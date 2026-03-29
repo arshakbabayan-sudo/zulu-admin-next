@@ -77,6 +77,26 @@ export default function FinancePage() {
     finally { setBusy(false); }
   }
 
+  function toggleEntitlement(id: number, checked: boolean) {
+    setSelectedEnt(prev => {
+      const next = new Set(prev);
+      if (checked) {
+        next.add(id);
+      } else {
+        next.delete(id);
+      }
+      return next;
+    });
+  }
+
+  function toggleAllEntitlements(checked: boolean) {
+    if (checked) {
+      setSelectedEnt(new Set(entitlements.map(r => r.id)));
+    } else {
+      setSelectedEnt(new Set());
+    }
+  }
+
   if (!allowed || forbidden) return (
     <div><h1 className="text-xl font-semibold">Finance</h1><div className="mt-4"><ForbiddenNotice /></div></div>
   );
@@ -113,7 +133,7 @@ export default function FinancePage() {
       {tab === "entitlements" && (
         <>
           <div className="mt-4 flex items-center gap-3">
-            <button type="button" disabled={busy || selectedEnt.size === 0} onClick={handleMarkPayable}
+            <button type="button" disabled={busy || selectedEnt.size === 0} onClick={() => void handleMarkPayable()}
               className="rounded bg-zinc-900 px-3 py-1 text-sm text-white disabled:opacity-40">
               Mark {selectedEnt.size > 0 ? `(${selectedEnt.size}) ` : ""}payable
             </button>
@@ -122,10 +142,9 @@ export default function FinancePage() {
             <table className="w-full min-w-[700px] text-left text-sm">
               <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase text-zinc-500">
                 <tr>
-                  <th className="px-3 py-2"><input type="checkbox" onChange={(e) => {
-                    if (e.target.checked) setSelectedEnt(new Set(entitlements.map(r => r.id)));
-                    else setSelectedEnt(new Set());
-                  }} /></th>
+                  <th className="px-3 py-2">
+                    <input type="checkbox" onChange={(e) => toggleAllEntitlements(e.target.checked)} />
+                  </th>
                   <th className="px-3 py-2">ID</th>
                   <th className="px-3 py-2">Amount</th>
                   <th className="px-3 py-2">Status</th>
@@ -141,12 +160,11 @@ export default function FinancePage() {
                 {entitlements.map((r) => (
                   <tr key={r.id} className="border-b border-zinc-100 hover:bg-zinc-50">
                     <td className="px-3 py-2">
-                      <input type="checkbox" checked={selectedEnt.has(r.id)}
-                        onChange={(e) => setSelectedEnt(prev => {
-                          const next = new Set(prev);
-                          e.target.checked ? next.add(r.id) : next.delete(r.id);
-                          return next;
-                        })} />
+                      <input
+                        type="checkbox"
+                        checked={selectedEnt.has(r.id)}
+                        onChange={(e) => toggleEntitlement(r.id, e.target.checked)}
+                      />
                     </td>
                     <td className="px-3 py-2 tabular-nums text-zinc-500">{r.id}</td>
                     <td className="px-3 py-2 tabular-nums font-medium">{r.currency} {Number(r.amount).toFixed(2)}</td>
