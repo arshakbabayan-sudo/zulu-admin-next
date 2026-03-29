@@ -143,7 +143,12 @@ export default function FinancePage() {
               <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase text-zinc-500">
                 <tr>
                   <th className="px-3 py-2">
-                    <input type="checkbox" onChange={(e) => toggleAllEntitlements(e.target.checked)} />
+                    <input
+                      type="checkbox"
+                      onChange={(e) => {
+                        toggleAllEntitlements(e.target.checked);
+                      }}
+                    />
                   </th>
                   <th className="px-3 py-2">ID</th>
                   <th className="px-3 py-2">Amount</th>
