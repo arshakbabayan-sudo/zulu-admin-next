@@ -96,11 +96,8 @@ export default function GenericApprovalsPage() {
   return (
     <div>
       <h1 className="text-xl font-semibold">Generic approvals</h1>
-      <p className="mt-1 text-sm text-zinc-500">
-        GET /api/platform-admin/approvals — POST …/approve and …/reject
-      </p>
       <div className="mt-4 flex flex-wrap items-end gap-3">
-        <label className="text-sm text-zinc-600">
+        <label className="text-sm text-slate-600">
           Status
           <select
             value={statusFilter}
@@ -108,7 +105,7 @@ export default function GenericApprovalsPage() {
               setPage(1);
               setStatusFilter(e.target.value);
             }}
-            className="ml-2 rounded border border-zinc-300 px-2 py-1 text-sm"
+            className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
           >
             <option value="">Any</option>
             <option value="pending">pending</option>
@@ -117,7 +114,7 @@ export default function GenericApprovalsPage() {
             <option value="rejected">rejected</option>
           </select>
         </label>
-        <label className="text-sm text-zinc-600">
+        <label className="text-sm text-slate-600">
           Entity type
           <input
             value={entityTypeDraft}
@@ -128,7 +125,7 @@ export default function GenericApprovalsPage() {
                 setEntityType(entityTypeDraft.trim());
               }
             }}
-            className="ml-2 rounded border border-zinc-300 px-2 py-1 text-sm"
+            className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
             placeholder="Filter by entity_type"
           />
         </label>
@@ -138,15 +135,15 @@ export default function GenericApprovalsPage() {
             setPage(1);
             setEntityType(entityTypeDraft.trim());
           }}
-          className="rounded border border-zinc-300 bg-white px-3 py-1 text-sm"
+          className="rounded border border-slate-300 bg-white px-3 py-1 text-sm"
         >
           Apply entity filter
         </button>
       </div>
       {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
-      <div className="mt-4 overflow-x-auto rounded border border-zinc-200 bg-white">
+      <div className="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
         <table className="w-full min-w-[900px] text-left text-sm">
-          <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase text-zinc-500">
+          <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
             <tr>
               <th className="px-3 py-2">ID</th>
               <th className="px-3 py-2">Entity</th>
@@ -159,25 +156,25 @@ export default function GenericApprovalsPage() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-zinc-100">
+              <tr key={r.id} className="border-b border-slate-100">
                 <td className="px-3 py-2 tabular-nums">{r.id}</td>
                 <td className="px-3 py-2">
                   <span className="font-mono text-xs">{r.entity_type}</span> #{r.entity_id}
                 </td>
                 <td className="px-3 py-2">{r.status}</td>
-                <td className="px-3 py-2">{r.priority ?? "—"}</td>
+                <td className="px-3 py-2">{r.priority ?? "-"}</td>
                 <td className="px-3 py-2 text-xs">
                   {r.requested_by ? (
                     <>
                       {r.requested_by.name}
                       <br />
-                      <span className="text-zinc-500">{r.requested_by.email}</span>
+                      <span className="text-slate-700">{r.requested_by.email}</span>
                     </>
                   ) : (
-                    "—"
+                    "-"
                   )}
                 </td>
-                <td className="px-3 py-2 text-xs text-zinc-600">{r.created_at ?? "—"}</td>
+                <td className="px-3 py-2 text-xs text-slate-600">{r.created_at ?? "-"}</td>
                 <td className="space-x-2 px-3 py-2">
                   {canActOnApproval(r.status) ? (
                     <>
@@ -199,7 +196,7 @@ export default function GenericApprovalsPage() {
                       </button>
                     </>
                   ) : (
-                    <span className="text-xs text-zinc-400">—</span>
+                    <span className="text-xs text-slate-400">-</span>
                   )}
                 </td>
               </tr>

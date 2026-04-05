@@ -102,7 +102,7 @@ export default function CompanyApplicationDetailPage() {
   }
 
   if (!row) {
-    return <p className="text-sm text-zinc-600">Loading…</p>;
+    return <p className="text-sm text-slate-600">Loading...</p>;
   }
 
   return (
@@ -113,79 +113,78 @@ export default function CompanyApplicationDetailPage() {
           onClick={() => router.push("/platform/company-applications")}
           className="text-blue-700 underline"
         >
-          ← Company applications
+          <- Company applications
         </button>
       </div>
       <h1 className="text-xl font-semibold">Application #{row.id}</h1>
-      <p className="mt-1 text-sm text-zinc-500">GET /api/platform-admin/applications/{row.id}</p>
       {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
 
       <dl className="mt-6 grid max-w-2xl gap-3 text-sm sm:grid-cols-2">
         <div>
-          <dt className="text-xs uppercase text-zinc-500">Status</dt>
+          <dt className="text-xs uppercase text-slate-700">Status</dt>
           <dd className="font-medium">{row.status}</dd>
         </div>
         <div>
-          <dt className="text-xs uppercase text-zinc-500">Company name</dt>
+          <dt className="text-xs uppercase text-slate-700">Company name</dt>
           <dd>{row.company_name}</dd>
         </div>
         <div>
-          <dt className="text-xs uppercase text-zinc-500">Business email</dt>
+          <dt className="text-xs uppercase text-slate-700">Business email</dt>
           <dd>{row.business_email}</dd>
         </div>
         <div>
-          <dt className="text-xs uppercase text-zinc-500">Contact</dt>
+          <dt className="text-xs uppercase text-slate-700">Contact</dt>
           <dd>
-            {row.contact_person} — {row.position}
+            {row.contact_person} - {row.position}
           </dd>
         </div>
         <div className="sm:col-span-2">
-          <dt className="text-xs uppercase text-zinc-500">Legal address</dt>
+          <dt className="text-xs uppercase text-slate-700">Legal address</dt>
           <dd>{row.legal_address}</dd>
         </div>
         <div className="sm:col-span-2">
-          <dt className="text-xs uppercase text-zinc-500">Actual address</dt>
+          <dt className="text-xs uppercase text-slate-700">Actual address</dt>
           <dd>{row.actual_address}</dd>
         </div>
         <div>
-          <dt className="text-xs uppercase text-zinc-500">Country / city</dt>
+          <dt className="text-xs uppercase text-slate-700">Country / city</dt>
           <dd>
             {row.country} / {row.city}
           </dd>
         </div>
         <div>
-          <dt className="text-xs uppercase text-zinc-500">Phone / tax ID</dt>
+          <dt className="text-xs uppercase text-slate-700">Phone / tax ID</dt>
           <dd>
             {row.phone} / {row.tax_id}
           </dd>
         </div>
         <div>
-          <dt className="text-xs uppercase text-zinc-500">Submitted</dt>
-          <dd className="text-zinc-600">{row.submitted_at ?? "—"}</dd>
+          <dt className="text-xs uppercase text-slate-700">Submitted</dt>
+          <dd className="text-slate-600">{row.submitted_at ?? "-"}</dd>
         </div>
         <div>
-          <dt className="text-xs uppercase text-zinc-500">Reviewed</dt>
-          <dd className="text-zinc-600">
-            {row.reviewed_at ?? "—"}
-            {row.reviewer ? ` · ${row.reviewer.name}` : ""}
+          <dt className="text-xs uppercase text-slate-700">Reviewed</dt>
+          <dd className="text-slate-600">
+            {row.reviewed_at ?? "-"}
+            {row.reviewer ? ` | ${row.reviewer.name}` : ""}
           </dd>
         </div>
         {row.rejection_reason && (
           <div className="sm:col-span-2">
-            <dt className="text-xs uppercase text-zinc-500">Rejection reason</dt>
+            <dt className="text-xs uppercase text-slate-700">Rejection reason</dt>
             <dd>{row.rejection_reason}</dd>
           </div>
         )}
         {row.notes && (
           <div className="sm:col-span-2">
-            <dt className="text-xs uppercase text-zinc-500">Notes</dt>
+            <dt className="text-xs uppercase text-slate-700">Notes</dt>
             <dd>{row.notes}</dd>
           </div>
         )}
         <div>
-          <dt className="text-xs uppercase text-zinc-500">Documents on disk</dt>
+          <dt className="text-xs uppercase text-slate-700">Documents on disk</dt>
           <dd>
-            State cert: {row.state_certificate_path ? "yes" : "no"} · License:{" "}
+            State cert: {row.state_certificate_path ? "yes" : "no"} | License:{" "}
             {row.license_path ? "yes" : "no"}
           </dd>
         </div>

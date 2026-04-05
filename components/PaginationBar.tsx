@@ -11,7 +11,7 @@ export function PaginationBar({
 }) {
   const { current_page, last_page, total, per_page } = meta;
   return (
-    <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-zinc-600">
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-slate-600">
       <span>
         Page {current_page} of {last_page} · {total} total · {per_page} per page
       </span>
@@ -20,7 +20,7 @@ export function PaginationBar({
           type="button"
           disabled={current_page <= 1}
           onClick={() => onPage(current_page - 1)}
-          className="rounded border border-zinc-300 bg-white px-3 py-1 disabled:opacity-40"
+          className="rounded border border-slate-300 bg-white px-3 py-1 disabled:opacity-40"
         >
           Previous
         </button>
@@ -28,7 +28,7 @@ export function PaginationBar({
           type="button"
           disabled={current_page >= last_page}
           onClick={() => onPage(current_page + 1)}
-          className="rounded border border-zinc-300 bg-white px-3 py-1 disabled:opacity-40"
+          className="rounded border border-slate-300 bg-white px-3 py-1 disabled:opacity-40"
         >
           Next
         </button>

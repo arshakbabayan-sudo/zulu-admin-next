@@ -1,7 +1,26 @@
 import { apiFetchJson } from "./api-client";
 import type { ApiListMeta, ApiSuccessEnvelope } from "./api-envelope";
+import {
+  type TransferFormValues,
+  transferCreateBodyFromForm,
+  transferUpdateBodyFromForm,
+} from "@/lib/transfers/transfer-field-adapter";
+
+/**
+ * Inventory API — admin contract (module vs offer)
+ *
+ * - Any `offer` nested under **module** rows (flights, transfers, cars, excursions, etc.) is
+ *   {@link ModuleRowOfferSummary} only: a shallow embed for list/UI context, not full offer or module detail.
+ * - Do **not** assume extra nested keys beyond that summary; the backend may slim or change embeds on list routes.
+ * - **Module detail** (forms, edit screens, full fields) must be loaded from **module** endpoints only
+ *   (e.g. GET `/flights/:id`, GET `/transfers/:id`). Do not use GET `/offers/:id` as the source of truth for a module.
+ */
 
 // ─── Offers ──────────────────────────────────────────────────────────────────
+/**
+ * Row from `/offers` (list, single, create, publish, archive) — **summary-only** per backend OfferResource.
+ * Same rule as module embeds: not a substitute for loading the parent module via its own GET.
+ */
 export type OfferRow = {
   id: number;
   title: string;
@@ -15,16 +34,53 @@ export type OfferRow = {
   company?: { id: number; name: string } | null;
 };
 
+/**
+ * Summary-only offer object embedded on **module** list/index (and some detail) payloads.
+ * Not exhaustive: the API may omit or add keys; treat as display/context only.
+ */
+export type ModuleRowOfferSummary = {
+  id?: number;
+  company_id?: number | null;
+  type?: string | null;
+  title?: string | null;
+  price?: number | null;
+  currency?: string | null;
+  status?: string | null;
+};
+
 export async function apiOffers(
   token: string,
-  params: { page?: number; per_page?: number; status?: string }
+  params: { page?: number; per_page?: number; status?: string; type?: string }
 ): Promise<ApiSuccessEnvelope<OfferRow[]> & { meta: ApiListMeta }> {
   const q = new URLSearchParams();
   if (params.page != null) q.set("page", String(params.page));
   if (params.per_page != null) q.set("per_page", String(params.per_page));
   if (params.status) q.set("status", params.status);
+  if (params.type) q.set("type", params.type);
   const qs = q.toString();
   return apiFetchJson(`/offers${qs ? `?${qs}` : ""}`, { method: "GET", token });
+}
+
+export type CompanyListRow = {
+  id: number;
+  name?: string | null;
+};
+
+export async function apiCompaniesList(token: string): Promise<ApiSuccessEnvelope<CompanyListRow[]>> {
+  return apiFetchJson(`/companies`, { method: "GET", token });
+}
+
+export async function apiCreateOffer(
+  token: string,
+  body: {
+    company_id: number;
+    type: string;
+    title: string;
+    price: number;
+    currency: string;
+  }
+): Promise<ApiSuccessEnvelope<OfferRow>> {
+  return apiFetchJson(`/offers`, { method: "POST", token, body });
 }
 
 export async function apiOffer(token: string, id: number): Promise<ApiSuccessEnvelope<OfferRow>> {
@@ -48,24 +104,143 @@ export async function apiArchiveOffer(
 // ─── Flights ─────────────────────────────────────────────────────────────────
 export type FlightRow = {
   id: number;
+  offer_id?: number | null;
+  flight_code_internal?: string | null;
+  service_type?: string | null;
+  departure_country?: string | null;
+  departure_city?: string | null;
+  departure_airport?: string | null;
+  arrival_country?: string | null;
+  arrival_city?: string | null;
+  arrival_airport?: string | null;
+  departure_airport_code?: string | null;
+  arrival_airport_code?: string | null;
+  departure_at?: string | null;
+  arrival_at?: string | null;
+  duration_minutes?: number | null;
+  connection_type?: string | null;
+  stops_count?: number | null;
+  cabin_class?: string | null;
+  seat_capacity_total?: number | null;
+  seat_capacity_available?: number | null;
+  adult_price?: number | null;
+  child_price?: number | null;
+  infant_price?: number | null;
+  is_package_eligible?: boolean | null;
+  appears_in_web?: boolean | null;
+  appears_in_admin?: boolean | null;
+  appears_in_zulu_admin?: boolean | null;
+  status?: string | null;
+  company_id?: number | null;
+  company?: { id: number; name: string } | null;
+  /** Summary-only embed; full flight detail from GET `/flights/:id`, not from offer APIs. */
+  offer?: ModuleRowOfferSummary | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  // Backward-compatible aliases for legacy consumers.
   flight_number?: string | null;
   airline?: string | null;
   origin?: string | null;
   destination?: string | null;
-  departure_at?: string | null;
-  arrival_at?: string | null;
-  status?: string | null;
-  company_id?: number | null;
-  created_at?: string | null;
 };
 
 export type FlightPayload = {
-  flight_number?: string;
-  airline?: string;
-  origin?: string;
-  destination?: string;
+  offer_id?: number | "";
+  flight_code_internal?: string;
+  service_type?: string;
+  departure_country?: string;
+  departure_city?: string;
+  departure_airport?: string;
+  arrival_country?: string;
+  arrival_city?: string;
+  arrival_airport?: string;
+  departure_airport_code?: string | null;
+  arrival_airport_code?: string | null;
+  departure_terminal?: string | null;
+  arrival_terminal?: string | null;
   departure_at?: string;
   arrival_at?: string;
+  duration_minutes?: number | "";
+  timezone_context?: string | null;
+  check_in_close_at?: string | null;
+  boarding_close_at?: string | null;
+  connection_type?: string;
+  stops_count?: number | "";
+  connection_notes?: string | null;
+  layover_summary?: string | null;
+  cabin_class?: string;
+  seat_capacity_total?: number | "";
+  seat_capacity_available?: number | "";
+  fare_family?: string | null;
+  seat_map_available?: boolean;
+  seat_selection_policy?: string | null;
+  adult_age_from?: number | "";
+  child_age_from?: number | "";
+  child_age_to?: number | "";
+  infant_age_from?: number | "";
+  infant_age_to?: number | "";
+  adult_price?: number | "";
+  child_price?: number | "";
+  infant_price?: number | "";
+  hand_baggage_included?: boolean;
+  checked_baggage_included?: boolean;
+  hand_baggage_weight?: string | null;
+  checked_baggage_weight?: string | null;
+  extra_baggage_allowed?: boolean;
+  baggage_notes?: string | null;
+  reservation_allowed?: boolean;
+  online_checkin_allowed?: boolean;
+  airport_checkin_allowed?: boolean;
+  cancellation_policy_type?: string;
+  change_policy_type?: string;
+  reservation_deadline_at?: string | null;
+  cancellation_deadline_at?: string | null;
+  change_deadline_at?: string | null;
+  policy_notes?: string | null;
+  is_package_eligible?: boolean;
+  appears_in_web?: boolean;
+  appears_in_admin?: boolean;
+  appears_in_zulu_admin?: boolean;
+  status?: string;
+  [key: string]: unknown;
+};
+
+export type FlightCabinRow = {
+  id: number;
+  cabin_class: string;
+  seat_capacity_total: number;
+  seat_capacity_available: number;
+  adult_price: number;
+  child_price: number;
+  infant_price: number;
+  hand_baggage_included: boolean;
+  hand_baggage_weight?: string | null;
+  checked_baggage_included: boolean;
+  checked_baggage_weight?: string | null;
+  extra_baggage_allowed: boolean;
+  baggage_notes?: string | null;
+  fare_family?: string | null;
+  seat_map_available: boolean;
+  seat_selection_policy?: string | null;
+  b2c_adult_price?: number | null;
+};
+
+export type FlightCabinPayload = {
+  cabin_class?: string;
+  seat_capacity_total?: number | "";
+  seat_capacity_available?: number | "";
+  adult_price?: number | "";
+  child_price?: number | "";
+  infant_price?: number | "";
+  hand_baggage_included?: boolean;
+  hand_baggage_weight?: string | null;
+  checked_baggage_included?: boolean;
+  checked_baggage_weight?: string | null;
+  extra_baggage_allowed?: boolean;
+  baggage_notes?: string | null;
+  fare_family?: string | null;
+  seat_map_available?: boolean;
+  seat_selection_policy?: string | null;
   [key: string]: unknown;
 };
 
@@ -109,25 +284,498 @@ export async function apiDeleteFlight(
   return apiFetchJson(`/flights/${id}`, { method: "DELETE", token });
 }
 
+export async function apiFlightCabins(
+  token: string,
+  flightId: number
+): Promise<ApiSuccessEnvelope<FlightCabinRow[]>> {
+  return apiFetchJson(`/flights/${flightId}/cabins`, { method: "GET", token });
+}
+
+export async function apiCreateFlightCabin(
+  token: string,
+  flightId: number,
+  body: FlightCabinPayload
+): Promise<ApiSuccessEnvelope<FlightCabinRow>> {
+  return apiFetchJson(`/flights/${flightId}/cabins`, { method: "POST", token, body });
+}
+
+export async function apiUpdateFlightCabin(
+  token: string,
+  flightId: number,
+  cabinId: number,
+  body: FlightCabinPayload
+): Promise<ApiSuccessEnvelope<FlightCabinRow>> {
+  return apiFetchJson(`/flights/${flightId}/cabins/${cabinId}`, { method: "PATCH", token, body });
+}
+
+export async function apiDeleteFlightCabin(
+  token: string,
+  flightId: number,
+  cabinId: number
+): Promise<ApiSuccessEnvelope<null>> {
+  return apiFetchJson(`/flights/${flightId}/cabins/${cabinId}`, { method: "DELETE", token });
+}
+
 // ─── Hotels ──────────────────────────────────────────────────────────────────
+/** List/detail row shape aligned with HotelListResource / HotelDetailResource. */
+/** Room + nested pricings as returned by GET /hotels/:id (HotelDetailResource). */
+export type HotelRoomDetail = {
+  id: number;
+  room_type?: string | null;
+  room_name?: string | null;
+  max_adults?: number | null;
+  max_children?: number | null;
+  max_total_guests?: number | null;
+  pricings?: HotelRoomPricingDetail[] | null;
+};
+
+export type HotelRoomPricingDetail = {
+  id: number;
+  price: number;
+  currency: string;
+  pricing_mode?: string | null;
+  valid_from?: string | null;
+  valid_to?: string | null;
+  min_nights?: number | null;
+  status?: string | null;
+};
+
 export type HotelRow = {
   id: number;
-  name?: string | null;
+  offer_id?: number | null;
+  hotel_name?: string | null;
+  property_type?: string | null;
+  hotel_type?: string | null;
   city?: string | null;
   country?: string | null;
-  stars?: number | null;
+  region_or_state?: string | null;
+  district_or_area?: string | null;
+  full_address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  star_rating?: number | null;
+  meal_type?: string | null;
+  availability_status?: string | null;
   status?: string | null;
   company_id?: number | null;
   created_at?: string | null;
+  bookable?: boolean;
+  is_package_eligible?: boolean;
+  // Step C3: visibility controls.
+  visibility_rule?: string | null;
+  appears_in_packages?: boolean;
+  free_wifi?: boolean;
+  parking?: boolean;
+  airport_shuttle?: boolean;
+  indoor_pool?: boolean;
+  outdoor_pool?: boolean;
+  room_service?: boolean;
+  front_desk_24h?: boolean;
+  child_friendly?: boolean;
+  accessibility_support?: boolean;
+  pets_allowed?: boolean;
+  free_cancellation?: boolean;
+  prepayment_required?: boolean;
+  cancellation_policy_type?: string | null;
+  cancellation_deadline_at?: string | null;
+  no_show_policy?: string | null;
+  review_score?: number | null;
+  review_count?: number | null;
+  review_label?: string | null;
+  room_inventory_mode?: string | null;
+  rooms?: HotelRoomDetail[] | null;
 };
 
-export type HotelPayload = {
-  name?: string;
-  city?: string;
-  country?: string;
-  stars?: number;
-  [key: string]: unknown;
+/** Single pricing row in operator form (hotel room). */
+export type HotelPricingFormRow = {
+  /** Persisted `hotel_room_pricings.id` from API; omitted for new rows (POST / PATCH create). */
+  id?: number;
+  price: string;
+  currency: string;
+  pricing_mode: string;
+  valid_from: string;
+  valid_to: string;
+  min_nights: number | "";
+  status: string;
 };
+
+/** One room block: aligns with HotelService room payload; capacity → max_* . */
+export type HotelRoomFormRow = {
+  clientKey: string;
+  /** Persisted `hotel_rooms.id` from API; omitted for new rows (POST / PATCH create). */
+  id?: number;
+  room_type: string;
+  room_name: string;
+  /** Maps to max_adults / max_total_guests (max_children = 0). */
+  capacity: number | "";
+  pricings: HotelPricingFormRow[];
+};
+
+/**
+ * Operator form state (create + edit). Mirrors HotelService create/update validation keys.
+ * `offer_id` is only sent on POST.
+ */
+/** Form state keys match API except `star_rating` is typed here; wire uses `star_rating` (see `lib/hotel-ui.ts`). */
+export type HotelFormPayload = {
+  offer_id: number | "";
+  hotel_name: string;
+  property_type: string;
+  hotel_type: string;
+  country: string;
+  region_or_state: string;
+  city: string;
+  district_or_area: string;
+  full_address: string;
+  /** Empty string = omit/null on API */
+  latitude: string;
+  longitude: string;
+  meal_type: string;
+  star_rating: number | "";
+  availability_status: string;
+  status: string;
+  bookable: boolean;
+  is_package_eligible: boolean;
+  // Step C3: visibility controls.
+  visibility_rule: string;
+  appears_in_packages: boolean;
+  free_wifi: boolean;
+  parking: boolean;
+  airport_shuttle: boolean;
+  indoor_pool: boolean;
+  outdoor_pool: boolean;
+  room_service: boolean;
+  front_desk_24h: boolean;
+  child_friendly: boolean;
+  accessibility_support: boolean;
+  pets_allowed: boolean;
+  free_cancellation: boolean;
+  prepayment_required: boolean;
+  /** Step C1 — policy detail (nullable strings on API). */
+  cancellation_policy_type: string;
+  /** `datetime-local` value or empty (→ null on API). */
+  cancellation_deadline_at: string;
+  no_show_policy: string;
+  /** 0–10 or empty → null. */
+  review_score: number | "";
+  review_count: number | "";
+  review_label: string;
+  room_inventory_mode: string;
+  /** Step B3 — rooms & pricings (POST full set; PATCH sync). */
+  rooms: HotelRoomFormRow[];
+};
+
+function trimOrNull(s: string): string | null {
+  const t = s.trim();
+  return t === "" ? null : t;
+}
+
+function parseCoord(s: string): number | null {
+  const t = s.trim();
+  if (t === "") return null;
+  const n = Number(t);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** API ISO8601 datetime → `datetime-local` input value (local wall clock). */
+export function hotelCancellationDeadlineFromApi(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function newClientKey(prefix: string): string {
+  if (typeof globalThis !== "undefined" && "crypto" in globalThis && globalThis.crypto.randomUUID) {
+    return globalThis.crypto.randomUUID();
+  }
+  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+/** Default pricing row for new room rows (backend defaults: per_night, active). */
+export function newHotelPricingFormRow(): HotelPricingFormRow {
+  return {
+    price: "",
+    currency: "USD",
+    pricing_mode: "per_night",
+    valid_from: "",
+    valid_to: "",
+    min_nights: "",
+    status: "active",
+  };
+}
+
+/** Default room block for create / empty state. */
+export function newHotelRoomFormRow(): HotelRoomFormRow {
+  return {
+    clientKey: newClientKey("room"),
+    room_type: "",
+    room_name: "",
+    capacity: "",
+    pricings: [newHotelPricingFormRow()],
+  };
+}
+
+function mapDetailRoomsToForm(rooms: HotelRoomDetail[] | null | undefined): HotelRoomFormRow[] {
+  if (!Array.isArray(rooms) || rooms.length === 0) {
+    return [newHotelRoomFormRow()];
+  }
+  return rooms.map((r) => ({
+    clientKey: newClientKey(`room-${r.id}`),
+    ...(typeof r.id === "number" && Number.isFinite(r.id) ? { id: r.id } : {}),
+    room_type: r.room_type ?? "",
+    room_name: r.room_name ?? "",
+    capacity:
+      r.max_total_guests != null && Number.isFinite(Number(r.max_total_guests))
+        ? Number(r.max_total_guests)
+        : r.max_adults != null && Number.isFinite(Number(r.max_adults))
+          ? Number(r.max_adults)
+          : "",
+    pricings:
+      Array.isArray(r.pricings) && r.pricings.length > 0
+        ? r.pricings.map((p) => ({
+            ...(typeof p.id === "number" && Number.isFinite(p.id) ? { id: p.id } : {}),
+            price: String(p.price),
+            currency: (p.currency ?? "USD").toUpperCase().slice(0, 3),
+            pricing_mode: p.pricing_mode ?? "per_night",
+            valid_from: p.valid_from ?? "",
+            valid_to: p.valid_to ?? "",
+            min_nights: p.min_nights != null ? p.min_nights : "",
+            status: p.status ?? "active",
+          }))
+        : [newHotelPricingFormRow()],
+  }));
+}
+
+/** Map GET /hotels/:id (HotelDetailResource) into operator form state. */
+export function hotelFormFromDetail(row: HotelRow): HotelFormPayload {
+  const lat = row.latitude;
+  const lng = row.longitude;
+  return {
+    offer_id: "",
+    hotel_name: row.hotel_name ?? "",
+    property_type: row.property_type ?? "hotel",
+    hotel_type: row.hotel_type ?? "resort",
+    country: row.country ?? "",
+    region_or_state: row.region_or_state ?? "",
+    city: row.city ?? "",
+    district_or_area: row.district_or_area ?? "",
+    full_address: row.full_address ?? "",
+    latitude: lat != null && Number.isFinite(Number(lat)) ? String(lat) : "",
+    longitude: lng != null && Number.isFinite(Number(lng)) ? String(lng) : "",
+    meal_type: row.meal_type ?? "room_only",
+    star_rating: row.star_rating != null ? row.star_rating : "",
+    availability_status: row.availability_status ?? "available",
+    status: row.status ?? "draft",
+    bookable: row.bookable !== false,
+    is_package_eligible: Boolean(row.is_package_eligible),
+    visibility_rule: row.visibility_rule ?? "show_all",
+    appears_in_packages: row.appears_in_packages ?? true,
+    free_wifi: Boolean(row.free_wifi),
+    parking: Boolean(row.parking),
+    airport_shuttle: Boolean(row.airport_shuttle),
+    indoor_pool: Boolean(row.indoor_pool),
+    outdoor_pool: Boolean(row.outdoor_pool),
+    room_service: Boolean(row.room_service),
+    front_desk_24h: Boolean(row.front_desk_24h),
+    child_friendly: Boolean(row.child_friendly),
+    accessibility_support: Boolean(row.accessibility_support),
+    pets_allowed: Boolean(row.pets_allowed),
+    free_cancellation: Boolean(row.free_cancellation),
+    prepayment_required: Boolean(row.prepayment_required),
+    cancellation_policy_type: row.cancellation_policy_type ?? "",
+    cancellation_deadline_at: hotelCancellationDeadlineFromApi(row.cancellation_deadline_at),
+    no_show_policy: row.no_show_policy ?? "",
+    review_score:
+      row.review_score != null && Number.isFinite(Number(row.review_score))
+        ? Number(row.review_score)
+        : "",
+    review_count:
+      row.review_count != null && Number.isFinite(Number(row.review_count))
+        ? Number(row.review_count)
+        : "",
+    review_label: row.review_label ?? "",
+    room_inventory_mode: row.room_inventory_mode ?? "",
+    rooms: mapDetailRoomsToForm(row.rooms),
+  };
+}
+
+/** POST/PATCH room payload — matches HotelService::validateRoomsPayload / pricingRowRules. */
+export type HotelRoomPricingApiRow = {
+  /** Sent on PATCH only when present so existing rows upsert in place. */
+  id?: number;
+  price: number;
+  currency: string;
+  pricing_mode: string;
+  valid_from: string | null;
+  valid_to: string | null;
+  min_nights: number | null;
+  status: string;
+};
+
+export type HotelRoomApiBody = {
+  /** Sent on PATCH only when present so existing rows upsert in place. */
+  id?: number;
+  room_type: string;
+  room_name: string;
+  max_adults: number;
+  max_children: number;
+  max_total_guests: number;
+  pricings: HotelRoomPricingApiRow[];
+};
+
+function emptyDateToNull(s: string): string | null {
+  const t = s.trim();
+  return t === "" ? null : t;
+}
+
+/** Build `rooms` array for API from operator form (capacity → max_*). */
+export function roomsPayloadFromForm(
+  rooms: HotelRoomFormRow[],
+  opts?: { includePersistedIds?: boolean }
+): HotelRoomApiBody[] {
+  const includeIds = opts?.includePersistedIds === true;
+  return rooms.map((r) => {
+    const cap = Number(r.capacity);
+    const roomId =
+      includeIds && typeof r.id === "number" && Number.isFinite(r.id) ? r.id : undefined;
+    return {
+      ...(roomId !== undefined ? { id: roomId } : {}),
+      room_type: r.room_type.trim(),
+      room_name: r.room_name.trim(),
+      max_adults: cap,
+      max_children: 0,
+      max_total_guests: cap,
+      pricings: r.pricings.map((p) => {
+        const pricingId =
+          includeIds && typeof p.id === "number" && Number.isFinite(p.id) ? p.id : undefined;
+        return {
+          ...(pricingId !== undefined ? { id: pricingId } : {}),
+          price: Number(p.price),
+          currency: p.currency.trim().toUpperCase().slice(0, 3),
+          pricing_mode: (p.pricing_mode.trim() || "per_night").slice(0, 32),
+          valid_from: emptyDateToNull(p.valid_from),
+          valid_to: emptyDateToNull(p.valid_to),
+          min_nights: p.min_nights === "" ? null : Number(p.min_nights),
+          status: (p.status.trim() || "active").slice(0, 32),
+        };
+      }),
+    };
+  });
+}
+
+/** POST /hotels body (backend HotelService::create). */
+export type HotelCreateApiBody = {
+  offer_id: number;
+  hotel_name: string;
+  property_type: string;
+  hotel_type: string;
+  country: string;
+  region_or_state: string | null;
+  city: string;
+  district_or_area: string | null;
+  full_address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  meal_type: string;
+  availability_status: string;
+  status: string;
+  star_rating: number | null;
+  bookable: boolean;
+  is_package_eligible: boolean;
+  // Step C3: visibility controls.
+  visibility_rule: string;
+  appears_in_packages: boolean;
+  free_wifi: boolean;
+  parking: boolean;
+  airport_shuttle: boolean;
+  indoor_pool: boolean;
+  outdoor_pool: boolean;
+  room_service: boolean;
+  front_desk_24h: boolean;
+  child_friendly: boolean;
+  accessibility_support: boolean;
+  pets_allowed: boolean;
+  free_cancellation: boolean;
+  prepayment_required: boolean;
+  cancellation_policy_type: string | null;
+  cancellation_deadline_at: string | null;
+  no_show_policy: string | null;
+  review_score: number | null;
+  review_count: number;
+  review_label: string | null;
+  room_inventory_mode: string | null;
+  rooms: HotelRoomApiBody[];
+};
+
+function hotelSharedBodyFromForm(form: HotelFormPayload): Omit<HotelCreateApiBody, "offer_id"> {
+  const star =
+    form.star_rating === "" || form.star_rating == null ? null : Number(form.star_rating);
+  const lat = parseCoord(form.latitude);
+  const lng = parseCoord(form.longitude);
+  return {
+    hotel_name: form.hotel_name.trim(),
+    property_type: form.property_type.trim(),
+    hotel_type: form.hotel_type.trim(),
+    country: form.country.trim(),
+    region_or_state: trimOrNull(form.region_or_state),
+    city: form.city.trim(),
+    district_or_area: trimOrNull(form.district_or_area),
+    full_address: trimOrNull(form.full_address),
+    latitude: lat,
+    longitude: lng,
+    meal_type: form.meal_type.trim(),
+    availability_status: form.availability_status.trim(),
+    status: form.status.trim(),
+    star_rating: star === null || Number.isNaN(star) ? null : star,
+    bookable: form.bookable,
+    is_package_eligible: form.is_package_eligible,
+    visibility_rule: form.visibility_rule.trim(),
+    appears_in_packages: form.appears_in_packages,
+    free_wifi: form.free_wifi,
+    parking: form.parking,
+    airport_shuttle: form.airport_shuttle,
+    indoor_pool: form.indoor_pool,
+    outdoor_pool: form.outdoor_pool,
+    room_service: form.room_service,
+    front_desk_24h: form.front_desk_24h,
+    child_friendly: form.child_friendly,
+    accessibility_support: form.accessibility_support,
+    pets_allowed: form.pets_allowed,
+    free_cancellation: form.free_cancellation,
+    prepayment_required: form.prepayment_required,
+    cancellation_policy_type: trimOrNull(form.cancellation_policy_type),
+    cancellation_deadline_at:
+      form.cancellation_deadline_at.trim() === "" ? null : form.cancellation_deadline_at.trim(),
+    no_show_policy: trimOrNull(form.no_show_policy),
+    review_score:
+      form.review_score === "" || form.review_score == null
+        ? null
+        : Number(form.review_score),
+    review_count:
+      form.review_count === "" || form.review_count == null
+        ? 0
+        : Math.max(0, Math.floor(Number(form.review_count))),
+    review_label: trimOrNull(form.review_label),
+    room_inventory_mode: trimOrNull(form.room_inventory_mode),
+  };
+}
+
+export function hotelCreateBodyFromForm(form: HotelFormPayload): HotelCreateApiBody {
+  return {
+    offer_id: Number(form.offer_id),
+    ...hotelSharedBodyFromForm(form),
+    rooms: roomsPayloadFromForm(form.rooms),
+  };
+}
+
+/** PATCH /hotels/:id — no offer_id / company_id (HotelController prohibits); includes `rooms` to sync. */
+export function hotelUpdateBodyFromForm(form: HotelFormPayload): Record<string, unknown> {
+  return {
+    ...hotelSharedBodyFromForm(form),
+    rooms: roomsPayloadFromForm(form.rooms, { includePersistedIds: true }),
+  };
+}
 
 export async function apiHotels(
   token: string,
@@ -140,9 +788,16 @@ export async function apiHotels(
   return apiFetchJson(`/hotels${qs ? `?${qs}` : ""}`, { method: "GET", token });
 }
 
+export async function apiGetHotel(
+  token: string,
+  id: number
+): Promise<ApiSuccessEnvelope<HotelRow>> {
+  return apiFetchJson(`/hotels/${id}`, { method: "GET", token });
+}
+
 export async function apiCreateHotel(
   token: string,
-  body: HotelPayload
+  body: HotelCreateApiBody
 ): Promise<ApiSuccessEnvelope<HotelRow>> {
   return apiFetchJson(`/hotels`, { method: "POST", token, body });
 }
@@ -150,7 +805,7 @@ export async function apiCreateHotel(
 export async function apiUpdateHotel(
   token: string,
   id: number,
-  body: HotelPayload
+  body: Record<string, unknown>
 ): Promise<ApiSuccessEnvelope<HotelRow>> {
   return apiFetchJson(`/hotels/${id}`, { method: "PATCH", token, body });
 }
@@ -165,23 +820,58 @@ export async function apiDeleteHotel(
 // ─── Transfers ───────────────────────────────────────────────────────────────
 export type TransferRow = {
   id: number;
-  vehicle_type?: string | null;
-  from_location?: string | null;
-  to_location?: string | null;
-  price?: number | null;
-  currency?: string | null;
+  offer_id?: number | null;
   company_id?: number | null;
+  visibility_rule?: string | null;
+  appears_in_web?: boolean | null;
+  appears_in_admin?: boolean | null;
+  appears_in_zulu_admin?: boolean | null;
   created_at?: string | null;
+  transfer_title?: string | null;
+  transfer_type?: string | null;
+  pickup_country?: string | null;
+  vehicle_category?: string | null;
+  pickup_point_type?: string | null;
+  pickup_point_name?: string | null;
+  pickup_city?: string | null;
+  dropoff_country?: string | null;
+  dropoff_point_type?: string | null;
+  dropoff_point_name?: string | null;
+  dropoff_city?: string | null;
+  pickup_latitude?: number | null;
+  pickup_longitude?: number | null;
+  dropoff_latitude?: number | null;
+  dropoff_longitude?: number | null;
+  route_distance_km?: number | null;
+  route_label?: string | null;
+  service_date?: string | null;
+  pickup_time?: string | null;
+  estimated_duration_minutes?: number | null;
+  availability_window_start?: string | null;
+  availability_window_end?: string | null;
+  vehicle_class?: string | null;
+  private_or_shared?: string | null;
+  passenger_capacity?: number | null;
+  luggage_capacity?: number | null;
+  minimum_passengers?: number | null;
+  maximum_passengers?: number | null;
+  maximum_luggage?: number | null;
+  child_seat_available?: boolean | null;
+  child_seat_required_rule?: string | null;
+  accessibility_support?: boolean | null;
+  special_assistance_supported?: boolean | null;
+  pricing_mode?: string | null;
+  availability_status?: string | null;
+  status?: string | null;
+  base_price?: number | null;
+  free_cancellation?: boolean | null;
+  cancellation_policy_type?: string | null;
+  cancellation_deadline_at?: string | null;
+  /** Summary-only embed; full transfer detail from GET `/transfers/:id`, not from offer APIs. */
+  offer?: ModuleRowOfferSummary | null;
 };
 
-export type TransferPayload = {
-  vehicle_type?: string;
-  from_location?: string;
-  to_location?: string;
-  price?: number;
-  currency?: string;
-  [key: string]: unknown;
-};
+export type TransferPayload = TransferFormValues;
 
 export async function apiTransfers(
   token: string,
@@ -198,7 +888,8 @@ export async function apiCreateTransfer(
   token: string,
   body: TransferPayload
 ): Promise<ApiSuccessEnvelope<TransferRow>> {
-  return apiFetchJson(`/transfers`, { method: "POST", token, body });
+  const createBody = transferCreateBodyFromForm(body);
+  return apiFetchJson(`/transfers`, { method: "POST", token, body: createBody });
 }
 
 export async function apiUpdateTransfer(
@@ -206,7 +897,8 @@ export async function apiUpdateTransfer(
   id: number,
   body: TransferPayload
 ): Promise<ApiSuccessEnvelope<TransferRow>> {
-  return apiFetchJson(`/transfers/${id}`, { method: "PATCH", token, body });
+  const updateBody = transferUpdateBodyFromForm(body);
+  return apiFetchJson(`/transfers/${id}`, { method: "PATCH", token, body: updateBody });
 }
 
 export async function apiDeleteTransfer(
@@ -217,25 +909,131 @@ export async function apiDeleteTransfer(
 }
 
 // ─── Cars ────────────────────────────────────────────────────────────────────
+/** Step C1 — aligned with `CarAdvancedOptionsNormalizer` (v1). */
+export const CAR_CHILD_SEAT_TYPES = ["infant", "toddler", "booster", "convertible"] as const;
+
+export const CAR_SERVICE_KEYS = [
+  "wifi",
+  "ac",
+  "gps",
+  "bluetooth",
+  "usb_charger",
+  "dashcam",
+  "child_seat_included",
+  "snow_chains",
+  "roof_rack",
+  "winter_tires",
+] as const;
+
+/** Step C2 — aligned with `CarAdvancedOptionsNormalizer::defaultPricingRules`. */
+export type CarPricingRulesRow = {
+  mileage: {
+    mode: "limited" | "unlimited";
+    included_km_per_rental: number | null;
+    extra_km_price: number | null;
+  };
+  cross_border: {
+    policy: "not_allowed" | "included" | "surcharge_fixed" | "surcharge_daily";
+    surcharge_amount: number | null;
+  };
+  radius: {
+    service_radius_km: number | null;
+    out_of_radius_mode:
+      | "not_applicable"
+      | "flat_fee"
+      | "per_km"
+      | "not_allowed"
+      | "quote_only";
+    out_of_radius_flat_fee: number | null;
+    out_of_radius_per_km: number | null;
+  };
+};
+
+export type CarAdvancedOptionsRow = {
+  v: number;
+  child_seats: {
+    available: boolean;
+    types: string[];
+  };
+  extra_luggage: {
+    additional_suitcases_max: number;
+    additional_small_bags_max: number;
+    notes: string | null;
+  };
+  services: string[];
+  driver_languages: string[];
+  pricing_rules: CarPricingRulesRow;
+};
+
+/** Mirrors `CarResource` + summary-only `offer` embed from list/detail API. */
 export type CarRow = {
   id: number;
+  offer_id?: number | null;
+  company_id?: number | null;
+  pickup_location?: string | null;
+  dropoff_location?: string | null;
+  vehicle_class?: string | null;
+  vehicle_type?: string | null;
   brand?: string | null;
   model?: string | null;
   year?: number | null;
-  price_per_day?: number | null;
-  currency?: string | null;
-  company_id?: number | null;
+  transmission_type?: string | null;
+  fuel_type?: string | null;
+  fleet?: string | null;
+  category?: string | null;
+  seats?: number | null;
+  suitcases?: number | null;
+  small_bag?: number | null;
+  availability_window_start?: string | null;
+  availability_window_end?: string | null;
+  pricing_mode?: string | null;
+  base_price?: number | null;
+  status?: string | null;
+  availability_status?: string | null;
+  advanced_options?: CarAdvancedOptionsRow | null;
   created_at?: string | null;
+  updated_at?: string | null;
+  /** Summary-only embed; full car detail from GET `/cars/:id`, not from offer APIs. */
+  offer?: ModuleRowOfferSummary | null;
 };
 
-export type CarPayload = {
-  brand?: string;
-  model?: string;
-  year?: number;
-  price_per_day?: number;
-  currency?: string;
-  [key: string]: unknown;
+/** Expanded fields accepted by `CarService` store/update (aligned with `Car` model). */
+export type CarExpandedWriteFields = {
+  vehicle_type?: string | null;
+  brand?: string | null;
+  model?: string | null;
+  year?: number | null;
+  transmission_type?: string | null;
+  fuel_type?: string | null;
+  fleet?: string | null;
+  category?: string | null;
+  seats?: number | null;
+  suitcases?: number | null;
+  small_bag?: number | null;
+  availability_window_start?: string | null;
+  availability_window_end?: string | null;
+  pricing_mode?: string | null;
+  base_price?: number | null;
+  status?: string | null;
+  availability_status?: string | null;
+  advanced_options?: CarAdvancedOptionsRow | null;
 };
+
+/** POST /cars — must match `CarController::store` validation. */
+export type CarCreatePayload = {
+  offer_id: number;
+  company_id: number;
+  pickup_location: string;
+  dropoff_location: string;
+  vehicle_class: string;
+} & CarExpandedWriteFields;
+
+/** PATCH /cars/{id} — `offer_id` / `company_id` are prohibited server-side. */
+export type CarUpdatePayload = {
+  pickup_location?: string;
+  dropoff_location?: string;
+  vehicle_class?: string;
+} & CarExpandedWriteFields;
 
 export async function apiCars(
   token: string,
@@ -250,7 +1048,7 @@ export async function apiCars(
 
 export async function apiCreateCar(
   token: string,
-  body: CarPayload
+  body: CarCreatePayload
 ): Promise<ApiSuccessEnvelope<CarRow>> {
   return apiFetchJson(`/cars`, { method: "POST", token, body });
 }
@@ -258,7 +1056,7 @@ export async function apiCreateCar(
 export async function apiUpdateCar(
   token: string,
   id: number,
-  body: CarPayload
+  body: CarUpdatePayload
 ): Promise<ApiSuccessEnvelope<CarRow>> {
   return apiFetchJson(`/cars/${id}`, { method: "PATCH", token, body });
 }
@@ -271,27 +1069,92 @@ export async function apiDeleteCar(
 }
 
 // ─── Excursions ───────────────────────────────────────────────────────────────
+/** Mirrors `ExcursionResource` (commerce `/excursions`). */
 export type ExcursionRow = {
   id: number;
+  offer_id?: number | null;
+  company_id?: number | null;
   title?: string | null;
-  city?: string | null;
-  country?: string | null;
   price?: number | null;
   currency?: string | null;
-  duration_hours?: number | null;
-  company_id?: number | null;
+  location?: string | null;
+  country?: string | null;
+  city?: string | null;
+  general_category?: string | null;
+  category?: string | null;
+  excursion_type?: string | null;
+  tour_name?: string | null;
+  overview?: string | null;
+  duration?: string | null;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  language?: string | null;
+  group_size?: number | null;
+  ticket_max_count?: number | null;
+  status?: string | null;
+  is_available?: boolean | null;
+  is_bookable?: boolean | null;
+  includes?: string[] | null;
+  meeting_pickup?: string | null;
+  additional_info?: string | null;
+  cancellation_policy?: string | null;
+  photos?: string[] | null;
+  price_by_dates?: { date: string; price: number }[] | null;
+  /** Step C3 — visibility (backend defaults when omitted). */
+  visibility_rule?: string | null;
+  appears_in_web?: boolean | null;
+  appears_in_admin?: boolean | null;
+  appears_in_zulu_admin?: boolean | null;
   created_at?: string | null;
+  updated_at?: string | null;
+  /** Summary-only embed; full excursion detail from GET `/excursions/:id`, not from offer APIs. */
+  offer?: ModuleRowOfferSummary | null;
 };
 
-export type ExcursionPayload = {
-  title?: string;
-  city?: string;
+/** Expanded fields optional on create (`ExcursionService::excursionStoreValidationRules`). */
+export type ExcursionExpandedWritePayload = {
   country?: string;
-  price?: number;
-  currency?: string;
-  duration_hours?: number;
-  [key: string]: unknown;
+  city?: string;
+  general_category?: string;
+  category?: string;
+  excursion_type?: string;
+  tour_name?: string;
+  overview?: string;
+  starts_at?: string;
+  ends_at?: string;
+  language?: string;
+  ticket_max_count?: number;
+  status?: string;
+  is_available?: boolean;
+  is_bookable?: boolean;
+  includes?: string[];
+  meeting_pickup?: string;
+  additional_info?: string;
+  cancellation_policy?: string;
+  photos?: string[];
+  price_by_dates?: { date: string; price: number }[];
+  /** Step C3 — visibility controls. */
+  visibility_rule?: string;
+  appears_in_web?: boolean;
+  appears_in_admin?: boolean;
+  appears_in_zulu_admin?: boolean;
 };
+
+/** POST /excursions — must match `ExcursionController::store` validation. */
+export type ExcursionCreatePayload = {
+  offer_id: number;
+  company_id: number;
+  location: string;
+  duration: string;
+  group_size: number;
+} & ExcursionExpandedWritePayload;
+
+/** PATCH /excursions/{id} — `offer_id` / `company_id` are prohibited server-side. */
+export type ExcursionUpdatePayload = {
+  location?: string;
+  duration?: string;
+  group_size?: number;
+} & ExcursionExpandedWritePayload;
 
 export async function apiExcursions(
   token: string,
@@ -306,7 +1169,7 @@ export async function apiExcursions(
 
 export async function apiCreateExcursion(
   token: string,
-  body: ExcursionPayload
+  body: ExcursionCreatePayload
 ): Promise<ApiSuccessEnvelope<ExcursionRow>> {
   return apiFetchJson(`/excursions`, { method: "POST", token, body });
 }
@@ -314,7 +1177,7 @@ export async function apiCreateExcursion(
 export async function apiUpdateExcursion(
   token: string,
   id: number,
-  body: ExcursionPayload
+  body: ExcursionUpdatePayload
 ): Promise<ApiSuccessEnvelope<ExcursionRow>> {
   return apiFetchJson(`/excursions/${id}`, { method: "PATCH", token, body });
 }
@@ -339,10 +1202,10 @@ export type VisaRow = {
 };
 
 export type VisaPayload = {
+  /** Required on create (POST); omit on update (PATCH — server prohibits changes). */
+  offer_id?: number;
   country?: string;
   visa_type?: string;
-  price?: number;
-  currency?: string;
   processing_days?: number;
   [key: string]: unknown;
 };

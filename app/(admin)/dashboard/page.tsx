@@ -26,7 +26,13 @@ export default function DashboardPage() {
           if (e instanceof ApiRequestError && e.status === 403) {
             setErr("forbidden");
           } else {
-            setErr(e instanceof ApiRequestError ? e.message : "Failed to load stats");
+            setErr(
+              e instanceof ApiRequestError
+                ? e.message
+                : e instanceof Error
+                  ? e.message
+                  : "Failed to load stats"
+            );
           }
         }
       }
@@ -38,9 +44,9 @@ export default function DashboardPage() {
 
   if (!allowed) {
     return (
-      <div>
-        <h1 className="text-xl font-semibold text-zinc-900">Dashboard</h1>
-        <div className="mt-4">
+      <div className="space-y-4">
+        <h1 className="admin-page-title">Dashboard</h1>
+        <div className="admin-card p-4">
           <ForbiddenNotice message="Platform KPIs require super admin (GET /api/platform-admin/stats)." />
         </div>
       </div>
@@ -49,9 +55,9 @@ export default function DashboardPage() {
 
   if (err === "forbidden") {
     return (
-      <div>
-        <h1 className="text-xl font-semibold text-zinc-900">Dashboard</h1>
-        <div className="mt-4">
+      <div className="space-y-4">
+        <h1 className="admin-page-title">Dashboard</h1>
+        <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
       </div>
@@ -60,18 +66,18 @@ export default function DashboardPage() {
 
   if (err) {
     return (
-      <div>
-        <h1 className="text-xl font-semibold text-zinc-900">Dashboard</h1>
-        <p className="mt-2 text-sm text-red-600">{err}</p>
+      <div className="space-y-3">
+        <h1 className="admin-page-title">Dashboard</h1>
+        <p className="text-sm text-red-600">{err}</p>
       </div>
     );
   }
 
   if (!stats) {
     return (
-      <div>
-        <h1 className="text-xl font-semibold text-zinc-900">Dashboard</h1>
-        <p className="mt-2 text-sm text-zinc-500">Loading platform stats…</p>
+      <div className="space-y-2">
+        <h1 className="admin-page-title">Dashboard</h1>
+        <p className="admin-page-subtitle">Loading platform stats…</p>
       </div>
     );
   }
@@ -80,18 +86,17 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold text-zinc-900">Platform overview</h1>
-      <p className="mt-1 text-sm text-zinc-500">GET /api/platform-admin/stats</p>
-      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <h1 className="admin-page-title">Platform overview</h1>
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {keys.map((k) => (
           <div
             key={k}
-            className="rounded-lg border border-zinc-200 bg-white px-4 py-3 shadow-sm"
+            className="admin-card px-5 py-4"
           >
-            <div className="text-xs font-medium uppercase text-zinc-500">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               {k.replace(/_/g, " ")}
             </div>
-            <div className="mt-1 text-2xl font-semibold tabular-nums text-zinc-900">
+            <div className="mt-2 text-3xl font-semibold tabular-nums text-slate-800">
               {stats[k]}
             </div>
           </div>

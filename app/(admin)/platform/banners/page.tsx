@@ -151,12 +151,12 @@ export default function PlatformBannersPage() {
   return (
     <div>
       <h1 className="text-xl font-semibold">Banner CMS</h1>
-      <p className="mt-1 text-sm text-zinc-500">
-        GET|POST|PATCH|DELETE /api/platform-admin/banners* · multipart image on create / optional on update
+      <p className="mt-1 text-sm text-slate-700">
+        GET|POST|PATCH|DELETE /api/platform-admin/banners* | multipart image on create / optional on update
       </p>
       {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
 
-      <section className="mt-6 rounded border border-zinc-200 bg-white p-4">
+      <section className="mt-6 rounded border border-slate-200 bg-white p-4">
         <h2 className="text-sm font-semibold">Create banner</h2>
         <div className="mt-3 grid max-w-xl gap-2 text-sm">
           <label className="block">
@@ -173,7 +173,7 @@ export default function PlatformBannersPage() {
             <input
               value={createTitleEn}
               onChange={(e) => setCreateTitleEn(e.target.value)}
-              className="ml-2 w-full max-w-md rounded border border-zinc-300 px-2 py-1"
+              className="ml-2 w-full max-w-md rounded border border-slate-300 px-2 py-1"
             />
           </label>
           <label>
@@ -181,7 +181,7 @@ export default function PlatformBannersPage() {
             <input
               value={createTitleRu}
               onChange={(e) => setCreateTitleRu(e.target.value)}
-              className="ml-2 w-full max-w-md rounded border border-zinc-300 px-2 py-1"
+              className="ml-2 w-full max-w-md rounded border border-slate-300 px-2 py-1"
             />
           </label>
           <label>
@@ -189,7 +189,7 @@ export default function PlatformBannersPage() {
             <input
               value={createTitleHy}
               onChange={(e) => setCreateTitleHy(e.target.value)}
-              className="ml-2 w-full max-w-md rounded border border-zinc-300 px-2 py-1"
+              className="ml-2 w-full max-w-md rounded border border-slate-300 px-2 py-1"
             />
           </label>
           <label>
@@ -197,7 +197,7 @@ export default function PlatformBannersPage() {
             <input
               value={createLink}
               onChange={(e) => setCreateLink(e.target.value)}
-              className="ml-2 w-full max-w-md rounded border border-zinc-300 px-2 py-1"
+              className="ml-2 w-full max-w-md rounded border border-slate-300 px-2 py-1"
             />
           </label>
           <label>
@@ -205,14 +205,14 @@ export default function PlatformBannersPage() {
             <input
               value={createSort}
               onChange={(e) => setCreateSort(e.target.value)}
-              className="ml-2 w-24 rounded border border-zinc-300 px-2 py-1 tabular-nums"
+              className="ml-2 w-24 rounded border border-slate-300 px-2 py-1 tabular-nums"
             />
           </label>
           <button
             type="button"
             disabled={busyId !== null}
             onClick={() => submitCreate()}
-            className="w-fit rounded border border-zinc-300 bg-zinc-50 px-3 py-1 text-sm disabled:opacity-40"
+            className="w-fit rounded border border-slate-300 bg-slate-100 px-3 py-1 text-sm disabled:opacity-40"
           >
             Create
           </button>
@@ -237,7 +237,7 @@ export default function PlatformBannersPage() {
               <input
                 value={editTitleEn}
                 onChange={(e) => setEditTitleEn(e.target.value)}
-                className="ml-2 w-full max-w-md rounded border border-zinc-300 px-2 py-1"
+                className="ml-2 w-full max-w-md rounded border border-slate-300 px-2 py-1"
               />
             </label>
             <label>
@@ -245,7 +245,7 @@ export default function PlatformBannersPage() {
               <input
                 value={editTitleRu}
                 onChange={(e) => setEditTitleRu(e.target.value)}
-                className="ml-2 w-full max-w-md rounded border border-zinc-300 px-2 py-1"
+                className="ml-2 w-full max-w-md rounded border border-slate-300 px-2 py-1"
               />
             </label>
             <label>
@@ -253,7 +253,7 @@ export default function PlatformBannersPage() {
               <input
                 value={editTitleHy}
                 onChange={(e) => setEditTitleHy(e.target.value)}
-                className="ml-2 w-full max-w-md rounded border border-zinc-300 px-2 py-1"
+                className="ml-2 w-full max-w-md rounded border border-slate-300 px-2 py-1"
               />
             </label>
             <label>
@@ -261,7 +261,7 @@ export default function PlatformBannersPage() {
               <input
                 value={editLink}
                 onChange={(e) => setEditLink(e.target.value)}
-                className="ml-2 w-full max-w-md rounded border border-zinc-300 px-2 py-1"
+                className="ml-2 w-full max-w-md rounded border border-slate-300 px-2 py-1"
               />
             </label>
             <label>
@@ -269,7 +269,7 @@ export default function PlatformBannersPage() {
               <input
                 value={editSort}
                 onChange={(e) => setEditSort(e.target.value)}
-                className="ml-2 w-24 rounded border border-zinc-300 px-2 py-1 tabular-nums"
+                className="ml-2 w-24 rounded border border-slate-300 px-2 py-1 tabular-nums"
               />
             </label>
             <div className="flex gap-2">
@@ -277,14 +277,14 @@ export default function PlatformBannersPage() {
                 type="button"
                 disabled={busyId !== null}
                 onClick={() => submitEdit()}
-                className="rounded border border-zinc-300 bg-white px-3 py-1 text-sm disabled:opacity-40"
+                className="rounded border border-slate-300 bg-white px-3 py-1 text-sm disabled:opacity-40"
               >
                 Save
               </button>
               <button
                 type="button"
                 onClick={() => setEditing(null)}
-                className="rounded border border-zinc-300 bg-white px-3 py-1 text-sm"
+                className="rounded border border-slate-300 bg-white px-3 py-1 text-sm"
               >
                 Cancel
               </button>
@@ -293,9 +293,9 @@ export default function PlatformBannersPage() {
         </section>
       )}
 
-      <div className="mt-6 overflow-x-auto rounded border border-zinc-200 bg-white">
+      <div className="mt-6 overflow-x-auto rounded border border-slate-200 bg-white">
         <table className="w-full min-w-[720px] text-left text-sm">
-          <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase text-zinc-500">
+          <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
             <tr>
               <th className="px-3 py-2">ID</th>
               <th className="px-3 py-2">Preview</th>
@@ -310,25 +310,25 @@ export default function PlatformBannersPage() {
             {rows.map((r) => {
               const src = resolveBannerImageSrc(r);
               return (
-                <tr key={r.id} className="border-b border-zinc-100 align-top">
+                <tr key={r.id} className="border-b border-slate-100 align-top">
                   <td className="px-3 py-2 tabular-nums">{r.id}</td>
                   <td className="px-3 py-2">
                     {src ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={src} alt="" className="h-14 w-28 object-cover" />
                     ) : (
-                      "—"
+                      "-"
                     )}
                   </td>
-                  <td className="max-w-xs px-3 py-2 text-xs text-zinc-700">
-                    en: {r.title_en ?? "—"}
+                  <td className="max-w-xs px-3 py-2 text-xs text-slate-700">
+                    en: {r.title_en ?? "-"}
                     <br />
-                    ru: {r.title_ru ?? "—"}
+                    ru: {r.title_ru ?? "-"}
                     <br />
-                    hy: {r.title_hy ?? "—"}
+                    hy: {r.title_hy ?? "-"}
                   </td>
                   <td className="max-w-[140px] truncate px-3 py-2 text-xs">
-                    {r.link_url ?? "—"}
+                    {r.link_url ?? "-"}
                   </td>
                   <td className="px-3 py-2 tabular-nums">{r.sort_order}</td>
                   <td className="px-3 py-2">{r.is_active ? "yes" : "no"}</td>
@@ -338,7 +338,7 @@ export default function PlatformBannersPage() {
                         type="button"
                         disabled={busyId !== null}
                         onClick={() => openEdit(r)}
-                        className="text-left text-xs text-zinc-700 underline disabled:opacity-40"
+                        className="text-left text-xs text-slate-700 underline disabled:opacity-40"
                       >
                         Edit
                       </button>

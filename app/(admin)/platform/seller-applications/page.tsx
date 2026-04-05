@@ -20,7 +20,7 @@ export default function SellerApplicationsPage() {
   const [rows, setRows] = useState<SellerApplicationRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
   const [page, setPage] = useState(1);
-  /** Empty = backend default (pending + under_review). Set to explicit status or "__all__" for no filter — backend needs status for all; we use common statuses */
+  /** Empty = backend default (pending + under_review). Set to explicit status or "__all__" for no filter - backend needs status for all; we use common statuses */
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
@@ -105,11 +105,8 @@ export default function SellerApplicationsPage() {
   return (
     <div>
       <h1 className="text-xl font-semibold">Seller applications</h1>
-      <p className="mt-1 text-sm text-zinc-500">
-        GET /api/platform-admin/seller-applications — approve/reject POST routes
-      </p>
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <label className="text-sm text-zinc-600">
+        <label className="text-sm text-slate-600">
           Status filter
           <select
             value={statusFilter}
@@ -117,7 +114,7 @@ export default function SellerApplicationsPage() {
               setPage(1);
               setStatusFilter(e.target.value);
             }}
-            className="ml-2 rounded border border-zinc-300 px-2 py-1 text-sm"
+            className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
           >
             <option value="">Default queue (pending / under review)</option>
             <option value="pending">pending</option>
@@ -128,9 +125,9 @@ export default function SellerApplicationsPage() {
         </label>
       </div>
       {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
-      <div className="mt-4 overflow-x-auto rounded border border-zinc-200 bg-white">
+      <div className="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
         <table className="w-full min-w-[800px] text-left text-sm">
-          <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase text-zinc-500">
+          <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
             <tr>
               <th className="px-3 py-2">ID</th>
               <th className="px-3 py-2">Company</th>
@@ -142,12 +139,12 @@ export default function SellerApplicationsPage() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-zinc-100">
+              <tr key={r.id} className="border-b border-slate-100">
                 <td className="px-3 py-2 tabular-nums">{r.id}</td>
                 <td className="px-3 py-2">{r.company_name ?? r.company_id}</td>
                 <td className="px-3 py-2">{r.service_type}</td>
                 <td className="px-3 py-2">{r.status}</td>
-                <td className="px-3 py-2 text-xs text-zinc-600">{r.applied_at ?? "—"}</td>
+                <td className="px-3 py-2 text-xs text-slate-600">{r.applied_at ?? "-"}</td>
                 <td className="space-x-2 px-3 py-2">
                   <button
                     type="button"

@@ -317,13 +317,13 @@ export default function PlatformLocationsPage() {
   return (
     <div>
       <h1 className="text-xl font-semibold">Locations / destinations</h1>
-      <p className="mt-1 text-sm text-zinc-500">
+      <p className="mt-1 text-sm text-slate-700">
         GET|POST /api/locations/countries, /countries/{"{id}"}/regions, POST /regions, GET
-        /regions/{"{id}"}/cities, POST /cities — super admin only
+        /regions/{"{id}"}/cities, POST /cities - super admin only
       </p>
       {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
 
-      <section className="mt-6 rounded border border-zinc-200 bg-white p-4">
+      <section className="mt-6 rounded border border-slate-200 bg-white p-4">
         <h2 className="text-sm font-semibold">Countries</h2>
         <div className="mt-3 flex flex-wrap items-end gap-2 text-sm">
           <label>
@@ -331,7 +331,7 @@ export default function PlatformLocationsPage() {
             <input
               value={cName}
               onChange={(e) => setCName(e.target.value)}
-              className="ml-1 rounded border border-zinc-300 px-2 py-1"
+              className="ml-1 rounded border border-slate-300 px-2 py-1"
             />
           </label>
           <label>
@@ -340,7 +340,7 @@ export default function PlatformLocationsPage() {
               value={cCode}
               onChange={(e) => setCCode(e.target.value.toUpperCase())}
               maxLength={2}
-              className="ml-1 w-14 rounded border border-zinc-300 px-2 py-1 uppercase"
+              className="ml-1 w-14 rounded border border-slate-300 px-2 py-1 uppercase"
             />
           </label>
           <label>
@@ -348,7 +348,7 @@ export default function PlatformLocationsPage() {
             <input
               value={cFlag}
               onChange={(e) => setCFlag(e.target.value)}
-              className="ml-1 w-16 rounded border border-zinc-300 px-2 py-1"
+              className="ml-1 w-16 rounded border border-slate-300 px-2 py-1"
             />
           </label>
           <label>
@@ -356,21 +356,21 @@ export default function PlatformLocationsPage() {
             <input
               value={cSort}
               onChange={(e) => setCSort(e.target.value)}
-              className="ml-1 w-16 rounded border border-zinc-300 px-2 py-1 tabular-nums"
+              className="ml-1 w-16 rounded border border-slate-300 px-2 py-1 tabular-nums"
             />
           </label>
           <button
             type="button"
             disabled={busy}
             onClick={() => addCountry()}
-            className="rounded border border-zinc-300 bg-zinc-50 px-3 py-1 disabled:opacity-40"
+            className="rounded border border-slate-300 bg-slate-100 px-3 py-1 disabled:opacity-40"
           >
             Add country
           </button>
         </div>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[520px] text-left text-sm">
-            <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase text-zinc-500">
+            <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
               <tr>
                 <th className="px-2 py-2">ID</th>
                 <th className="px-2 py-2">Name</th>
@@ -384,15 +384,15 @@ export default function PlatformLocationsPage() {
                 <tr
                   key={c.id}
                   className={
-                    "border-b border-zinc-100 " +
-                    (selectedCountryId === c.id ? "bg-zinc-100" : "")
+                    "border-b border-slate-100 " +
+                    (selectedCountryId === c.id ? "bg-slate-100" : "")
                   }
                 >
                   <td className="px-2 py-2 tabular-nums">{c.id}</td>
                   <td className="px-2 py-2">{c.name}</td>
                   <td className="px-2 py-2">{c.code}</td>
-                  <td className="px-2 py-2 text-xs text-zinc-600">
-                    {c.regions_count ?? "—"} / {c.cities_count ?? "—"}
+                  <td className="px-2 py-2 text-xs text-slate-600">
+                    {c.regions_count ?? "-"} / {c.cities_count ?? "-"}
                   </td>
                   <td className="px-2 py-2">
                     <button
@@ -401,7 +401,7 @@ export default function PlatformLocationsPage() {
                         setSelectedCountryId(c.id);
                         setSelectedRegionId(null);
                       }}
-                      className="mr-2 text-xs text-zinc-700 underline"
+                      className="mr-2 text-xs text-slate-700 underline"
                     >
                       Select
                     </button>
@@ -409,7 +409,7 @@ export default function PlatformLocationsPage() {
                       type="button"
                       disabled={busy}
                       onClick={() => updCountry(c)}
-                      className="mr-2 text-xs text-zinc-700 underline disabled:opacity-40"
+                      className="mr-2 text-xs text-slate-700 underline disabled:opacity-40"
                     >
                       Edit
                     </button>
@@ -430,7 +430,7 @@ export default function PlatformLocationsPage() {
       </section>
 
       {selectedCountryId != null && (
-        <section className="mt-6 rounded border border-zinc-200 bg-white p-4">
+        <section className="mt-6 rounded border border-slate-200 bg-white p-4">
           <h2 className="text-sm font-semibold">Regions (country #{selectedCountryId})</h2>
           <div className="mt-3 flex flex-wrap items-end gap-2 text-sm">
             <label>
@@ -438,7 +438,7 @@ export default function PlatformLocationsPage() {
               <input
                 value={rName}
                 onChange={(e) => setRName(e.target.value)}
-                className="ml-1 rounded border border-zinc-300 px-2 py-1"
+                className="ml-1 rounded border border-slate-300 px-2 py-1"
               />
             </label>
             <label>
@@ -446,7 +446,7 @@ export default function PlatformLocationsPage() {
               <input
                 value={rCode}
                 onChange={(e) => setRCode(e.target.value)}
-                className="ml-1 rounded border border-zinc-300 px-2 py-1"
+                className="ml-1 rounded border border-slate-300 px-2 py-1"
               />
             </label>
             <label>
@@ -454,21 +454,21 @@ export default function PlatformLocationsPage() {
               <input
                 value={rSort}
                 onChange={(e) => setRSort(e.target.value)}
-                className="ml-1 w-16 rounded border border-zinc-300 px-2 py-1 tabular-nums"
+                className="ml-1 w-16 rounded border border-slate-300 px-2 py-1 tabular-nums"
               />
             </label>
             <button
               type="button"
               disabled={busy}
               onClick={() => addRegion()}
-              className="rounded border border-zinc-300 bg-zinc-50 px-3 py-1 disabled:opacity-40"
+              className="rounded border border-slate-300 bg-slate-100 px-3 py-1 disabled:opacity-40"
             >
               Add region
             </button>
           </div>
           <div className="mt-4 overflow-x-auto">
             <table className="w-full min-w-[480px] text-left text-sm">
-              <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase text-zinc-500">
+              <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
                 <tr>
                   <th className="px-2 py-2">ID</th>
                   <th className="px-2 py-2">Name</th>
@@ -481,18 +481,18 @@ export default function PlatformLocationsPage() {
                   <tr
                     key={r.id}
                     className={
-                      "border-b border-zinc-100 " +
-                      (selectedRegionId === r.id ? "bg-zinc-100" : "")
+                      "border-b border-slate-100 " +
+                      (selectedRegionId === r.id ? "bg-slate-100" : "")
                     }
                   >
                     <td className="px-2 py-2 tabular-nums">{r.id}</td>
                     <td className="px-2 py-2">{r.name}</td>
-                    <td className="px-2 py-2 tabular-nums">{r.cities_count ?? "—"}</td>
+                    <td className="px-2 py-2 tabular-nums">{r.cities_count ?? "-"}</td>
                     <td className="px-2 py-2">
                       <button
                         type="button"
                         onClick={() => setSelectedRegionId(r.id)}
-                        className="mr-2 text-xs text-zinc-700 underline"
+                        className="mr-2 text-xs text-slate-700 underline"
                       >
                         Select
                       </button>
@@ -500,7 +500,7 @@ export default function PlatformLocationsPage() {
                         type="button"
                         disabled={busy}
                         onClick={() => updRegion(r)}
-                        className="mr-2 text-xs text-zinc-700 underline disabled:opacity-40"
+                        className="mr-2 text-xs text-slate-700 underline disabled:opacity-40"
                       >
                         Edit
                       </button>
@@ -522,7 +522,7 @@ export default function PlatformLocationsPage() {
       )}
 
       {selectedRegionId != null && (
-        <section className="mt-6 rounded border border-zinc-200 bg-white p-4">
+        <section className="mt-6 rounded border border-slate-200 bg-white p-4">
           <h2 className="text-sm font-semibold">Cities (region #{selectedRegionId})</h2>
           <div className="mt-3 flex flex-wrap items-end gap-2 text-sm">
             <label>
@@ -530,7 +530,7 @@ export default function PlatformLocationsPage() {
               <input
                 value={ciName}
                 onChange={(e) => setCiName(e.target.value)}
-                className="ml-1 rounded border border-zinc-300 px-2 py-1"
+                className="ml-1 rounded border border-slate-300 px-2 py-1"
               />
             </label>
             <label>
@@ -538,7 +538,7 @@ export default function PlatformLocationsPage() {
               <input
                 value={ciSort}
                 onChange={(e) => setCiSort(e.target.value)}
-                className="ml-1 w-16 rounded border border-zinc-300 px-2 py-1 tabular-nums"
+                className="ml-1 w-16 rounded border border-slate-300 px-2 py-1 tabular-nums"
               />
             </label>
             <label>
@@ -546,7 +546,7 @@ export default function PlatformLocationsPage() {
               <input
                 value={ciLat}
                 onChange={(e) => setCiLat(e.target.value)}
-                className="ml-1 w-24 rounded border border-zinc-300 px-2 py-1 tabular-nums"
+                className="ml-1 w-24 rounded border border-slate-300 px-2 py-1 tabular-nums"
               />
             </label>
             <label>
@@ -554,21 +554,21 @@ export default function PlatformLocationsPage() {
               <input
                 value={ciLng}
                 onChange={(e) => setCiLng(e.target.value)}
-                className="ml-1 w-24 rounded border border-zinc-300 px-2 py-1 tabular-nums"
+                className="ml-1 w-24 rounded border border-slate-300 px-2 py-1 tabular-nums"
               />
             </label>
             <button
               type="button"
               disabled={busy}
               onClick={() => addCity()}
-              className="rounded border border-zinc-300 bg-zinc-50 px-3 py-1 disabled:opacity-40"
+              className="rounded border border-slate-300 bg-slate-100 px-3 py-1 disabled:opacity-40"
             >
               Add city
             </button>
           </div>
           <div className="mt-4 overflow-x-auto">
             <table className="w-full min-w-[400px] text-left text-sm">
-              <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase text-zinc-500">
+              <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
                 <tr>
                   <th className="px-2 py-2">ID</th>
                   <th className="px-2 py-2">Name</th>
@@ -577,7 +577,7 @@ export default function PlatformLocationsPage() {
               </thead>
               <tbody>
                 {cities.map((x) => (
-                  <tr key={x.id} className="border-b border-zinc-100">
+                  <tr key={x.id} className="border-b border-slate-100">
                     <td className="px-2 py-2 tabular-nums">{x.id}</td>
                     <td className="px-2 py-2">{x.name}</td>
                     <td className="px-2 py-2">
@@ -585,7 +585,7 @@ export default function PlatformLocationsPage() {
                         type="button"
                         disabled={busy}
                         onClick={() => updCity(x)}
-                        className="mr-2 text-xs text-zinc-700 underline disabled:opacity-40"
+                        className="mr-2 text-xs text-slate-700 underline disabled:opacity-40"
                       >
                         Edit
                       </button>

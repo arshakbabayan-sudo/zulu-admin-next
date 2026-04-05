@@ -66,9 +66,8 @@ export default function PlatformPaymentsPage() {
   return (
     <div>
       <h1 className="text-xl font-semibold">Platform payments</h1>
-      <p className="mt-1 text-sm text-zinc-500">GET /api/platform-admin/payments</p>
       <div className="mt-4">
-        <label className="text-sm text-zinc-600">
+        <label className="text-sm text-slate-600">
           Status
           <input
             value={statusFilter}
@@ -77,14 +76,14 @@ export default function PlatformPaymentsPage() {
               setStatusFilter(e.target.value);
             }}
             placeholder="e.g. completed"
-            className="ml-2 rounded border border-zinc-300 px-2 py-1 text-sm"
+            className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
           />
         </label>
       </div>
       {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
-      <div className="mt-4 overflow-x-auto rounded border border-zinc-200 bg-white">
+      <div className="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
         <table className="w-full min-w-[800px] text-left text-sm">
-          <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase text-zinc-500">
+          <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
             <tr>
               <th className="px-3 py-2">ID</th>
               <th className="px-3 py-2">Amount</th>
@@ -97,17 +96,17 @@ export default function PlatformPaymentsPage() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-zinc-100">
+              <tr key={r.id} className="border-b border-slate-100">
                 <td className="px-3 py-2 tabular-nums">{r.id}</td>
                 <td className="px-3 py-2 tabular-nums">{r.amount}</td>
                 <td className="px-3 py-2">{r.currency}</td>
                 <td className="px-3 py-2">{r.status}</td>
-                <td className="px-3 py-2">{r.payment_method ?? "—"}</td>
-                <td className="px-3 py-2 text-xs text-zinc-600">{r.paid_at ?? "—"}</td>
+                <td className="px-3 py-2">{r.payment_method ?? "-"}</td>
+                <td className="px-3 py-2 text-xs text-slate-600">{r.paid_at ?? "-"}</td>
                 <td className="px-3 py-2 text-xs">
                   {r.invoice
                     ? `#${r.invoice.id} ${r.invoice.unique_booking_reference ?? ""}`
-                    : r.invoice_id ?? "—"}
+                    : r.invoice_id ?? "-"}
                 </td>
               </tr>
             ))}

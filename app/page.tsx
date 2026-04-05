@@ -1,21 +1,10 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { useAdminAuth } from "@/contexts/AdminAuthContext";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-
+/**
+ * Root `/` never needs client auth: server redirect avoids a blank "Redirecting…"
+ * shell if JS fails or context bootstraps slowly. Logged-in users hit `/login` briefly;
+ * `app/login/page.tsx` then sends them to `/dashboard` when token + user are ready.
+ */
 export default function HomePage() {
-  const { token, bootstrapped } = useAdminAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!bootstrapped) return;
-    router.replace(token ? "/dashboard" : "/login");
-  }, [bootstrapped, token, router]);
-
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 text-sm text-zinc-600">
-      Redirecting…
-    </div>
-  );
+  redirect("/login");
 }

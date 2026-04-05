@@ -84,11 +84,8 @@ export default function SupportTicketsPage() {
   return (
     <div>
       <h1 className="text-xl font-semibold">Support tickets</h1>
-      <p className="mt-1 text-sm text-zinc-500">
-        GET /api/support/tickets · super admin (optional ?company_id=) or company admin (scoped)
-      </p>
       <div className="mt-4 flex flex-wrap items-end gap-3 text-sm">
-        <label className="text-zinc-600">
+        <label className="text-slate-600">
           Status
           <select
             value={statusFilter}
@@ -96,7 +93,7 @@ export default function SupportTicketsPage() {
               setPage(1);
               setStatusFilter(e.target.value);
             }}
-            className="ml-2 rounded border border-zinc-300 px-2 py-1"
+            className="ml-2 rounded border border-slate-300 px-2 py-1"
           >
             <option value="">All</option>
             {STATUSES.map((s) => (
@@ -106,7 +103,7 @@ export default function SupportTicketsPage() {
             ))}
           </select>
         </label>
-        <label className="text-zinc-600">
+        <label className="text-slate-600">
           Priority
           <select
             value={priorityFilter}
@@ -114,7 +111,7 @@ export default function SupportTicketsPage() {
               setPage(1);
               setPriorityFilter(e.target.value);
             }}
-            className="ml-2 rounded border border-zinc-300 px-2 py-1"
+            className="ml-2 rounded border border-slate-300 px-2 py-1"
           >
             <option value="">All</option>
             {PRIORITIES.map((p) => (
@@ -124,24 +121,24 @@ export default function SupportTicketsPage() {
             ))}
           </select>
         </label>
-        <label className="text-zinc-600">
+        <label className="text-slate-600">
           Search subject
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onBlur={() => setPage(1)}
-            className="ml-2 rounded border border-zinc-300 px-2 py-1"
+            className="ml-2 rounded border border-slate-300 px-2 py-1"
             placeholder="Substring"
           />
         </label>
         {isSuper && (
-          <label className="text-zinc-600">
+          <label className="text-slate-600">
             Company ID
             <input
               value={companyIdFilter}
               onChange={(e) => setCompanyIdFilter(e.target.value)}
               onBlur={() => setPage(1)}
-              className="ml-2 w-24 rounded border border-zinc-300 px-2 py-1 tabular-nums"
+              className="ml-2 w-24 rounded border border-slate-300 px-2 py-1 tabular-nums"
               placeholder="All"
             />
           </label>
@@ -152,15 +149,15 @@ export default function SupportTicketsPage() {
             setPage(1);
             load();
           }}
-          className="rounded border border-zinc-300 bg-white px-3 py-1"
+          className="rounded border border-slate-300 bg-white px-3 py-1"
         >
           Apply
         </button>
       </div>
       {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
-      <div className="mt-4 overflow-x-auto rounded border border-zinc-200 bg-white">
+      <div className="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
         <table className="w-full min-w-[640px] text-left text-sm">
-          <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase text-zinc-500">
+          <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
             <tr>
               <th className="px-3 py-2">ID</th>
               <th className="px-3 py-2">Subject</th>
@@ -174,16 +171,16 @@ export default function SupportTicketsPage() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-zinc-100">
+              <tr key={r.id} className="border-b border-slate-100">
                 <td className="px-3 py-2 tabular-nums">{r.id}</td>
                 <td className="max-w-xs px-3 py-2">{r.subject}</td>
                 <td className="px-3 py-2">{r.status}</td>
                 <td className="px-3 py-2">{r.priority}</td>
-                <td className="px-3 py-2 tabular-nums">{r.company_id ?? "—"}</td>
-                <td className="px-3 py-2 text-xs">{r.user?.name ?? "—"}</td>
-                <td className="px-3 py-2 tabular-nums">{r.messages_count ?? "—"}</td>
+                <td className="px-3 py-2 tabular-nums">{r.company_id ?? "-"}</td>
+                <td className="px-3 py-2 text-xs">{r.user?.name ?? "-"}</td>
+                <td className="px-3 py-2 tabular-nums">{r.messages_count ?? "-"}</td>
                 <td className="px-3 py-2">
-                  <Link href={`/support/tickets/${r.id}`} className="text-zinc-700 underline">
+                  <Link href={`/support/tickets/${r.id}`} className="text-slate-700 underline">
                     Open
                   </Link>
                 </td>

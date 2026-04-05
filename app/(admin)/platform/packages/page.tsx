@@ -69,7 +69,7 @@ export default function PlatformPackagesGovernancePage() {
   async function deactivate(pkg: PlatformGovernancePackageRow) {
     if (!token) return;
     const reason = window.prompt(
-      `Optional reason for force-deactivating “${pkg.package_title}” (package #${pkg.id})`,
+      `Optional reason for force-deactivating "${pkg.package_title}" (package #${pkg.id})`,
       ""
     );
     if (reason === null) return;
@@ -109,11 +109,8 @@ export default function PlatformPackagesGovernancePage() {
   return (
     <div>
       <h1 className="text-xl font-semibold">Packages governance</h1>
-      <p className="mt-1 text-sm text-zinc-500">
-        GET /api/platform-admin/packages — POST …/packages/{"{id}"}/deactivate
-      </p>
       <div className="mt-4 flex flex-wrap items-end gap-3">
-        <label className="text-sm text-zinc-600">
+        <label className="text-sm text-slate-600">
           Status
           <input
             value={statusFilter}
@@ -122,30 +119,30 @@ export default function PlatformPackagesGovernancePage() {
               setStatusFilter(e.target.value);
             }}
             placeholder="package status"
-            className="ml-2 rounded border border-zinc-300 px-2 py-1 text-sm"
+            className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
           />
         </label>
-        <label className="text-sm text-zinc-600">
+        <label className="text-sm text-slate-600">
           Company ID
           <input
             value={companyIdDraft}
             onChange={(e) => setCompanyIdDraft(e.target.value)}
             placeholder="optional"
-            className="ml-2 w-24 rounded border border-zinc-300 px-2 py-1 text-sm tabular-nums"
+            className="ml-2 w-24 rounded border border-slate-300 px-2 py-1 text-sm tabular-nums"
           />
         </label>
         <button
           type="button"
           onClick={applyCompanyFilter}
-          className="rounded border border-zinc-300 bg-white px-3 py-1 text-sm hover:bg-zinc-50"
+          className="rounded border border-slate-300 bg-white px-3 py-1 text-sm hover:bg-slate-100"
         >
           Apply company
         </button>
       </div>
       {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
-      <div className="mt-4 overflow-x-auto rounded border border-zinc-200 bg-white">
+      <div className="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
         <table className="w-full min-w-[880px] text-left text-sm">
-          <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase text-zinc-500">
+          <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
             <tr>
               <th className="px-3 py-2">ID</th>
               <th className="px-3 py-2">Title</th>
@@ -158,13 +155,13 @@ export default function PlatformPackagesGovernancePage() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-zinc-100">
+              <tr key={r.id} className="border-b border-slate-100">
                 <td className="px-3 py-2 tabular-nums">{r.id}</td>
                 <td className="px-3 py-2">{r.package_title}</td>
                 <td className="px-3 py-2 text-xs">{r.package_type}</td>
                 <td className="px-3 py-2">{r.status}</td>
                 <td className="px-3 py-2 text-xs">
-                  {r.company ? r.company.name : `— (${r.company_id})`}
+                  {r.company ? r.company.name : `- (${r.company_id})`}
                 </td>
                 <td className="px-3 py-2 text-xs tabular-nums">
                   {r.is_public ? "yes" : "no"} / {r.is_bookable ? "yes" : "no"}
@@ -176,7 +173,7 @@ export default function PlatformPackagesGovernancePage() {
                     onClick={() => deactivate(r)}
                     className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-800 hover:bg-red-100 disabled:opacity-50"
                   >
-                    {busyId === r.id ? "…" : "Force deactivate"}
+                    {busyId === r.id ? "..." : "Force deactivate"}
                   </button>
                 </td>
               </tr>

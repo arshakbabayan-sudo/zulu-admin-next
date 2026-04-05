@@ -55,11 +55,8 @@ export default function CompanyApplicationsPage() {
   return (
     <div>
       <h1 className="text-xl font-semibold">Company applications</h1>
-      <p className="mt-1 text-sm text-zinc-500">
-        GET /api/platform-admin/applications — detail, approve, and reject on the application page
-      </p>
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <label className="text-sm text-zinc-600">
+        <label className="text-sm text-slate-600">
           Status
           <select
             value={statusFilter}
@@ -67,7 +64,7 @@ export default function CompanyApplicationsPage() {
               setPage(1);
               setStatusFilter(e.target.value);
             }}
-            className="ml-2 rounded border border-zinc-300 px-2 py-1 text-sm"
+            className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
           >
             <option value="">All</option>
             <option value="pending">pending</option>
@@ -78,9 +75,9 @@ export default function CompanyApplicationsPage() {
         </label>
       </div>
       {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
-      <div className="mt-4 overflow-x-auto rounded border border-zinc-200 bg-white">
+      <div className="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
         <table className="w-full min-w-[720px] text-left text-sm">
-          <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase text-zinc-500">
+          <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
             <tr>
               <th className="px-3 py-2">ID</th>
               <th className="px-3 py-2">Company</th>
@@ -92,12 +89,12 @@ export default function CompanyApplicationsPage() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-zinc-100">
+              <tr key={r.id} className="border-b border-slate-100">
                 <td className="px-3 py-2 tabular-nums">{r.id}</td>
                 <td className="px-3 py-2">{r.company_name}</td>
                 <td className="px-3 py-2">{r.business_email}</td>
                 <td className="px-3 py-2">{r.status}</td>
-                <td className="px-3 py-2 text-xs text-zinc-600">{r.submitted_at ?? "—"}</td>
+                <td className="px-3 py-2 text-xs text-slate-600">{r.submitted_at ?? "-"}</td>
                 <td className="px-3 py-2">
                   <Link
                     href={`/platform/company-applications/${r.id}`}

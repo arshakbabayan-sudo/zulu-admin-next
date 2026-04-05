@@ -79,37 +79,34 @@ export default function PlatformSettingsPage() {
   return (
     <div>
       <h1 className="text-xl font-semibold">Platform settings</h1>
-      <p className="mt-1 text-sm text-zinc-500">
-        GET /api/platform-admin/settings · PATCH /api/platform-admin/settings/{"{key}"} with {"{ value }"}
-      </p>
       {msg && <p className="mt-2 text-sm text-emerald-700">{msg}</p>}
       {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
       <div className="mt-4 space-y-4">
         {rows.map((r) => (
           <div
             key={r.id}
-            className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm"
+            className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
           >
-            <div className="text-xs font-mono text-zinc-500">{r.key}</div>
+            <div className="text-xs font-mono text-slate-700">{r.key}</div>
             {r.description && (
-              <p className="mt-1 text-xs text-zinc-600">{r.description}</p>
+              <p className="mt-1 text-xs text-slate-600">{r.description}</p>
             )}
-            <div className="mt-2 text-xs text-zinc-400">
-              type: {r.type} · id: {r.id}
+            <div className="mt-2 text-xs text-slate-400">
+              type: {r.type} | id: {r.id}
             </div>
             <textarea
               value={drafts[r.key] ?? r.value}
               onChange={(e) => setDrafts((prev) => ({ ...prev, [r.key]: e.target.value }))}
               rows={3}
-              className="mt-2 w-full max-w-xl rounded border border-zinc-300 px-2 py-1 font-mono text-sm"
+              className="mt-2 w-full max-w-xl rounded border border-slate-300 px-2 py-1 font-mono text-sm"
             />
             <button
               type="button"
               disabled={busyKey === r.key}
               onClick={() => save(r.key)}
-              className="mt-2 rounded bg-zinc-900 px-3 py-1 text-sm text-white disabled:opacity-50"
+              className="mt-2 rounded bg-slate-800 px-3 py-1 text-sm text-white disabled:opacity-50"
             >
-              {busyKey === r.key ? "Saving…" : "Save"}
+              {busyKey === r.key ? "Saving..." : "Save"}
             </button>
           </div>
         ))}

@@ -64,10 +64,6 @@ export default function OperatorStatisticsPage() {
   return (
     <div>
       <h1 className="text-xl font-semibold">Operator statistics</h1>
-      <p className="mt-1 text-sm text-zinc-500">
-        GET /api/operator/statistics — super scope uses optional ?company_id=; others use membership
-        company context.
-      </p>
       {isSuper && (
         <div className="mt-4 flex flex-wrap items-end gap-2">
           <label className="text-sm">
@@ -78,28 +74,28 @@ export default function OperatorStatisticsPage() {
               value={companyIdInput}
               onChange={(e) => setCompanyIdInput(e.target.value)}
               placeholder="Required for super-admin scope"
-              className="ml-2 rounded border border-zinc-300 px-2 py-1 text-sm"
+              className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
             />
           </label>
           <button
             type="button"
             onClick={() => load()}
             disabled={loading}
-            className="rounded bg-zinc-900 px-3 py-1 text-sm text-white disabled:opacity-50"
+            className="rounded bg-slate-800 px-3 py-1 text-sm text-white disabled:opacity-50"
           >
             Load
           </button>
         </div>
       )}
       {!isSuper && defaultCompanyId && (
-        <p className="mt-2 text-xs text-zinc-500">
+        <p className="mt-2 text-xs text-slate-700">
           Using context active company id {defaultCompanyId} (server resolves membership).
         </p>
       )}
       {err && <p className="mt-4 text-sm text-red-600">{err}</p>}
-      {loading && <p className="mt-4 text-sm text-zinc-500">Loading…</p>}
+      {loading && <p className="mt-4 text-sm text-slate-700">Loading...</p>}
       {payload !== null && !loading && (
-        <pre className="mt-4 max-h-[70vh] overflow-auto rounded border border-zinc-200 bg-zinc-900 p-4 text-xs text-zinc-100">
+        <pre className="mt-4 max-h-[70vh] overflow-auto rounded border border-slate-200 bg-slate-800 p-4 text-xs text-slate-100">
           {JSON.stringify(payload, null, 2)}
         </pre>
       )}

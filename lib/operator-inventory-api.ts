@@ -31,6 +31,10 @@ function buildQuery(
 
 /**
  * GET /api/operator/inventory/{segment} — paginated; same RBAC as Blade admin/inventory (per-resource *.view).
+ *
+ * Contract: each element of `data` is a **module list row** for that segment. If the API embeds `offer`, it is
+ * summary-only (`ModuleRowOfferSummary` in `./inventory-crud-api.ts`) — shallow display context, not module detail.
+ * Do not call offer endpoints to hydrate module edit/detail; use the segment’s resource GET by id.
  */
 export async function apiOperatorInventoryList(
   token: string,
@@ -41,7 +45,7 @@ export async function apiOperatorInventoryList(
 ): Promise<{ data: unknown[]; meta: ApiListMeta }> {
   const qs = buildQuery(page, perPage, extraQuery);
   const json = await apiFetchJson<OperatorInventoryListResponse>(
-    `/api/operator/inventory/${segment}?${qs}`,
+    `/operator/inventory/${segment}?${qs}`,
     { token, method: "GET" }
   );
   return { data: json.data, meta: json.meta };

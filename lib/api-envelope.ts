@@ -6,7 +6,12 @@ export type ApiListMeta = {
 };
 
 export type ApiSuccessEnvelope<T> = { success: true; data: T; message?: string };
-export type ApiErrorEnvelope = { success: false; message: string };
+/** Laravel JSON validation responses may include `errors` (field → messages). */
+export type ApiErrorEnvelope = {
+  success: false;
+  message: string;
+  errors?: Record<string, string[]>;
+};
 
 export function isApiError(json: unknown): json is ApiErrorEnvelope {
   return (

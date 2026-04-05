@@ -13,6 +13,23 @@ export type ConnectionRow = {
   connection_type: string;
   status: string;
   client_targeting?: string;
+  selected_client_ids?: number[] | null;
+  targeting?: {
+    mode: "all" | "selected";
+    client_ids?: number[];
+  };
+  city_rules?: {
+    mode: "any" | "exact";
+    source_cities: string[];
+    target_cities: string[];
+  } | null;
+  status_history?: Array<{
+    from: string | null;
+    to: string;
+    actor_id: number;
+    at: string;
+    notes: string | null;
+  }> | null;
   company_id?: number;
   notes?: string | null;
   created_at?: string | null;
@@ -55,7 +72,18 @@ export type ConnectionCreateBody = {
   target_type: string;
   target_id: number;
   connection_type: "only" | "both";
+  targeting?: {
+    mode: "all" | "selected";
+    client_ids?: number[];
+  };
+  // Back-compat: older clients may still send these (API normalizes them).
   client_targeting?: "all" | "selected";
+  selected_client_ids?: number[];
+  city_rules?: {
+    mode: "any" | "exact";
+    source_cities?: string[];
+    target_cities?: string[];
+  };
   notes?: string | null;
 };
 
@@ -64,6 +92,20 @@ export async function apiConnectionCreate(
   body: ConnectionCreateBody
 ): Promise<ApiSuccessEnvelope<ConnectionRow>> {
   return apiFetchJson(BASE, { method: "POST", token, body });
+}
+
+export type CompanyClientOption = {
+  id: number;
+  name: string;
+  email: string;
+  status?: string;
+};
+
+export async function apiCompanyClients(
+  token: string,
+  companyId: number
+): Promise<ApiSuccessEnvelope<CompanyClientOption[]>> {
+  return apiFetchJson(`/companies/${companyId}/users`, { method: "GET", token });
 }
 
 export async function apiConnectionAccept(
@@ -92,7 +134,12 @@ export async function apiConnectionReject(
 
 export async function apiConnectionCancel(
   token: string,
-  id: number
+  id: number,
+  notes?: string | null
 ): Promise<ApiSuccessEnvelope<ConnectionRow>> {
-  return apiFetchJson(`${BASE}/${id}/cancel`, { method: "PATCH", token, body: {} });
+  return apiFetchJson(`${BASE}/${id}/cancel`, {
+    method: "PATCH",
+    token,
+    body: notes && notes.trim() ? { notes: notes.trim() } : {},
+  });
 }

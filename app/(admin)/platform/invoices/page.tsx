@@ -17,7 +17,7 @@ function StatusBadge({ status }: { status: string }) {
     status === "cancelled" ? "bg-red-100 text-red-800" :
     status === "issued"    ? "bg-blue-100 text-blue-800" :
     status === "overdue"   ? "bg-orange-100 text-orange-800" :
-    "bg-zinc-100 text-zinc-700";
+    "bg-slate-100 text-slate-700";
   return <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${cls}`}>{status}</span>;
 }
 
@@ -69,24 +69,23 @@ export default function PlatformInvoicesPage() {
   return (
     <div>
       <h1 className="text-xl font-semibold">Invoices</h1>
-      <p className="mt-1 text-sm text-zinc-500">GET /api/invoices · issue · cancel</p>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <label className="text-sm text-zinc-600">
+        <label className="text-sm text-slate-600">
           Status
           <select value={statusFilter} onChange={(e) => { setPage(1); setStatusFilter(e.target.value); }}
-            className="ml-2 rounded border border-zinc-300 px-2 py-1 text-sm">
+            className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm">
             {STATUSES.map((s) => <option key={s} value={s}>{s || "All"}</option>)}
           </select>
         </label>
-        <button type="button" onClick={load} className="rounded border border-zinc-300 bg-white px-3 py-1 text-sm">Refresh</button>
+        <button type="button" onClick={load} className="rounded border border-slate-300 bg-white px-3 py-1 text-sm">Refresh</button>
       </div>
 
       {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
 
-      <div className="mt-4 overflow-x-auto rounded border border-zinc-200 bg-white">
+      <div className="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
         <table className="w-full min-w-[860px] text-left text-sm">
-          <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase text-zinc-500">
+          <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
             <tr>
               <th className="px-3 py-2">ID</th>
               <th className="px-3 py-2">Invoice #</th>
@@ -100,22 +99,22 @@ export default function PlatformInvoicesPage() {
           </thead>
           <tbody>
             {rows.length === 0 && (
-              <tr><td colSpan={8} className="px-3 py-6 text-center text-zinc-400">No invoices found</td></tr>
+              <tr><td colSpan={8} className="px-3 py-6 text-center text-slate-400">No invoices found</td></tr>
             )}
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-zinc-100 hover:bg-zinc-50">
-                <td className="px-3 py-2 tabular-nums text-zinc-500">{r.id}</td>
-                <td className="px-3 py-2 font-mono text-xs">{r.invoice_number ?? "—"}</td>
+              <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-100">
+                <td className="px-3 py-2 tabular-nums text-slate-700">{r.id}</td>
+                <td className="px-3 py-2 font-mono text-xs">{r.invoice_number ?? "-"}</td>
                 <td className="px-3 py-2"><StatusBadge status={r.status} /></td>
                 <td className="px-3 py-2 tabular-nums font-medium">
                   {r.currency} {Number(r.total_amount).toFixed(2)}
                 </td>
-                <td className="px-3 py-2">{r.company?.name ?? "—"}</td>
-                <td className="px-3 py-2 text-xs text-zinc-500">
-                  {r.issued_at ? new Date(r.issued_at).toLocaleDateString() : "—"}
+                <td className="px-3 py-2">{r.company?.name ?? "-"}</td>
+                <td className="px-3 py-2 text-xs text-slate-700">
+                  {r.issued_at ? new Date(r.issued_at).toLocaleDateString() : "-"}
                 </td>
-                <td className="px-3 py-2 text-xs text-zinc-500">
-                  {r.due_date ? new Date(r.due_date).toLocaleDateString() : "—"}
+                <td className="px-3 py-2 text-xs text-slate-700">
+                  {r.due_date ? new Date(r.due_date).toLocaleDateString() : "-"}
                 </td>
                 <td className="px-3 py-2">
                   <div className="flex flex-col gap-1">

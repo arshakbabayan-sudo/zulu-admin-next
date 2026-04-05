@@ -86,11 +86,8 @@ export default function PlatformReviewsPage() {
   return (
     <div>
       <h1 className="text-xl font-semibold">Reviews moderation</h1>
-      <p className="mt-1 text-sm text-zinc-500">
-        GET /api/platform-admin/reviews · POST /api/platform-admin/reviews/{"{id}"}/moderate
-      </p>
       <div className="mt-4">
-        <label className="text-sm text-zinc-600">
+        <label className="text-sm text-slate-600">
           Status filter
           <select
             value={statusFilter}
@@ -98,7 +95,7 @@ export default function PlatformReviewsPage() {
               setPage(1);
               setStatusFilter(e.target.value);
             }}
-            className="ml-2 rounded border border-zinc-300 px-2 py-1 text-sm"
+            className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
           >
             <option value="">All</option>
             <option value="pending">pending</option>
@@ -109,9 +106,9 @@ export default function PlatformReviewsPage() {
         </label>
       </div>
       {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
-      <div className="mt-4 overflow-x-auto rounded border border-zinc-200 bg-white">
+      <div className="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
         <table className="w-full min-w-[720px] text-left text-sm">
-          <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase text-zinc-500">
+          <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
             <tr>
               <th className="px-3 py-2">ID</th>
               <th className="px-3 py-2">Rating</th>
@@ -124,18 +121,18 @@ export default function PlatformReviewsPage() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-zinc-100 align-top">
+              <tr key={r.id} className="border-b border-slate-100 align-top">
                 <td className="px-3 py-2 tabular-nums">{r.id}</td>
                 <td className="px-3 py-2">{r.rating}</td>
-                <td className="max-w-xs px-3 py-2 text-xs text-zinc-700">
+                <td className="max-w-xs px-3 py-2 text-xs text-slate-700">
                   {(r.review_text ?? "").slice(0, 200)}
-                  {(r.review_text?.length ?? 0) > 200 ? "…" : ""}
+                  {(r.review_text?.length ?? 0) > 200 ? "..." : ""}
                 </td>
                 <td className="px-3 py-2">{r.status}</td>
                 <td className="px-3 py-2 text-xs">
                   {r.target_entity_type} #{r.target_entity_id}
                 </td>
-                <td className="px-3 py-2 text-xs">{r.user?.name ?? "—"}</td>
+                <td className="px-3 py-2 text-xs">{r.user?.name ?? "-"}</td>
                 <td className="px-3 py-2">
                   <div className="flex flex-col gap-1">
                     {MOD_STATUSES.map((s) => (
@@ -144,7 +141,7 @@ export default function PlatformReviewsPage() {
                         type="button"
                         disabled={busyId === r.id}
                         onClick={() => moderate(r.id, s)}
-                        className="text-left text-xs text-zinc-700 underline disabled:opacity-40"
+                        className="text-left text-xs text-slate-700 underline disabled:opacity-40"
                       >
                         Set {s}
                       </button>

@@ -20,10 +20,10 @@ function SummaryCard({
   sub?: string;
 }) {
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-      <div className="text-xs font-medium uppercase tracking-wide text-zinc-500">{label}</div>
-      <div className="mt-1 text-2xl font-semibold tabular-nums text-zinc-900">{value}</div>
-      {sub && <div className="mt-1 text-xs text-zinc-500">{sub}</div>}
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="text-xs font-medium uppercase tracking-wide text-slate-700">{label}</div>
+      <div className="mt-1 text-2xl font-semibold tabular-nums text-slate-800">{value}</div>
+      {sub && <div className="mt-1 text-xs text-slate-700">{sub}</div>}
     </div>
   );
 }
@@ -77,11 +77,10 @@ export default function PlatformFinanceSummaryPage() {
   return (
     <div>
       <h1 className="text-xl font-semibold">Platform finance summary</h1>
-      <p className="mt-1 text-sm text-zinc-500">GET /api/platform-admin/finance-summary</p>
       <button
         type="button"
         onClick={() => load()}
-        className="mt-4 rounded border border-zinc-300 bg-white px-3 py-1.5 text-sm hover:bg-zinc-50"
+        className="mt-4 rounded border border-slate-300 bg-white px-3 py-1.5 text-sm hover:bg-slate-100"
       >
         Refresh
       </button>

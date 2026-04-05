@@ -9,9 +9,11 @@ import type { ApiListMeta } from "@/lib/api-envelope";
 import {
   apiConnectionAccept,
   apiConnectionCancel,
+  apiCompanyClients,
   apiConnectionCreate,
   apiConnectionReject,
   apiConnectionsList,
+  type CompanyClientOption,
   CONNECTION_SOURCE_TYPES,
   CONNECTION_TARGET_TYPES,
   type ConnectionCreateBody,
@@ -20,11 +22,11 @@ import {
 import { useCallback, useEffect, useState } from "react";
 
 function companyLabel(c: ConnectionRow): string {
-  return c.company?.name ?? (c.company_id != null ? String(c.company_id) : "—");
+  return c.company?.name ?? (c.company_id != null ? String(c.company_id) : "-");
 }
 
 function entityLabel(type: string | undefined, id: number | undefined): string {
-  if (!type || id == null) return "—";
+  if (!type || id == null) return "-";
   return `${type} #${id}`;
 }
 
@@ -47,6 +49,10 @@ export default function ConnectionsPage() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [createBusy, setCreateBusy] = useState(false);
+  const [clientsBusy, setClientsBusy] = useState(false);
+  const [clientOptions, setClientOptions] = useState<CompanyClientOption[]>([]);
+  const [clientQuery, setClientQuery] = useState("");
+  const [clientLoadError, setClientLoadError] = useState<string | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState<ConnectionCreateBody>({
@@ -56,8 +62,10 @@ export default function ConnectionsPage() {
     target_id: 0,
     connection_type: "only",
     client_targeting: "all",
+    selected_client_ids: [],
     notes: "",
   });
+  const actorCompanyId = user?.companies?.[0]?.id ?? null;
 
   const companyIdNum =
     companyIdFilter.trim() === "" ? undefined : Number(companyIdFilter);
@@ -94,14 +102,54 @@ export default function ConnectionsPage() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    if (!token || !createOpen || !actorCompanyId) return;
+    setClientsBusy(true);
+    setClientLoadError(null);
+    apiCompanyClients(token, actorCompanyId)
+      .then((res) => setClientOptions(res.data ?? []))
+      .catch((e) => {
+        setClientLoadError(
+          e instanceof ApiRequestError ? e.message : "Failed to load company clients"
+        );
+      })
+      .finally(() => setClientsBusy(false));
+  }, [token, createOpen, actorCompanyId]);
+
   const onAction = async (id: number, action: "accept" | "reject" | "cancel") => {
     if (!token) return;
     setBusyId(id);
     setErr(null);
     try {
       if (action === "accept") await apiConnectionAccept(token, id);
-      else if (action === "reject") await apiConnectionReject(token, id);
-      else await apiConnectionCancel(token, id);
+      else if (action === "reject") {
+        const input = window.prompt("Notes (required for rejection):", "") ?? null;
+        const notes = input?.trim() ? input.trim() : null;
+        if (!notes) {
+          setErr("Notes are required for rejection.");
+          return;
+        }
+        await apiConnectionReject(token, id, notes);
+      } else {
+        const input = window.prompt("Notes (optional):", "") ?? null;
+        const notes = input?.trim() ? input.trim() : undefined;
+        try {
+          await apiConnectionCancel(token, id, notes);
+        } catch (e) {
+          // If API requires notes for cancel (feature/config), re-prompt once.
+          if (e instanceof ApiRequestError && e.status === 422 && e.message.toLowerCase().includes("notes")) {
+            const retry = window.prompt("Notes (required to cancel):", "") ?? null;
+            const retryNotes = retry?.trim() ? retry.trim() : null;
+            if (!retryNotes) {
+              setErr("Notes are required to cancel.");
+              return;
+            }
+            await apiConnectionCancel(token, id, retryNotes);
+          } else {
+            throw e;
+          }
+        }
+      }
       await load();
     } catch (e) {
       setErr(e instanceof ApiRequestError ? e.message : "Failed to update connection");
@@ -121,15 +169,27 @@ export default function ConnectionsPage() {
       target_type: createForm.target_type,
       target_id: Number(createForm.target_id),
       connection_type: createForm.connection_type,
-      client_targeting: createForm.client_targeting ?? "all",
+      targeting: {
+        mode: createForm.client_targeting ?? "all",
+        client_ids:
+          createForm.client_targeting === "selected"
+            ? Array.from(new Set((createForm.selected_client_ids ?? []).filter((id) => id > 0)))
+            : undefined,
+      },
       notes: createForm.notes?.trim() ? createForm.notes.trim() : undefined,
     };
+    if (body.targeting?.mode === "selected" && (body.targeting.client_ids?.length ?? 0) === 0) {
+      setErr("When client targeting is selected, choose at least one client.");
+      setCreateBusy(false);
+      return;
+    }
     try {
       await apiConnectionCreate(token, body);
       setCreateForm((f) => ({
         ...f,
         source_id: 0,
         target_id: 0,
+        selected_client_ids: [],
         notes: "",
       }));
       setPage(1);
@@ -166,31 +226,27 @@ export default function ConnectionsPage() {
   return (
     <div>
       <h1 className="text-xl font-semibold">Service connections</h1>
-      <p className="mt-1 text-sm text-zinc-500">
-        GET /api/connections · PATCH …/accept | …/reject | …/cancel · POST /api/connections (requires
-        company membership)
-      </p>
 
       {canCreate && (
-        <div className="mt-4 rounded border border-zinc-200 bg-white p-4">
+        <div className="mt-4 rounded border border-slate-200 bg-white p-4">
           <button
             type="button"
             onClick={() => setCreateOpen((o) => !o)}
-            className="text-sm font-medium text-zinc-800 underline"
+            className="text-sm font-medium text-slate-800 underline"
           >
             {createOpen ? "Hide create form" : "Create connection"}
           </button>
           {createOpen && (
             <form onSubmit={onCreate} className="mt-3 grid max-w-xl gap-3 text-sm">
               <div className="grid grid-cols-2 gap-2">
-                <label className="text-zinc-600">
+                <label className="text-slate-600">
                   Source type
                   <select
                     value={createForm.source_type}
                     onChange={(e) =>
                       setCreateForm((f) => ({ ...f, source_type: e.target.value }))
                     }
-                    className="mt-1 w-full rounded border border-zinc-300 px-2 py-1"
+                    className="mt-1 w-full rounded border border-slate-300 px-2 py-1"
                   >
                     {CONNECTION_SOURCE_TYPES.map((t) => (
                       <option key={t} value={t}>
@@ -199,7 +255,7 @@ export default function ConnectionsPage() {
                     ))}
                   </select>
                 </label>
-                <label className="text-zinc-600">
+                <label className="text-slate-600">
                   Source ID
                   <input
                     type="number"
@@ -209,19 +265,19 @@ export default function ConnectionsPage() {
                     onChange={(e) =>
                       setCreateForm((f) => ({ ...f, source_id: Number(e.target.value) }))
                     }
-                    className="mt-1 w-full rounded border border-zinc-300 px-2 py-1"
+                    className="mt-1 w-full rounded border border-slate-300 px-2 py-1"
                   />
                 </label>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <label className="text-zinc-600">
+                <label className="text-slate-600">
                   Target type
                   <select
                     value={createForm.target_type}
                     onChange={(e) =>
                       setCreateForm((f) => ({ ...f, target_type: e.target.value }))
                     }
-                    className="mt-1 w-full rounded border border-zinc-300 px-2 py-1"
+                    className="mt-1 w-full rounded border border-slate-300 px-2 py-1"
                   >
                     {CONNECTION_TARGET_TYPES.map((t) => (
                       <option key={t} value={t}>
@@ -230,7 +286,7 @@ export default function ConnectionsPage() {
                     ))}
                   </select>
                 </label>
-                <label className="text-zinc-600">
+                <label className="text-slate-600">
                   Target ID
                   <input
                     type="number"
@@ -240,12 +296,12 @@ export default function ConnectionsPage() {
                     onChange={(e) =>
                       setCreateForm((f) => ({ ...f, target_id: Number(e.target.value) }))
                     }
-                    className="mt-1 w-full rounded border border-zinc-300 px-2 py-1"
+                    className="mt-1 w-full rounded border border-slate-300 px-2 py-1"
                   />
                 </label>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <label className="text-zinc-600">
+                <label className="text-slate-600">
                   Connection type
                   <select
                     value={createForm.connection_type}
@@ -255,13 +311,13 @@ export default function ConnectionsPage() {
                         connection_type: e.target.value as ConnectionCreateBody["connection_type"],
                       }))
                     }
-                    className="mt-1 w-full rounded border border-zinc-300 px-2 py-1"
+                    className="mt-1 w-full rounded border border-slate-300 px-2 py-1"
                   >
                     <option value="only">only</option>
                     <option value="both">both</option>
                   </select>
                 </label>
-                <label className="text-zinc-600">
+                <label className="text-slate-600">
                   Client targeting
                   <select
                     value={createForm.client_targeting ?? "all"}
@@ -269,31 +325,90 @@ export default function ConnectionsPage() {
                       setCreateForm((f) => ({
                         ...f,
                         client_targeting: e.target.value as "all" | "selected",
+                        selected_client_ids:
+                          e.target.value === "selected" ? f.selected_client_ids ?? [] : [],
                       }))
                     }
-                    className="mt-1 w-full rounded border border-zinc-300 px-2 py-1"
+                    className="mt-1 w-full rounded border border-slate-300 px-2 py-1"
                   >
                     <option value="all">all</option>
                     <option value="selected">selected</option>
                   </select>
                 </label>
               </div>
-              <label className="text-zinc-600">
+              {createForm.client_targeting === "selected" && (
+                <div className="rounded border border-slate-200 p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="text-slate-700">Selected clients</p>
+                    <input
+                      type="text"
+                      placeholder="Search by name/email"
+                      value={clientQuery}
+                      onChange={(e) => setClientQuery(e.target.value)}
+                      className="w-56 rounded border border-slate-300 px-2 py-1 text-xs"
+                    />
+                  </div>
+                  {clientsBusy ? (
+                    <p className="text-xs text-slate-600">Loading clients...</p>
+                  ) : clientLoadError ? (
+                    <p className="text-xs text-red-600">{clientLoadError}</p>
+                  ) : clientOptions.length === 0 ? (
+                    <p className="text-xs text-slate-600">No company clients found.</p>
+                  ) : (
+                    <div className="max-h-48 overflow-y-auto rounded border border-slate-200 p-2">
+                      {clientOptions
+                        .filter((c) => {
+                          const q = clientQuery.trim().toLowerCase();
+                          if (!q) return true;
+                          return (
+                            c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q)
+                          );
+                        })
+                        .map((c) => {
+                          const checked = (createForm.selected_client_ids ?? []).includes(c.id);
+                          return (
+                            <label
+                              key={c.id}
+                              className="flex cursor-pointer items-center justify-between gap-3 py-1 text-xs"
+                            >
+                              <span className="truncate text-slate-700">
+                                {c.name} ({c.email})
+                              </span>
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={(e) =>
+                                  setCreateForm((f) => {
+                                    const prev = new Set(f.selected_client_ids ?? []);
+                                    if (e.target.checked) prev.add(c.id);
+                                    else prev.delete(c.id);
+                                    return { ...f, selected_client_ids: Array.from(prev) };
+                                  })
+                                }
+                              />
+                            </label>
+                          );
+                        })}
+                    </div>
+                  )}
+                </div>
+              )}
+              <label className="text-slate-600">
                 Notes (optional)
                 <input
                   type="text"
                   value={createForm.notes ?? ""}
                   onChange={(e) => setCreateForm((f) => ({ ...f, notes: e.target.value }))}
-                  className="mt-1 w-full rounded border border-zinc-300 px-2 py-1"
+                  className="mt-1 w-full rounded border border-slate-300 px-2 py-1"
                 />
               </label>
               <div>
                 <button
                   type="submit"
                   disabled={createBusy}
-                  className="rounded border border-zinc-800 bg-zinc-900 px-3 py-1 text-white disabled:opacity-40"
+                  className="rounded border border-slate-800 bg-slate-800 px-3 py-1 text-white disabled:opacity-40"
                 >
-                  {createBusy ? "Creating…" : "Submit"}
+                  {createBusy ? "Creating..." : "Submit"}
                 </button>
               </div>
             </form>
@@ -313,7 +428,7 @@ export default function ConnectionsPage() {
               }}
               className={
                 "rounded border px-2 py-1 " +
-                (statusFilter === s ? "border-zinc-800 bg-zinc-800 text-white" : "border-zinc-300 bg-white")
+                (statusFilter === s ? "border-slate-800 bg-slate-800 text-white" : "border-slate-300 bg-white")
               }
             >
               {s === "" ? "All" : s}
@@ -329,14 +444,14 @@ export default function ConnectionsPage() {
             setTargetTypeFilter("");
             setCompanyIdFilter("");
           }}
-          className="rounded border border-zinc-300 bg-white px-2 py-1"
+          className="rounded border border-slate-300 bg-white px-2 py-1"
         >
           Reset filters
         </button>
       </div>
 
       <div className="mt-3 flex flex-wrap gap-4 text-sm">
-        <label className="text-zinc-600">
+        <label className="text-slate-600">
           Source type
           <select
             value={sourceTypeFilter}
@@ -344,7 +459,7 @@ export default function ConnectionsPage() {
               setPage(1);
               setSourceTypeFilter(e.target.value);
             }}
-            className="ml-2 rounded border border-zinc-300 px-2 py-1"
+            className="ml-2 rounded border border-slate-300 px-2 py-1"
           >
             <option value="">All</option>
             {CONNECTION_SOURCE_TYPES.map((t) => (
@@ -354,7 +469,7 @@ export default function ConnectionsPage() {
             ))}
           </select>
         </label>
-        <label className="text-zinc-600">
+        <label className="text-slate-600">
           Target type
           <select
             value={targetTypeFilter}
@@ -362,7 +477,7 @@ export default function ConnectionsPage() {
               setPage(1);
               setTargetTypeFilter(e.target.value);
             }}
-            className="ml-2 rounded border border-zinc-300 px-2 py-1"
+            className="ml-2 rounded border border-slate-300 px-2 py-1"
           >
             <option value="">All</option>
             {CONNECTION_TARGET_TYPES.map((t) => (
@@ -373,7 +488,7 @@ export default function ConnectionsPage() {
           </select>
         </label>
         {isSuper && (
-          <label className="text-zinc-600">
+          <label className="text-slate-600">
             Company ID
             <input
               type="number"
@@ -384,7 +499,7 @@ export default function ConnectionsPage() {
                 setPage(1);
                 setCompanyIdFilter(e.target.value);
               }}
-              className="ml-2 w-28 rounded border border-zinc-300 px-2 py-1"
+              className="ml-2 w-28 rounded border border-slate-300 px-2 py-1"
             />
           </label>
         )}
@@ -392,9 +507,9 @@ export default function ConnectionsPage() {
 
       {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
 
-      <div className="mt-4 overflow-x-auto rounded border border-zinc-200 bg-white">
+      <div className="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
         <table className="w-full min-w-[900px] text-left text-sm">
-          <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase text-zinc-500">
+          <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
             <tr>
               <th className="px-3 py-2">ID</th>
               <th className="px-3 py-2">Source</th>
@@ -410,23 +525,23 @@ export default function ConnectionsPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={9} className="px-3 py-8 text-center text-zinc-500">
-                  Loading…
+                <td colSpan={9} className="px-3 py-8 text-center text-slate-700">
+                  Loading...
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-3 py-8 text-center text-zinc-500">
+                <td colSpan={9} className="px-3 py-8 text-center text-slate-700">
                   No connections found
                 </td>
               </tr>
             ) : (
               rows.map((c) => (
-                <tr key={c.id} className="border-b border-zinc-100">
+                <tr key={c.id} className="border-b border-slate-100">
                   <td className="px-3 py-2 tabular-nums font-medium">{c.id}</td>
                   <td className="px-3 py-2">{entityLabel(c.source_type, c.source_id)}</td>
                   <td className="px-3 py-2">{entityLabel(c.target_type, c.target_id)}</td>
-                  <td className="px-3 py-2">{c.connection_type ?? "—"}</td>
+                  <td className="px-3 py-2">{c.connection_type ?? "-"}</td>
                   <td className="px-3 py-2">
                     <span
                       className={
@@ -437,16 +552,16 @@ export default function ConnectionsPage() {
                             ? "bg-emerald-100 text-emerald-900"
                             : c.status === "rejected"
                               ? "bg-red-100 text-red-800"
-                              : "bg-zinc-200 text-zinc-700")
+                              : "bg-slate-200 text-slate-700")
                       }
                     >
-                      {c.status ?? "—"}
+                      {c.status ?? "-"}
                     </span>
                   </td>
                   <td className="max-w-[160px] truncate px-3 py-2">{companyLabel(c)}</td>
                   <td className="px-3 py-2">{c.client_targeting === "selected" ? "selected" : "all"}</td>
-                  <td className="whitespace-nowrap px-3 py-2 text-xs text-zinc-500">
-                    {c.created_at ? String(c.created_at).slice(0, 10) : "—"}
+                  <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-700">
+                    {c.created_at ? String(c.created_at).slice(0, 10) : "-"}
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex flex-wrap gap-1">
@@ -475,7 +590,7 @@ export default function ConnectionsPage() {
                           type="button"
                           disabled={busyId === c.id}
                           onClick={() => onAction(c.id, "cancel")}
-                          className="rounded border border-zinc-300 px-2 py-0.5 text-zinc-700 disabled:opacity-40"
+                          className="rounded border border-slate-300 px-2 py-0.5 text-slate-700 disabled:opacity-40"
                         >
                           Cancel
                         </button>
@@ -491,7 +606,7 @@ export default function ConnectionsPage() {
 
       {meta && !loading && <PaginationBar meta={meta} onPage={setPage} />}
 
-      <p className="mt-3 text-xs text-zinc-500">
+      <p className="mt-3 text-xs text-slate-700">
         Filters mirror Blade admin: status, source_type, target_type. Super admins may narrow by{" "}
         <code className="text-[11px]">company_id</code>. Create assigns the actor&apos;s first company
         per API (<code className="text-[11px]">POST /api/connections</code>).

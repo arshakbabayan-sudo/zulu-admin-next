@@ -183,12 +183,8 @@ export default function PlatformCompaniesPage() {
   return (
     <div>
       <h1 className="text-xl font-semibold">Platform companies</h1>
-      <p className="mt-1 text-sm text-zinc-500">
-        GET /api/platform-admin/companies — PATCH …/governance, …/permissions, …/toggle-seller; load
-        matrix via GET /api/companies/…/seller-permissions
-      </p>
       <div className="mt-4 flex flex-wrap items-end gap-3">
-        <label className="text-sm text-zinc-600">
+        <label className="text-sm text-slate-600">
           Search
           <input
             value={searchDraft}
@@ -199,8 +195,8 @@ export default function PlatformCompaniesPage() {
                 setSearch(searchDraft.trim());
               }
             }}
-            className="ml-2 rounded border border-zinc-300 px-2 py-1 text-sm"
-            placeholder="Name, slug…"
+            className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
+            placeholder="Name, slug..."
           />
         </label>
         <button
@@ -209,11 +205,11 @@ export default function PlatformCompaniesPage() {
             setPage(1);
             setSearch(searchDraft.trim());
           }}
-          className="rounded border border-zinc-300 bg-white px-3 py-1 text-sm"
+          className="rounded border border-slate-300 bg-white px-3 py-1 text-sm"
         >
           Apply search
         </button>
-        <label className="text-sm text-zinc-600">
+        <label className="text-sm text-slate-600">
           Governance
           <select
             value={governanceFilter}
@@ -221,7 +217,7 @@ export default function PlatformCompaniesPage() {
               setPage(1);
               setGovernanceFilter(e.target.value);
             }}
-            className="ml-2 rounded border border-zinc-300 px-2 py-1 text-sm"
+            className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
           >
             <option value="">Any</option>
             {GOVERNANCE_STATUSES.map((s) => (
@@ -231,7 +227,7 @@ export default function PlatformCompaniesPage() {
             ))}
           </select>
         </label>
-        <label className="text-sm text-zinc-600">
+        <label className="text-sm text-slate-600">
           Seller
           <select
             value={sellerFilter}
@@ -239,7 +235,7 @@ export default function PlatformCompaniesPage() {
               setPage(1);
               setSellerFilter(e.target.value);
             }}
-            className="ml-2 rounded border border-zinc-300 px-2 py-1 text-sm"
+            className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
           >
             <option value="">Any</option>
             <option value="1">Yes</option>
@@ -248,9 +244,9 @@ export default function PlatformCompaniesPage() {
         </label>
       </div>
       {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
-      <div className="mt-4 overflow-x-auto rounded border border-zinc-200 bg-white">
+      <div className="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
         <table className="w-full min-w-[960px] text-left text-sm">
-          <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase text-zinc-500">
+          <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
             <tr>
               <th className="px-3 py-2">ID</th>
               <th className="px-3 py-2">Name</th>
@@ -263,18 +259,18 @@ export default function PlatformCompaniesPage() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-zinc-100">
+              <tr key={r.id} className="border-b border-slate-100">
                 <td className="px-3 py-2 tabular-nums">{r.id}</td>
                 <td className="px-3 py-2">{r.name}</td>
-                <td className="px-3 py-2">{r.type ?? "—"}</td>
-                <td className="px-3 py-2">{r.status ?? "—"}</td>
+                <td className="px-3 py-2">{r.type ?? "-"}</td>
+                <td className="px-3 py-2">{r.status ?? "-"}</td>
                 <td className="px-3 py-2">
                   <select
                     value={draftGovernance[r.id] ?? r.governance_status}
                     onChange={(e) =>
                       setDraftGovernance((prev) => ({ ...prev, [r.id]: e.target.value }))
                     }
-                    className="max-w-[140px] rounded border border-zinc-300 px-1 py-0.5 text-xs"
+                    className="max-w-[140px] rounded border border-slate-300 px-1 py-0.5 text-xs"
                   >
                     {GOVERNANCE_STATUSES.map((s) => (
                       <option key={s} value={s}>
@@ -286,7 +282,7 @@ export default function PlatformCompaniesPage() {
                 <td className="px-3 py-2">
                   {r.is_seller ? "yes" : "no"}
                   {r.active_seller_permissions_count != null ? (
-                    <span className="ml-1 text-zinc-500 tabular-nums">
+                    <span className="ml-1 text-slate-700 tabular-nums">
                       ({r.active_seller_permissions_count} types)
                     </span>
                   ) : null}
@@ -307,7 +303,7 @@ export default function PlatformCompaniesPage() {
                       onClick={() => void openPermissionsModal(r)}
                       className="text-left text-xs text-blue-700 underline disabled:opacity-40"
                     >
-                      Service permissions…
+                      Service permissions...
                     </button>
                     <button
                       type="button"
@@ -336,17 +332,17 @@ export default function PlatformCompaniesPage() {
             if (e.target === e.currentTarget) closePermissionsModal();
           }}
         >
-          <div className="max-h-[90vh] w-full max-w-md overflow-auto rounded border border-zinc-200 bg-white p-4 shadow-lg">
+          <div className="max-h-[90vh] w-full max-w-md overflow-auto rounded border border-slate-200 bg-white p-4 shadow-lg">
             <h2 id="perm-modal-title" className="text-base font-semibold">
-              Seller service types — {permModalCompany.name}
+              Seller service types - {permModalCompany.name}
             </h2>
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs text-slate-700">
               Checked types are synced as active; unchecked are removed from the active set (same as Blade
               matrix).
             </p>
             {permLoadErr && <p className="mt-2 text-sm text-red-600">{permLoadErr}</p>}
             {permLoading ? (
-              <p className="mt-4 text-sm text-zinc-600">Loading…</p>
+              <p className="mt-4 text-sm text-slate-600">Loading...</p>
             ) : !permLoadErr ? (
               <ul className="mt-4 space-y-2">
                 {SELLER_SERVICE_TYPES.map((t) => (
@@ -365,11 +361,11 @@ export default function PlatformCompaniesPage() {
                 ))}
               </ul>
             ) : null}
-            <div className="mt-6 flex justify-end gap-2 border-t border-zinc-100 pt-4">
+            <div className="mt-6 flex justify-end gap-2 border-t border-slate-100 pt-4">
               <button
                 type="button"
                 onClick={closePermissionsModal}
-                className="rounded border border-zinc-300 bg-white px-3 py-1 text-sm"
+                className="rounded border border-slate-300 bg-white px-3 py-1 text-sm"
               >
                 Cancel
               </button>
@@ -377,7 +373,7 @@ export default function PlatformCompaniesPage() {
                 type="button"
                 disabled={!!permLoadErr || permLoading || busyId === permModalCompany.id}
                 onClick={() => void savePermissions()}
-                className="rounded bg-zinc-900 px-3 py-1 text-sm text-white disabled:opacity-40"
+                className="rounded bg-slate-800 px-3 py-1 text-sm text-white disabled:opacity-40"
               >
                 Save permissions
               </button>

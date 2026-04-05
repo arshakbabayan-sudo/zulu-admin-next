@@ -74,17 +74,14 @@ export default function LocalizationLanguagesPage() {
   return (
     <div>
       <h1 className="text-xl font-semibold">Languages</h1>
-      <p className="mt-1 text-sm text-zinc-500">
-        GET /api/localization/languages · PATCH /api/localization/languages/{"{id}"}/toggle
-      </p>
-      <p className="mt-2 text-xs text-zinc-500">
+      <p className="mt-2 text-xs text-slate-700">
         The list includes enabled languages only. After disabling, a language disappears here until it is
         re-enabled via legacy admin or direct API if you still have its id.
       </p>
       {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
-      <div className="mt-4 overflow-x-auto rounded-lg border border-zinc-200 bg-white shadow-sm">
+      <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
         <table className="min-w-full text-left text-sm">
-          <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase text-zinc-500">
+          <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
             <tr>
               <th className="px-3 py-2">Code</th>
               <th className="px-3 py-2">Name</th>
@@ -96,20 +93,20 @@ export default function LocalizationLanguagesPage() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-zinc-100">
+              <tr key={r.id} className="border-b border-slate-100">
                 <td className="px-3 py-2 font-mono">{r.code}</td>
                 <td className="px-3 py-2">{r.name}</td>
-                <td className="px-3 py-2">{r.name_en ?? "—"}</td>
-                <td className="px-3 py-2">{r.is_default ? "Yes" : "—"}</td>
+                <td className="px-3 py-2">{r.name_en ?? "-"}</td>
+                <td className="px-3 py-2">{r.is_default ? "Yes" : "-"}</td>
                 <td className="px-3 py-2">{r.sort_order}</td>
                 <td className="px-3 py-2">
                   <button
                     type="button"
                     disabled={busyId === r.id}
                     onClick={() => toggle(r)}
-                    className="rounded bg-zinc-900 px-2 py-1 text-xs text-white disabled:opacity-50"
+                    className="rounded bg-slate-800 px-2 py-1 text-xs text-white disabled:opacity-50"
                   >
-                    {busyId === r.id ? "…" : "Toggle enabled"}
+                    {busyId === r.id ? "..." : "Toggle enabled"}
                   </button>
                 </td>
               </tr>

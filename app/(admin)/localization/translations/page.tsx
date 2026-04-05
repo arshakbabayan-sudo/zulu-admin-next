@@ -13,7 +13,7 @@ import {
   LOCALIZATION_TRANSLATABLE_FIELDS,
   type LocalizationLanguageRow,
 } from "@/lib/localization-api";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 export default function LocalizationTranslationsPage() {
   const { token, user } = useAdminAuth();
@@ -21,6 +21,7 @@ export default function LocalizationTranslationsPage() {
   const isSuper = user?.is_super_admin === true;
 
   const [langs, setLangs] = useState<LocalizationLanguageRow[]>([]);
+  const langsLoaded = useRef(false);
   const [entityType, setEntityType] = useState<string>("package");
   const [entityId, setEntityId] = useState<string>("");
   const [languageCode, setLanguageCode] = useState<string>("en");
@@ -36,18 +37,17 @@ export default function LocalizationTranslationsPage() {
   const [busy, setBusy] = useState(false);
   const [deleteLang, setDeleteLang] = useState<string>("");
 
-  const loadLangs = useCallback(async () => {
+  // Lazy — load languages only once, on first Load/Save click.
+  const ensureLangsLoaded = useCallback(async () => {
+    if (langsLoaded.current) return;
     try {
       const res = await apiLocalizationLanguages(token);
       setLangs(res.data);
+      langsLoaded.current = true;
     } catch {
-      /* optional for public GET */
+      // non-critical
     }
   }, [token]);
-
-  useEffect(() => {
-    if (allowed) loadLangs();
-  }, [allowed, loadLangs]);
 
   async function loadTranslations() {
     if (!token) return;
@@ -59,6 +59,7 @@ export default function LocalizationTranslationsPage() {
     setErr(null);
     setMsg(null);
     setBusy(true);
+    await ensureLangsLoaded();
     try {
       const res = await apiLocalizationTranslationsGet(token, {
         entity_type: entityType,
@@ -104,6 +105,7 @@ export default function LocalizationTranslationsPage() {
     setErr(null);
     setMsg(null);
     setBusy(true);
+    await ensureLangsLoaded();
     try {
       await apiLocalizationTranslationsSet(token, {
         entity_type: entityType,
@@ -166,21 +168,17 @@ export default function LocalizationTranslationsPage() {
   return (
     <div>
       <h1 className="text-xl font-semibold">Content translations</h1>
-      <p className="mt-1 text-sm text-zinc-500">
-        GET /api/localization/translations · POST /api/localization/translations
-        {isSuper && " · DELETE /api/localization/translations (super admin)"}
-      </p>
       {msg && <p className="mt-2 text-sm text-emerald-700">{msg}</p>}
       {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
 
-      <div className="mt-4 space-y-3 rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+      <div className="mt-4 space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex flex-wrap gap-3">
-          <label className="flex flex-col text-xs text-zinc-600">
+          <label className="flex flex-col text-xs text-slate-600">
             Entity type
             <select
               value={entityType}
               onChange={(e) => setEntityType(e.target.value)}
-              className="mt-1 rounded border border-zinc-300 px-2 py-1 text-sm"
+              className="mt-1 rounded border border-slate-300 px-2 py-1 text-sm"
             >
               {LOCALIZATION_ENTITY_TYPES.map((t) => (
                 <option key={t} value={t}>
@@ -189,29 +187,29 @@ export default function LocalizationTranslationsPage() {
               ))}
             </select>
           </label>
-          <label className="flex flex-col text-xs text-zinc-600">
+          <label className="flex flex-col text-xs text-slate-600">
             Entity id
             <input
               type="number"
               min={1}
               value={entityId}
               onChange={(e) => setEntityId(e.target.value)}
-              className="mt-1 w-32 rounded border border-zinc-300 px-2 py-1 text-sm"
+              className="mt-1 w-32 rounded border border-slate-300 px-2 py-1 text-sm"
             />
           </label>
-          <label className="flex flex-col text-xs text-zinc-600">
+          <label className="flex flex-col text-xs text-slate-600">
             Language
             <select
               value={languageCode}
               onChange={(e) => setLanguageCode(e.target.value)}
-              className="mt-1 rounded border border-zinc-300 px-2 py-1 text-sm"
+              className="mt-1 rounded border border-slate-300 px-2 py-1 text-sm"
             >
               {langs.length === 0 ? (
                 <option value={languageCode}>{languageCode}</option>
               ) : (
                 langs.map((l) => (
                   <option key={l.id} value={l.code}>
-                    {l.code} — {l.name}
+                    {l.code} - {l.name}
                   </option>
                 ))
               )}
@@ -223,7 +221,7 @@ export default function LocalizationTranslationsPage() {
             type="button"
             disabled={busy || !token}
             onClick={() => loadTranslations()}
-            className="rounded bg-zinc-200 px-3 py-1 text-sm disabled:opacity-50"
+            className="rounded bg-slate-200 px-3 py-1 text-sm disabled:opacity-50"
           >
             Load
           </button>
@@ -231,37 +229,37 @@ export default function LocalizationTranslationsPage() {
             type="button"
             disabled={busy || !token}
             onClick={() => saveTranslations()}
-            className="rounded bg-zinc-900 px-3 py-1 text-sm text-white disabled:opacity-50"
+            className="rounded bg-slate-800 px-3 py-1 text-sm text-white disabled:opacity-50"
           >
             Save
           </button>
         </div>
         {loadedMeta && (
-          <p className="text-xs text-zinc-500">
-            Editing {loadedMeta.entity_type} #{loadedMeta.entity_id} · {loadedMeta.language_code}
+          <p className="text-xs text-slate-700">
+            Editing {loadedMeta.entity_type} #{loadedMeta.entity_id} | {loadedMeta.language_code}
           </p>
         )}
       </div>
 
       <div className="mt-4 space-y-3">
         {LOCALIZATION_TRANSLATABLE_FIELDS.map((field) => (
-          <div key={field} className="rounded-lg border border-zinc-200 bg-white p-3 shadow-sm">
-            <div className="text-xs font-mono text-zinc-500">{field}</div>
+          <div key={field} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+            <div className="text-xs font-mono text-slate-700">{field}</div>
             <textarea
               value={drafts[field] ?? ""}
               onChange={(e) => setDrafts((p) => ({ ...p, [field]: e.target.value }))}
               rows={3}
-              className="mt-1 w-full max-w-3xl rounded border border-zinc-300 px-2 py-1 text-sm"
+              className="mt-1 w-full max-w-3xl rounded border border-slate-300 px-2 py-1 text-sm"
             />
           </div>
         ))}
       </div>
 
       {isSuper && (
-        <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4">
+        <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
           <h2 className="text-sm font-semibold text-amber-900">Delete translations (super admin)</h2>
           <p className="mt-1 text-xs text-amber-800">
-            Optional language code — leave empty to delete all languages for this entity.
+            Optional language code - leave empty to delete all languages for this entity.
           </p>
           <input
             type="text"

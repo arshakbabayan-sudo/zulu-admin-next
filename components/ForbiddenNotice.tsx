@@ -1,6 +1,6 @@
 export function ForbiddenNotice({ message }: { message?: string }) {
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
       <p className="font-medium">Access denied</p>
       <p className="mt-1 text-amber-800">
         {message ??

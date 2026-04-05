@@ -1,7 +1,16 @@
 import type { AdminUser } from "./auth-types";
 
-/** Platform-admin JSON requires true super admin (not statistics scope alone). */
+/** Platform access: super admin or canonical platform admin. */
 export function canAccessPlatformAdminNav(user: AdminUser | null): boolean {
+  if (!user) return false;
+  if (user.is_super_admin) return true;
+  if (user.context?.is_platform_admin === true) return true;
+  if (user.canonical_role === "platform_admin") return true;
+  return user.canonical_roles?.includes("platform_admin") ?? false;
+}
+
+/** Explicit super-admin-only nav entries (avoid click -> 403 for scoped platform admins). */
+export function canAccessSuperAdminOnlyPlatformNav(user: AdminUser | null): boolean {
   return user?.is_super_admin === true;
 }
 
