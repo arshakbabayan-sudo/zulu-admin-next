@@ -92,7 +92,7 @@ export default function SupportTicketDetailPage() {
     <div>
       <div className="mb-4 text-sm">
         <Link href="/support/tickets" className="text-slate-600 underline">
-          <- Tickets
+          ← Tickets
         </Link>
       </div>
       <h1 className="text-xl font-semibold">Support ticket #{id}</h1>

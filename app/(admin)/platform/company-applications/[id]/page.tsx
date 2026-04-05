@@ -113,7 +113,7 @@ export default function CompanyApplicationDetailPage() {
           onClick={() => router.push("/platform/company-applications")}
           className="text-blue-700 underline"
         >
-          <- Company applications
+          ← Company applications
         </button>
       </div>
       <h1 className="text-xl font-semibold">Application #{row.id}</h1>
