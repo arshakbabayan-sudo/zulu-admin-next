@@ -8,18 +8,26 @@ import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import {
-  apiOffers,
-  apiTransfers,
   apiCreateTransfer,
-  apiUpdateTransfer,
   apiDeleteTransfer,
-  type OfferRow,
+  apiGetTransfer,
+  apiTransfers,
+  apiUpdateTransfer,
   type TransferRow,
-  type TransferPayload,
 } from "@/lib/inventory-crud-api";
-import { newTransferForm, transferFormFromRow } from "@/lib/transfers/transfer-field-adapter";
-import { TRANSFER_BUILDER_STEPS, type TransferBuilderStep, formatTransferApiValidationErrors, validateTransferStep } from "@/lib/transfers/transfer-ui";
-import { useTransferBuilderForm } from "@/lib/transfers/use-transfer-builder";
+import {
+  emptyTransferOperatorForm,
+  transferFormFromRow,
+  type TransferFormValues,
+} from "@/lib/transfers/transfer-field-adapter";
+import {
+  TRANSFER_FIELD_LABELS,
+  TRANSFER_OPERATOR_WIZARD_STEPS,
+  formatTransferApiValidationErrors,
+  validateTransferOperatorForm,
+  validateTransferOperatorStep,
+  type TransferOperatorWizardStep,
+} from "@/lib/transfers/transfer-ui";
 import {
   csvExportFilename,
   downloadCsvFile,
@@ -27,7 +35,154 @@ import {
   runTransferCsvImport,
   transferTemplateCsv,
 } from "@/lib/csv-import-export";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+
+type FieldType = "text" | "number" | "datetime-local" | "select" | "boolean" | "date" | "time";
+
+type TransferField = {
+  key: keyof TransferFormValues;
+  label: string;
+  type: FieldType;
+  required?: boolean;
+  options?: string[];
+};
+
+const TRANSFER_TYPES = [
+  "airport_transfer",
+  "hotel_transfer",
+  "city_transfer",
+  "private_transfer",
+  "shared_transfer",
+  "intercity_transfer",
+] as const;
+
+const POINT_TYPES = ["airport", "hotel", "address", "station", "port", "landmark"] as const;
+
+const VEHICLE_CATEGORIES = ["sedan", "suv", "minivan", "minibus", "bus", "luxury_car"] as const;
+
+const PRICING_MODES = ["per_vehicle", "per_person"] as const;
+
+const PRIVATE_OR_SHARED_OPTS = ["private", "shared"] as const;
+
+const CANCELLATION_POLICY_TYPES = ["non_refundable", "partially_refundable", "fully_refundable"] as const;
+
+const AVAILABILITY_STATUSES = ["available", "unavailable"] as const;
+
+const LIFECYCLE_STATUSES = ["draft", "active", "inactive", "archived"] as const;
+
+const VISIBILITY_RULES = ["show_all", "show_accepted_only", "hide_rejected"] as const;
+
+const FIELDS: TransferField[] = [
+  { key: "offer_id", label: TRANSFER_FIELD_LABELS.offer_id, type: "number", required: true },
+  { key: "transfer_title", label: TRANSFER_FIELD_LABELS.transfer_title, type: "text", required: true },
+  { key: "transfer_type", label: TRANSFER_FIELD_LABELS.transfer_type, type: "select", options: [...TRANSFER_TYPES], required: true },
+  { key: "service_date", label: TRANSFER_FIELD_LABELS.service_date, type: "date", required: true },
+  { key: "pickup_time", label: TRANSFER_FIELD_LABELS.pickup_time, type: "time", required: true },
+  { key: "estimated_duration_minutes", label: TRANSFER_FIELD_LABELS.estimated_duration_minutes, type: "number", required: true },
+  { key: "pickup_country", label: TRANSFER_FIELD_LABELS.pickup_country, type: "text", required: true },
+  { key: "pickup_city", label: TRANSFER_FIELD_LABELS.pickup_city, type: "text", required: true },
+  { key: "pickup_point_type", label: TRANSFER_FIELD_LABELS.pickup_point_type, type: "select", options: [...POINT_TYPES], required: true },
+  { key: "pickup_point_name", label: TRANSFER_FIELD_LABELS.pickup_point_name, type: "text", required: true },
+  { key: "dropoff_country", label: TRANSFER_FIELD_LABELS.dropoff_country, type: "text", required: true },
+  { key: "dropoff_city", label: TRANSFER_FIELD_LABELS.dropoff_city, type: "text", required: true },
+  { key: "dropoff_point_type", label: TRANSFER_FIELD_LABELS.dropoff_point_type, type: "select", options: [...POINT_TYPES], required: true },
+  { key: "dropoff_point_name", label: TRANSFER_FIELD_LABELS.dropoff_point_name, type: "text", required: true },
+  { key: "route_label", label: TRANSFER_FIELD_LABELS.route_label, type: "text" },
+  { key: "route_distance_km", label: TRANSFER_FIELD_LABELS.route_distance_km, type: "number" },
+  { key: "pickup_latitude", label: TRANSFER_FIELD_LABELS.pickup_latitude, type: "number" },
+  { key: "pickup_longitude", label: TRANSFER_FIELD_LABELS.pickup_longitude, type: "number" },
+  { key: "dropoff_latitude", label: TRANSFER_FIELD_LABELS.dropoff_latitude, type: "number" },
+  { key: "dropoff_longitude", label: TRANSFER_FIELD_LABELS.dropoff_longitude, type: "number" },
+  { key: "availability_window_start", label: TRANSFER_FIELD_LABELS.availability_window_start, type: "datetime-local" },
+  { key: "availability_window_end", label: TRANSFER_FIELD_LABELS.availability_window_end, type: "datetime-local" },
+  { key: "vehicle_category", label: TRANSFER_FIELD_LABELS.vehicle_category, type: "select", options: [...VEHICLE_CATEGORIES], required: true },
+  { key: "vehicle_class", label: TRANSFER_FIELD_LABELS.vehicle_class, type: "text" },
+  { key: "private_or_shared", label: TRANSFER_FIELD_LABELS.private_or_shared, type: "select", options: ["", ...PRIVATE_OR_SHARED_OPTS] },
+  { key: "passenger_capacity", label: TRANSFER_FIELD_LABELS.passenger_capacity, type: "number", required: true },
+  { key: "luggage_capacity", label: TRANSFER_FIELD_LABELS.luggage_capacity, type: "number", required: true },
+  { key: "minimum_passengers", label: TRANSFER_FIELD_LABELS.minimum_passengers, type: "number", required: true },
+  { key: "maximum_passengers", label: TRANSFER_FIELD_LABELS.maximum_passengers, type: "number", required: true },
+  { key: "maximum_luggage", label: TRANSFER_FIELD_LABELS.maximum_luggage, type: "number" },
+  { key: "child_seat_available", label: TRANSFER_FIELD_LABELS.child_seat_available, type: "boolean", required: true },
+  { key: "child_seat_required_rule", label: TRANSFER_FIELD_LABELS.child_seat_required_rule, type: "text" },
+  { key: "accessibility_support", label: TRANSFER_FIELD_LABELS.accessibility_support, type: "boolean", required: true },
+  { key: "special_assistance_supported", label: TRANSFER_FIELD_LABELS.special_assistance_supported, type: "boolean", required: true },
+  { key: "pricing_mode", label: TRANSFER_FIELD_LABELS.pricing_mode, type: "select", options: [...PRICING_MODES], required: true },
+  { key: "base_price", label: TRANSFER_FIELD_LABELS.base_price, type: "number", required: true },
+  { key: "free_cancellation", label: TRANSFER_FIELD_LABELS.free_cancellation, type: "boolean", required: true },
+  { key: "cancellation_policy_type", label: TRANSFER_FIELD_LABELS.cancellation_policy_type, type: "select", options: [...CANCELLATION_POLICY_TYPES], required: true },
+  { key: "cancellation_deadline_at", label: TRANSFER_FIELD_LABELS.cancellation_deadline_at, type: "datetime-local" },
+  { key: "visibility_rule", label: TRANSFER_FIELD_LABELS.visibility_rule, type: "select", options: [...VISIBILITY_RULES], required: true },
+  { key: "appears_in_web", label: TRANSFER_FIELD_LABELS.appears_in_web, type: "boolean", required: true },
+  { key: "appears_in_admin", label: TRANSFER_FIELD_LABELS.appears_in_admin, type: "boolean", required: true },
+  { key: "appears_in_zulu_admin", label: TRANSFER_FIELD_LABELS.appears_in_zulu_admin, type: "boolean", required: true },
+  { key: "availability_status", label: TRANSFER_FIELD_LABELS.availability_status, type: "select", options: [...AVAILABILITY_STATUSES], required: true },
+  { key: "bookable", label: TRANSFER_FIELD_LABELS.bookable, type: "boolean", required: true },
+  { key: "is_package_eligible", label: TRANSFER_FIELD_LABELS.is_package_eligible, type: "boolean", required: true },
+  { key: "status", label: TRANSFER_FIELD_LABELS.status, type: "select", options: [...LIFECYCLE_STATUSES], required: true },
+];
+
+type TransferWizardStepNonReview = Exclude<TransferOperatorWizardStep, "review">;
+
+const STEP_FIELDS: Record<TransferWizardStepNonReview, (keyof TransferFormValues)[]> = {
+  general: [
+    "offer_id",
+    "transfer_title",
+    "transfer_type",
+    "service_date",
+    "pickup_time",
+    "estimated_duration_minutes",
+  ],
+  route: [
+    "pickup_country",
+    "pickup_city",
+    "pickup_point_type",
+    "pickup_point_name",
+    "dropoff_country",
+    "dropoff_city",
+    "dropoff_point_type",
+    "dropoff_point_name",
+    "route_label",
+    "route_distance_km",
+    "pickup_latitude",
+    "pickup_longitude",
+    "dropoff_latitude",
+    "dropoff_longitude",
+    "availability_window_start",
+    "availability_window_end",
+  ],
+  vehicle: [
+    "vehicle_category",
+    "vehicle_class",
+    "private_or_shared",
+    "passenger_capacity",
+    "luggage_capacity",
+    "minimum_passengers",
+    "maximum_passengers",
+    "maximum_luggage",
+    "child_seat_available",
+    "child_seat_required_rule",
+    "accessibility_support",
+    "special_assistance_supported",
+  ],
+  pricing: [
+    "pricing_mode",
+    "base_price",
+    "free_cancellation",
+    "cancellation_policy_type",
+    "cancellation_deadline_at",
+  ],
+  publication: [
+    "visibility_rule",
+    "appears_in_web",
+    "appears_in_admin",
+    "appears_in_zulu_admin",
+    "availability_status",
+    "bookable",
+    "is_package_eligible",
+    "status",
+  ],
+};
 
 type FieldErrors = Record<string, string[]>;
 
@@ -52,22 +207,22 @@ export default function OperatorTransfersPage() {
   const [page, setPage] = useState(1);
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
-  const [seed, setSeed] = useState<TransferPayload | null>(null);
+  const [form, setForm] = useState<TransferFormValues | null>(null);
   const [editId, setEditId] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [formErr, setFormErr] = useState<string | null>(null);
   const [fieldErrs, setFieldErrs] = useState<FieldErrors | null>(null);
-  const [builderKey, setBuilderKey] = useState(1);
+  const [wizardStep, setWizardStep] = useState<TransferOperatorWizardStep>("general");
+  const [stepErrors, setStepErrors] = useState<string[]>([]);
   const [importOpen, setImportOpen] = useState(false);
   const [exportBusy, setExportBusy] = useState(false);
 
-  // Offers are loaded lazily — only when "+ New transfer" is clicked.
-  // This removes an extra API round-trip on every page mount.
-  const offersCache = useRef<OfferRow[] | null>(null);
+  const mode = editId == null ? "create" : "edit";
 
   const load = useCallback(async () => {
     if (!token) return;
-    setErr(null); setForbidden(false);
+    setErr(null);
+    setForbidden(false);
     try {
       const res = await apiTransfers(token, { page, per_page: 20 });
       setRows(res.data);
@@ -78,67 +233,254 @@ export default function OperatorTransfersPage() {
     }
   }, [token, page]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
-  const ensureOffersLoaded = useCallback(async (): Promise<OfferRow[]> => {
-    if (offersCache.current !== null) return offersCache.current;
-    if (!token) return [];
-    try {
-      const res = await apiOffers(token, { type: "transfer" });
-      offersCache.current = res.data ?? [];
-      return offersCache.current;
-    } catch {
-      offersCache.current = [];
-      return [];
-    }
-  }, [token]);
+  function openCreate() {
+    setEditId(null);
+    setForm(emptyTransferOperatorForm());
+    setFormErr(null);
+    setFieldErrs(null);
+    setWizardStep("general");
+    setStepErrors([]);
+  }
 
-  async function openCreate() {
+  async function openEdit(r: TransferRow) {
+    if (!token) return;
+    setEditId(r.id);
     setBusy(true);
-    const loadedOffers = await ensureOffersLoaded();
-    setBusy(false);
-
-    const usedOfferIds = new Set<number>();
-    for (const r of rows) {
-      if (r.offer_id != null) usedOfferIds.add(Number(r.offer_id));
-    }
-    const available = loadedOffers.find((o) => !usedOfferIds.has(o.id));
-
-    if (!available) {
-      setSeed(null);
+    setFormErr(null);
+    setFieldErrs(null);
+    try {
+      const res = await apiGetTransfer(token, r.id);
+      const raw = (res.data ?? {}) as TransferRow;
+      setForm(transferFormFromRow(raw));
+      setWizardStep("general");
+      setStepErrors([]);
+    } catch (e) {
+      setFormErr(e instanceof ApiRequestError ? e.message : "Failed");
+      setForm(null);
       setEditId(null);
-      setFormErr("No available transfer offers to create from.");
-      setFieldErrs(null);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function closeForm() {
+    setForm(null);
+    setEditId(null);
+    setFormErr(null);
+    setFieldErrs(null);
+    setWizardStep("general");
+    setStepErrors([]);
+  }
+
+  const fieldByKey = new Map<keyof TransferFormValues, TransferField>(FIELDS.map((f) => [f.key, f]));
+  const currentStepIndex = TRANSFER_OPERATOR_WIZARD_STEPS.findIndex((s) => s.key === wizardStep);
+
+  const hasFieldErr = (key: string) => Boolean(fieldErrs && Array.isArray(fieldErrs[key]) && fieldErrs[key].length > 0);
+  const fieldMsgs = (key: string) => (fieldErrs && Array.isArray(fieldErrs[key]) ? fieldErrs[key] : []);
+  const inputClass = (key: string) =>
+    `rounded border px-2 py-1.5 text-sm ${
+      hasFieldErr(key) ? "border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200" : "border-slate-300"
+    }`;
+
+  function renderTransferField(field: TransferField) {
+    if (!form) return null;
+    const disabledOffer = field.key === "offer_id" && editId != null;
+
+    if (field.type === "select" && field.options) {
+      return (
+        <label key={String(field.key)} className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-slate-600">
+            {field.label}
+            {field.required ? " *" : ""}
+          </span>
+          <select
+            value={
+              field.key === "private_or_shared"
+                ? String(form.private_or_shared ?? "")
+                : String(form[field.key] ?? "")
+            }
+            disabled={disabledOffer}
+            onChange={(e) => {
+              const v = e.target.value;
+              setForm((p) => (p ? { ...p, [field.key]: v as never } : p));
+            }}
+            className={inputClass(String(field.key)) + (disabledOffer ? " bg-slate-50 text-slate-600" : "")}
+          >
+            {field.key === "private_or_shared" && <option value="">(optional)</option>}
+            {field.options
+              .filter((opt) => opt !== "")
+              .map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt || "(optional)"}
+                </option>
+              ))}
+          </select>
+          {fieldMsgs(String(field.key)).map((m, i) => (
+            <span key={i} className="text-xs text-red-700">
+              {m}
+            </span>
+          ))}
+        </label>
+      );
+    }
+
+    if (field.type === "boolean") {
+      return (
+        <label key={String(field.key)} className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-slate-600">
+            {field.label}
+            {field.required ? " *" : ""}
+          </span>
+          <select
+            value={String(Boolean(form[field.key]))}
+            onChange={(e) =>
+              setForm((p) => (p ? { ...p, [field.key]: e.target.value === "true" } : p))
+            }
+            className={inputClass(String(field.key))}
+          >
+            <option value="true">true</option>
+            <option value="false">false</option>
+          </select>
+          {fieldMsgs(String(field.key)).map((m, i) => (
+            <span key={i} className="text-xs text-red-700">
+              {m}
+            </span>
+          ))}
+        </label>
+      );
+    }
+
+    if (field.type === "time") {
+      const raw = String(form.pickup_time ?? "09:00:00");
+      const hm = raw.slice(0, 5);
+      return (
+        <label key={String(field.key)} className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-slate-600">
+            {field.label}
+            {field.required ? " *" : ""}
+          </span>
+          <input
+            type="time"
+            value={hm}
+            onChange={(e) => {
+              const v = e.target.value;
+              setForm((p) => (p ? { ...p, pickup_time: v ? `${v}:00` : "09:00:00" } : p));
+            }}
+            className={inputClass(String(field.key))}
+          />
+          {fieldMsgs(String(field.key)).map((m, i) => (
+            <span key={i} className="text-xs text-red-700">
+              {m}
+            </span>
+          ))}
+        </label>
+      );
+    }
+
+    if (field.type === "date") {
+      return (
+        <label key={String(field.key)} className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-slate-600">
+            {field.label}
+            {field.required ? " *" : ""}
+          </span>
+          <input
+            type="date"
+            value={String(form[field.key] ?? "")}
+            onChange={(e) => setForm((p) => (p ? { ...p, [field.key]: e.target.value } : p))}
+            className={inputClass(String(field.key))}
+          />
+          {fieldMsgs(String(field.key)).map((m, i) => (
+            <span key={i} className="text-xs text-red-700">
+              {m}
+            </span>
+          ))}
+        </label>
+      );
+    }
+
+    return (
+      <label key={String(field.key)} className="flex flex-col gap-1 text-sm">
+        <span className="font-medium text-slate-600">
+          {field.label}
+          {field.required ? " *" : ""}
+        </span>
+        <input
+          value={
+            field.key === "offer_id"
+              ? form.offer_id == null
+                ? ""
+                : String(form.offer_id)
+              : field.type === "number"
+                ? form[field.key] === "" || form[field.key] == null
+                  ? ""
+                  : String(form[field.key])
+                : String(form[field.key] ?? "")
+          }
+          disabled={disabledOffer}
+          onChange={(e) => {
+            const v = e.target.value;
+            setForm((p) => {
+              if (!p) return p;
+              if (field.key === "offer_id") {
+                if (v === "") return { ...p, offer_id: null };
+                const n = Number(v);
+                return { ...p, offer_id: Number.isFinite(n) ? n : null };
+              }
+              if (field.type === "number") {
+                if (v === "") return { ...p, [field.key]: "" as never };
+                return { ...p, [field.key]: Number(v) as never };
+              }
+              return { ...p, [field.key]: v as never };
+            });
+          }}
+          type={field.type === "number" ? "number" : field.type === "datetime-local" ? "datetime-local" : "text"}
+          className={inputClass(String(field.key)) + (disabledOffer ? " bg-slate-50 text-slate-600" : "")}
+        />
+        {fieldMsgs(String(field.key)).map((m, i) => (
+          <span key={i} className="text-xs text-red-700">
+            {m}
+          </span>
+        ))}
+      </label>
+    );
+  }
+
+  function handleNextStep() {
+    if (!form) return;
+    const errors = validateTransferOperatorStep(form, wizardStep, mode);
+    setStepErrors(errors);
+    if (errors.length > 0) return;
+    setFormErr(null);
+    const next = TRANSFER_OPERATOR_WIZARD_STEPS[currentStepIndex + 1];
+    if (next) setWizardStep(next.key);
+  }
+
+  function handlePreviousStep() {
+    const prev = TRANSFER_OPERATOR_WIZARD_STEPS[currentStepIndex - 1];
+    if (prev) {
+      setWizardStep(prev.key);
+      setStepErrors([]);
+    }
+  }
+
+  async function handleSubmit() {
+    if (!token || !form) return;
+    const clientErrors = validateTransferOperatorForm(form, mode);
+    if (clientErrors.length > 0) {
+      setFormErr(clientErrors.slice(0, 4).join(" "));
       return;
     }
-
-    const offerId = available.id;
-    const currency = (available.currency ?? "USD").toString();
-    setEditId(null);
-    setSeed(newTransferForm(offerId, currency));
-    setBuilderKey((k) => k + 1);
+    setBusy(true);
     setFormErr(null);
     setFieldErrs(null);
-  }
-
-  function openEdit(r: TransferRow) {
-    setEditId(r.id);
-    setSeed(transferFormFromRow(r));
-    setBuilderKey((k) => k + 1);
-    setFormErr(null);
-    setFieldErrs(null);
-  }
-
-  function closeForm() { setSeed(null); setEditId(null); setFormErr(null); setFieldErrs(null); }
-
-  async function handleSubmit(payload: TransferPayload) {
-    if (!token) return;
-    setBusy(true); setFormErr(null); setFieldErrs(null);
     try {
-      if (editId != null) await apiUpdateTransfer(token, editId, payload);
-      else await apiCreateTransfer(token, payload);
-      // Invalidate offers cache so next "New transfer" gets fresh data.
-      offersCache.current = null;
+      if (editId != null) await apiUpdateTransfer(token, editId, form);
+      else await apiCreateTransfer(token, form);
       closeForm();
       await load();
     } catch (e) {
@@ -158,7 +500,6 @@ export default function OperatorTransfersPage() {
     setBusy(true);
     try {
       await apiDeleteTransfer(token, id);
-      offersCache.current = null;
       await load();
     } catch (e) {
       alert(e instanceof ApiRequestError ? e.message : "Failed");
@@ -167,15 +508,19 @@ export default function OperatorTransfersPage() {
     }
   }
 
-  if (forbidden) return <div><h1 className="text-xl font-semibold">Transfers</h1><div className="mt-4"><ForbiddenNotice /></div></div>;
+  if (forbidden) {
+    return (
+      <div>
+        <h1 className="text-xl font-semibold">Transfers</h1>
+        <div className="mt-4">
+          <ForbiddenNotice />
+        </div>
+      </div>
+    );
+  }
 
   const fieldSummary = renderApiFieldErrors(fieldErrs ?? undefined);
-  const hasFieldErr = (key: string) => Boolean(fieldErrs && Array.isArray(fieldErrs[key]) && fieldErrs[key].length > 0);
-  const fieldMsgs = (key: string) => (fieldErrs && Array.isArray(fieldErrs[key]) ? fieldErrs[key] : []);
-  const inputClass = (key: string) =>
-    `rounded border px-2 py-1.5 text-sm ${
-      hasFieldErr(key) ? "border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200" : "border-slate-300"
-    }`;
+  const apiErrLines = fieldErrs ? formatTransferApiValidationErrors(fieldErrs) : [];
 
   return (
     <div>
@@ -204,14 +549,15 @@ export default function OperatorTransfersPage() {
           />
           <button
             type="button"
-            onClick={() => void openCreate()}
+            onClick={openCreate}
             disabled={busy}
             className="rounded bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700 disabled:opacity-40"
           >
-            {busy ? "Loading…" : "+ New transfer"}
+            + New transfer
           </button>
         </div>
       </div>
+
       <CsvImportModal
         open={importOpen}
         title="Import transfers (CSV)"
@@ -229,10 +575,13 @@ export default function OperatorTransfersPage() {
           return res;
         }}
       />
+
       {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
-      {seed && (
+
+      {form && (
         <div className="mt-4 rounded border border-slate-200 bg-white p-4">
           <h2 className="mb-3 text-base font-medium">{editId ? "Edit transfer" : "New transfer"}</h2>
+
           {fieldSummary && (
             <div className="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
               <div className="font-medium">{fieldSummary.title}</div>
@@ -245,551 +594,179 @@ export default function OperatorTransfersPage() {
               </ul>
             </div>
           )}
-          <TransferBuilder
-            key={builderKey}
-            seed={seed}
-            editId={editId}
-            busy={busy}
-            formErr={formErr}
-            apiFieldErrs={fieldErrs}
-            onClose={closeForm}
-            onSubmit={(payload) => void handleSubmit(payload)}
-            inputClass={inputClass}
-            fieldMsgs={fieldMsgs}
-            hasFieldErr={hasFieldErr}
-          />
+
+          {apiErrLines.length > 0 && (
+            <div className="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+              <div className="font-medium">API validation</div>
+              <ul className="mt-1 list-disc pl-5">
+                {apiErrLines.slice(0, 10).map((line, i) => (
+                  <li key={i}>{line}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="mb-3 grid gap-3 sm:grid-cols-2">
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-slate-600">Currency (offer)</span>
+              <input
+                value={form.currency ?? ""}
+                readOnly
+                className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm text-slate-600"
+              />
+            </label>
+          </div>
+
+          <div className="mb-3 flex flex-wrap gap-2">
+            {TRANSFER_OPERATOR_WIZARD_STEPS.map((step, idx) => {
+              const isActive = step.key === wizardStep;
+              const isComplete = idx < currentStepIndex;
+              return (
+                <button
+                  key={step.key}
+                  type="button"
+                  onClick={() => {
+                    if (!form) return;
+                    if (idx <= currentStepIndex) {
+                      setWizardStep(step.key);
+                      setStepErrors([]);
+                    }
+                  }}
+                  className={`rounded border px-2 py-1 text-xs ${
+                    isActive
+                      ? "border-slate-800 bg-slate-800 text-white"
+                      : isComplete
+                        ? "border-slate-300 bg-slate-100 text-slate-700"
+                        : "border-slate-200 bg-white text-slate-400"
+                  }`}
+                >
+                  {step.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {wizardStep !== "review" ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {STEP_FIELDS[wizardStep as TransferWizardStepNonReview].map((key) => {
+                const field = fieldByKey.get(key);
+                return field ? renderTransferField(field) : null;
+              })}
+            </div>
+          ) : (
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div className="rounded border border-slate-200 px-3 py-2 text-sm">
+                <div className="text-xs text-slate-500">{TRANSFER_FIELD_LABELS.currency}</div>
+                <div className="font-medium text-slate-800">{form.currency ?? "—"}</div>
+              </div>
+              {FIELDS.map((field) => (
+                <div key={String(field.key)} className="rounded border border-slate-200 px-3 py-2 text-sm">
+                  <div className="text-xs text-slate-500">{field.label}</div>
+                  <div className="font-medium text-slate-800">
+                    {field.type === "boolean"
+                      ? String(Boolean(form[field.key]))
+                      : String(form[field.key] ?? "—")}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {stepErrors.length > 0 && (
+            <p className="mt-2 text-sm text-red-600">{stepErrors.slice(0, 4).join(" ")}</p>
+          )}
+          {formErr && <p className="mt-2 text-sm text-red-600">{formErr}</p>}
+
+          <div className="mt-4 flex gap-2">
+            <button
+              type="button"
+              onClick={handlePreviousStep}
+              disabled={currentStepIndex === 0 || busy}
+              className="rounded border border-slate-300 px-4 py-1.5 text-sm disabled:opacity-40"
+            >
+              Back
+            </button>
+            {wizardStep === "review" ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void handleSubmit()}
+                className="rounded bg-slate-800 px-4 py-1.5 text-sm text-white disabled:opacity-40"
+              >
+                {busy ? "Saving..." : "Submit transfer"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={handleNextStep}
+                className="rounded bg-slate-800 px-4 py-1.5 text-sm text-white disabled:opacity-40"
+              >
+                Next
+              </button>
+            )}
+            <button type="button" onClick={closeForm} className="rounded border border-slate-300 px-4 py-1.5 text-sm">
+              Cancel
+            </button>
+          </div>
         </div>
       )}
+
       <div className="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
-        <table className="w-full min-w-[700px] text-left text-sm">
+        <table className="w-full min-w-[800px] text-left text-sm">
           <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
-            <tr><th className="px-3 py-2">ID</th><th className="px-3 py-2">Vehicle</th><th className="px-3 py-2">Route</th><th className="px-3 py-2">Price</th><th className="px-3 py-2">Actions</th></tr>
+            <tr>
+              <th className="px-3 py-2">ID</th>
+              <th className="px-3 py-2">Title</th>
+              <th className="px-3 py-2">Vehicle</th>
+              <th className="px-3 py-2">Route</th>
+              <th className="px-3 py-2">Price</th>
+              <th className="px-3 py-2">Actions</th>
+            </tr>
           </thead>
           <tbody>
-            {rows.length === 0 && <tr><td colSpan={5} className="px-3 py-6 text-center text-slate-400">No transfers</td></tr>}
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan={6} className="px-3 py-6 text-center text-slate-400">
+                  No transfers
+                </td>
+              </tr>
+            )}
             {rows.map((r) => (
               <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-100">
                 <td className="px-3 py-2 tabular-nums text-slate-700">{r.id}</td>
+                <td className="px-3 py-2 font-medium">{r.transfer_title ?? "—"}</td>
                 <td className="px-3 py-2">{r.vehicle_category ?? "-"}</td>
-                <td className="px-3 py-2">{r.pickup_city ?? "-"} {" -> "} {r.dropoff_city ?? "-"}</td>
-                <td className="px-3 py-2 tabular-nums">
-                  {r.base_price != null
-                    ? `${r.offer?.currency ?? ""} ${Number(r.base_price).toFixed(2)}`
-                    : "-"}
+                <td className="px-3 py-2">
+                  {r.pickup_city ?? "-"} {" -> "} {r.dropoff_city ?? "-"}
                 </td>
-                <td className="px-3 py-2"><div className="flex gap-2">
-                  <button type="button" onClick={() => openEdit(r)} className="text-xs text-blue-700 underline">Edit</button>
-                  <button type="button" onClick={() => void handleDelete(r.id)} className="text-xs text-red-600 underline">Delete</button>
-                </div></td>
+                <td className="px-3 py-2 tabular-nums">
+                  {r.base_price != null ? `${r.offer?.currency ?? ""} ${Number(r.base_price).toFixed(2)}` : "-"}
+                </td>
+                <td className="px-3 py-2">
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void openEdit(r)}
+                      className="text-xs text-blue-700 underline"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleDelete(r.id)}
+                      className="text-xs text-red-600 underline"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
       {meta && <PaginationBar meta={meta} onPage={setPage} />}
-    </div>
-  );
-}
-
-function stepTitle(step: TransferBuilderStep): string {
-  switch (step) {
-    case "route_location": return "1) Route and location";
-    case "vehicle_capacity": return "2) Vehicle and capacity";
-    case "pricing_policies": return "3) Pricing and policies";
-    case "availability_publication": return "4) Availability and publication controls";
-    case "review_submit": return "5) Review and submit";
-    default: return step;
-  }
-}
-
-function TransferBuilder(props: {
-  seed: TransferPayload;
-  editId: number | null;
-  busy: boolean;
-  formErr: string | null;
-  apiFieldErrs: FieldErrors | null;
-  onClose: () => void;
-  onSubmit: (payload: TransferPayload) => void;
-  inputClass: (key: string) => string;
-  fieldMsgs: (key: string) => string[];
-  hasFieldErr: (key: string) => boolean;
-}) {
-  const mode = props.editId != null ? "edit" : "create";
-  const b = useTransferBuilderForm(props.seed, mode);
-
-  const stepErrs = b.stepErrors;
-  const apiErrLines = props.apiFieldErrs ? formatTransferApiValidationErrors(props.apiFieldErrs) : [];
-
-  function set<K extends keyof TransferPayload>(key: K, value: TransferPayload[K]) {
-    b.setForm((p) => ({ ...p, [key]: value }));
-  }
-
-  const stepBtnClass = (active: boolean, ok: boolean) =>
-    `rounded px-2 py-1 text-xs ${
-      active ? "bg-slate-800 text-white" : ok ? "bg-slate-100 text-slate-700 hover:bg-slate-200" : "bg-amber-50 text-amber-800 hover:bg-amber-100"
-    }`;
-
-  return (
-    <div>
-      <div className="mb-3 flex flex-wrap gap-2">
-        {TRANSFER_BUILDER_STEPS.map((s) => {
-          const ok = validateTransferStep(b.form, s, mode).length === 0;
-          return (
-            <button
-              key={s}
-              type="button"
-              onClick={() => b.goTo(s)}
-              className={stepBtnClass(b.step === s, ok)}
-            >
-              {stepTitle(s)}
-            </button>
-          );
-        })}
-      </div>
-
-      {stepErrs.length > 0 && (
-        <div className="mb-3 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          <div className="font-medium">Fix these to continue.</div>
-          <ul className="mt-1 list-disc pl-5">
-            {stepErrs.slice(0, 10).map((e, i) => <li key={i}>{e}</li>)}
-          </ul>
-        </div>
-      )}
-
-      {apiErrLines.length > 0 && (
-        <div className="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-          <div className="font-medium">API validation errors</div>
-          <ul className="mt-1 list-disc pl-5">
-            {apiErrLines.slice(0, 10).map((e, i) => <li key={i}>{e}</li>)}
-          </ul>
-        </div>
-      )}
-
-      {/* Shared readonly context */}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-slate-600">Offer ID</span>
-          <input
-            value={b.form.offer_id == null ? "" : String(b.form.offer_id)}
-            disabled={true}
-            className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm text-slate-600"
-          />
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-slate-600">Currency (offer)</span>
-          <input
-            value={b.form.currency ?? ""}
-            disabled={true}
-            className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm text-slate-600"
-          />
-        </label>
-      </div>
-
-      {b.step === "route_location" && (
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-            <span className="font-medium text-slate-600">Transfer title</span>
-            <input
-              value={b.form.transfer_title ?? ""}
-              onChange={(e) => set("transfer_title", e.target.value)}
-              className={props.inputClass("transfer_title")}
-            />
-            {props.fieldMsgs("transfer_title").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-          </label>
-
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-slate-600">Transfer type</span>
-            <select
-              value={b.form.transfer_type ?? "city_transfer"}
-              onChange={(e) => set("transfer_type", e.target.value)}
-              className={props.inputClass("transfer_type")}
-            >
-              {[
-                "airport_transfer",
-                "hotel_transfer",
-                "city_transfer",
-                "private_transfer",
-                "shared_transfer",
-                "intercity_transfer",
-              ].map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
-            {props.fieldMsgs("transfer_type").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-          </label>
-
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-slate-600">Service date</span>
-            <input
-              type="date"
-              value={b.form.service_date ?? ""}
-              onChange={(e) => set("service_date", e.target.value)}
-              className={props.inputClass("service_date")}
-            />
-            {props.fieldMsgs("service_date").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-          </label>
-
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-slate-600">Pickup time</span>
-            <input
-              type="time"
-              value={(b.form.pickup_time ?? "09:00:00").slice(0, 5)}
-              onChange={(e) => set("pickup_time", e.target.value)}
-              className={props.inputClass("pickup_time")}
-            />
-            {props.fieldMsgs("pickup_time").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-          </label>
-
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-slate-600">Estimated duration (minutes)</span>
-            <input
-              type="number"
-              value={b.form.estimated_duration_minutes === "" ? "" : String(b.form.estimated_duration_minutes)}
-              onChange={(e) => set("estimated_duration_minutes", e.target.value ? Number(e.target.value) : "")}
-              className={props.inputClass("estimated_duration_minutes")}
-            />
-            {props.fieldMsgs("estimated_duration_minutes").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-          </label>
-
-          <div className="sm:col-span-2 mt-2 flex flex-col gap-2 border-t border-slate-200 pt-4">
-            <span className="text-xs font-semibold uppercase text-slate-500">Pickup</span>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">Pickup country</span>
-                <input value={b.form.pickup_country ?? ""} onChange={(e) => set("pickup_country", e.target.value)} className={props.inputClass("pickup_country")} />
-                {props.fieldMsgs("pickup_country").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">Pickup city</span>
-                <input value={b.form.pickup_city ?? ""} onChange={(e) => set("pickup_city", e.target.value)} className={props.inputClass("pickup_city")} />
-                {props.fieldMsgs("pickup_city").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">Pickup point type</span>
-                <select value={b.form.pickup_point_type ?? "address"} onChange={(e) => set("pickup_point_type", e.target.value)} className={props.inputClass("pickup_point_type")}>
-                  {["airport", "hotel", "address", "station", "port", "landmark"].map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-                {props.fieldMsgs("pickup_point_type").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">Pickup point name</span>
-                <input value={b.form.pickup_point_name ?? ""} onChange={(e) => set("pickup_point_name", e.target.value)} className={props.inputClass("pickup_point_name")} />
-                {props.fieldMsgs("pickup_point_name").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-              </label>
-            </div>
-          </div>
-
-          <div className="sm:col-span-2 mt-2 flex flex-col gap-2 border-t border-slate-200 pt-4">
-            <span className="text-xs font-semibold uppercase text-slate-500">Drop-off</span>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">Drop-off country</span>
-                <input value={b.form.dropoff_country ?? ""} onChange={(e) => set("dropoff_country", e.target.value)} className={props.inputClass("dropoff_country")} />
-                {props.fieldMsgs("dropoff_country").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">Drop-off city</span>
-                <input value={b.form.dropoff_city ?? ""} onChange={(e) => set("dropoff_city", e.target.value)} className={props.inputClass("dropoff_city")} />
-                {props.fieldMsgs("dropoff_city").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">Drop-off point type</span>
-                <select value={b.form.dropoff_point_type ?? "address"} onChange={(e) => set("dropoff_point_type", e.target.value)} className={props.inputClass("dropoff_point_type")}>
-                  {["airport", "hotel", "address", "station", "port", "landmark"].map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-                {props.fieldMsgs("dropoff_point_type").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">Drop-off point name</span>
-                <input value={b.form.dropoff_point_name ?? ""} onChange={(e) => set("dropoff_point_name", e.target.value)} className={props.inputClass("dropoff_point_name")} />
-                {props.fieldMsgs("dropoff_point_name").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-              </label>
-            </div>
-          </div>
-
-          <div className="sm:col-span-2 mt-2 flex flex-col gap-2 border-t border-slate-200 pt-4">
-            <span className="text-xs font-semibold uppercase text-slate-500">Route metadata (optional)</span>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">Route label</span>
-                <input value={b.form.route_label ?? ""} onChange={(e) => set("route_label", e.target.value)} className={props.inputClass("route_label")} />
-                {props.fieldMsgs("route_label").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">Route distance (km)</span>
-                <input type="number" value={b.form.route_distance_km === "" ? "" : String(b.form.route_distance_km)} onChange={(e) => set("route_distance_km", e.target.value ? Number(e.target.value) : "")} className={props.inputClass("route_distance_km")} />
-                {props.fieldMsgs("route_distance_km").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">Pickup lat</span>
-                <input type="number" value={b.form.pickup_latitude === "" ? "" : String(b.form.pickup_latitude)} onChange={(e) => set("pickup_latitude", e.target.value ? Number(e.target.value) : "")} className={props.inputClass("pickup_latitude")} />
-                {props.fieldMsgs("pickup_latitude").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">Pickup lng</span>
-                <input type="number" value={b.form.pickup_longitude === "" ? "" : String(b.form.pickup_longitude)} onChange={(e) => set("pickup_longitude", e.target.value ? Number(e.target.value) : "")} className={props.inputClass("pickup_longitude")} />
-                {props.fieldMsgs("pickup_longitude").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">Drop-off lat</span>
-                <input type="number" value={b.form.dropoff_latitude === "" ? "" : String(b.form.dropoff_latitude)} onChange={(e) => set("dropoff_latitude", e.target.value ? Number(e.target.value) : "")} className={props.inputClass("dropoff_latitude")} />
-                {props.fieldMsgs("dropoff_latitude").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">Drop-off lng</span>
-                <input type="number" value={b.form.dropoff_longitude === "" ? "" : String(b.form.dropoff_longitude)} onChange={(e) => set("dropoff_longitude", e.target.value ? Number(e.target.value) : "")} className={props.inputClass("dropoff_longitude")} />
-                {props.fieldMsgs("dropoff_longitude").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-              </label>
-            </div>
-          </div>
-
-          <div className="sm:col-span-2 mt-2 flex flex-col gap-2 border-t border-slate-200 pt-4">
-            <span className="text-xs font-semibold uppercase text-slate-500">Availability window (optional)</span>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">Window start</span>
-                <input type="datetime-local" value={b.form.availability_window_start ?? ""} onChange={(e) => set("availability_window_start", e.target.value)} className={props.inputClass("availability_window_start")} />
-                {props.fieldMsgs("availability_window_start").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">Window end</span>
-                <input type="datetime-local" value={b.form.availability_window_end ?? ""} onChange={(e) => set("availability_window_end", e.target.value)} className={props.inputClass("availability_window_end")} />
-                {props.fieldMsgs("availability_window_end").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-              </label>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {b.step === "vehicle_capacity" && (
-        <div className="mt-3">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">Vehicle category</span>
-              <select value={b.form.vehicle_category ?? "sedan"} onChange={(e) => set("vehicle_category", e.target.value)} className={props.inputClass("vehicle_category")}>
-                {["sedan", "suv", "minivan", "minibus", "bus", "luxury_car"].map((v) => <option key={v} value={v}>{v}</option>)}
-              </select>
-              {props.fieldMsgs("vehicle_category").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-            </label>
-
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">Vehicle class (optional)</span>
-              <input value={b.form.vehicle_class ?? ""} onChange={(e) => set("vehicle_class", e.target.value)} className={props.inputClass("vehicle_class")} placeholder="e.g. comfort / business" />
-              {props.fieldMsgs("vehicle_class").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-            </label>
-
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">Private/shared (optional)</span>
-              <select value={b.form.private_or_shared ?? ""} onChange={(e) => set("private_or_shared", e.target.value)} className={props.inputClass("private_or_shared")}>
-                <option value="">(default)</option>
-                {["private", "shared"].map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-              {props.fieldMsgs("private_or_shared").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-            </label>
-
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">Passenger capacity</span>
-              <input type="number" value={b.form.passenger_capacity === "" ? "" : String(b.form.passenger_capacity)} onChange={(e) => set("passenger_capacity", e.target.value ? Number(e.target.value) : "")} className={props.inputClass("passenger_capacity")} />
-              {props.fieldMsgs("passenger_capacity").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-            </label>
-
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">Luggage capacity</span>
-              <input type="number" value={b.form.luggage_capacity === "" ? "" : String(b.form.luggage_capacity)} onChange={(e) => set("luggage_capacity", e.target.value ? Number(e.target.value) : "")} className={props.inputClass("luggage_capacity")} />
-              {props.fieldMsgs("luggage_capacity").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-            </label>
-
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">Minimum passengers</span>
-              <input type="number" value={b.form.minimum_passengers === "" ? "" : String(b.form.minimum_passengers)} onChange={(e) => set("minimum_passengers", e.target.value ? Number(e.target.value) : "")} className={props.inputClass("minimum_passengers")} />
-              {props.fieldMsgs("minimum_passengers").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-            </label>
-
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">Maximum passengers</span>
-              <input type="number" value={b.form.maximum_passengers === "" ? "" : String(b.form.maximum_passengers)} onChange={(e) => set("maximum_passengers", e.target.value ? Number(e.target.value) : "")} className={props.inputClass("maximum_passengers")} />
-              {props.fieldMsgs("maximum_passengers").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-            </label>
-
-            <div className="sm:col-span-2 mt-2 flex flex-col gap-2 border-t border-slate-200 pt-4">
-              <span className="text-xs font-semibold uppercase text-slate-500">Additional services</span>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="flex flex-col gap-2 sm:col-span-2">
-                  <label className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" checked={Boolean(b.form.child_seat_available)} onChange={(e) => set("child_seat_available", e.target.checked)} className={`rounded border ${props.hasFieldErr("child_seat_available") ? "border-red-400" : "border-slate-300"}`} />
-                    <span className="font-medium text-slate-600">Child seat available</span>
-                  </label>
-                  {props.fieldMsgs("child_seat_available").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-                </div>
-
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="font-medium text-slate-600">Child seat rule (optional)</span>
-                  <input value={b.form.child_seat_required_rule ?? ""} onChange={(e) => set("child_seat_required_rule", e.target.value)} className={props.inputClass("child_seat_required_rule")} placeholder="e.g. required / on request" />
-                  {props.fieldMsgs("child_seat_required_rule").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-                </label>
-
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="font-medium text-slate-600">Maximum luggage (optional)</span>
-                  <input type="number" value={b.form.maximum_luggage === "" ? "" : String(b.form.maximum_luggage)} onChange={(e) => set("maximum_luggage", e.target.value ? Number(e.target.value) : "")} className={props.inputClass("maximum_luggage")} />
-                  {props.fieldMsgs("maximum_luggage").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-                </label>
-
-                <div className="flex flex-col gap-2 sm:col-span-2">
-                  <label className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" checked={Boolean(b.form.accessibility_support)} onChange={(e) => set("accessibility_support", e.target.checked)} className={`rounded border ${props.hasFieldErr("accessibility_support") ? "border-red-400" : "border-slate-300"}`} />
-                    <span className="font-medium text-slate-600">Accessibility support</span>
-                  </label>
-                  {props.fieldMsgs("accessibility_support").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-
-                  <label className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" checked={Boolean(b.form.special_assistance_supported)} onChange={(e) => set("special_assistance_supported", e.target.checked)} className={`rounded border ${props.hasFieldErr("special_assistance_supported") ? "border-red-400" : "border-slate-300"}`} />
-                    <span className="font-medium text-slate-600">Special assistance supported</span>
-                  </label>
-                  {props.fieldMsgs("special_assistance_supported").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {b.step === "pricing_policies" && (
-        <div className="mt-3">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">Pricing mode</span>
-              <select value={b.form.pricing_mode ?? "per_vehicle"} onChange={(e) => set("pricing_mode", e.target.value)} className={props.inputClass("pricing_mode")}>
-                {["per_vehicle", "per_person"].map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-              {props.fieldMsgs("pricing_mode").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-            </label>
-
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">Base price</span>
-              <input type="number" value={b.form.base_price === "" ? "" : String(b.form.base_price)} onChange={(e) => set("base_price", e.target.value ? Number(e.target.value) : "")} className={props.inputClass("base_price")} />
-              {props.fieldMsgs("base_price").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-            </label>
-          </div>
-
-          <div className="mt-4 flex flex-col gap-2 border-t border-slate-200 pt-4">
-            <span className="text-xs font-semibold uppercase text-slate-500">Cancellation</span>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="flex flex-col gap-2 sm:col-span-2">
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={Boolean(b.form.free_cancellation)} onChange={(e) => set("free_cancellation", e.target.checked)} className={`rounded border ${props.hasFieldErr("free_cancellation") ? "border-red-400" : "border-slate-300"}`} />
-                  <span className="font-medium text-slate-600">Free cancellation</span>
-                </label>
-                {props.fieldMsgs("free_cancellation").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-              </div>
-
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">Cancellation policy type</span>
-                <select value={b.form.cancellation_policy_type ?? "non_refundable"} onChange={(e) => set("cancellation_policy_type", e.target.value)} className={props.inputClass("cancellation_policy_type")}>
-                  {["non_refundable", "partially_refundable", "fully_refundable"].map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-                {props.fieldMsgs("cancellation_policy_type").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-              </label>
-
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">Cancellation deadline (optional)</span>
-                <input type="datetime-local" value={b.form.cancellation_deadline_at ?? ""} onChange={(e) => set("cancellation_deadline_at", e.target.value)} className={props.inputClass("cancellation_deadline_at")} />
-                {props.fieldMsgs("cancellation_deadline_at").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-              </label>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {b.step === "availability_publication" && (
-        <div className="mt-3">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">Availability status</span>
-              <select value={b.form.availability_status ?? "available"} onChange={(e) => set("availability_status", e.target.value)} className={props.inputClass("availability_status")}>
-                {["available", "unavailable"].map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-              {props.fieldMsgs("availability_status").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-            </label>
-
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">Status</span>
-              <select value={b.form.status ?? "draft"} onChange={(e) => set("status", e.target.value)} className={props.inputClass("status")}>
-                {["draft", "active", "inactive", "archived"].map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-              {props.fieldMsgs("status").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-            </label>
-
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">Visibility rule</span>
-              <select value={b.form.visibility_rule ?? "show_all"} onChange={(e) => set("visibility_rule", e.target.value)} className={props.inputClass("visibility_rule")}>
-                {["show_all", "show_accepted_only", "hide_rejected"].map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-              {props.fieldMsgs("visibility_rule").map((m, i) => <span key={i} className="text-xs text-red-700">{m}</span>)}
-            </label>
-
-            <div className="flex flex-col gap-2 sm:col-span-2">
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={Boolean(b.form.bookable)} onChange={(e) => set("bookable", e.target.checked)} className={`rounded border ${props.hasFieldErr("bookable") ? "border-red-400" : "border-slate-300"}`} />
-                <span className="font-medium text-slate-600">Bookable online</span>
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={Boolean(b.form.is_package_eligible)} onChange={(e) => set("is_package_eligible", e.target.checked)} className={`rounded border ${props.hasFieldErr("is_package_eligible") ? "border-red-400" : "border-slate-300"}`} />
-                <span className="font-medium text-slate-600">Package eligible</span>
-              </label>
-
-              <div className="mt-2 grid gap-2 rounded border border-slate-200 bg-slate-50 p-3 sm:grid-cols-3">
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={Boolean(b.form.appears_in_web)} onChange={(e) => set("appears_in_web", e.target.checked)} className={`rounded border ${props.hasFieldErr("appears_in_web") ? "border-red-400" : "border-slate-300"}`} />
-                  <span className="font-medium text-slate-600">Web</span>
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={Boolean(b.form.appears_in_admin)} onChange={(e) => set("appears_in_admin", e.target.checked)} className={`rounded border ${props.hasFieldErr("appears_in_admin") ? "border-red-400" : "border-slate-300"}`} />
-                  <span className="font-medium text-slate-600">Admin</span>
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={Boolean(b.form.appears_in_zulu_admin)} onChange={(e) => set("appears_in_zulu_admin", e.target.checked)} className={`rounded border ${props.hasFieldErr("appears_in_zulu_admin") ? "border-red-400" : "border-slate-300"}`} />
-                  <span className="font-medium text-slate-600">Zulu admin</span>
-                </label>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {b.step === "review_submit" && (
-        <div className="mt-3">
-          <div className="rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
-            <div className="font-medium">Review</div>
-            <div className="mt-2 grid gap-1 sm:grid-cols-2">
-              <div><span className="font-medium">Route:</span> {b.form.pickup_city || "—"} → {b.form.dropoff_city || "—"}</div>
-              <div><span className="font-medium">Vehicle:</span> {b.form.vehicle_category || "—"} · {b.form.passenger_capacity || "—"} pax</div>
-              <div><span className="font-medium">Date/time:</span> {b.form.service_date || "—"} {String(b.form.pickup_time || "").slice(0, 5)}</div>
-              <div><span className="font-medium">Price:</span> {b.form.currency || ""} {b.form.base_price === "" ? "—" : String(b.form.base_price)}</div>
-              <div><span className="font-medium">Availability:</span> {b.form.availability_status || "—"}</div>
-              <div><span className="font-medium">Status:</span> {b.form.status || "—"}</div>
-            </div>
-          </div>
-
-          {props.formErr && <p className="mt-2 text-sm text-red-600">{props.formErr}</p>}
-          <div className="mt-4 flex gap-2">
-            <button
-              type="button"
-              disabled={props.busy || b.allErrors.length > 0}
-              onClick={() => props.onSubmit(b.form)}
-              className="rounded bg-slate-800 px-4 py-1.5 text-sm text-white disabled:opacity-40"
-            >
-              {props.busy ? "Saving..." : "Submit"}
-            </button>
-            <button type="button" onClick={props.onClose} className="rounded border border-slate-300 px-4 py-1.5 text-sm">Cancel</button>
-          </div>
-        </div>
-      )}
-
-      <div className="mt-4 flex gap-2 border-t border-slate-200 pt-4">
-        <button type="button" onClick={b.goPrev} disabled={!b.canGoPrev || props.busy} className="rounded border border-slate-300 px-4 py-1.5 text-sm disabled:opacity-40">Back</button>
-        <button type="button" onClick={b.goNext} disabled={!b.canGoNext || props.busy} className="rounded bg-slate-800 px-4 py-1.5 text-sm text-white disabled:opacity-40">Next</button>
-        <div className="flex-1" />
-        <button type="button" onClick={props.onClose} disabled={props.busy} className="rounded border border-slate-300 px-4 py-1.5 text-sm disabled:opacity-40">Close</button>
-      </div>
     </div>
   );
 }

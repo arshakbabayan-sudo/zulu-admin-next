@@ -41,6 +41,7 @@ export function InventoryOversightList({
   const [page, setPage] = useState(1);
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const filterSig = useMemo(() => JSON.stringify(queryParams), [queryParams]);
 
@@ -52,6 +53,7 @@ export function InventoryOversightList({
     if (!token || !allowed) return;
     setErr(null);
     setForbidden(false);
+    setIsLoading(true);
     try {
       const res = await apiOperatorInventoryList(token, segment, page, queryParams);
       setRows(res.data.map((r) => (typeof r === "object" && r !== null ? (r as Record<string, unknown>) : {})));
@@ -61,6 +63,8 @@ export function InventoryOversightList({
       else setErr(e instanceof ApiRequestError ? e.message : "Failed to load");
       setRows([]);
       setMeta(null);
+    } finally {
+      setIsLoading(false);
     }
   }, [token, allowed, segment, page, queryParams]);
 
@@ -84,7 +88,7 @@ export function InventoryOversightList({
       <h1 className="text-xl font-semibold">{title}</h1>
       {filterBar ? <div className="mt-4 flex flex-wrap items-end gap-3">{filterBar}</div> : null}
       {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
-      <div className="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
+      <div className={`mt-4 overflow-x-auto rounded border border-slate-200 bg-white transition-opacity ${isLoading ? "opacity-50 pointer-events-none" : "opacity-100"}`}>
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
             <tr>

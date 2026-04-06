@@ -171,6 +171,60 @@ function dateTimeLocalFromApi(iso: string | null | undefined): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+/** Empty operator form (manual offer id + required fields); aligned with flights/hotels CRUD pattern. */
+export function emptyTransferOperatorForm(): TransferFormValues {
+  return {
+    offer_id: null,
+    currency: "USD",
+    visibility_rule: "show_all",
+    appears_in_web: true,
+    appears_in_admin: true,
+    appears_in_zulu_admin: true,
+    transfer_title: "",
+    transfer_type: "city_transfer",
+    pickup_country: "",
+    pickup_city: "",
+    pickup_point_type: "address",
+    pickup_point_name: "",
+    dropoff_country: "",
+    dropoff_city: "",
+    dropoff_point_type: "address",
+    dropoff_point_name: "",
+    pickup_latitude: "",
+    pickup_longitude: "",
+    dropoff_latitude: "",
+    dropoff_longitude: "",
+    route_distance_km: "",
+    route_label: "",
+    service_date: todayISO(),
+    pickup_time: "09:00:00",
+    estimated_duration_minutes: 60,
+    availability_window_start: "",
+    availability_window_end: "",
+    vehicle_category: "sedan",
+    vehicle_class: "",
+    private_or_shared: "",
+    passenger_capacity: 1,
+    luggage_capacity: 0,
+    minimum_passengers: 1,
+    maximum_passengers: 1,
+    maximum_luggage: "",
+    child_seat_available: false,
+    child_seat_required_rule: "",
+    accessibility_support: false,
+    special_assistance_supported: false,
+    pricing_mode: "per_vehicle",
+    base_price: "",
+    free_cancellation: false,
+    cancellation_policy_type: "non_refundable",
+    cancellation_deadline_at: "",
+    availability_status: "available",
+    bookable: true,
+    is_package_eligible: false,
+    status: "draft",
+  };
+}
+
 export function newTransferForm(offerId: number | null, currency: string): TransferFormValues {
   return {
     offer_id: offerId,
@@ -226,7 +280,7 @@ export function newTransferForm(offerId: number | null, currency: string): Trans
 
 export function transferFormFromRow(row: TransferRow): TransferFormValues {
   return {
-    offer_id: null,
+    offer_id: row.offer_id != null ? Number(row.offer_id) : null,
     currency: row.offer?.currency ?? "USD",
     visibility_rule: (row as any).visibility_rule ?? "show_all",
     appears_in_web: (row as any).appears_in_web !== false,

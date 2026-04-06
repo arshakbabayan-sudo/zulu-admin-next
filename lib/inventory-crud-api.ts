@@ -867,6 +867,8 @@ export type TransferRow = {
   free_cancellation?: boolean | null;
   cancellation_policy_type?: string | null;
   cancellation_deadline_at?: string | null;
+  bookable?: boolean | null;
+  is_package_eligible?: boolean | null;
   /** Summary-only embed; full transfer detail from GET `/transfers/:id`, not from offer APIs. */
   offer?: ModuleRowOfferSummary | null;
 };
@@ -882,6 +884,13 @@ export async function apiTransfers(
   if (params.per_page != null) q.set("per_page", String(params.per_page));
   const qs = q.toString();
   return apiFetchJson(`/transfers${qs ? `?${qs}` : ""}`, { method: "GET", token });
+}
+
+export async function apiGetTransfer(
+  token: string,
+  id: number
+): Promise<ApiSuccessEnvelope<TransferRow>> {
+  return apiFetchJson(`/transfers/${id}`, { method: "GET", token });
 }
 
 export async function apiCreateTransfer(
@@ -1190,23 +1199,60 @@ export async function apiDeleteExcursion(
 }
 
 // ─── Visas ────────────────────────────────────────────────────────────────────
+/**
+ * List/show payload matches Laravel `VisaResource`.
+ * `visa_price` is the visa row price; `offer_price` / legacy `price` may reflect the linked offer
+ * for display; `currency` and `status` are typically offer-driven.
+ */
 export type VisaRow = {
   id: number;
+  offer_id?: number | null;
   country?: string | null;
+  country_id?: number | null;
   visa_type?: string | null;
+  name?: string | null;
+  description?: string | null;
+  required_documents?: string[] | null;
+  visa_price?: number | null;
+  offer_price?: number | null;
+  /** Backward-compatible; often aligned with offer price in the resource */
   price?: number | null;
   currency?: string | null;
   processing_days?: number | null;
   company_id?: number | null;
+  status?: string | null;
   created_at?: string | null;
+  updated_at?: string | null;
 };
 
+/**
+ * Client form state + fields mirrored for API writes where applicable.
+ * Editable visa amount is `visa_price`; POST/PATCH body must send `price` = `visa_price`.
+ * `offer_price`, `currency`, `offer_status` are display/prefill only — never sent.
+ * `required_documents_text` is UI-only (one line per document); normalized to `required_documents` on submit.
+ */
 export type VisaPayload = {
   /** Required on create (POST); omit on update (PATCH — server prohibits changes). */
   offer_id?: number;
   country?: string;
+  country_id?: number | "";
   visa_type?: string;
+  name?: string;
+  description?: string;
+  required_documents?: string[];
+  /** Newline-separated in the form; not sent as-is; maps to API `required_documents`. */
+  required_documents_text?: string;
   processing_days?: number;
+  /** Editable visa row price; maps to API field `price` on write. */
+  visa_price?: number;
+  /** Prefill from `VisaResource.offer_price`; display only. */
+  offer_price?: number;
+  /** Backward-compatible typing; API responses may still include `price`. Prefer `visa_price` in forms. */
+  price?: number;
+  /** Prefill from resource; display only (not persisted on visa endpoints). */
+  currency?: string;
+  /** Prefilled from VisaResource `status` (offer); never sent in POST/PATCH body. */
+  offer_status?: string;
   [key: string]: unknown;
 };
 
@@ -1219,6 +1265,13 @@ export async function apiVisas(
   if (params.per_page != null) q.set("per_page", String(params.per_page));
   const qs = q.toString();
   return apiFetchJson(`/visas${qs ? `?${qs}` : ""}`, { method: "GET", token });
+}
+
+export async function apiGetVisa(
+  token: string,
+  id: number
+): Promise<ApiSuccessEnvelope<VisaRow>> {
+  return apiFetchJson(`/visas/${id}`, { method: "GET", token });
 }
 
 export async function apiCreateVisa(

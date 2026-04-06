@@ -52,6 +52,8 @@ export type LocalizationLanguageRow = {
   name: string;
   name_en?: string | null;
   is_default: boolean;
+  is_enabled?: boolean;
+  rtl?: boolean;
   sort_order: number;
 };
 
@@ -71,10 +73,78 @@ export type NotificationTemplateRow = {
   is_active: boolean;
 };
 
+export type UiTranslationRow = {
+  key: string;
+  value: string;
+};
+
+export type UiTranslationsPaginatedPayload = {
+  data: UiTranslationRow[];
+  total: number;
+  per_page: number;
+  current_page: number;
+  last_page: number;
+};
+
 export async function apiLocalizationLanguages(
   token?: string | null
 ): Promise<ApiSuccessEnvelope<LocalizationLanguageRow[]>> {
   return apiFetchJson(`${LOC}/languages`, { method: "GET", token: token ?? undefined });
+}
+
+/** Admin: returns ALL languages including disabled ones */
+export async function apiAdminLanguages(
+  token: string
+): Promise<ApiSuccessEnvelope<LocalizationLanguageRow[]>> {
+  return apiFetchJson(`${LOC}/languages/all`, { method: "GET", token });
+}
+
+export async function apiSetDefaultLanguage(
+  token: string,
+  languageId: number
+): Promise<ApiSuccessEnvelope<{ id: number; code: string; is_default: boolean }>> {
+  return apiFetchJson(`${LOC}/languages/${languageId}/set-default`, { method: "PATCH", token, body: {} });
+}
+
+export async function apiEditLanguage(
+  token: string,
+  languageId: number,
+  body: { name: string; name_en: string; rtl: boolean }
+): Promise<ApiSuccessEnvelope<LocalizationLanguageRow>> {
+  return apiFetchJson(`${LOC}/languages/${languageId}/edit`, { method: "PATCH", token, body });
+}
+
+export async function apiLocalizationCreateLanguage(
+  token: string,
+  body: { code: string; name: string; name_en: string }
+): Promise<ApiSuccessEnvelope<LocalizationLanguageRow & { is_enabled: boolean }>> {
+  return apiFetchJson(`${LOC}/languages`, { method: "POST", token, body });
+}
+
+export async function apiLocalizationDeleteLanguage(
+  token: string,
+  languageId: number
+): Promise<ApiSuccessEnvelope<Record<string, never>>> {
+  return apiFetchJson(`${LOC}/languages/${languageId}`, { method: "DELETE", token, body: {} });
+}
+
+export async function apiUiTranslationsGetAdmin(
+  token: string,
+  params: { lang: string; page?: number; per_page?: number; search?: string }
+): Promise<ApiSuccessEnvelope<UiTranslationsPaginatedPayload>> {
+  const q = new URLSearchParams();
+  q.set("lang", params.lang);
+  if (params.page) q.set("page", String(params.page));
+  if (params.per_page) q.set("per_page", String(params.per_page));
+  if (params.search) q.set("search", params.search);
+  return apiFetchJson(`${LOC}/ui-translations/admin?${q.toString()}`, { method: "GET", token });
+}
+
+export async function apiUiTranslationsSave(
+  token: string,
+  body: { language_code: string; translations: Record<string, string> }
+): Promise<ApiSuccessEnvelope<{ saved: number }>> {
+  return apiFetchJson(`${LOC}/ui-translations`, { method: "POST", token, body });
 }
 
 export async function apiLocalizationToggleLanguage(

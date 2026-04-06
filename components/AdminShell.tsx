@@ -62,7 +62,8 @@ const operatorLinks = [
 
 const localizationLinks: { href: string; label: string }[] = [
   { href: "/localization/languages", label: "Languages" },
-  { href: "/localization/translations", label: "Translations" },
+  { href: "/localization/ui-translations", label: "UI Translations" },
+  { href: "/localization/translations", label: "Content Translations" },
   { href: "/localization/templates", label: "Templates" },
 ];
 
@@ -135,6 +136,7 @@ function NavLink({
     "/inventory/excursions": "/icons/menu/excursion.svg",
 
     "/localization/languages": "/icons/menu/language.svg",
+    "/localization/ui-translations": "/icons/menu/translation.svg",
     "/localization/translations": "/icons/menu/translation.svg",
     "/localization/templates": "/icons/menu/template.svg",
 
@@ -405,6 +407,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 if (l.href === "/localization/languages" && !canAccessLocalizationLanguagesNav(user)) return null;
                 if (l.href === "/localization/templates" && !canAccessLocalizationTemplatesNav(user)) return null;
                 if (l.href === "/localization/translations" && !canAccessLocalizationTranslationsNav(user)) return null;
+                if (l.href === "/localization/ui-translations" && !user?.is_super_admin) return null;
                 return <NavLink key={l.href} href={l.href} label={l.label} pathname={pathname} collapsed={!sidebarOpen} />;
               })}
             </>
