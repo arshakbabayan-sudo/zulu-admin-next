@@ -61,7 +61,7 @@ export default function PlatformUsersPage() {
       <div>
         <h1 className="text-xl font-semibold">Users</h1>
         <div className="mt-4">
-          <ForbiddenNotice message="GET /api/platform-admin/users requires super admin." />
+          <ForbiddenNotice messageKey="admin.forbidden.platform_users" />
         </div>
       </div>
     );

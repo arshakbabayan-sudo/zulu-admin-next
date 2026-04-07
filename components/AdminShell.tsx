@@ -4,7 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { getLanguageMeta } from "@/lib/zulu-lang";
 import { reportAdminNextScreenView } from "@/lib/rollout-telemetry";
+import {
+  ADMIN_INVENTORY_LINKS,
+  ADMIN_LOCALIZATION_LINKS,
+  ADMIN_OPERATOR_LINKS,
+  ADMIN_PLATFORM_LINKS,
+  resolveAdminPageTitle,
+} from "@/lib/admin-nav-config";
 import {
   canAccessInventoryOversightNav,
   canAccessLocalizationLanguagesNav,
@@ -19,53 +28,6 @@ import {
   canAccessSupportNav,
   userHasPermission,
 } from "@/lib/access";
-
-const platformLinks: { href: string; label: string; superAdminOnly?: boolean }[] = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/platform/company-applications", label: "Company applications" },
-  { href: "/platform/companies", label: "Platform companies" },
-  { href: "/platform/approvals", label: "Approvals" },
-  { href: "/platform/users", label: "Users" },
-  { href: "/platform/seller-applications", label: "Seller applications" },
-  { href: "/platform/bookings", label: "Bookings" },
-  { href: "/platform/invoices", label: "Invoices" },
-  { href: "/platform/commissions", label: "Commissions" },
-  { href: "/platform/finance", label: "Finance" },
-  { href: "/platform/payments", label: "Payments" },
-  { href: "/platform/package-orders", label: "Package orders" },
-  { href: "/platform/finance-summary", label: "Finance summary" },
-  { href: "/platform/packages", label: "Packages" },
-  { href: "/platform/reviews", label: "Reviews" },
-  { href: "/platform/banners", label: "Banners", superAdminOnly: true },
-  { href: "/platform/settings", label: "Settings" },
-  { href: "/platform/locations", label: "Locations", superAdminOnly: true },
-];
-
-const inventoryLinks: { href: string; label: string; perm: string }[] = [
-  { href: "/inventory/flights", label: "Flights inventory", perm: "flights.view" },
-  { href: "/inventory/hotels", label: "Hotels inventory", perm: "hotels.view" },
-  { href: "/inventory/transfers", label: "Transfers inventory", perm: "transfers.view" },
-  { href: "/inventory/cars", label: "Cars inventory", perm: "cars.view" },
-  { href: "/inventory/excursions", label: "Excursions inventory", perm: "excursions.view" },
-];
-
-const operatorLinks = [
-  { href: "/operator/flights", label: "Flights CRUD" },
-  { href: "/operator/hotels", label: "Hotels CRUD" },
-  { href: "/operator/transfers", label: "Transfers CRUD" },
-  { href: "/operator/cars", label: "Cars CRUD" },
-  { href: "/operator/excursions", label: "Excursions CRUD" },
-  { href: "/operator/visas", label: "Visas CRUD" },
-  { href: "/operator/packages", label: "Packages CRUD" },
-  { href: "/operator/offers", label: "Offers" },
-];
-
-const localizationLinks: { href: string; label: string }[] = [
-  { href: "/localization/languages", label: "Languages" },
-  { href: "/localization/ui-translations", label: "UI Translations" },
-  { href: "/localization/translations", label: "Content Translations" },
-  { href: "/localization/templates", label: "Templates" },
-];
 
 function TopIconButton({
   label,
@@ -210,6 +172,9 @@ function GroupHeader({
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, token, logout } = useAdminAuth();
+  const { lang, setLang, languageOptions, t } = useLanguage();
+  const [languageOpen, setLanguageOpen] = useState(false);
+  const languageRef = useRef<HTMLDivElement>(null);
   const lastScreenPing = useRef<{ path: string; t: number } | null>(null);
   const lastPathname = useRef<string | null>(null);
   const [isNavigating, setIsNavigating] = useState(false);
@@ -255,6 +220,17 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     };
   }, [pathname]);
 
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (languageRef.current && !languageRef.current.contains(target)) {
+        setLanguageOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
   const showPlatform = canAccessPlatformAdminNav(user);
   const showSuperAdminOnlyPlatform = canAccessSuperAdminOnlyPlatformNav(user);
   const showSupport = canAccessSupportNav(user);
@@ -264,13 +240,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const showInventory = canAccessInventoryOversightNav(user);
   const showLocalization = canAccessLocalizationSectionNav(user);
 
-  const pageTitle = pathname === "/dashboard"
-    ? "Dashboard"
-    : pathname
-      .split("/")
-      .filter(Boolean)
-      .map((p) => p.replace(/-/g, " "))
-      .join(" / ");
+  const pageTitle = pathname ? resolveAdminPageTitle(pathname, t) : t("admin.nav.dashboard");
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-slate-100 text-slate-900">
@@ -288,8 +258,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </div>
           <button
             type="button"
-            aria-label="Toggle sidebar"
-            title="Toggle sidebar"
+            aria-label={t("admin.header.toggle_sidebar")}
+            title={t("admin.header.toggle_sidebar")}
             onClick={() => setSidebarOpen((v) => !v)}
             className="ml-3 inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-700 transition hover:bg-black/5"
           >
@@ -300,10 +270,43 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <div className="ml-3 text-sm font-semibold tracking-wide text-slate-800">{pageTitle}</div>
         </div>
         <div className="flex items-center gap-1.5">
-          <TopIconButton label="Language">
-            <span className="text-sm">🇬🇧</span>
-          </TopIconButton>
-          <TopIconButton label="Theme">
+          <div ref={languageRef} className="relative flex items-center">
+            <button
+              type="button"
+              aria-label={t("common.language")}
+              title={t("common.language")}
+              onClick={() => setLanguageOpen((o) => !o)}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-700 transition hover:bg-black/5"
+            >
+              <span className="text-sm leading-none">
+                {getLanguageMeta(lang, languageOptions).flag ?? "🌐"}
+              </span>
+            </button>
+            {languageOpen ? (
+              <div
+                className="absolute right-0 top-full z-[100] mt-1 min-w-[140px] overflow-hidden rounded-md border bg-white py-1 shadow-lg"
+                style={{ borderColor: "var(--admin-border)" }}
+              >
+                {languageOptions.map((option) => (
+                  <button
+                    key={option.code}
+                    type="button"
+                    className="block w-full px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50"
+                    onClick={() => {
+                      setLang(option.code);
+                      setLanguageOpen(false);
+                    }}
+                  >
+                    <span className="mr-2" aria-hidden>
+                      {option.flag ?? "🌐"}
+                    </span>
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+          <TopIconButton label={t("admin.header.theme")}>
             <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2">
               <path d="M12 3a7 7 0 1 0 7 7 6 6 0 0 1-7-7Z" />
             </svg>
@@ -314,7 +317,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               <path d="M9 17a3 3 0 0 0 6 0" />
             </svg>
           </TopIconButton>
-          <TopIconButton label="Apps">
+          <TopIconButton label={t("admin.header.apps")}>
             <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current">
               <circle cx="6" cy="6" r="1.8" />
               <circle cx="12" cy="6" r="1.8" />
@@ -330,10 +333,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             className="inline-flex items-center gap-2 rounded-full bg-white/10 px-2 py-1 text-left transition hover:bg-white/20"
           >
             <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white text-xs font-semibold text-sky-600">
-              {(user?.name ?? "U").slice(0, 1).toUpperCase()}
+              {(user?.name ?? t("admin.user.fallback_initial")).slice(0, 1).toUpperCase()}
             </span>
               <span className="hidden max-w-[160px] truncate text-xs font-medium text-slate-700 md:block">
-              {user?.name ?? "User"}
+              {user?.name ?? t("admin.user.fallback_name")}
             </span>
           </button>
         </div>
@@ -350,14 +353,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <>
               {sidebarOpen && (
                 <GroupHeader
-                  label="Platform"
+                  label={t("admin.nav.group.platform")}
                   isOpen={groupOpen.platform}
                   onToggle={() => setGroupOpen((v) => ({ ...v, platform: !v.platform }))}
                 />
               )}
-              {(!sidebarOpen || groupOpen.platform) && platformLinks.map((l) => {
+              {(!sidebarOpen || groupOpen.platform) && ADMIN_PLATFORM_LINKS.map((l) => {
                 if (l.superAdminOnly && !showSuperAdminOnlyPlatform) return null;
-                return <NavLink key={l.href} href={l.href} label={l.label} pathname={pathname} collapsed={!sidebarOpen} />;
+                return <NavLink key={l.href} href={l.href} label={t(l.labelKey)} pathname={pathname} collapsed={!sidebarOpen} />;
               })}
             </>
           )}
@@ -367,12 +370,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               {!sidebarOpen && <div className="my-1 border-t" style={{ borderColor: "var(--admin-border)" }} />}
               {sidebarOpen && (
                 <GroupHeader
-                  label="Operator tools"
+                  label={t("admin.nav.group.operator_tools")}
                   isOpen={groupOpen.operator}
                   onToggle={() => setGroupOpen((v) => ({ ...v, operator: !v.operator }))}
                 />
               )}
-              {(!sidebarOpen || groupOpen.operator) && operatorLinks.map((l) => <NavLink key={l.href} href={l.href} label={l.label} pathname={pathname} collapsed={!sidebarOpen} />)}
+              {(!sidebarOpen || groupOpen.operator) && ADMIN_OPERATOR_LINKS.map((l) => (
+                <NavLink key={l.href} href={l.href} label={t(l.labelKey)} pathname={pathname} collapsed={!sidebarOpen} />
+              ))}
             </>
           )}
 
@@ -381,14 +386,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               {!sidebarOpen && <div className="my-1 border-t" style={{ borderColor: "var(--admin-border)" }} />}
               {sidebarOpen && (
                 <GroupHeader
-                  label="Inventory oversight"
+                  label={t("admin.nav.group.inventory_oversight")}
                   isOpen={groupOpen.inventory}
                   onToggle={() => setGroupOpen((v) => ({ ...v, inventory: !v.inventory }))}
                 />
               )}
-              {(!sidebarOpen || groupOpen.inventory) && inventoryLinks.map((l) => {
+              {(!sidebarOpen || groupOpen.inventory) && ADMIN_INVENTORY_LINKS.map((l) => {
                 if (!userHasPermission(user, l.perm)) return null;
-                return <NavLink key={l.href} href={l.href} label={l.label} pathname={pathname} collapsed={!sidebarOpen} />;
+                return <NavLink key={l.href} href={l.href} label={t(l.labelKey)} pathname={pathname} collapsed={!sidebarOpen} />;
               })}
             </>
           )}
@@ -398,17 +403,17 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               {!sidebarOpen && <div className="my-1 border-t" style={{ borderColor: "var(--admin-border)" }} />}
               {sidebarOpen && (
                 <GroupHeader
-                  label="Localization"
+                  label={t("admin.nav.group.localization")}
                   isOpen={groupOpen.localization}
                   onToggle={() => setGroupOpen((v) => ({ ...v, localization: !v.localization }))}
                 />
               )}
-              {(!sidebarOpen || groupOpen.localization) && localizationLinks.map((l) => {
+              {(!sidebarOpen || groupOpen.localization) && ADMIN_LOCALIZATION_LINKS.map((l) => {
                 if (l.href === "/localization/languages" && !canAccessLocalizationLanguagesNav(user)) return null;
                 if (l.href === "/localization/templates" && !canAccessLocalizationTemplatesNav(user)) return null;
                 if (l.href === "/localization/translations" && !canAccessLocalizationTranslationsNav(user)) return null;
                 if (l.href === "/localization/ui-translations" && !user?.is_super_admin) return null;
-                return <NavLink key={l.href} href={l.href} label={l.label} pathname={pathname} collapsed={!sidebarOpen} />;
+                return <NavLink key={l.href} href={l.href} label={t(l.labelKey)} pathname={pathname} collapsed={!sidebarOpen} />;
               })}
             </>
           )}
@@ -418,12 +423,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               {!sidebarOpen && <div className="my-1 border-t" style={{ borderColor: "var(--admin-border)" }} />}
               {sidebarOpen && (
                 <GroupHeader
-                  label="Support"
+                  label={t("admin.nav.group.support")}
                   isOpen={groupOpen.support}
                   onToggle={() => setGroupOpen((v) => ({ ...v, support: !v.support }))}
                 />
               )}
-              {(!sidebarOpen || groupOpen.support) && <NavLink href="/support/tickets" label="Support tickets" pathname={pathname} collapsed={!sidebarOpen} />}
+              {(!sidebarOpen || groupOpen.support) && (
+                <NavLink href="/support/tickets" label={t("admin.nav.support_tickets")} pathname={pathname} collapsed={!sidebarOpen} />
+              )}
             </>
           )}
 
@@ -432,16 +439,22 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               {!sidebarOpen && <div className="my-1 border-t" style={{ borderColor: "var(--admin-border)" }} />}
               {sidebarOpen && (
                 <GroupHeader
-                  label="Other"
+                  label={t("admin.nav.group.other")}
                   isOpen={groupOpen.other}
                   onToggle={() => setGroupOpen((v) => ({ ...v, other: !v.other }))}
                 />
               )}
               {(!sidebarOpen || groupOpen.other) && (
                 <>
-                  {showConnections && <NavLink href="/connections" label="Service connections" pathname={pathname} collapsed={!sidebarOpen} />}
-                  {showNotifications && <NavLink href="/notifications" label="Notifications" pathname={pathname} collapsed={!sidebarOpen} />}
-                  {showStats && <NavLink href="/statistics" label="Operator statistics" pathname={pathname} collapsed={!sidebarOpen} />}
+                  {showConnections && (
+                    <NavLink href="/connections" label={t("admin.nav.service_connections")} pathname={pathname} collapsed={!sidebarOpen} />
+                  )}
+                  {showNotifications && (
+                    <NavLink href="/notifications" label={t("admin.nav.notifications")} pathname={pathname} collapsed={!sidebarOpen} />
+                  )}
+                  {showStats && (
+                    <NavLink href="/statistics" label={t("admin.nav.operator_statistics")} pathname={pathname} collapsed={!sidebarOpen} />
+                  )}
                 </>
               )}
             </>
@@ -449,7 +462,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
           {!showPlatform && !showSupport && !showConnections && !showNotifications && !showStats && !showInventory && !showLocalization && (
             <p className="px-3 text-xs text-slate-500">
-              No navigation available. Platform tools require super admin; inventory requires view permissions.
+              {t("admin.shell.no_navigation")}
             </p>
           )}
         </nav>
@@ -457,10 +470,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         <div className="sticky bottom-0 border-t bg-white px-3 py-3 text-xs text-slate-500" style={{ borderColor: "var(--admin-border)", backgroundColor: "var(--admin-surface)" }}>
           {user && (
             <div className={`mb-3 rounded-lg bg-slate-50 px-3 py-2 ${sidebarOpen ? "" : "text-center"}`}>
-              <div className="font-medium text-slate-800">{sidebarOpen ? user.name : (user.name?.slice(0, 1).toUpperCase() ?? "U")}</div>
+              <div className="font-medium text-slate-800">{sidebarOpen ? user.name : (user.name?.slice(0, 1).toUpperCase() ?? t("admin.user.fallback_initial"))}</div>
               {sidebarOpen && <div className="truncate">{user.email}</div>}
               {sidebarOpen && <div className="mt-1 text-[10px] uppercase text-slate-400">
-                {user.context.world}{user.context.is_statistics_elevated_only ? " · stats scope" : ""}
+                {user.context.world}
+                {user.context.is_statistics_elevated_only ? t("admin.user.stats_scope_suffix") : ""}
               </div>}
             </div>
           )}
@@ -469,7 +483,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             onClick={() => logout().then(() => (window.location.href = "/login"))}
             className={`w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-100 ${sidebarOpen ? "text-left" : "text-center"}`}
           >
-            {sidebarOpen ? "Log out" : "↩"}
+            {sidebarOpen ? t("admin.shell.logout") : "↩"}
           </button>
         </div>
       </aside>

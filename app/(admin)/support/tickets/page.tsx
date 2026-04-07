@@ -7,6 +7,7 @@ import { canAccessSupportNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { apiSupportTickets, type SupportTicketListRow } from "@/lib/support-api";
+import { useLanguage } from "@/contexts/LanguageContext";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
@@ -14,6 +15,7 @@ const STATUSES = ["open", "pending", "resolved", "closed"] as const;
 const PRIORITIES = ["low", "medium", "high"] as const;
 
 export default function SupportTicketsPage() {
+  const { t } = useLanguage();
   const { token, user } = useAdminAuth();
   const allowed = canAccessSupportNav(user);
   const isSuper = user?.is_super_admin === true;
@@ -51,9 +53,9 @@ export default function SupportTicketsPage() {
       setMeta(res.meta);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else setErr(e instanceof ApiRequestError ? e.message : "Failed to load tickets");
+      else setErr(e instanceof ApiRequestError ? e.message : t("admin.common.failed"));
     }
-  }, [token, allowed, page, statusFilter, priorityFilter, search, companyIdParam]);
+  }, [token, allowed, page, statusFilter, priorityFilter, search, companyIdParam, t]);
 
   useEffect(() => {
     load();
@@ -62,7 +64,7 @@ export default function SupportTicketsPage() {
   if (!allowed) {
     return (
       <div>
-        <h1 className="text-xl font-semibold">Support tickets</h1>
+        <h1 className="text-xl font-semibold">{t("admin.support.tickets_title")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -73,7 +75,7 @@ export default function SupportTicketsPage() {
   if (forbidden) {
     return (
       <div>
-        <h1 className="text-xl font-semibold">Support tickets</h1>
+        <h1 className="text-xl font-semibold">{t("admin.support.tickets_title")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -83,10 +85,10 @@ export default function SupportTicketsPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">Support tickets</h1>
+      <h1 className="text-xl font-semibold">{t("admin.support.tickets_title")}</h1>
       <div className="mt-4 flex flex-wrap items-end gap-3 text-sm">
         <label className="text-slate-600">
-          Status
+          {t("admin.support.status")}
           <select
             value={statusFilter}
             onChange={(e) => {
@@ -95,7 +97,7 @@ export default function SupportTicketsPage() {
             }}
             className="ml-2 rounded border border-slate-300 px-2 py-1"
           >
-            <option value="">All</option>
+            <option value="">{t("common.all")}</option>
             {STATUSES.map((s) => (
               <option key={s} value={s}>
                 {s}
@@ -104,7 +106,7 @@ export default function SupportTicketsPage() {
           </select>
         </label>
         <label className="text-slate-600">
-          Priority
+          {t("admin.support.priority")}
           <select
             value={priorityFilter}
             onChange={(e) => {
@@ -113,7 +115,7 @@ export default function SupportTicketsPage() {
             }}
             className="ml-2 rounded border border-slate-300 px-2 py-1"
           >
-            <option value="">All</option>
+            <option value="">{t("common.all")}</option>
             {PRIORITIES.map((p) => (
               <option key={p} value={p}>
                 {p}
@@ -122,24 +124,24 @@ export default function SupportTicketsPage() {
           </select>
         </label>
         <label className="text-slate-600">
-          Search subject
+          {t("admin.support.search_subject")}
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onBlur={() => setPage(1)}
             className="ml-2 rounded border border-slate-300 px-2 py-1"
-            placeholder="Substring"
+            placeholder={t("admin.support.placeholder_substring")}
           />
         </label>
         {isSuper && (
           <label className="text-slate-600">
-            Company ID
+            {t("admin.support.company_id")}
             <input
               value={companyIdFilter}
               onChange={(e) => setCompanyIdFilter(e.target.value)}
               onBlur={() => setPage(1)}
               className="ml-2 w-24 rounded border border-slate-300 px-2 py-1 tabular-nums"
-              placeholder="All"
+              placeholder={t("admin.support.placeholder_all")}
             />
           </label>
         )}
@@ -151,7 +153,7 @@ export default function SupportTicketsPage() {
           }}
           className="rounded border border-slate-300 bg-white px-3 py-1"
         >
-          Apply
+          {t("admin.support.apply")}
         </button>
       </div>
       {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
@@ -159,13 +161,13 @@ export default function SupportTicketsPage() {
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
             <tr>
-              <th className="px-3 py-2">ID</th>
-              <th className="px-3 py-2">Subject</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Priority</th>
-              <th className="px-3 py-2">Company</th>
-              <th className="px-3 py-2">User</th>
-              <th className="px-3 py-2">Msgs</th>
+              <th className="px-3 py-2">{t("admin.support.table.id")}</th>
+              <th className="px-3 py-2">{t("admin.support.table.subject")}</th>
+              <th className="px-3 py-2">{t("admin.support.table.status")}</th>
+              <th className="px-3 py-2">{t("admin.support.table.priority")}</th>
+              <th className="px-3 py-2">{t("admin.support.table.company")}</th>
+              <th className="px-3 py-2">{t("admin.support.table.user")}</th>
+              <th className="px-3 py-2">{t("admin.support.table.msgs")}</th>
               <th className="px-3 py-2" />
             </tr>
           </thead>
@@ -181,7 +183,7 @@ export default function SupportTicketsPage() {
                 <td className="px-3 py-2 tabular-nums">{r.messages_count ?? "-"}</td>
                 <td className="px-3 py-2">
                   <Link href={`/support/tickets/${r.id}`} className="text-slate-700 underline">
-                    Open
+                    {t("admin.support.open")}
                   </Link>
                 </td>
               </tr>

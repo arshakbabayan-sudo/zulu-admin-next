@@ -159,7 +159,7 @@ export default function LocalizationTranslationsPage() {
       <div>
         <h1 className="text-xl font-semibold">Translations</h1>
         <div className="mt-4">
-          <ForbiddenNotice message="Managing translations requires super admin or company membership for the owning entity." />
+          <ForbiddenNotice messageKey="admin.forbidden.managing_translations" />
         </div>
       </div>
     );

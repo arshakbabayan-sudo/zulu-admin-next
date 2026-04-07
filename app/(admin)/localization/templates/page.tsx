@@ -99,7 +99,7 @@ export default function LocalizationTemplatesPage() {
       <div>
         <h1 className="text-xl font-semibold">Notification templates</h1>
         <div className="mt-4">
-          <ForbiddenNotice message="Updating notification templates requires super admin." />
+          <ForbiddenNotice messageKey="admin.forbidden.templates" />
         </div>
       </div>
     );

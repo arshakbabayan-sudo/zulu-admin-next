@@ -77,7 +77,7 @@ export function InventoryOversightList({
       <div>
         <h1 className="text-xl font-semibold">{title}</h1>
         <div className="mt-4">
-          <ForbiddenNotice message="This inventory list requires the matching commerce view permission (e.g. flights.view). Super admins have full access. A 403 means your token is valid but not authorized for this resource." />
+          <ForbiddenNotice messageKey="admin.forbidden.inventory_oversight" />
         </div>
       </div>
     );

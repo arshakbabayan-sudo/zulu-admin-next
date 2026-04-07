@@ -5,6 +5,7 @@ import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { ImportExportButtons } from "@/components/ImportExportButtons";
 import { PaginationBar } from "@/components/PaginationBar";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import {
@@ -464,6 +465,7 @@ function renderApiFieldErrors(errors: FieldErrors | undefined): { title: string;
 
 export default function OperatorCarsPage() {
   const { token } = useAdminAuth();
+  const { t } = useLanguage();
   const [rows, setRows] = useState<CarRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
   const [page, setPage] = useState(1);
@@ -520,7 +522,7 @@ export default function OperatorCarsPage() {
           setForm(null);
           setEditId(null);
           setCarOffers(null);
-          setFormErr("No companies exist yet. Create a company first, then add a car.");
+          setFormErr(t("admin.crud.cars.err.no_companies"));
           setBusy(false);
           return;
         }
@@ -653,7 +655,7 @@ export default function OperatorCarsPage() {
   }
 
   async function handleDelete(id: number) {
-    if (!token || !window.confirm("Delete this car?")) return;
+    if (!token || !window.confirm(t("admin.crud.cars.delete_confirm"))) return;
     setBusy(true);
     try {
       await apiDeleteCar(token, id);
@@ -669,7 +671,7 @@ export default function OperatorCarsPage() {
   if (forbidden)
     return (
       <div>
-        <h1 className="text-xl font-semibold">Cars</h1>
+        <h1 className="text-xl font-semibold">{t("admin.crud.cars.title")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -690,7 +692,7 @@ export default function OperatorCarsPage() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <h1 className="text-xl font-semibold">Cars</h1>
+          <h1 className="text-xl font-semibold">{t("admin.crud.cars.title")}</h1>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <ImportExportButtons
@@ -717,13 +719,13 @@ export default function OperatorCarsPage() {
             disabled={busy}
             className="rounded bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700 disabled:opacity-40"
           >
-            {busy ? "Loading…" : "+ New car"}
+            {busy ? "Loading…" : t("admin.crud.cars.new_btn")}
           </button>
         </div>
       </div>
       <CsvImportModal
         open={importOpen}
-        title="Import cars (CSV)"
+        title={t("admin.crud.cars.import_title")}
         onClose={() => setImportOpen(false)}
         onRun={async (rows, rowLineNumbers) => {
           if (!token) {
@@ -742,7 +744,7 @@ export default function OperatorCarsPage() {
       {formErr && !form && <p className="mt-2 text-sm text-red-600">{formErr}</p>}
       {form && (
         <div className="mt-4 rounded border border-slate-200 bg-white p-4">
-          <h2 className="mb-3 text-base font-medium">{editId ? "Edit car" : "New car"}</h2>
+          <h2 className="mb-3 text-base font-medium">{editId ? t("admin.crud.cars.form_edit") : t("admin.crud.cars.form_new")}</h2>
           {fieldSummary && (
             <div className="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
               <div className="font-medium">{fieldSummary.title}</div>
@@ -758,7 +760,7 @@ export default function OperatorCarsPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             {isCreate && carOffers && (
               <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-                <span className="font-medium text-slate-600">offer_id</span>
+                <span className="font-medium text-slate-600">{t("admin.crud.cars.field.offer_id")}</span>
                 <select
                   value={form.offer_id === "" ? "" : String(form.offer_id)}
                   onChange={(e) => onOfferChange(e.target.value)}
@@ -783,14 +785,14 @@ export default function OperatorCarsPage() {
             )}
             {!isCreate && (
               <div className="text-sm sm:col-span-2">
-                <span className="font-medium text-slate-600">Offer </span>
+                <span className="font-medium text-slate-600">{t("admin.crud.cars.field.offer_id")} </span>
                 <span className="text-slate-800">
                   {editRow && form.offer_id !== "" ? `#${form.offer_id} — ${offerTitle(editRow)}` : "—"}
                 </span>
               </div>
             )}
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">company_id</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.company_id")}</span>
               <input
                 readOnly
                 value={form.company_id === "" ? "" : String(form.company_id)}
@@ -804,10 +806,10 @@ export default function OperatorCarsPage() {
             </label>
 
             <div className="col-span-2 mt-1 border-t border-slate-100 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-              1) Route (pickup / dropoff)
+              {t("admin.crud.cars.section.route")}
             </div>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">pickup_location</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.pickup_location")}</span>
               <input
                 value={form.pickup_location}
                 onChange={(e) => setForm((p) => (p ? { ...p, pickup_location: e.target.value } : p))}
@@ -820,7 +822,7 @@ export default function OperatorCarsPage() {
               ))}
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">dropoff_location</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.dropoff_location")}</span>
               <input
                 value={form.dropoff_location}
                 onChange={(e) => setForm((p) => (p ? { ...p, dropoff_location: e.target.value } : p))}
@@ -834,10 +836,10 @@ export default function OperatorCarsPage() {
             </label>
 
             <div className="col-span-2 mt-1 border-t border-slate-100 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-              2) Vehicle info
+              {t("admin.crud.cars.section.vehicle_info")}
             </div>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">vehicle_class</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.vehicle_class")}</span>
               <input
                 value={form.vehicle_class}
                 onChange={(e) => setForm((p) => (p ? { ...p, vehicle_class: e.target.value } : p))}
@@ -850,7 +852,7 @@ export default function OperatorCarsPage() {
               ))}
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">vehicle_type</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.vehicle_type")}</span>
               <input
                 value={form.vehicle_type}
                 onChange={(e) => setForm((p) => (p ? { ...p, vehicle_type: e.target.value } : p))}
@@ -863,7 +865,7 @@ export default function OperatorCarsPage() {
               ))}
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">brand</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.brand")}</span>
               <input
                 value={form.brand}
                 onChange={(e) => setForm((p) => (p ? { ...p, brand: e.target.value } : p))}
@@ -876,7 +878,7 @@ export default function OperatorCarsPage() {
               ))}
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">model</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.model")}</span>
               <input
                 value={form.model}
                 onChange={(e) => setForm((p) => (p ? { ...p, model: e.target.value } : p))}
@@ -889,7 +891,7 @@ export default function OperatorCarsPage() {
               ))}
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">year</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.year")}</span>
               <input
                 type="number"
                 min={1900}
@@ -910,7 +912,7 @@ export default function OperatorCarsPage() {
               ))}
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">transmission_type</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.transmission_type")}</span>
               <input
                 value={form.transmission_type}
                 onChange={(e) => setForm((p) => (p ? { ...p, transmission_type: e.target.value } : p))}
@@ -923,7 +925,7 @@ export default function OperatorCarsPage() {
               ))}
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">fuel_type</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.fuel_type")}</span>
               <input
                 value={form.fuel_type}
                 onChange={(e) => setForm((p) => (p ? { ...p, fuel_type: e.target.value } : p))}
@@ -936,7 +938,7 @@ export default function OperatorCarsPage() {
               ))}
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">fleet</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.fleet")}</span>
               <input
                 value={form.fleet}
                 onChange={(e) => setForm((p) => (p ? { ...p, fleet: e.target.value } : p))}
@@ -949,7 +951,7 @@ export default function OperatorCarsPage() {
               ))}
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">category</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.category")}</span>
               <input
                 value={form.category}
                 onChange={(e) => setForm((p) => (p ? { ...p, category: e.target.value } : p))}
@@ -963,10 +965,10 @@ export default function OperatorCarsPage() {
             </label>
 
             <div className="col-span-2 mt-1 border-t border-slate-100 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-              3) Capacity
+              {t("admin.crud.cars.section.capacity")}
             </div>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">seats</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.seats")}</span>
               <input
                 type="number"
                 min={1}
@@ -987,7 +989,7 @@ export default function OperatorCarsPage() {
               ))}
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">suitcases</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.suitcases")}</span>
               <input
                 type="number"
                 min={0}
@@ -1008,7 +1010,7 @@ export default function OperatorCarsPage() {
               ))}
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">small_bag</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.small_bag")}</span>
               <input
                 type="number"
                 min={0}
@@ -1030,10 +1032,10 @@ export default function OperatorCarsPage() {
             </label>
 
             <div className="col-span-2 mt-1 border-t border-slate-100 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-              4) Pricing
+              {t("admin.crud.cars.section.pricing")}
             </div>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">pricing_mode</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.pricing_mode")}</span>
               <select
                 value={form.pricing_mode}
                 onChange={(e) => setForm((p) => (p ? { ...p, pricing_mode: e.target.value } : p))}
@@ -1053,7 +1055,7 @@ export default function OperatorCarsPage() {
               ))}
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">base_price</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.base_price")}</span>
               <input
                 type="number"
                 min={0}
@@ -1075,10 +1077,10 @@ export default function OperatorCarsPage() {
             </label>
 
             <div className="col-span-2 mt-1 border-t border-slate-100 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-              5) Status / availability
+              {t("admin.crud.cars.section.status")}
             </div>
             <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-              <span className="font-medium text-slate-600">availability_window_start</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.availability_window_start")}</span>
               <input
                 type="datetime-local"
                 value={form.availability_window_start}
@@ -1094,7 +1096,7 @@ export default function OperatorCarsPage() {
               ))}
             </label>
             <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-              <span className="font-medium text-slate-600">availability_window_end</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.availability_window_end")}</span>
               <input
                 type="datetime-local"
                 value={form.availability_window_end}
@@ -1110,7 +1112,7 @@ export default function OperatorCarsPage() {
               ))}
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">status</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.status")}</span>
               <select
                 value={form.status}
                 onChange={(e) => setForm((p) => (p ? { ...p, status: e.target.value } : p))}
@@ -1130,7 +1132,7 @@ export default function OperatorCarsPage() {
               ))}
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">availability_status</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.availability_status")}</span>
               <select
                 value={form.availability_status}
                 onChange={(e) =>
@@ -1153,7 +1155,7 @@ export default function OperatorCarsPage() {
             </label>
 
             <div className="col-span-2 mt-1 border-t border-slate-100 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-              6) Advanced options
+              {t("admin.crud.cars.section.advanced")}
             </div>
             <label className="flex items-center gap-2 text-sm sm:col-span-2">
               <input
@@ -1176,10 +1178,10 @@ export default function OperatorCarsPage() {
                   )
                 }
               />
-              <span className="font-medium text-slate-600">Child seats available</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.child_seats_available")}</span>
             </label>
             <div className="col-span-2 flex flex-wrap gap-3 text-sm">
-              <span className="w-full min-w-[8rem] font-medium text-slate-600">Child seat types</span>
+              <span className="w-full min-w-[8rem] font-medium text-slate-600">{t("admin.crud.cars.field.child_seat_types")}</span>
               {CAR_CHILD_SEAT_TYPES.map((t) => (
                 <label key={t} className="flex items-center gap-1.5">
                   <input
@@ -1207,7 +1209,7 @@ export default function OperatorCarsPage() {
               ))}
             </div>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">extra_luggage.additional_suitcases_max</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.additional_suitcases_max")}</span>
               <input
                 type="number"
                 min={0}
@@ -1234,7 +1236,7 @@ export default function OperatorCarsPage() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">extra_luggage.additional_small_bags_max</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.additional_small_bags_max")}</span>
               <input
                 type="number"
                 min={0}
@@ -1261,7 +1263,7 @@ export default function OperatorCarsPage() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-              <span className="font-medium text-slate-600">extra_luggage.notes</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.extra_luggage_notes")}</span>
               <textarea
                 rows={2}
                 value={form.advanced_options.extra_luggage.notes ?? ""}
@@ -1285,7 +1287,7 @@ export default function OperatorCarsPage() {
               />
             </label>
             <div className="col-span-2 flex flex-wrap gap-3 text-sm">
-              <span className="w-full min-w-[8rem] font-medium text-slate-600">Services</span>
+              <span className="w-full min-w-[8rem] font-medium text-slate-600">{t("admin.crud.cars.field.services")}</span>
               {CAR_SERVICE_KEYS.map((k) => (
                 <label key={k} className="flex items-center gap-1.5">
                   <input
@@ -1310,7 +1312,7 @@ export default function OperatorCarsPage() {
               ))}
             </div>
             <div className="col-span-2 flex flex-wrap gap-3 text-sm">
-              <span className="w-full min-w-[8rem] font-medium text-slate-600">Driver languages</span>
+              <span className="w-full min-w-[8rem] font-medium text-slate-600">{t("admin.crud.cars.field.driver_languages")}</span>
               {DRIVER_LANG_PRESETS.map(({ code, label }) => (
                 <label key={code} className="flex items-center gap-1.5">
                   <input
@@ -1349,7 +1351,7 @@ export default function OperatorCarsPage() {
               Mileage — unlimited = no cap; limited = included km per rental, optional price per extra km beyond that.
             </p>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">Mileage</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.mileage")}</span>
               <select
                 value={form.advanced_options.pricing_rules.mileage.mode}
                 onChange={(e) => {
@@ -1381,7 +1383,7 @@ export default function OperatorCarsPage() {
             {form.advanced_options.pricing_rules.mileage.mode === "limited" && (
               <>
                 <label className="flex flex-col gap-1 text-sm">
-                  <span className="font-medium text-slate-600">Included km / rental</span>
+                  <span className="font-medium text-slate-600">{t("admin.crud.cars.field.included_km_per_rental")}</span>
                   <input
                     type="number"
                     min={1}
@@ -1418,7 +1420,7 @@ export default function OperatorCarsPage() {
                   ))}
                 </label>
                 <label className="flex flex-col gap-1 text-sm">
-                  <span className="font-medium text-slate-600">Extra per km (optional)</span>
+                  <span className="font-medium text-slate-600">{t("admin.crud.cars.field.extra_km_price")}</span>
                   <input
                     type="number"
                     min={0}
@@ -1455,7 +1457,7 @@ export default function OperatorCarsPage() {
               per rental day).
             </p>
             <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-              <span className="font-medium text-slate-600">Cross-border</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.cross_border")}</span>
               <select
                 value={form.advanced_options.pricing_rules.cross_border.policy}
                 onChange={(e) => {
@@ -1489,7 +1491,7 @@ export default function OperatorCarsPage() {
             {(form.advanced_options.pricing_rules.cross_border.policy === "surcharge_fixed" ||
               form.advanced_options.pricing_rules.cross_border.policy === "surcharge_daily") && (
               <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">Border surcharge amount</span>
+                <span className="font-medium text-slate-600">{t("admin.crud.cars.field.border_surcharge_amount")}</span>
                 <input
                   type="number"
                   min={0}
@@ -1530,7 +1532,7 @@ export default function OperatorCarsPage() {
               blocked.
             </p>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">Service radius (km)</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.service_radius_km")}</span>
               <input
                 type="number"
                 min={1}
@@ -1577,7 +1579,7 @@ export default function OperatorCarsPage() {
               form.advanced_options.pricing_rules.radius.service_radius_km > 0 && (
                 <>
                   <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-                    <span className="font-medium text-slate-600">Out of radius</span>
+                    <span className="font-medium text-slate-600">{t("admin.crud.cars.field.out_of_radius_mode")}</span>
                     <select
                       value={form.advanced_options.pricing_rules.radius.out_of_radius_mode}
                       onChange={(e) => {
@@ -1625,7 +1627,7 @@ export default function OperatorCarsPage() {
                   </label>
                   {form.advanced_options.pricing_rules.radius.out_of_radius_mode === "flat_fee" && (
                     <label className="flex flex-col gap-1 text-sm">
-                      <span className="font-medium text-slate-600">Out-of-radius flat fee</span>
+                      <span className="font-medium text-slate-600">{t("admin.crud.cars.field.out_of_radius_flat_fee")}</span>
                       <input
                         type="number"
                         min={0}
@@ -1662,7 +1664,7 @@ export default function OperatorCarsPage() {
                   )}
                   {form.advanced_options.pricing_rules.radius.out_of_radius_mode === "per_km" && (
                     <label className="flex flex-col gap-1 text-sm">
-                      <span className="font-medium text-slate-600">Out-of-radius per km</span>
+                      <span className="font-medium text-slate-600">{t("admin.crud.cars.field.out_of_radius_per_km")}</span>
                       <input
                         type="number"
                         min={0}
@@ -1708,14 +1710,14 @@ export default function OperatorCarsPage() {
               onClick={() => void handleSubmit()}
               className="rounded bg-slate-800 px-4 py-1.5 text-sm text-white disabled:opacity-40"
             >
-              {busy ? "Saving..." : "Save"}
+              {busy ? t("admin.crud.common.saving") : t("common.save")}
             </button>
             <button
               type="button"
               onClick={closeForm}
               className="rounded border border-slate-300 px-4 py-1.5 text-sm"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
           </div>
         </div>
@@ -1724,20 +1726,20 @@ export default function OperatorCarsPage() {
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
             <tr>
-              <th className="px-3 py-2">ID</th>
-              <th className="px-3 py-2">Company</th>
-              <th className="px-3 py-2">Pickup</th>
-              <th className="px-3 py-2">Dropoff</th>
-              <th className="px-3 py-2">Class</th>
-              <th className="px-3 py-2">Offer</th>
-              <th className="px-3 py-2">Actions</th>
+              <th className="px-3 py-2">{t("admin.crud.common.id")}</th>
+              <th className="px-3 py-2">{t("admin.crud.cars.col.company")}</th>
+              <th className="px-3 py-2">{t("admin.crud.cars.col.pickup")}</th>
+              <th className="px-3 py-2">{t("admin.crud.cars.col.dropoff")}</th>
+              <th className="px-3 py-2">{t("admin.crud.cars.col.class")}</th>
+              <th className="px-3 py-2">{t("admin.crud.cars.col.offer")}</th>
+              <th className="px-3 py-2">{t("admin.crud.common.actions")}</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-3 py-6 text-center text-slate-400">
-                  No cars
+                  {t("admin.crud.cars.empty")}
                 </td>
               </tr>
             )}
@@ -1756,14 +1758,14 @@ export default function OperatorCarsPage() {
                       onClick={() => openEdit(r)}
                       className="text-xs text-blue-700 underline"
                     >
-                      Edit
+                      {t("admin.crud.common.edit")}
                     </button>
                     <button
                       type="button"
                       onClick={() => void handleDelete(r.id)}
                       className="text-xs text-red-600 underline"
                     >
-                      Delete
+                      {t("admin.crud.common.delete")}
                     </button>
                   </div>
                 </td>

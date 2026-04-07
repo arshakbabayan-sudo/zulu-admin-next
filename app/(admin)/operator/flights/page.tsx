@@ -25,6 +25,7 @@ import {
   flightCabinClassLabel,
   toCanonicalFlightCabinClass,
 } from "@/lib/flight-cabin-class";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Fragment, useCallback, useEffect, useState } from "react";
 
 type FieldType = "text" | "number" | "datetime-local" | "select" | "boolean";
@@ -118,6 +119,14 @@ const WIZARD_STEPS: { key: FlightWizardStep; label: string }[] = [
   { key: "policies", label: "4) Policies" },
   { key: "review", label: "5) Review/submit" },
 ];
+
+const FLIGHT_STEP_LABEL_KEYS: Record<FlightWizardStep, string> = {
+  general: "admin.crud.flights.step.general",
+  schedule: "admin.crud.flights.step.schedule",
+  classPricing: "admin.crud.flights.step.class_pricing",
+  policies: "admin.crud.flights.step.policies",
+  review: "admin.crud.flights.step.review",
+};
 
 const STEP_FIELDS: Record<Exclude<FlightWizardStep, "review">, (keyof FlightPayload)[]> = {
   general: [
@@ -383,6 +392,7 @@ function validateCabinForm(form: FlightCabinPayload): string[] {
 
 export default function OperatorFlightsPage() {
   const { token } = useAdminAuth();
+  const { t } = useLanguage();
   const [rows, setRows] = useState<FlightRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
   const [page, setPage] = useState(1);
@@ -467,7 +477,7 @@ export default function OperatorFlightsPage() {
     return (
       <label key={String(field.key)} className="flex flex-col gap-1 text-sm">
         <span className="font-medium text-slate-600">
-          {field.label}
+          {t(`admin.crud.flights.field.${String(field.key)}`)}
           {field.required ? " *" : ""}
         </span>
         {field.type === "select" && field.options ? (
@@ -551,7 +561,7 @@ export default function OperatorFlightsPage() {
   }
 
   async function handleDelete(id: number) {
-    if (!token || !window.confirm("Delete this flight?")) return;
+    if (!token || !window.confirm(t("admin.crud.flights.delete_confirm"))) return;
     setBusy(true);
     try { await apiDeleteFlight(token, id); await load(); }
     catch (e) { alert(e instanceof ApiRequestError ? e.message : "Failed"); }
@@ -643,7 +653,7 @@ export default function OperatorFlightsPage() {
   }
 
   async function handleDeleteCabin(cabinId: number) {
-    if (!token || !activeCabinFlightId || !window.confirm("Delete this cabin?")) return;
+    if (!token || !activeCabinFlightId || !window.confirm(t("admin.crud.flights.cabin.delete_confirm"))) return;
     setCabinBusy(true);
     setCabinErr(null);
     try {
@@ -657,14 +667,14 @@ export default function OperatorFlightsPage() {
   }
 
   if (forbidden) return (
-    <div><h1 className="text-xl font-semibold">Flights</h1><div className="mt-4"><ForbiddenNotice /></div></div>
+    <div><h1 className="text-xl font-semibold">{t("admin.crud.flights.title")}</h1><div className="mt-4"><ForbiddenNotice /></div></div>
   );
 
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <h1 className="text-xl font-semibold">Flights</h1>
+          <h1 className="text-xl font-semibold">{t("admin.crud.flights.title")}</h1>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <ImportExportButtons
@@ -686,13 +696,13 @@ export default function OperatorFlightsPage() {
             onImport={() => setImportOpen(true)}
           />
           <button type="button" onClick={openCreate}
-            className="rounded bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700">+ New flight</button>
+            className="rounded bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700">{t("admin.crud.flights.new_btn")}</button>
         </div>
       </div>
 
       <CsvImportModal
         open={importOpen}
-        title="Import flights (CSV)"
+        title={t("admin.crud.flights.import_title")}
         onClose={() => setImportOpen(false)}
         onRun={async (rows, rowLineNumbers) => {
           if (!token) {
@@ -712,7 +722,7 @@ export default function OperatorFlightsPage() {
 
       {form && (
         <div className="mt-4 rounded border border-slate-200 bg-white p-4">
-          <h2 className="mb-3 text-base font-medium">{editId ? "Edit flight" : "New flight"}</h2>
+          <h2 className="mb-3 text-base font-medium">{editId ? t("admin.crud.flights.form_edit") : t("admin.crud.flights.form_new")}</h2>
           <div className="mb-3 flex flex-wrap gap-2">
             {WIZARD_STEPS.map((step, idx) => {
               const isActive = step.key === wizardStep;
@@ -736,7 +746,7 @@ export default function OperatorFlightsPage() {
                         : "border-slate-200 bg-white text-slate-400"
                   }`}
                 >
-                  {step.label}
+                  {t(FLIGHT_STEP_LABEL_KEYS[step.key])}
                 </button>
               );
             })}
@@ -752,7 +762,7 @@ export default function OperatorFlightsPage() {
             <div className="grid gap-2 sm:grid-cols-2">
               {FIELDS.map((field) => (
                 <div key={String(field.key)} className="rounded border border-slate-200 px-3 py-2 text-sm">
-                  <div className="text-xs text-slate-500">{field.label}</div>
+                  <div className="text-xs text-slate-500">{t(`admin.crud.flights.field.${String(field.key)}`)}</div>
                   <div className="font-medium text-slate-800">
                     {field.type === "boolean"
                       ? String(Boolean(form[field.key]))
@@ -777,7 +787,7 @@ export default function OperatorFlightsPage() {
               disabled={currentStepIndex === 0 || busy}
               className="rounded border border-slate-300 px-4 py-1.5 text-sm disabled:opacity-40"
             >
-              Back
+              {t("common.prev")}
             </button>
             {wizardStep === "review" ? (
               <button
@@ -786,7 +796,7 @@ export default function OperatorFlightsPage() {
                 onClick={() => void handleSubmit()}
                 className="rounded bg-slate-800 px-4 py-1.5 text-sm text-white disabled:opacity-40"
               >
-                {busy ? "Saving..." : "Submit flight"}
+                {busy ? t("admin.crud.common.saving") : t("admin.crud.flights.submit")}
               </button>
             ) : (
               <button
@@ -795,11 +805,11 @@ export default function OperatorFlightsPage() {
                 onClick={handleNextStep}
                 className="rounded bg-slate-800 px-4 py-1.5 text-sm text-white disabled:opacity-40"
               >
-                Next
+                {t("common.next")}
               </button>
             )}
             <button type="button" onClick={closeForm}
-              className="rounded border border-slate-300 px-4 py-1.5 text-sm">Cancel</button>
+              className="rounded border border-slate-300 px-4 py-1.5 text-sm">{t("common.cancel")}</button>
           </div>
         </div>
       )}
@@ -808,18 +818,18 @@ export default function OperatorFlightsPage() {
         <table className="w-full min-w-[800px] text-left text-sm">
           <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
             <tr>
-              <th className="px-3 py-2">ID</th>
-              <th className="px-3 py-2">Flight #</th>
-              <th className="px-3 py-2">Airline</th>
-              <th className="px-3 py-2">Route</th>
-              <th className="px-3 py-2">Departure</th>
-              <th className="px-3 py-2">Arrival</th>
-              <th className="px-3 py-2">Actions</th>
+              <th className="px-3 py-2">{t("admin.crud.common.id")}</th>
+              <th className="px-3 py-2">{t("admin.crud.flights.col.flight_num")}</th>
+              <th className="px-3 py-2">{t("admin.crud.flights.col.airline")}</th>
+              <th className="px-3 py-2">{t("admin.crud.flights.col.route")}</th>
+              <th className="px-3 py-2">{t("admin.crud.flights.col.departure")}</th>
+              <th className="px-3 py-2">{t("admin.crud.flights.col.arrival")}</th>
+              <th className="px-3 py-2">{t("admin.crud.common.actions")}</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
-              <tr><td colSpan={7} className="px-3 py-6 text-center text-slate-400">No flights</td></tr>
+              <tr><td colSpan={7} className="px-3 py-6 text-center text-slate-400">{t("admin.crud.flights.empty")}</td></tr>
             )}
             {rows.map((r) => (
               <Fragment key={r.id}>
@@ -833,11 +843,11 @@ export default function OperatorFlightsPage() {
                 <td className="px-3 py-2">
                   <div className="flex gap-2">
                     <button type="button" onClick={() => openEdit(r)}
-                      className="text-xs text-blue-700 underline">Edit</button>
+                      className="text-xs text-blue-700 underline">{t("admin.crud.common.edit")}</button>
                     <button type="button" onClick={() => openCabinManager(r.id)}
-                      className="text-xs text-slate-700 underline">Cabins</button>
+                      className="text-xs text-slate-700 underline">{t("admin.crud.flights.cabins")}</button>
                     <button type="button" onClick={() => void handleDelete(r.id)}
-                      className="text-xs text-red-600 underline">Delete</button>
+                      className="text-xs text-red-600 underline">{t("admin.crud.common.delete")}</button>
                   </div>
                 </td>
               </tr>
@@ -846,14 +856,14 @@ export default function OperatorFlightsPage() {
                 <td colSpan={7} className="px-3 py-3">
                   <div className="rounded border border-slate-200 bg-white p-3">
                     <div className="mb-3 flex items-center justify-between">
-                      <h3 className="text-sm font-semibold text-slate-800">Cabins for flight #{r.id}</h3>
+                      <h3 className="text-sm font-semibold text-slate-800">{t("admin.crud.flights.cabins")} #{r.id}</h3>
                       <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={openCreateCabin}
                           className="rounded border border-slate-300 px-2 py-1 text-xs"
                         >
-                          + New cabin
+                          {t("admin.crud.flights.cabin.new_btn")}
                         </button>
                         <button
                           type="button"
@@ -867,10 +877,10 @@ export default function OperatorFlightsPage() {
 
                     {cabinForm && (
                       <div className="mb-3 rounded border border-slate-200 p-3">
-                        <h4 className="mb-2 text-sm font-medium">{editCabinId ? "Edit cabin" : "New cabin"}</h4>
+                        <h4 className="mb-2 text-sm font-medium">{editCabinId ? t("admin.crud.flights.cabin.form_edit") : t("admin.crud.flights.cabin.form_new")}</h4>
                         <div className="grid gap-3 sm:grid-cols-2">
                           <label className="flex flex-col gap-1 text-sm">
-                            <span className="font-medium text-slate-600">Cabin Class *</span>
+                            <span className="font-medium text-slate-600">{t("admin.crud.flights.field.cabin_class")} *</span>
                             <select
                               value={String(cabinForm.cabin_class ?? "economy")}
                               onChange={(e) => setCabinForm((p) => p ? { ...p, cabin_class: e.target.value } : p)}
@@ -882,7 +892,7 @@ export default function OperatorFlightsPage() {
                             </select>
                           </label>
                           <label className="flex flex-col gap-1 text-sm">
-                            <span className="font-medium text-slate-600">Seat Capacity Total *</span>
+                            <span className="font-medium text-slate-600">{t("admin.crud.flights.field.seat_capacity_total")} *</span>
                             <input
                               type="number"
                               value={String(cabinForm.seat_capacity_total ?? 0)}
@@ -891,7 +901,7 @@ export default function OperatorFlightsPage() {
                             />
                           </label>
                           <label className="flex flex-col gap-1 text-sm">
-                            <span className="font-medium text-slate-600">Seat Capacity Available *</span>
+                            <span className="font-medium text-slate-600">{t("admin.crud.flights.field.seat_capacity_available")} *</span>
                             <input
                               type="number"
                               value={String(cabinForm.seat_capacity_available ?? 0)}
@@ -900,7 +910,7 @@ export default function OperatorFlightsPage() {
                             />
                           </label>
                           <label className="flex flex-col gap-1 text-sm">
-                            <span className="font-medium text-slate-600">Adult Price *</span>
+                            <span className="font-medium text-slate-600">{t("admin.crud.flights.field.adult_price")} *</span>
                             <input
                               type="number"
                               value={String(cabinForm.adult_price ?? 1)}
@@ -909,7 +919,7 @@ export default function OperatorFlightsPage() {
                             />
                           </label>
                           <label className="flex flex-col gap-1 text-sm">
-                            <span className="font-medium text-slate-600">Child Price *</span>
+                            <span className="font-medium text-slate-600">{t("admin.crud.flights.field.child_price")} *</span>
                             <input
                               type="number"
                               value={String(cabinForm.child_price ?? 0)}
@@ -918,7 +928,7 @@ export default function OperatorFlightsPage() {
                             />
                           </label>
                           <label className="flex flex-col gap-1 text-sm">
-                            <span className="font-medium text-slate-600">Infant Price *</span>
+                            <span className="font-medium text-slate-600">{t("admin.crud.flights.field.infant_price")} *</span>
                             <input
                               type="number"
                               value={String(cabinForm.infant_price ?? 0)}
@@ -927,13 +937,13 @@ export default function OperatorFlightsPage() {
                             />
                           </label>
                           {[
-                            ["hand_baggage_included", "Hand Baggage Included"],
-                            ["checked_baggage_included", "Checked Baggage Included"],
-                            ["extra_baggage_allowed", "Extra Baggage Allowed"],
-                            ["seat_map_available", "Seat Map Available"],
-                          ].map(([key, label]) => (
+                            "hand_baggage_included",
+                            "checked_baggage_included",
+                            "extra_baggage_allowed",
+                            "seat_map_available",
+                          ].map((key) => (
                             <label key={key} className="flex flex-col gap-1 text-sm">
-                              <span className="font-medium text-slate-600">{label} *</span>
+                              <span className="font-medium text-slate-600">{t(`admin.crud.flights.field.${key}`)} *</span>
                               <select
                                 value={String(Boolean(cabinForm[key as keyof FlightCabinPayload]))}
                                 onChange={(e) => setCabinForm((p) => p ? { ...p, [key]: e.target.value === "true" } : p)}
@@ -945,7 +955,7 @@ export default function OperatorFlightsPage() {
                             </label>
                           ))}
                           <label className="flex flex-col gap-1 text-sm">
-                            <span className="font-medium text-slate-600">Hand Baggage Weight</span>
+                            <span className="font-medium text-slate-600">{t("admin.crud.flights.field.hand_baggage_weight")}</span>
                             <input
                               type="text"
                               value={String(cabinForm.hand_baggage_weight ?? "")}
@@ -954,7 +964,7 @@ export default function OperatorFlightsPage() {
                             />
                           </label>
                           <label className="flex flex-col gap-1 text-sm">
-                            <span className="font-medium text-slate-600">Checked Baggage Weight</span>
+                            <span className="font-medium text-slate-600">{t("admin.crud.flights.field.checked_baggage_weight")}</span>
                             <input
                               type="text"
                               value={String(cabinForm.checked_baggage_weight ?? "")}
@@ -963,7 +973,7 @@ export default function OperatorFlightsPage() {
                             />
                           </label>
                           <label className="flex flex-col gap-1 text-sm">
-                            <span className="font-medium text-slate-600">Fare Family</span>
+                            <span className="font-medium text-slate-600">{t("admin.crud.flights.field.fare_family")}</span>
                             <input
                               type="text"
                               value={String(cabinForm.fare_family ?? "")}
@@ -972,7 +982,7 @@ export default function OperatorFlightsPage() {
                             />
                           </label>
                           <label className="flex flex-col gap-1 text-sm">
-                            <span className="font-medium text-slate-600">Seat Selection Policy</span>
+                            <span className="font-medium text-slate-600">{t("admin.crud.flights.field.seat_selection_policy")}</span>
                             <input
                               type="text"
                               value={String(cabinForm.seat_selection_policy ?? "")}
@@ -981,7 +991,7 @@ export default function OperatorFlightsPage() {
                             />
                           </label>
                           <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-                            <span className="font-medium text-slate-600">Baggage Notes</span>
+                            <span className="font-medium text-slate-600">{t("admin.crud.flights.field.baggage_notes")}</span>
                             <input
                               type="text"
                               value={String(cabinForm.baggage_notes ?? "")}
@@ -997,14 +1007,14 @@ export default function OperatorFlightsPage() {
                             onClick={() => void handleSubmitCabin()}
                             className="rounded bg-slate-800 px-4 py-1.5 text-sm text-white disabled:opacity-40"
                           >
-                            {cabinBusy ? "Saving..." : "Save cabin"}
+                            {cabinBusy ? t("admin.crud.common.saving") : t("common.save")}
                           </button>
                           <button
                             type="button"
                             onClick={closeCabinForm}
                             className="rounded border border-slate-300 px-4 py-1.5 text-sm"
                           >
-                            Cancel
+                            {t("common.cancel")}
                           </button>
                         </div>
                       </div>
@@ -1016,19 +1026,19 @@ export default function OperatorFlightsPage() {
                       <table className="w-full min-w-[700px] text-left text-xs">
                         <thead className="border-b border-slate-200 bg-slate-100 uppercase text-slate-700">
                           <tr>
-                            <th className="px-2 py-2">Class</th>
-                            <th className="px-2 py-2">Seats</th>
-                            <th className="px-2 py-2">Adult</th>
-                            <th className="px-2 py-2">Child</th>
-                            <th className="px-2 py-2">Infant</th>
-                            <th className="px-2 py-2">Actions</th>
+                            <th className="px-2 py-2">{t("admin.crud.flights.cabin.col.class")}</th>
+                            <th className="px-2 py-2">{t("admin.crud.flights.cabin.col.seats")}</th>
+                            <th className="px-2 py-2">{t("admin.crud.flights.cabin.col.adult")}</th>
+                            <th className="px-2 py-2">{t("admin.crud.flights.cabin.col.child")}</th>
+                            <th className="px-2 py-2">{t("admin.crud.flights.cabin.col.infant")}</th>
+                            <th className="px-2 py-2">{t("admin.crud.common.actions")}</th>
                           </tr>
                         </thead>
                         <tbody>
                           {(cabinsByFlight[r.id] ?? []).length === 0 && (
                             <tr>
                               <td colSpan={6} className="px-2 py-4 text-center text-slate-400">
-                                {cabinBusy ? "Loading cabins..." : "No cabins"}
+                                {cabinBusy ? t("admin.crud.flights.cabin.loading") : t("admin.crud.flights.cabin.empty")}
                               </td>
                             </tr>
                           )}
@@ -1046,14 +1056,14 @@ export default function OperatorFlightsPage() {
                                     onClick={() => openEditCabin(cabin)}
                                     className="text-xs text-blue-700 underline"
                                   >
-                                    Edit
+                                    {t("admin.crud.common.edit")}
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => void handleDeleteCabin(cabin.id)}
                                     className="text-xs text-red-600 underline"
                                   >
-                                    Delete
+                                    {t("admin.crud.common.delete")}
                                   </button>
                                 </div>
                               </td>

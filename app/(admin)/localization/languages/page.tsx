@@ -2,6 +2,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessLocalizationLanguagesNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import {
@@ -88,12 +89,13 @@ function Toggle({
 
 /* ── icon buttons — exactly like Triprex ────────────────── */
 function BtnInfo({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
+  const { t } = useLanguage();
   return (
     <button
       type="button"
       disabled={disabled}
       onClick={onClick}
-      title="View translations"
+      title={t("admin.languages.btn_view_translations")}
       style={{
         width: 34, height: 34, borderRadius: 6,
         backgroundColor: "#10b981", border: "none",
@@ -111,12 +113,13 @@ function BtnInfo({ onClick, disabled }: { onClick: () => void; disabled?: boolea
   );
 }
 function BtnEdit({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
+  const { t } = useLanguage();
   return (
     <button
       type="button"
       disabled={disabled}
       onClick={onClick}
-      title="Edit"
+      title={t("admin.languages.btn_edit")}
       style={{
         width: 34, height: 34, borderRadius: 6,
         backgroundColor: "#7c3aed", border: "none",
@@ -133,12 +136,13 @@ function BtnEdit({ onClick, disabled }: { onClick: () => void; disabled?: boolea
   );
 }
 function BtnDelete({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
+  const { t } = useLanguage();
   return (
     <button
       type="button"
       disabled={disabled}
       onClick={onClick}
-      title="Delete"
+      title={t("admin.languages.btn_delete")}
       style={{
         width: 34, height: 34, borderRadius: 6,
         backgroundColor: "#ef4444", border: "none",
@@ -163,6 +167,7 @@ function EditModal({ row, onClose, onSave }: {
   onClose: () => void;
   onSave: (name: string, nameEn: string, rtl: boolean) => Promise<void>;
 }) {
+  const { t } = useLanguage();
   const [name, setName] = useState(row.name);
   const [nameEn, setNameEn] = useState(row.name_en ?? "");
   const [rtl, setRtl] = useState(row.rtl ?? false);
@@ -170,36 +175,36 @@ function EditModal({ row, onClose, onSave }: {
   const [err, setErr] = useState<string | null>(null);
 
   async function submit() {
-    if (!name || !nameEn) { setErr("All fields required."); return; }
+    if (!name || !nameEn) { setErr(t("admin.languages.fields_required")); return; }
     setSaving(true);
     try { await onSave(name, nameEn, rtl); onClose(); }
-    catch (e) { setErr(e instanceof ApiRequestError ? e.message : "Save failed"); }
+    catch (e) { setErr(e instanceof ApiRequestError ? e.message : t("admin.languages.err_save")); }
     finally { setSaving(false); }
   }
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.45)", padding: 16 }}>
       <div style={{ width: "100%", maxWidth: 440, backgroundColor: "#fff", borderRadius: 12, padding: 24, boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
-        <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Edit Language — {row.code.toUpperCase()}</h2>
+        <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>{t("admin.languages.edit_title").replace("{code}", row.code.toUpperCase())}</h2>
         {err && <p style={{ color: "#ef4444", fontSize: 12, marginBottom: 12 }}>{err}</p>}
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div>
-            <label style={{ display: "block", fontSize: 11, fontWeight: 500, color: "#64748b", marginBottom: 4 }}>Native name</label>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 500, color: "#64748b", marginBottom: 4 }}>{t("admin.languages.label_native_name")}</label>
             <input value={name} onChange={e => setName(e.target.value)} style={{ width: "100%", border: "1px solid #e2e8f0", borderRadius: 6, padding: "7px 10px", fontSize: 14, boxSizing: "border-box", color: "#1e293b", backgroundColor: "#fff" }} />
           </div>
           <div>
-            <label style={{ display: "block", fontSize: 11, fontWeight: 500, color: "#64748b", marginBottom: 4 }}>Name (English)</label>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 500, color: "#64748b", marginBottom: 4 }}>{t("admin.languages.label_name_en")}</label>
             <input value={nameEn} onChange={e => setNameEn(e.target.value)} style={{ width: "100%", border: "1px solid #e2e8f0", borderRadius: 6, padding: "7px 10px", fontSize: 14, boxSizing: "border-box", color: "#1e293b", backgroundColor: "#fff" }} />
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <Toggle checked={rtl} onChange={() => setRtl(v => !v)} />
-            <span style={{ fontSize: 14, color: "#374151" }}>Right-to-Left (RTL)</span>
+            <span style={{ fontSize: 14, color: "#374151" }}>{t("admin.languages.label_rtl")}</span>
           </div>
         </div>
         <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end", gap: 8 }}>
-          <button type="button" onClick={onClose} style={{ padding: "7px 18px", borderRadius: 6, border: "1px solid #e2e8f0", fontSize: 14, cursor: "pointer", backgroundColor: "#fff" }}>Cancel</button>
+          <button type="button" onClick={onClose} style={{ padding: "7px 18px", borderRadius: 6, border: "1px solid #e2e8f0", fontSize: 14, cursor: "pointer", backgroundColor: "#fff" }}>{t("common.cancel")}</button>
           <button type="button" disabled={saving} onClick={submit} style={{ padding: "7px 18px", borderRadius: 6, border: "none", fontSize: 14, cursor: "pointer", backgroundColor: "#7c3aed", color: "#fff", opacity: saving ? 0.6 : 1 }}>
-            {saving ? "Saving…" : "Save"}
+            {saving ? t("admin.localization.saving") : t("common.save")}
           </button>
         </div>
       </div>
@@ -212,6 +217,7 @@ function AddModal({ onClose, onAdd }: {
   onClose: () => void;
   onAdd: (code: string, name: string, nameEn: string) => Promise<void>;
 }) {
+  const { t } = useLanguage();
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [nameEn, setNameEn] = useState("");
@@ -219,36 +225,36 @@ function AddModal({ onClose, onAdd }: {
   const [err, setErr] = useState<string | null>(null);
 
   async function submit() {
-    if (!code || !name || !nameEn) { setErr("All fields required."); return; }
+    if (!code || !name || !nameEn) { setErr(t("admin.languages.fields_required")); return; }
     setAdding(true);
     try { await onAdd(code, name, nameEn); onClose(); }
-    catch (e) { setErr(e instanceof ApiRequestError ? e.message : "Failed"); }
+    catch (e) { setErr(e instanceof ApiRequestError ? e.message : t("admin.languages.err_failed")); }
     finally { setAdding(false); }
   }
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.45)", padding: 16 }}>
       <div style={{ width: "100%", maxWidth: 440, backgroundColor: "#fff", borderRadius: 12, padding: 24, boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
-        <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Add New Language</h2>
+        <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>{t("admin.languages.add_title")}</h2>
         {err && <p style={{ color: "#ef4444", fontSize: 12, marginBottom: 12 }}>{err}</p>}
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div>
-            <label style={{ display: "block", fontSize: 11, fontWeight: 500, color: "#64748b", marginBottom: 4 }}>Code (e.g. fr)</label>
-            <input value={code} onChange={e => setCode(e.target.value.toLowerCase())} placeholder="fr" style={{ width: "100%", border: "1px solid #e2e8f0", borderRadius: 6, padding: "7px 10px", fontSize: 14, fontFamily: "monospace", boxSizing: "border-box", color: "#1e293b", backgroundColor: "#fff" }} />
+            <label style={{ display: "block", fontSize: 11, fontWeight: 500, color: "#64748b", marginBottom: 4 }}>{t("admin.languages.label_code")}</label>
+            <input value={code} onChange={e => setCode(e.target.value.toLowerCase())} placeholder={t("admin.languages.placeholder_code")} style={{ width: "100%", border: "1px solid #e2e8f0", borderRadius: 6, padding: "7px 10px", fontSize: 14, fontFamily: "monospace", boxSizing: "border-box", color: "#1e293b", backgroundColor: "#fff" }} />
           </div>
           <div>
-            <label style={{ display: "block", fontSize: 11, fontWeight: 500, color: "#64748b", marginBottom: 4 }}>Native name</label>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="Français" style={{ width: "100%", border: "1px solid #e2e8f0", borderRadius: 6, padding: "7px 10px", fontSize: 14, boxSizing: "border-box", color: "#1e293b", backgroundColor: "#fff" }} />
+            <label style={{ display: "block", fontSize: 11, fontWeight: 500, color: "#64748b", marginBottom: 4 }}>{t("admin.languages.label_native_name")}</label>
+            <input value={name} onChange={e => setName(e.target.value)} placeholder={t("admin.languages.placeholder_native")} style={{ width: "100%", border: "1px solid #e2e8f0", borderRadius: 6, padding: "7px 10px", fontSize: 14, boxSizing: "border-box", color: "#1e293b", backgroundColor: "#fff" }} />
           </div>
           <div>
-            <label style={{ display: "block", fontSize: 11, fontWeight: 500, color: "#64748b", marginBottom: 4 }}>Name (English)</label>
-            <input value={nameEn} onChange={e => setNameEn(e.target.value)} placeholder="French" style={{ width: "100%", border: "1px solid #e2e8f0", borderRadius: 6, padding: "7px 10px", fontSize: 14, boxSizing: "border-box", color: "#1e293b", backgroundColor: "#fff" }} />
+            <label style={{ display: "block", fontSize: 11, fontWeight: 500, color: "#64748b", marginBottom: 4 }}>{t("admin.languages.label_name_en")}</label>
+            <input value={nameEn} onChange={e => setNameEn(e.target.value)} placeholder={t("admin.languages.placeholder_name_en")} style={{ width: "100%", border: "1px solid #e2e8f0", borderRadius: 6, padding: "7px 10px", fontSize: 14, boxSizing: "border-box", color: "#1e293b", backgroundColor: "#fff" }} />
           </div>
         </div>
         <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end", gap: 8 }}>
-          <button type="button" onClick={onClose} style={{ padding: "7px 18px", borderRadius: 6, border: "1px solid #e2e8f0", fontSize: 14, cursor: "pointer", backgroundColor: "#fff" }}>Cancel</button>
+          <button type="button" onClick={onClose} style={{ padding: "7px 18px", borderRadius: 6, border: "1px solid #e2e8f0", fontSize: 14, cursor: "pointer", backgroundColor: "#fff" }}>{t("common.cancel")}</button>
           <button type="button" disabled={adding} onClick={submit} style={{ padding: "7px 18px", borderRadius: 6, border: "none", fontSize: 14, cursor: "pointer", backgroundColor: "#7c3aed", color: "#fff", opacity: adding ? 0.6 : 1 }}>
-            {adding ? "Adding…" : "Add Language"}
+            {adding ? t("admin.languages.adding") : t("admin.languages.add_language")}
           </button>
         </div>
       </div>
@@ -258,6 +264,7 @@ function AddModal({ onClose, onAdd }: {
 
 /* ── main page ───────────────────────────────────────────── */
 export default function LocalizationLanguagesPage() {
+  const { t } = useLanguage();
   const { token, user } = useAdminAuth();
   const allowed = canAccessLocalizationLanguagesNav(user);
 
@@ -273,9 +280,9 @@ export default function LocalizationLanguagesPage() {
       const res = await apiAdminLanguages(token);
       setRows(res.data);
     } catch (e) {
-      setErr(e instanceof ApiRequestError ? e.message : "Failed to load");
+      setErr(e instanceof ApiRequestError ? e.message : t("admin.languages.err_load"));
     }
-  }, [token, allowed]);
+  }, [token, allowed, t]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -283,7 +290,7 @@ export default function LocalizationLanguagesPage() {
     if (!token) return;
     setBusyId(row.id);
     try { await apiLocalizationToggleLanguage(token, row.id); await load(); }
-    catch (e) { alert(e instanceof ApiRequestError ? e.message : "Toggle failed"); }
+    catch (e) { alert(e instanceof ApiRequestError ? e.message : t("admin.languages.err_toggle")); }
     finally { setBusyId(null); }
   }
 
@@ -291,7 +298,7 @@ export default function LocalizationLanguagesPage() {
     if (!token || row.is_default) return;
     setBusyId(row.id);
     try { await apiSetDefaultLanguage(token, row.id); await load(); }
-    catch (e) { alert(e instanceof ApiRequestError ? e.message : "Failed"); }
+    catch (e) { alert(e instanceof ApiRequestError ? e.message : t("admin.languages.err_failed")); }
     finally { setBusyId(null); }
   }
 
@@ -300,7 +307,7 @@ export default function LocalizationLanguagesPage() {
     if (!confirm(`Delete "${row.name_en ?? row.name}" (${row.code})?`)) return;
     setBusyId(row.id);
     try { await apiLocalizationDeleteLanguage(token, row.id); await load(); }
-    catch (e) { alert(e instanceof ApiRequestError ? e.message : "Delete failed"); }
+    catch (e) { alert(e instanceof ApiRequestError ? e.message : t("admin.languages.err_delete")); }
     finally { setBusyId(null); }
   }
 
@@ -319,8 +326,8 @@ export default function LocalizationLanguagesPage() {
   if (!allowed) {
     return (
       <div>
-        <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 16 }}>Languages</h1>
-        <ForbiddenNotice message="Managing languages requires super admin." />
+        <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 16 }}>{t("admin.languages.title")}</h1>
+        <ForbiddenNotice messageKey="admin.forbidden.languages" />
       </div>
     );
   }
@@ -340,7 +347,7 @@ export default function LocalizationLanguagesPage() {
       {editRow && <EditModal row={editRow} onClose={() => setEditRow(null)} onSave={handleEdit} />}
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 600 }}>Languages</h1>
+        <h1 style={{ fontSize: 20, fontWeight: 600 }}>{t("admin.languages.title")}</h1>
         <button
           type="button"
           onClick={() => setShowAdd(true)}
@@ -354,7 +361,7 @@ export default function LocalizationLanguagesPage() {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
             <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
           </svg>
-          Add New
+          {t("admin.languages.add_new")}
         </button>
       </div>
 
@@ -364,8 +371,8 @@ export default function LocalizationLanguagesPage() {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
           <thead>
             <tr style={{ backgroundColor: "#7c3aed" }}>
-              {["S.N", "Name", "Code", "RTL", "Default", "Option"].map((h, i) => (
-                <th key={h} style={{
+              {[t("admin.languages.table_sn"), t("admin.languages.table_name"), t("admin.languages.table_code"), t("admin.languages.table_rtl"), t("admin.languages.table_default"), t("admin.languages.table_option")].map((h, i) => (
+                <th key={`${h}-${i}`} style={{
                   padding: "13px 16px", color: "#fff", fontWeight: 600,
                   fontSize: 13, letterSpacing: "0.04em",
                   textAlign: i === 0 || i >= 3 ? "center" : "left",
@@ -376,7 +383,7 @@ export default function LocalizationLanguagesPage() {
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={6} style={{ padding: "32px 16px", textAlign: "center", color: "#64748b", fontSize: 13 }}>No languages found.</td>
+                <td colSpan={6} style={{ padding: "32px 16px", textAlign: "center", color: "#64748b", fontSize: 13 }}>{t("admin.languages.no_rows")}</td>
               </tr>
             )}
             {rows.map((row, i) => (

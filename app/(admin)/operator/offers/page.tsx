@@ -8,6 +8,7 @@ import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { apiOffers, apiPublishOffer, apiArchiveOffer, type OfferRow } from "@/lib/inventory-crud-api";
 import { useCallback, useEffect, useState } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const STATUSES = ["", "draft", "published", "archived"];
 
@@ -20,6 +21,7 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function OperatorOffersPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<OfferRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -44,7 +46,7 @@ export default function OperatorOffersPage() {
   useEffect(() => { load(); }, [load]);
 
   async function handlePublish(id: number) {
-    if (!token || !window.confirm("Publish this offer?")) return;
+    if (!token || !window.confirm(t("admin.crud.offers.publish_confirm"))) return;
     setBusyId(id);
     try { await apiPublishOffer(token, id); await load(); }
     catch (e) { alert(e instanceof ApiRequestError ? e.message : "Failed"); }
@@ -52,7 +54,7 @@ export default function OperatorOffersPage() {
   }
 
   async function handleArchive(id: number) {
-    if (!token || !window.confirm("Archive this offer?")) return;
+    if (!token || !window.confirm(t("admin.crud.offers.archive_confirm"))) return;
     setBusyId(id);
     try { await apiArchiveOffer(token, id); await load(); }
     catch (e) { alert(e instanceof ApiRequestError ? e.message : "Failed"); }
@@ -60,22 +62,22 @@ export default function OperatorOffersPage() {
   }
 
   if (!allowed || forbidden) return (
-    <div><h1 className="text-xl font-semibold">Offers</h1><div className="mt-4"><ForbiddenNotice /></div></div>
+    <div><h1 className="text-xl font-semibold">{t("admin.crud.offers.title")}</h1><div className="mt-4"><ForbiddenNotice /></div></div>
   );
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">Offers</h1>
+      <h1 className="text-xl font-semibold">{t("admin.crud.offers.title")}</h1>
 
       <div className="mt-4 flex items-center gap-3">
         <label className="text-sm text-slate-600">
-          Status
+          {t("admin.crud.offers.filter.status")}
           <select value={statusFilter} onChange={(e) => { setPage(1); setStatusFilter(e.target.value); }}
             className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm">
-            {STATUSES.map((s) => <option key={s} value={s}>{s || "All"}</option>)}
+            {STATUSES.map((s) => <option key={s} value={s}>{s || t("admin.crud.common.all")}</option>)}
           </select>
         </label>
-        <button type="button" onClick={load} className="rounded border border-slate-300 bg-white px-3 py-1 text-sm">Refresh</button>
+        <button type="button" onClick={load} className="rounded border border-slate-300 bg-white px-3 py-1 text-sm">{t("admin.crud.common.refresh")}</button>
       </div>
 
       {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
@@ -83,10 +85,10 @@ export default function OperatorOffersPage() {
       <div className="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
         <table className="w-full min-w-[800px] text-left text-sm">
           <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
-            <tr><th className="px-3 py-2">ID</th><th className="px-3 py-2">Title</th><th className="px-3 py-2">Type</th><th className="px-3 py-2">Price</th><th className="px-3 py-2">Status</th><th className="px-3 py-2">Company</th><th className="px-3 py-2">Actions</th></tr>
+            <tr><th className="px-3 py-2">{t("admin.crud.common.id")}</th><th className="px-3 py-2">{t("admin.crud.offers.col.title")}</th><th className="px-3 py-2">{t("admin.crud.offers.col.type")}</th><th className="px-3 py-2">{t("admin.crud.offers.col.price")}</th><th className="px-3 py-2">{t("admin.crud.common.status")}</th><th className="px-3 py-2">{t("admin.crud.offers.col.company")}</th><th className="px-3 py-2">{t("admin.crud.common.actions")}</th></tr>
           </thead>
           <tbody>
-            {rows.length === 0 && <tr><td colSpan={7} className="px-3 py-6 text-center text-slate-400">No offers</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={7} className="px-3 py-6 text-center text-slate-400">{t("admin.crud.offers.empty")}</td></tr>}
             {rows.map((r) => (
               <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-100">
                 <td className="px-3 py-2 tabular-nums text-slate-700">{r.id}</td>
@@ -99,11 +101,11 @@ export default function OperatorOffersPage() {
                   <div className="flex flex-col gap-1">
                     {r.status === "draft" && (
                       <button type="button" disabled={busyId === r.id} onClick={() => void handlePublish(r.id)}
-                        className="text-left text-xs text-green-700 underline disabled:opacity-40">Publish</button>
+                        className="text-left text-xs text-green-700 underline disabled:opacity-40">{t("admin.crud.common.publish")}</button>
                     )}
                     {r.status === "published" && (
                       <button type="button" disabled={busyId === r.id} onClick={() => void handleArchive(r.id)}
-                        className="text-left text-xs text-amber-700 underline disabled:opacity-40">Archive</button>
+                        className="text-left text-xs text-amber-700 underline disabled:opacity-40">{t("admin.crud.common.archive")}</button>
                     )}
                   </div>
                 </td>

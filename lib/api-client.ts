@@ -1,5 +1,40 @@
 import { getApiBaseUrl } from "./api-base";
 import { isApiError, type ApiErrorEnvelope } from "./api-envelope";
+import { ZULU_LANG_KEY } from "./zulu-lang";
+
+function readLangForRequest(): string {
+  const def = "en";
+  if (typeof window !== "undefined") {
+    try {
+      const ls = window.localStorage.getItem(ZULU_LANG_KEY);
+      if (ls && /^[a-z]{2}(-[a-z]{2})?$/i.test(ls.trim())) {
+        return ls.trim().toLowerCase();
+      }
+    } catch {
+      // ignore
+    }
+    try {
+      const match = document.cookie.match(
+        new RegExp(`(?:^|;\\s*)${ZULU_LANG_KEY.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}=([^;]*)`)
+      );
+      const fromCookie = match?.[1] ? decodeURIComponent(match[1].trim()) : "";
+      if (fromCookie && /^[a-z]{2}(-[a-z]{2})?$/i.test(fromCookie)) {
+        return fromCookie.toLowerCase();
+      }
+    } catch {
+      // ignore
+    }
+    return def;
+  }
+  // Server-side: avoid importing `next/headers` here (this module is bundled for the client).
+  return def;
+}
+
+function appendLangQuery(url: string, lang: string): string {
+  if (url.includes("lang=")) return url;
+  const sep = url.includes("?") ? "&" : "?";
+  return `${url}${sep}lang=${encodeURIComponent(lang)}`;
+}
 
 export class ApiRequestError extends Error {
   constructor(
@@ -37,7 +72,9 @@ export async function apiFetchJson<T>(
         ? rawBody
         : JSON.stringify(rawBody);
 
-  const res = await fetch(url, { ...rest, headers, body });
+  const lang = readLangForRequest();
+  const urlWithLang = appendLangQuery(url, lang);
+  const res = await fetch(urlWithLang, { ...rest, headers, body });
   const text = await res.text();
   let json: unknown = null;
   try {

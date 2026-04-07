@@ -10,6 +10,7 @@ import {
   type LocalizationLanguageRow,
   type UiTranslationRow,
 } from "@/lib/localization-api";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -27,6 +28,7 @@ function buildPages(current: number, last: number): (number | "...")[] {
 }
 
 export default function UiTranslationsPage() {
+  const { t } = useLanguage();
   const { token, user } = useAdminAuth();
   const isSuperAdmin = user?.is_super_admin === true;
   const router = useRouter();
@@ -58,7 +60,7 @@ export default function UiTranslationsPage() {
           : res.data[0]?.code ?? "";
         setSelectedLang(initial);
       })
-      .catch(() => setErr("Failed to load languages"));
+      .catch(() => setErr(t("admin.localization.err_load_languages")));
   }, [token, searchParams]);
 
   const loadTranslations = useCallback(async () => {
@@ -72,7 +74,7 @@ export default function UiTranslationsPage() {
       setTotal(res.data.total);
       setEdits({});
     } catch (e) {
-      setErr(e instanceof ApiRequestError ? e.message : "Failed to load");
+      setErr(e instanceof ApiRequestError ? e.message : t("admin.localization.err_load"));
     } finally {
       setLoading(false);
     }
@@ -91,10 +93,12 @@ export default function UiTranslationsPage() {
     setSuccessMsg(null);
     try {
       await apiUiTranslationsSave(token, { language_code: selectedLang, translations: edits });
-      setSuccessMsg(`Saved ${Object.keys(edits).length} key(s) successfully.`);
+      setSuccessMsg(
+        t("admin.localization.saved_success").replace("{count}", String(Object.keys(edits).length))
+      );
       await loadTranslations();
     } catch (e) {
-      setErr(e instanceof ApiRequestError ? e.message : "Save failed");
+      setErr(e instanceof ApiRequestError ? e.message : t("admin.localization.err_save"));
     } finally {
       setSaving(false);
     }
@@ -108,8 +112,8 @@ export default function UiTranslationsPage() {
   if (!isSuperAdmin) {
     return (
       <div>
-        <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 16 }}>UI Translations</h1>
-        <ForbiddenNotice message="Managing UI translations requires super admin." />
+        <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 16 }}>{t("admin.localization.ui_title")}</h1>
+        <ForbiddenNotice messageKey="admin.forbidden.ui_translations" />
       </div>
     );
   }
@@ -132,7 +136,7 @@ export default function UiTranslationsPage() {
 
       {/* ── Top bar: title + search + Go Back ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-        <h1 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>UI Translations</h1>
+        <h1 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>{t("admin.localization.ui_title")}</h1>
 
         <div className="zulu-tr-search" style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {/* Language selector */}
@@ -149,7 +153,7 @@ export default function UiTranslationsPage() {
           {/* Search input */}
           <input
             type="text"
-            placeholder="Type key &amp; Enter"
+            placeholder={t("admin.localization.search_placeholder")}
             value={searchInput}
             onChange={e => setSearchInput(e.target.value)}
             onKeyDown={e => e.key === "Enter" && handleSearch()}
@@ -160,7 +164,7 @@ export default function UiTranslationsPage() {
           <button
             type="button"
             onClick={handleSearch}
-            title="Search"
+            title={t("admin.localization.search_title")}
             style={{
               width: 38, height: 38, borderRadius: 8, border: "none",
               backgroundColor: "#7c3aed", cursor: "pointer",
@@ -186,7 +190,7 @@ export default function UiTranslationsPage() {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <polyline points="15 18 9 12 15 6" />
             </svg>
-            Go Back
+            {t("admin.localization.go_back")}
           </button>
         </div>
       </div>
@@ -199,25 +203,25 @@ export default function UiTranslationsPage() {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
           <thead>
             <tr style={{ backgroundColor: "#7c3aed" }}>
-              <th style={{ width: 60, padding: "13px 16px", color: "#fff", fontWeight: 600, fontSize: 13, textAlign: "center" }}>#</th>
-              <th style={{ width: "38%", padding: "13px 16px", color: "#fff", fontWeight: 600, fontSize: 13, textAlign: "center" }}>Key</th>
-              <th style={{ padding: "13px 16px", color: "#fff", fontWeight: 600, fontSize: 13, textAlign: "center" }}>Value</th>
+              <th style={{ width: 60, padding: "13px 16px", color: "#fff", fontWeight: 600, fontSize: 13, textAlign: "center" }}>{t("admin.localization.col_hash")}</th>
+              <th style={{ width: "38%", padding: "13px 16px", color: "#fff", fontWeight: 600, fontSize: 13, textAlign: "center" }}>{t("admin.localization.col_key")}</th>
+              <th style={{ padding: "13px 16px", color: "#fff", fontWeight: 600, fontSize: 13, textAlign: "center" }}>{t("admin.localization.col_value")}</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={3} style={{ padding: "40px 16px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>Loading…</td>
+                <td colSpan={3} style={{ padding: "40px 16px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>{t("admin.localization.loading")}</td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
                 <td colSpan={3} style={{ padding: "40px 16px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>
-                  No translations found.
+                  {t("admin.localization.empty")}
                 </td>
               </tr>
             ) : (
               rows.map((row, i) => (
-                <tr key={row.key} style={{ borderBottom: "1px solid #f1f5f9", backgroundColor: "#fff", color: "#1e293b" }}>
+                <tr key={`${selectedLang}-${row.key}`} style={{ borderBottom: "1px solid #f1f5f9", backgroundColor: "#fff", color: "#1e293b" }}>
                   <td style={{ padding: "10px 16px", textAlign: "center", color: "#94a3b8", fontVariantNumeric: "tabular-nums" }}>
                     {(page - 1) * PER_PAGE + i + 1}
                   </td>
@@ -321,7 +325,9 @@ export default function UiTranslationsPage() {
             <polyline points="17 21 17 13 7 13 7 21" />
             <polyline points="7 3 7 8 15 8" />
           </svg>
-          {saving ? "Saving…" : `Save${hasEdits ? ` (${Object.keys(edits).length})` : ""}`}
+          {saving
+            ? t("admin.localization.saving")
+            : `${t("admin.localization.save")}${hasEdits ? ` (${Object.keys(edits).length})` : ""}`}
         </button>
       </div>
 

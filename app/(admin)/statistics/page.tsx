@@ -55,7 +55,7 @@ export default function OperatorStatisticsPage() {
       <div>
         <h1 className="text-xl font-semibold">Operator statistics</h1>
         <div className="mt-4">
-          <ForbiddenNotice message="GET /api/operator/statistics requires operator statistics platform scope (or super admin)." />
+          <ForbiddenNotice messageKey="admin.forbidden.statistics_scope" />
         </div>
       </div>
     );

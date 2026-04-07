@@ -5,6 +5,7 @@ import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { ImportExportButtons } from "@/components/ImportExportButtons";
 import { PaginationBar } from "@/components/PaginationBar";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import {
@@ -200,8 +201,18 @@ function renderApiFieldErrors(errors: FieldErrors | undefined): { title: string;
   return { title: "Please fix the highlighted fields.", items };
 }
 
+const TRANSFER_STEP_LABEL_KEYS: Record<string, string> = {
+  general: "admin.crud.transfers.step.general",
+  route: "admin.crud.transfers.step.route",
+  vehicle: "admin.crud.transfers.step.vehicle",
+  pricing: "admin.crud.transfers.step.pricing",
+  publication: "admin.crud.transfers.step.publication",
+  review: "admin.crud.transfers.step.review",
+};
+
 export default function OperatorTransfersPage() {
   const { token } = useAdminAuth();
+  const { t } = useLanguage();
   const [rows, setRows] = useState<TransferRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
   const [page, setPage] = useState(1);
@@ -294,7 +305,7 @@ export default function OperatorTransfersPage() {
       return (
         <label key={String(field.key)} className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-slate-600">
-            {field.label}
+            {t(`admin.crud.transfers.field.${String(field.key)}`)}
             {field.required ? " *" : ""}
           </span>
           <select
@@ -332,7 +343,7 @@ export default function OperatorTransfersPage() {
       return (
         <label key={String(field.key)} className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-slate-600">
-            {field.label}
+            {t(`admin.crud.transfers.field.${String(field.key)}`)}
             {field.required ? " *" : ""}
           </span>
           <select
@@ -360,7 +371,7 @@ export default function OperatorTransfersPage() {
       return (
         <label key={String(field.key)} className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-slate-600">
-            {field.label}
+            {t(`admin.crud.transfers.field.${String(field.key)}`)}
             {field.required ? " *" : ""}
           </span>
           <input
@@ -385,7 +396,7 @@ export default function OperatorTransfersPage() {
       return (
         <label key={String(field.key)} className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-slate-600">
-            {field.label}
+            {t(`admin.crud.transfers.field.${String(field.key)}`)}
             {field.required ? " *" : ""}
           </span>
           <input
@@ -406,7 +417,7 @@ export default function OperatorTransfersPage() {
     return (
       <label key={String(field.key)} className="flex flex-col gap-1 text-sm">
         <span className="font-medium text-slate-600">
-          {field.label}
+          {t(`admin.crud.transfers.field.${String(field.key)}`)}
           {field.required ? " *" : ""}
         </span>
         <input
@@ -496,7 +507,7 @@ export default function OperatorTransfersPage() {
   }
 
   async function handleDelete(id: number) {
-    if (!token || !window.confirm("Delete this transfer?")) return;
+    if (!token || !window.confirm(t("admin.crud.transfers.delete_confirm"))) return;
     setBusy(true);
     try {
       await apiDeleteTransfer(token, id);
@@ -511,7 +522,7 @@ export default function OperatorTransfersPage() {
   if (forbidden) {
     return (
       <div>
-        <h1 className="text-xl font-semibold">Transfers</h1>
+        <h1 className="text-xl font-semibold">{t("admin.crud.transfers.title")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -526,7 +537,7 @@ export default function OperatorTransfersPage() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <h1 className="text-xl font-semibold">Transfers</h1>
+          <h1 className="text-xl font-semibold">{t("admin.crud.transfers.title")}</h1>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <ImportExportButtons
@@ -553,14 +564,14 @@ export default function OperatorTransfersPage() {
             disabled={busy}
             className="rounded bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700 disabled:opacity-40"
           >
-            + New transfer
+            {t("admin.crud.transfers.new_btn")}
           </button>
         </div>
       </div>
 
       <CsvImportModal
         open={importOpen}
-        title="Import transfers (CSV)"
+        title={t("admin.crud.transfers.import_title")}
         onClose={() => setImportOpen(false)}
         onRun={async (rows, rowLineNumbers) => {
           if (!token) {
@@ -580,7 +591,7 @@ export default function OperatorTransfersPage() {
 
       {form && (
         <div className="mt-4 rounded border border-slate-200 bg-white p-4">
-          <h2 className="mb-3 text-base font-medium">{editId ? "Edit transfer" : "New transfer"}</h2>
+          <h2 className="mb-3 text-base font-medium">{editId ? t("admin.crud.transfers.form_edit") : t("admin.crud.transfers.form_new")}</h2>
 
           {fieldSummary && (
             <div className="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
@@ -640,7 +651,7 @@ export default function OperatorTransfersPage() {
                         : "border-slate-200 bg-white text-slate-400"
                   }`}
                 >
-                  {step.label}
+                  {t(TRANSFER_STEP_LABEL_KEYS[step.key] ?? step.key)}
                 </button>
               );
             })}
@@ -661,7 +672,7 @@ export default function OperatorTransfersPage() {
               </div>
               {FIELDS.map((field) => (
                 <div key={String(field.key)} className="rounded border border-slate-200 px-3 py-2 text-sm">
-                  <div className="text-xs text-slate-500">{field.label}</div>
+                  <div className="text-xs text-slate-500">{t(`admin.crud.transfers.field.${String(field.key)}`)}</div>
                   <div className="font-medium text-slate-800">
                     {field.type === "boolean"
                       ? String(Boolean(form[field.key]))
@@ -684,7 +695,7 @@ export default function OperatorTransfersPage() {
               disabled={currentStepIndex === 0 || busy}
               className="rounded border border-slate-300 px-4 py-1.5 text-sm disabled:opacity-40"
             >
-              Back
+              {t("common.prev")}
             </button>
             {wizardStep === "review" ? (
               <button
@@ -693,7 +704,7 @@ export default function OperatorTransfersPage() {
                 onClick={() => void handleSubmit()}
                 className="rounded bg-slate-800 px-4 py-1.5 text-sm text-white disabled:opacity-40"
               >
-                {busy ? "Saving..." : "Submit transfer"}
+                {busy ? t("admin.crud.common.saving") : t("admin.crud.transfers.submit")}
               </button>
             ) : (
               <button
@@ -702,11 +713,11 @@ export default function OperatorTransfersPage() {
                 onClick={handleNextStep}
                 className="rounded bg-slate-800 px-4 py-1.5 text-sm text-white disabled:opacity-40"
               >
-                Next
+                {t("common.next")}
               </button>
             )}
             <button type="button" onClick={closeForm} className="rounded border border-slate-300 px-4 py-1.5 text-sm">
-              Cancel
+              {t("common.cancel")}
             </button>
           </div>
         </div>
@@ -716,19 +727,19 @@ export default function OperatorTransfersPage() {
         <table className="w-full min-w-[800px] text-left text-sm">
           <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
             <tr>
-              <th className="px-3 py-2">ID</th>
-              <th className="px-3 py-2">Title</th>
-              <th className="px-3 py-2">Vehicle</th>
-              <th className="px-3 py-2">Route</th>
-              <th className="px-3 py-2">Price</th>
-              <th className="px-3 py-2">Actions</th>
+              <th className="px-3 py-2">{t("admin.crud.common.id")}</th>
+              <th className="px-3 py-2">{t("admin.crud.transfers.col.title")}</th>
+              <th className="px-3 py-2">{t("admin.crud.transfers.col.vehicle")}</th>
+              <th className="px-3 py-2">{t("admin.crud.transfers.col.route")}</th>
+              <th className="px-3 py-2">{t("admin.crud.transfers.col.price")}</th>
+              <th className="px-3 py-2">{t("admin.crud.common.actions")}</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-3 py-6 text-center text-slate-400">
-                  No transfers
+                  {t("admin.crud.transfers.empty")}
                 </td>
               </tr>
             )}
@@ -750,14 +761,14 @@ export default function OperatorTransfersPage() {
                       onClick={() => void openEdit(r)}
                       className="text-xs text-blue-700 underline"
                     >
-                      Edit
+                      {t("admin.crud.common.edit")}
                     </button>
                     <button
                       type="button"
                       onClick={() => void handleDelete(r.id)}
                       className="text-xs text-red-600 underline"
                     >
-                      Delete
+                      {t("admin.crud.common.delete")}
                     </button>
                   </div>
                 </td>

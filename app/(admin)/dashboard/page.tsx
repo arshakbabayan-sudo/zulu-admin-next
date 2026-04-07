@@ -5,9 +5,11 @@ import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { apiPlatformStats, type PlatformStats } from "@/lib/platform-admin-api";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useEffect, useState } from "react";
 
 export default function DashboardPage() {
+  const { t } = useLanguage();
   const { token, user } = useAdminAuth();
   const [stats, setStats] = useState<PlatformStats | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -31,7 +33,7 @@ export default function DashboardPage() {
                 ? e.message
                 : e instanceof Error
                   ? e.message
-                  : "Failed to load stats"
+                  : t("admin.dashboard.load_failed")
             );
           }
         }
@@ -40,14 +42,14 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [allowed, token]);
+  }, [allowed, token, t]);
 
   if (!allowed) {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">Dashboard</h1>
+        <h1 className="admin-page-title">{t("admin.dashboard.title")}</h1>
         <div className="admin-card p-4">
-          <ForbiddenNotice message="Platform KPIs require super admin (GET /api/platform-admin/stats)." />
+          <ForbiddenNotice messageKey="admin.forbidden.dashboard_stats" />
         </div>
       </div>
     );
@@ -56,7 +58,7 @@ export default function DashboardPage() {
   if (err === "forbidden") {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">Dashboard</h1>
+        <h1 className="admin-page-title">{t("admin.dashboard.title")}</h1>
         <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
@@ -67,7 +69,7 @@ export default function DashboardPage() {
   if (err) {
     return (
       <div className="space-y-3">
-        <h1 className="admin-page-title">Dashboard</h1>
+        <h1 className="admin-page-title">{t("admin.dashboard.title")}</h1>
         <p className="text-sm text-red-600">{err}</p>
       </div>
     );
@@ -76,8 +78,8 @@ export default function DashboardPage() {
   if (!stats) {
     return (
       <div className="space-y-2">
-        <h1 className="admin-page-title">Dashboard</h1>
-        <p className="admin-page-subtitle">Loading platform stats…</p>
+        <h1 className="admin-page-title">{t("admin.dashboard.title")}</h1>
+        <p className="admin-page-subtitle">{t("admin.dashboard.loading_stats")}</p>
       </div>
     );
   }
@@ -86,7 +88,7 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <h1 className="admin-page-title">Platform overview</h1>
+      <h1 className="admin-page-title">{t("admin.dashboard.platform_overview")}</h1>
       <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {keys.map((k) => (
           <div

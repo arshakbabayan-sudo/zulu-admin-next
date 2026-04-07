@@ -32,6 +32,7 @@ import {
   visaNumberFromApi,
   visaOfferStatusLabel,
 } from "@/lib/visa-ui";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 function visaFormFromApiRow(r: VisaRow): VisaPayload {
@@ -258,6 +259,7 @@ function bodyFromForm(form: VisaPayload, mode: "create" | "update"): VisaPayload
 
 export default function OperatorVisasPage() {
   const { token } = useAdminAuth();
+  const { t } = useLanguage();
   const [rows, setRows] = useState<VisaRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
   const [page, setPage] = useState(1);
@@ -373,7 +375,7 @@ export default function OperatorVisasPage() {
   }
 
   async function handleDelete(id: number) {
-    if (!token || !window.confirm("Delete this visa?")) return;
+    if (!token || !window.confirm(t("admin.crud.visas.delete_confirm"))) return;
     setBusy(true);
     try {
       await apiDeleteVisa(token, id);
@@ -388,7 +390,7 @@ export default function OperatorVisasPage() {
   if (forbidden)
     return (
       <div>
-        <h1 className="text-xl font-semibold">Visas</h1>
+        <h1 className="text-xl font-semibold">{t("admin.crud.visas.title")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -399,7 +401,7 @@ export default function OperatorVisasPage() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <h1 className="text-xl font-semibold">Visas</h1>
+          <h1 className="text-xl font-semibold">{t("admin.crud.visas.title")}</h1>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <ImportExportButtons
@@ -426,14 +428,14 @@ export default function OperatorVisasPage() {
             disabled={busy}
             className="rounded bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700 disabled:opacity-40"
           >
-            + New visa
+            {t("admin.crud.visas.new_btn")}
           </button>
         </div>
       </div>
 
       <CsvImportModal
         open={importOpen}
-        title="Import visas (CSV)"
+        title={t("admin.crud.visas.import_title")}
         onClose={() => setImportOpen(false)}
         onRun={async (dataRows, rowLineNumbers) => {
           if (!token) {
@@ -451,24 +453,24 @@ export default function OperatorVisasPage() {
 
       {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
       {formLoading && editId != null && !form && (
-        <div className="mt-4 rounded border border-slate-200 bg-white p-4 text-sm text-slate-600">Loading visa...</div>
+        <div className="mt-4 rounded border border-slate-200 bg-white p-4 text-sm text-slate-600">{t("admin.crud.visas.loading")}</div>
       )}
       {form && (
         <div className="mt-4 rounded border border-slate-200 bg-white p-5">
-          <h2 className="mb-4 text-base font-medium">{editId ? "Edit visa" : "New visa"}</h2>
+          <h2 className="mb-4 text-base font-medium">{editId ? t("admin.crud.visas.form_edit") : t("admin.crud.visas.form_new")}</h2>
 
           <div className="space-y-6">
           <div>
-          <h3 className={sectionTitleClass}>General</h3>
+          <h3 className={sectionTitleClass}>{t("admin.crud.visas.section.general")}</h3>
           <div className="grid gap-4 sm:grid-cols-2">
             {editId == null && (
               <label className="flex flex-col gap-1.5 text-sm sm:col-span-2">
                 <span className={labelTextClass}>
-                  Offer ID <span className="text-red-500">*</span>
+                  {t("admin.crud.visas.field.offer_id")} <span className="text-red-500">*</span>
                 </span>
                 <input
                   type="number"
-                  placeholder="ID of a visa-type offer"
+                  placeholder={t("admin.crud.visas.hint.offer_id")}
                   value={form.offer_id != null && Number.isFinite(Number(form.offer_id)) ? form.offer_id : ""}
                   onChange={(e) =>
                     setForm((p) =>
@@ -481,16 +483,16 @@ export default function OperatorVisasPage() {
             )}
             {editId != null && (
               <div className="flex flex-col gap-1.5 text-sm sm:col-span-2">
-                <span className={labelTextClass}>Offer status (read-only)</span>
+                <span className={labelTextClass}>{t("admin.crud.visas.field.offer_status")}</span>
                 <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-slate-800">
                   {(form.offer_status ?? "").trim() || "—"}
                 </p>
-                <p className={hintClass}>Linked offer status; change via Offers, not here.</p>
+                <p className={hintClass}>{t("admin.crud.visas.hint.offer_status")}</p>
               </div>
             )}
             <label className="flex flex-col gap-1.5 text-sm">
               <span className={labelTextClass}>
-                Country <span className="text-red-500">*</span>
+                {t("admin.crud.visas.field.country")} <span className="text-red-500">*</span>
               </span>
               <input
                 value={form.country ?? ""}
@@ -499,7 +501,7 @@ export default function OperatorVisasPage() {
               />
             </label>
             <label className="flex flex-col gap-1.5 text-sm">
-              <span className={labelTextClass}>Country ID</span>
+              <span className={labelTextClass}>{t("admin.crud.visas.field.country_id")}</span>
               <input
                 type="number"
                 min={1}
@@ -520,7 +522,7 @@ export default function OperatorVisasPage() {
             </label>
             <label className="flex flex-col gap-1.5 text-sm">
               <span className={labelTextClass}>
-                Visa type <span className="text-red-500">*</span>
+                {t("admin.crud.visas.field.visa_type")} <span className="text-red-500">*</span>
               </span>
               <input
                 value={form.visa_type ?? ""}
@@ -529,7 +531,7 @@ export default function OperatorVisasPage() {
               />
             </label>
             <label className="flex flex-col gap-1.5 text-sm sm:col-span-2">
-              <span className={labelTextClass}>Name</span>
+              <span className={labelTextClass}>{t("admin.crud.visas.field.name")}</span>
               <input
                 value={form.name ?? ""}
                 onChange={(e) => setForm((p) => (p ? { ...p, name: e.target.value } : p))}
@@ -540,10 +542,10 @@ export default function OperatorVisasPage() {
           </div>
 
           <div>
-          <h3 className={sectionTitleClass}>Processing</h3>
+          <h3 className={sectionTitleClass}>{t("admin.crud.visas.section.processing")}</h3>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="flex flex-col gap-1.5 text-sm">
-              <span className={labelTextClass}>Processing days</span>
+              <span className={labelTextClass}>{t("admin.crud.visas.field.processing_days")}</span>
               <input
                 type="number"
                 min={0}
@@ -560,10 +562,10 @@ export default function OperatorVisasPage() {
           </div>
 
           <div>
-          <h3 className={sectionTitleClass}>Pricing</h3>
+          <h3 className={sectionTitleClass}>{t("admin.crud.visas.section.pricing")}</h3>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="flex flex-col gap-1.5 text-sm">
-              <span className={labelTextClass}>Visa price</span>
+              <span className={labelTextClass}>{t("admin.crud.visas.field.visa_price")}</span>
               <input
                 type="number"
                 min={0}
@@ -580,7 +582,7 @@ export default function OperatorVisasPage() {
             </label>
             {editId != null && (
               <div className="flex flex-col gap-1.5 text-sm">
-                <span className={labelTextClass}>Offer price (read-only)</span>
+                <span className={labelTextClass}>{t("admin.crud.visas.field.offer_price")}</span>
                 <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 tabular-nums text-slate-800">
                   {form.offer_price != null && !Number.isNaN(Number(form.offer_price))
                     ? visaMoneyCell(form.offer_price, form.currency)
@@ -590,7 +592,7 @@ export default function OperatorVisasPage() {
               </div>
             )}
             <div className="flex flex-col gap-1.5 text-sm sm:col-span-2">
-              <span className={labelTextClass}>Currency (read-only)</span>
+              <span className={labelTextClass}>{t("admin.crud.visas.field.currency")}</span>
               <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 uppercase text-slate-800">
                 {(form.currency ?? "").trim() || "—"}
               </p>
@@ -600,10 +602,10 @@ export default function OperatorVisasPage() {
           </div>
 
           <div>
-          <h3 className={sectionTitleClass}>Content</h3>
+          <h3 className={sectionTitleClass}>{t("admin.crud.visas.section.content")}</h3>
           <div className="grid gap-4 sm:grid-cols-1">
             <label className="flex flex-col gap-1.5 text-sm">
-              <span className={labelTextClass}>Description</span>
+              <span className={labelTextClass}>{t("admin.crud.visas.field.description")}</span>
               <textarea
                 rows={4}
                 value={form.description ?? ""}
@@ -612,7 +614,7 @@ export default function OperatorVisasPage() {
               />
             </label>
             <label className="flex flex-col gap-1.5 text-sm">
-              <span className={labelTextClass}>Required documents</span>
+              <span className={labelTextClass}>{t("admin.crud.visas.field.required_documents")}</span>
               <textarea
                 rows={5}
                 placeholder="e.g. Passport copy"
@@ -620,7 +622,7 @@ export default function OperatorVisasPage() {
                 onChange={(e) => setForm((p) => (p ? { ...p, required_documents_text: e.target.value } : p))}
                 className={inputClass("required_documents_text")}
               />
-              <p className={hintClass}>One document per line.</p>
+              <p className={hintClass}>{t("admin.crud.visas.hint.required_documents")}</p>
             </label>
           </div>
           </div>
@@ -640,14 +642,14 @@ export default function OperatorVisasPage() {
               onClick={() => void handleSubmit()}
               className="rounded bg-slate-800 px-4 py-1.5 text-sm text-white hover:bg-slate-700 disabled:pointer-events-none disabled:opacity-40"
             >
-              {busy ? "Saving..." : "Save"}
+              {busy ? t("admin.crud.common.saving") : t("common.save")}
             </button>
             <button
               type="button"
               onClick={closeForm}
               className="rounded border border-slate-300 bg-white px-4 py-1.5 text-sm text-slate-800 hover:bg-slate-50"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
           </div>
         </div>
@@ -656,21 +658,21 @@ export default function OperatorVisasPage() {
         <table className="w-full min-w-[880px] text-left text-sm">
           <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
             <tr>
-              <th className="px-3 py-2">ID</th>
-              <th className="px-3 py-2">Country</th>
-              <th className="px-3 py-2">Type</th>
-              <th className="px-3 py-2 font-semibold text-slate-800">Visa price</th>
-              <th className="px-3 py-2 font-normal text-slate-600">Offer price</th>
-              <th className="px-3 py-2">Processing</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Actions</th>
+              <th className="px-3 py-2">{t("admin.crud.common.id")}</th>
+              <th className="px-3 py-2">{t("admin.crud.visas.col.country")}</th>
+              <th className="px-3 py-2">{t("admin.crud.visas.col.type")}</th>
+              <th className="px-3 py-2 font-semibold text-slate-800">{t("admin.crud.visas.col.visa_price")}</th>
+              <th className="px-3 py-2 font-normal text-slate-600">{t("admin.crud.visas.col.offer_price")}</th>
+              <th className="px-3 py-2">{t("admin.crud.visas.col.processing")}</th>
+              <th className="px-3 py-2">{t("admin.crud.common.status")}</th>
+              <th className="px-3 py-2">{t("admin.crud.common.actions")}</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr>
                 <td colSpan={8} className="px-3 py-6 text-center text-slate-400">
-                  No visas
+                  {t("admin.crud.visas.empty")}
                 </td>
               </tr>
             )}
@@ -699,7 +701,7 @@ export default function OperatorVisasPage() {
                       disabled={busy}
                       className="text-xs text-blue-700 underline disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                      Edit
+                      {t("admin.crud.common.edit")}
                     </button>
                     <button
                       type="button"
@@ -707,7 +709,7 @@ export default function OperatorVisasPage() {
                       disabled={busy}
                       className="text-xs text-red-600 underline disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                      Delete
+                      {t("admin.crud.common.delete")}
                     </button>
                   </div>
                 </td>

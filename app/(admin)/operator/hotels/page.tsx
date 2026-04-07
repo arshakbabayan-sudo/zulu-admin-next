@@ -43,6 +43,7 @@ import {
   hotelVisibilityRuleLabel,
   validateHotelOperatorForm,
 } from "@/lib/hotel-ui";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useCallback, useEffect, useState } from "react";
 
 const EMPTY: HotelFormPayload = {
@@ -89,6 +90,7 @@ const EMPTY: HotelFormPayload = {
 
 export default function OperatorHotelsPage() {
   const { token } = useAdminAuth();
+  const { t } = useLanguage();
   const [rows, setRows] = useState<HotelRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
   const [page, setPage] = useState(1);
@@ -186,7 +188,7 @@ export default function OperatorHotelsPage() {
   }
 
   async function handleDelete(id: number) {
-    if (!token || !window.confirm("Delete this hotel?")) return;
+    if (!token || !window.confirm(t("admin.crud.hotels.delete_confirm"))) return;
     setBusy(true);
     try {
       await apiDeleteHotel(token, id);
@@ -201,7 +203,7 @@ export default function OperatorHotelsPage() {
   if (forbidden)
     return (
       <div>
-        <h1 className="text-xl font-semibold">Hotels</h1>
+        <h1 className="text-xl font-semibold">{t("admin.crud.hotels.title")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -212,7 +214,7 @@ export default function OperatorHotelsPage() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <h1 className="text-xl font-semibold">Hotels</h1>
+          <h1 className="text-xl font-semibold">{t("admin.crud.hotels.title")}</h1>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <ImportExportButtons
@@ -238,21 +240,21 @@ export default function OperatorHotelsPage() {
             onClick={openCreate}
             className="rounded bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700"
           >
-            + New hotel
+            {t("admin.crud.hotels.new_btn")}
           </button>
         </div>
       </div>
       {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
       {formLoading && editId != null && !form && (
-        <div className="mt-4 rounded border border-slate-200 bg-white p-4 text-sm text-slate-600">Loading hotel…</div>
+        <div className="mt-4 rounded border border-slate-200 bg-white p-4 text-sm text-slate-600">{t("admin.crud.hotels.loading")}</div>
       )}
       {form && (
         <div className="mt-4 rounded border border-slate-200 bg-white p-4">
-          <h2 className="mb-3 text-base font-medium">{editId ? "Edit hotel" : "New hotel"}</h2>
+          <h2 className="mb-3 text-base font-medium">{editId ? t("admin.crud.hotels.form_edit") : t("admin.crud.hotels.form_new")}</h2>
           <div className="grid gap-3 sm:grid-cols-2">
             {editId == null && (
               <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">{HOTEL_FIELD_LABELS.offer_id}</span>
+                <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.offer_id")}</span>
                 <input
                   type="number"
                   min={1}
@@ -274,7 +276,7 @@ export default function OperatorHotelsPage() {
             {(["hotel_name", "property_type", "hotel_type", "country", "region_or_state", "city", "district_or_area"] as const).map(
               (f) => (
                 <label key={f} className="flex flex-col gap-1 text-sm">
-                  <span className="font-medium text-slate-600">{HOTEL_FIELD_LABELS[f]}</span>
+                  <span className="font-medium text-slate-600">{t(`admin.crud.hotels.field.${f}`)}</span>
                   <input
                     value={form[f]}
                     onChange={(e) => setForm((p) => (p ? { ...p, [f]: e.target.value } : p))}
@@ -284,7 +286,7 @@ export default function OperatorHotelsPage() {
               )
             )}
             <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-              <span className="font-medium text-slate-600">{HOTEL_FIELD_LABELS.full_address}</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.full_address")}</span>
               <input
                 value={form.full_address}
                 onChange={(e) => setForm((p) => (p ? { ...p, full_address: e.target.value } : p))}
@@ -292,7 +294,7 @@ export default function OperatorHotelsPage() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">{HOTEL_FIELD_LABELS.latitude}</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.latitude")}</span>
               <input
                 value={form.latitude}
                 onChange={(e) => setForm((p) => (p ? { ...p, latitude: e.target.value } : p))}
@@ -301,7 +303,7 @@ export default function OperatorHotelsPage() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">{HOTEL_FIELD_LABELS.longitude}</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.longitude")}</span>
               <input
                 value={form.longitude}
                 onChange={(e) => setForm((p) => (p ? { ...p, longitude: e.target.value } : p))}
@@ -310,7 +312,7 @@ export default function OperatorHotelsPage() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">{HOTEL_FIELD_LABELS.meal_type}</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.meal_type")}</span>
               <select
                 value={form.meal_type}
                 onChange={(e) => setForm((p) => (p ? { ...p, meal_type: e.target.value } : p))}
@@ -324,7 +326,7 @@ export default function OperatorHotelsPage() {
               </select>
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">{HOTEL_FIELD_LABELS.star_rating}</span>
+              <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.star_rating")}</span>
               <span className="text-xs text-slate-500">
                 Optional (1–5) — API field <code className="rounded bg-slate-100 px-1">{HOTEL_API_STAR_RATING_KEY}</code>
               </span>
@@ -348,10 +350,10 @@ export default function OperatorHotelsPage() {
             </label>
           </div>
           <div className="mt-4 flex flex-col gap-3 border-t border-slate-200 pt-4">
-            <span className="text-xs font-semibold uppercase text-slate-500">Availability & booking</span>
+            <span className="text-xs font-semibold uppercase text-slate-500">{t("admin.crud.hotels.section.availability")}</span>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">{HOTEL_FIELD_LABELS.availability_status}</span>
+                <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.availability_status")}</span>
                 <select
                   value={form.availability_status}
                   onChange={(e) => setForm((p) => (p ? { ...p, availability_status: e.target.value } : p))}
@@ -365,7 +367,7 @@ export default function OperatorHotelsPage() {
                 </select>
               </label>
               <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">{HOTEL_FIELD_LABELS.status}</span>
+                <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.status")}</span>
                 <select
                   value={form.status}
                   onChange={(e) => setForm((p) => (p ? { ...p, status: e.target.value } : p))}
@@ -379,7 +381,7 @@ export default function OperatorHotelsPage() {
                 </select>
               </label>
               <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">{HOTEL_FIELD_LABELS.room_inventory_mode}</span>
+                <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.room_inventory_mode")}</span>
                 <input
                   value={form.room_inventory_mode}
                   onChange={(e) => setForm((p) => (p ? { ...p, room_inventory_mode: e.target.value } : p))}
@@ -395,7 +397,7 @@ export default function OperatorHotelsPage() {
                 </datalist>
               </label>
               <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">{HOTEL_FIELD_LABELS.visibility_rule}</span>
+                <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.visibility_rule")}</span>
                 <select
                   value={form.visibility_rule}
                   onChange={(e) => setForm((p) => (p ? { ...p, visibility_rule: e.target.value } : p))}
@@ -416,7 +418,7 @@ export default function OperatorHotelsPage() {
                     onChange={(e) => setForm((p) => (p ? { ...p, bookable: e.target.checked } : p))}
                     className="rounded border border-slate-300"
                   />
-                  <span className="font-medium text-slate-600">{HOTEL_FIELD_LABELS.bookable}</span>
+                  <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.bookable")}</span>
                 </label>
                 <label className="flex items-center gap-2 text-sm">
                   <input
@@ -425,7 +427,7 @@ export default function OperatorHotelsPage() {
                     onChange={(e) => setForm((p) => (p ? { ...p, is_package_eligible: e.target.checked } : p))}
                     className="rounded border border-slate-300"
                   />
-                  <span className="font-medium text-slate-600">{HOTEL_FIELD_LABELS.is_package_eligible}</span>
+                  <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.is_package_eligible")}</span>
                 </label>
                 <label className="flex items-center gap-2 text-sm">
                   <input
@@ -434,13 +436,13 @@ export default function OperatorHotelsPage() {
                     onChange={(e) => setForm((p) => (p ? { ...p, appears_in_packages: e.target.checked } : p))}
                     className="rounded border border-slate-300"
                   />
-                  <span className="font-medium text-slate-600">{HOTEL_FIELD_LABELS.appears_in_packages}</span>
+                  <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.appears_in_packages")}</span>
                 </label>
               </div>
             </div>
           </div>
           <div className="mt-4 flex flex-col gap-2 border-t border-slate-200 pt-4">
-            <span className="text-xs font-semibold uppercase text-slate-500">Facilities</span>
+            <span className="text-xs font-semibold uppercase text-slate-500">{t("admin.crud.hotels.section.facilities")}</span>
             <div className="grid gap-2 sm:grid-cols-2">
               {HOTEL_FACILITY_AMENITY_KEYS.map((key) => (
                 <label key={key} className="flex items-center gap-2 text-sm">
@@ -450,13 +452,13 @@ export default function OperatorHotelsPage() {
                     onChange={(e) => setForm((p) => (p ? { ...p, [key]: e.target.checked } : p))}
                     className="rounded border border-slate-300"
                   />
-                  <span>{HOTEL_FIELD_LABELS[key]}</span>
+                  <span>{t(`admin.crud.hotels.field.${key}`)}</span>
                 </label>
               ))}
             </div>
           </div>
           <div className="mt-4 flex flex-col gap-3 border-t border-slate-200 pt-4">
-            <span className="text-xs font-semibold uppercase text-slate-500">Policies</span>
+            <span className="text-xs font-semibold uppercase text-slate-500">{t("admin.crud.hotels.section.policies")}</span>
             <div className="grid gap-2 sm:grid-cols-2">
               {HOTEL_POLICY_BOOLEAN_KEYS.map((key) => (
                 <label key={key} className="flex items-center gap-2 text-sm">
@@ -466,13 +468,13 @@ export default function OperatorHotelsPage() {
                     onChange={(e) => setForm((p) => (p ? { ...p, [key]: e.target.checked } : p))}
                     className="rounded border border-slate-300"
                   />
-                  <span>{HOTEL_FIELD_LABELS[key]}</span>
+                  <span>{t(`admin.crud.hotels.field.${key}`)}</span>
                 </label>
               ))}
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">{HOTEL_FIELD_LABELS.cancellation_policy_type}</span>
+                <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.cancellation_policy_type")}</span>
                 <input
                   value={form.cancellation_policy_type}
                   onChange={(e) => setForm((p) => (p ? { ...p, cancellation_policy_type: e.target.value } : p))}
@@ -487,7 +489,7 @@ export default function OperatorHotelsPage() {
                 </datalist>
               </label>
               <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">{HOTEL_FIELD_LABELS.cancellation_deadline_at}</span>
+                <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.cancellation_deadline_at")}</span>
                 <input
                   type="datetime-local"
                   value={form.cancellation_deadline_at}
@@ -498,7 +500,7 @@ export default function OperatorHotelsPage() {
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-                <span className="font-medium text-slate-600">{HOTEL_FIELD_LABELS.no_show_policy}</span>
+                <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.no_show_policy")}</span>
                 <input
                   value={form.no_show_policy}
                   onChange={(e) => setForm((p) => (p ? { ...p, no_show_policy: e.target.value } : p))}
@@ -510,10 +512,10 @@ export default function OperatorHotelsPage() {
             </div>
           </div>
           <div className="mt-4 flex flex-col gap-3 border-t border-slate-200 pt-4">
-            <span className="text-xs font-semibold uppercase text-slate-500">Review data</span>
+            <span className="text-xs font-semibold uppercase text-slate-500">{t("admin.crud.hotels.section.review_data")}</span>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">{HOTEL_FIELD_LABELS.review_score}</span>
+                <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.review_score")}</span>
                 <span className="text-xs text-slate-500">0–10, optional</span>
                 <input
                   type="number"
@@ -535,7 +537,7 @@ export default function OperatorHotelsPage() {
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">{HOTEL_FIELD_LABELS.review_count}</span>
+                <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.review_count")}</span>
                 <input
                   type="number"
                   min={0}
@@ -555,7 +557,7 @@ export default function OperatorHotelsPage() {
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-                <span className="font-medium text-slate-600">{HOTEL_FIELD_LABELS.review_label}</span>
+                <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.review_label")}</span>
                 <input
                   value={form.review_label}
                   onChange={(e) => setForm((p) => (p ? { ...p, review_label: e.target.value } : p))}
@@ -574,7 +576,7 @@ export default function OperatorHotelsPage() {
           <div className="mt-6 flex flex-col gap-3 border-t border-slate-200 pt-4">
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-semibold uppercase text-slate-500">
-                {HOTEL_FIELD_LABELS.rooms} & rates
+                {t("admin.crud.hotels.section.rooms")}
               </span>
               <button
                 type="button"
@@ -583,7 +585,7 @@ export default function OperatorHotelsPage() {
                 }
                 className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
               >
-                + Add room
+                {t("admin.crud.hotels.add_room")}
               </button>
             </div>
             <p className="text-xs text-slate-500">
@@ -606,13 +608,13 @@ export default function OperatorHotelsPage() {
                         )
                       }
                     >
-                      Remove room
+                      {t("admin.crud.hotels.remove_room")}
                     </button>
                   )}
                 </div>
                 <div className="grid gap-2 sm:grid-cols-3">
                   <label className="flex flex-col gap-1 text-sm">
-                    <span className="font-medium text-slate-600">{HOTEL_FIELD_LABELS.room_type}</span>
+                    <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.room_type")}</span>
                     <input
                       value={room.room_type}
                       onChange={(e) =>
@@ -627,7 +629,7 @@ export default function OperatorHotelsPage() {
                     />
                   </label>
                   <label className="flex flex-col gap-1 text-sm">
-                    <span className="font-medium text-slate-600">{HOTEL_FIELD_LABELS.room_name}</span>
+                    <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.room_name")}</span>
                     <input
                       value={room.room_name}
                       onChange={(e) =>
@@ -642,7 +644,7 @@ export default function OperatorHotelsPage() {
                     />
                   </label>
                   <label className="flex flex-col gap-1 text-sm">
-                    <span className="font-medium text-slate-600">{HOTEL_FIELD_LABELS.capacity}</span>
+                    <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.capacity")}</span>
                     <input
                       type="number"
                       min={1}
@@ -667,13 +669,13 @@ export default function OperatorHotelsPage() {
                   <table className="w-full min-w-[720px] border-collapse text-xs">
                     <thead>
                       <tr className="border-b border-slate-200 bg-white text-left text-slate-600">
-                        <th className="px-1 py-1.5 font-medium">{HOTEL_FIELD_LABELS.price}</th>
-                        <th className="px-1 py-1.5 font-medium">{HOTEL_FIELD_LABELS.currency}</th>
-                        <th className="px-1 py-1.5 font-medium">{HOTEL_FIELD_LABELS.pricing_mode}</th>
-                        <th className="px-1 py-1.5 font-medium">{HOTEL_FIELD_LABELS.valid_from}</th>
-                        <th className="px-1 py-1.5 font-medium">{HOTEL_FIELD_LABELS.valid_to}</th>
-                        <th className="px-1 py-1.5 font-medium">{HOTEL_FIELD_LABELS.min_nights}</th>
-                        <th className="px-1 py-1.5 font-medium">{HOTEL_FIELD_LABELS.pricing_status}</th>
+                        <th className="px-1 py-1.5 font-medium">{t("admin.crud.hotels.field.price")}</th>
+                        <th className="px-1 py-1.5 font-medium">{t("admin.crud.hotels.field.currency")}</th>
+                        <th className="px-1 py-1.5 font-medium">{t("admin.crud.hotels.field.pricing_mode")}</th>
+                        <th className="px-1 py-1.5 font-medium">{t("admin.crud.hotels.field.valid_from")}</th>
+                        <th className="px-1 py-1.5 font-medium">{t("admin.crud.hotels.field.valid_to")}</th>
+                        <th className="px-1 py-1.5 font-medium">{t("admin.crud.hotels.field.min_nights")}</th>
+                        <th className="px-1 py-1.5 font-medium">{t("admin.crud.hotels.field.pricing_status")}</th>
                         <th className="px-1 py-1.5" />
                       </tr>
                     </thead>
@@ -842,7 +844,7 @@ export default function OperatorHotelsPage() {
                                   })
                                 }
                               >
-                                Remove
+                                {t("admin.crud.hotels.remove")}
                               </button>
                             )}
                           </td>
@@ -866,7 +868,7 @@ export default function OperatorHotelsPage() {
                   }
                   className="mt-2 text-xs text-blue-700 underline"
                 >
-                  + Add rate row
+                  {t("admin.crud.hotels.add_rate")}
                 </button>
               </div>
             ))}
@@ -885,10 +887,10 @@ export default function OperatorHotelsPage() {
               onClick={() => void handleSubmit()}
               className="rounded bg-slate-800 px-4 py-1.5 text-sm text-white disabled:opacity-40"
             >
-              {busy ? "Saving..." : "Save"}
+              {busy ? t("admin.crud.common.saving") : t("common.save")}
             </button>
             <button type="button" onClick={closeForm} className="rounded border border-slate-300 px-4 py-1.5 text-sm">
-              Cancel
+              {t("common.cancel")}
             </button>
           </div>
         </div>
@@ -897,19 +899,19 @@ export default function OperatorHotelsPage() {
         <table className="w-full min-w-[600px] text-left text-sm">
           <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
             <tr>
-              <th className="px-3 py-2">ID</th>
-              <th className="px-3 py-2">Hotel</th>
-              <th className="px-3 py-2">City</th>
-              <th className="px-3 py-2">Country</th>
-              <th className="px-3 py-2">Star rating</th>
-              <th className="px-3 py-2">Actions</th>
+              <th className="px-3 py-2">{t("admin.crud.common.id")}</th>
+              <th className="px-3 py-2">{t("admin.crud.hotels.col.hotel")}</th>
+              <th className="px-3 py-2">{t("admin.crud.hotels.col.city")}</th>
+              <th className="px-3 py-2">{t("admin.crud.hotels.col.country")}</th>
+              <th className="px-3 py-2">{t("admin.crud.hotels.col.stars")}</th>
+              <th className="px-3 py-2">{t("admin.crud.common.actions")}</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-3 py-6 text-center text-slate-400">
-                  No hotels
+                  {t("admin.crud.hotels.empty")}
                 </td>
               </tr>
             )}
@@ -927,14 +929,14 @@ export default function OperatorHotelsPage() {
                       onClick={() => void openEdit(r)}
                       className="text-xs text-blue-700 underline"
                     >
-                      Edit
+                      {t("admin.crud.common.edit")}
                     </button>
                     <button
                       type="button"
                       onClick={() => void handleDelete(r.id)}
                       className="text-xs text-red-600 underline"
                     >
-                      Delete
+                      {t("admin.crud.common.delete")}
                     </button>
                   </div>
                 </td>
