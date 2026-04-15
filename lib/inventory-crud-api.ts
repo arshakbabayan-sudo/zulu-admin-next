@@ -105,6 +105,7 @@ export async function apiArchiveOffer(
 export type FlightRow = {
   id: number;
   offer_id?: number | null;
+  location_id?: number | null;
   flight_code_internal?: string | null;
   service_type?: string | null;
   departure_country?: string | null;
@@ -146,6 +147,7 @@ export type FlightRow = {
 
 export type FlightPayload = {
   offer_id?: number | "";
+  location_id?: number | "";
   flight_code_internal?: string;
   service_type?: string;
   departure_country?: string;
@@ -343,6 +345,7 @@ export type HotelRoomPricingDetail = {
 export type HotelRow = {
   id: number;
   offer_id?: number | null;
+  location_id?: number | null;
   hotel_name?: string | null;
   property_type?: string | null;
   hotel_type?: string | null;
@@ -418,6 +421,7 @@ export type HotelRoomFormRow = {
 /** Form state keys match API except `star_rating` is typed here; wire uses `star_rating` (see `lib/hotel-ui.ts`). */
 export type HotelFormPayload = {
   offer_id: number | "";
+  location_id: number | "";
   hotel_name: string;
   property_type: string;
   hotel_type: string;
@@ -553,6 +557,10 @@ export function hotelFormFromDetail(row: HotelRow): HotelFormPayload {
   const lng = row.longitude;
   return {
     offer_id: "",
+    location_id:
+      (row as { location_id?: number | null }).location_id != null
+        ? Number((row as { location_id?: number | null }).location_id)
+        : "",
     hotel_name: row.hotel_name ?? "",
     property_type: row.property_type ?? "hotel",
     hotel_type: row.hotel_type ?? "resort",
@@ -667,6 +675,7 @@ export function roomsPayloadFromForm(
 /** POST /hotels body (backend HotelService::create). */
 export type HotelCreateApiBody = {
   offer_id: number;
+  location_id: number | null;
   hotel_name: string;
   property_type: string;
   hotel_type: string;
@@ -714,6 +723,7 @@ function hotelSharedBodyFromForm(form: HotelFormPayload): Omit<HotelCreateApiBod
   const lat = parseCoord(form.latitude);
   const lng = parseCoord(form.longitude);
   return {
+    location_id: form.location_id === "" ? null : Number(form.location_id),
     hotel_name: form.hotel_name.trim(),
     property_type: form.property_type.trim(),
     hotel_type: form.hotel_type.trim(),
@@ -830,11 +840,13 @@ export type TransferRow = {
   transfer_title?: string | null;
   transfer_type?: string | null;
   pickup_country?: string | null;
+  origin_location_id?: number | null;
   vehicle_category?: string | null;
   pickup_point_type?: string | null;
   pickup_point_name?: string | null;
   pickup_city?: string | null;
   dropoff_country?: string | null;
+  destination_location_id?: number | null;
   dropoff_point_type?: string | null;
   dropoff_point_name?: string | null;
   dropoff_city?: string | null;
@@ -978,6 +990,7 @@ export type CarAdvancedOptionsRow = {
 export type CarRow = {
   id: number;
   offer_id?: number | null;
+  location_id?: number | null;
   company_id?: number | null;
   pickup_location?: string | null;
   dropoff_location?: string | null;
@@ -1008,6 +1021,7 @@ export type CarRow = {
 
 /** Expanded fields accepted by `CarService` store/update (aligned with `Car` model). */
 export type CarExpandedWriteFields = {
+  location_id?: number | null;
   vehicle_type?: string | null;
   brand?: string | null;
   model?: string | null;
@@ -1087,6 +1101,7 @@ export type ExcursionRow = {
   price?: number | null;
   currency?: string | null;
   location?: string | null;
+  location_id?: number | null;
   country?: string | null;
   city?: string | null;
   general_category?: string | null;
@@ -1122,6 +1137,7 @@ export type ExcursionRow = {
 
 /** Expanded fields optional on create (`ExcursionService::excursionStoreValidationRules`). */
 export type ExcursionExpandedWritePayload = {
+  location_id?: number;
   country?: string;
   city?: string;
   general_category?: string;
@@ -1208,6 +1224,7 @@ export type VisaRow = {
   id: number;
   offer_id?: number | null;
   country?: string | null;
+  location_id?: number | null;
   country_id?: number | null;
   visa_type?: string | null;
   name?: string | null;
@@ -1235,6 +1252,7 @@ export type VisaPayload = {
   /** Required on create (POST); omit on update (PATCH — server prohibits changes). */
   offer_id?: number;
   country?: string;
+  location_id?: number | "";
   country_id?: number | "";
   visa_type?: string;
   name?: string;

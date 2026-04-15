@@ -4,6 +4,7 @@ import { CsvImportModal } from "@/components/CsvImportModal";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { ImportExportButtons } from "@/components/ImportExportButtons";
 import { PaginationBar } from "@/components/PaginationBar";
+import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ApiRequestError } from "@/lib/api-client";
@@ -174,6 +175,7 @@ type FieldErrors = Record<string, string[]>;
 type CarFormState = {
   offer_id: number | "";
   company_id: number | "";
+  location_id: number | "";
   pickup_location: string;
   dropoff_location: string;
   vehicle_class: string;
@@ -199,6 +201,7 @@ type CarFormState = {
 
 function emptyCarForm(): Omit<CarFormState, "offer_id" | "company_id"> {
   return {
+    location_id: "",
     pickup_location: "",
     dropoff_location: "",
     vehicle_class: "",
@@ -249,6 +252,7 @@ function carFormFromRow(r: CarRow): CarFormState {
   return {
     offer_id: r.offer_id != null ? Number(r.offer_id) : "",
     company_id: cid,
+    location_id: r.location_id != null ? Number(r.location_id) : "",
     pickup_location: r.pickup_location ?? "",
     dropoff_location: r.dropoff_location ?? "",
     vehicle_class: r.vehicle_class ?? "",
@@ -420,6 +424,7 @@ function mergeExpandedFromForm(form: CarFormState): Record<string, unknown> {
 function buildCreatePayload(form: CarFormState): CarCreatePayload {
   return {
     offer_id: Number(form.offer_id),
+    location_id: form.location_id === "" ? null : Number(form.location_id),
     company_id: Number(form.company_id),
     pickup_location: form.pickup_location.trim(),
     dropoff_location: form.dropoff_location.trim(),
@@ -430,6 +435,7 @@ function buildCreatePayload(form: CarFormState): CarCreatePayload {
 
 function buildUpdatePayload(form: CarFormState): CarUpdatePayload {
   return {
+    location_id: form.location_id === "" ? null : Number(form.location_id),
     pickup_location: form.pickup_location.trim(),
     dropoff_location: form.dropoff_location.trim(),
     vehicle_class: form.vehicle_class.trim(),
@@ -579,6 +585,7 @@ export default function OperatorCarsPage() {
     setForm({
       offer_id: available.id,
       company_id: cid != null && cid !== "" ? Number(cid) : "",
+      location_id: "",
       ...emptyCarForm(),
     });
     setFormErr(null);
@@ -804,6 +811,14 @@ export default function OperatorCarsPage() {
                 </span>
               ))}
             </label>
+            <LocationCascadeSelect
+              token={token}
+              value={form.location_id === "" ? null : Number(form.location_id)}
+              label="Location"
+              onChange={(locationId) =>
+                setForm((p) => (p ? { ...p, location_id: locationId ?? "" } : p))
+              }
+            />
 
             <div className="col-span-2 mt-1 border-t border-slate-100 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
               {t("admin.crud.cars.section.route")}

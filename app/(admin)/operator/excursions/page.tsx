@@ -4,6 +4,7 @@ import { CsvImportModal } from "@/components/CsvImportModal";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { ImportExportButtons } from "@/components/ImportExportButtons";
 import { PaginationBar } from "@/components/PaginationBar";
+import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useExcursionWizardStepper } from "@/hooks/useExcursionWizardStepper";
 import { ApiRequestError } from "@/lib/api-client";
@@ -453,6 +454,23 @@ export default function OperatorExcursionsPage() {
               <div>
                 <h3 className="mb-2 text-sm font-semibold text-slate-700">{t(EXCURSION_STEP_LABEL_KEYS[0] ?? "")}</h3>
                 <div className="grid gap-3 sm:grid-cols-2">
+                  <LocationCascadeSelect
+                    token={token}
+                    value={form.location_id === "" || form.location_id == null ? null : Number(form.location_id)}
+                    label="Location (Country -> Region -> City)"
+                    onChange={(locationId, meta) =>
+                      setForm((p) =>
+                        p
+                          ? {
+                              ...p,
+                              location_id: locationId ?? "",
+                              country: meta.country?.name ?? p.country,
+                              city: meta.city?.name ?? meta.region?.name ?? p.city,
+                            }
+                          : p
+                      )
+                    }
+                  />
                   {isCreate && excursionOffers && (
                     <label className="flex flex-col gap-1 text-sm sm:col-span-2">
                       <span className="font-medium text-slate-600">{t("admin.crud.excursions.field.offer_id")}</span>

@@ -4,6 +4,7 @@ import { CsvImportModal } from "@/components/CsvImportModal";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { ImportExportButtons } from "@/components/ImportExportButtons";
 import { PaginationBar } from "@/components/PaginationBar";
+import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
@@ -198,6 +199,7 @@ const STEP_FIELDS: Record<Exclude<FlightWizardStep, "review">, (keyof FlightPayl
 
 const EMPTY: FlightPayload = {
   offer_id: "",
+  location_id: "",
   flight_code_internal: "",
   service_type: "scheduled",
   departure_country: "",
@@ -752,12 +754,26 @@ export default function OperatorFlightsPage() {
             })}
           </div>
           {wizardStep !== "review" ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {STEP_FIELDS[wizardStep].map((key) => {
-                const field = fieldByKey.get(key);
-                return field ? renderFlightField(field) : null;
-              })}
-            </div>
+            <>
+              {wizardStep === "general" && (
+                <div className="mb-3">
+                  <LocationCascadeSelect
+                    token={token}
+                    value={form.location_id === "" || form.location_id == null ? null : Number(form.location_id)}
+                    label="Main location"
+                    onChange={(locationId) =>
+                      setForm((p) => (p ? { ...p, location_id: locationId ?? "" } : p))
+                    }
+                  />
+                </div>
+              )}
+              <div className="grid gap-3 sm:grid-cols-2">
+                {STEP_FIELDS[wizardStep].map((key) => {
+                  const field = fieldByKey.get(key);
+                  return field ? renderFlightField(field) : null;
+                })}
+              </div>
+            </>
           ) : (
             <div className="grid gap-2 sm:grid-cols-2">
               {FIELDS.map((field) => (

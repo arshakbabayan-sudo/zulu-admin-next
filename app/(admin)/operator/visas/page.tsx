@@ -4,6 +4,7 @@ import { CsvImportModal } from "@/components/CsvImportModal";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { ImportExportButtons } from "@/components/ImportExportButtons";
 import { PaginationBar } from "@/components/PaginationBar";
+import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
@@ -41,6 +42,8 @@ function visaFormFromApiRow(r: VisaRow): VisaPayload {
   const visaPrice = hasVisaPrice ? visaNumberFromApi(vp) : visaNumberFromApi(r.price);
   return {
     country: r.country ?? "",
+    location_id:
+      r.location_id != null && Number.isFinite(Number(r.location_id)) ? Number(r.location_id) : "",
     country_id:
       r.country_id != null && Number.isFinite(Number(r.country_id)) ? Number(r.country_id) : "",
     visa_type: r.visa_type ?? "",
@@ -74,6 +77,11 @@ function validateVisaForm(form: VisaPayload, isCreate: boolean): string[] {
     const n = Number(cid);
     if (!Number.isFinite(n) || n <= 0) lines.push("country_id: must be a positive number");
   }
+  const lid = form.location_id;
+  if (lid !== "" && lid !== undefined && lid !== null) {
+    const n = Number(lid);
+    if (!Number.isFinite(n) || n <= 0) lines.push("location_id: must be a positive number");
+  }
   const vPrice = form.visa_price;
   if (vPrice !== undefined && vPrice !== null && (Number.isNaN(Number(vPrice)) || Number(vPrice) < 0)) {
     lines.push("visa_price: must be >= 0");
@@ -99,7 +107,8 @@ function fieldKeysFromFormErrLines(lines: string[]): Set<string> {
 }
 
 /** Import/template columns only — matches POST/PATCH body (price = visa row amount on API). */
-const VISA_CSV_TEMPLATE_HEADERS = [
+const VISA_CSV_TEMPLATE_KEYS = [
+  "id",
   "offer_id",
   "country",
   "country_id",
@@ -111,17 +120,54 @@ const VISA_CSV_TEMPLATE_HEADERS = [
   "required_documents",
 ] as const;
 
-/** Full export: template fields + id, then offer-linked context (not in template). */
-const VISA_CSV_EXPORT_HEADERS = [
-  "id",
-  ...VISA_CSV_TEMPLATE_HEADERS,
-  "status",
-  "currency",
-  "offer_price",
-] as const;
+const VISA_REQUIRED_TEMPLATE_KEYS = new Set<string>(["offer_id", "country", "visa_type"]);
+
+const VISA_TEMPLATE_LABELS: Record<(typeof VISA_CSV_TEMPLATE_KEYS)[number], string> = {
+  id: "ID (Update Existing; leave blank to create)",
+  offer_id: "Offer ID",
+  country: "Country",
+  country_id: "Country ID",
+  visa_type: "Visa Type",
+  name: "Name",
+  processing_days: "Processing Days",
+  price: "Visa Price",
+  description: "Description",
+  required_documents: "Required Documents",
+};
+
+/** Full export: template fields + offer-linked context (not in template). */
+const VISA_CSV_EXPORT_HEADERS = [...VISA_CSV_TEMPLATE_KEYS, "status", "currency", "offer_price"] as const;
+
+function normalizeVisaCsvHeader(header: string): string {
+  return header.replace(/\*/g, "").replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+const VISA_IMPORT_HEADER_KEY_MAP: Record<string, (typeof VISA_CSV_TEMPLATE_KEYS)[number]> = (() => {
+  const map: Record<string, (typeof VISA_CSV_TEMPLATE_KEYS)[number]> = {} as Record<
+    string,
+    (typeof VISA_CSV_TEMPLATE_KEYS)[number]
+  >;
+  for (const key of VISA_CSV_TEMPLATE_KEYS) {
+    map[normalizeVisaCsvHeader(key)] = key;
+    map[normalizeVisaCsvHeader(VISA_TEMPLATE_LABELS[key])] = key;
+  }
+  return map;
+})();
+
+function normalizeVisaCsvImportRow(row: Record<string, string>): Record<string, string> {
+  const normalized: Record<string, string> = {};
+  for (const [header, value] of Object.entries(row)) {
+    const mapped = VISA_IMPORT_HEADER_KEY_MAP[normalizeVisaCsvHeader(header)] ?? header.trim();
+    normalized[mapped] = value;
+  }
+  return normalized;
+}
 
 function visaTemplateCsv(): string {
-  return stringifyCsv([...VISA_CSV_TEMPLATE_HEADERS], []);
+  const headers = VISA_CSV_TEMPLATE_KEYS.map((key) =>
+    VISA_REQUIRED_TEMPLATE_KEYS.has(key) ? `${VISA_TEMPLATE_LABELS[key]} *` : VISA_TEMPLATE_LABELS[key]
+  );
+  return stringifyCsv(headers, [{}]);
 }
 
 function requiredDocumentsPipeFromApi(value: string[] | null | undefined): string {
@@ -190,7 +236,7 @@ async function runVisaCsvImport(
   let success = 0;
 
   for (let idx = 0; idx < dataRows.length; idx++) {
-    const row = dataRows[idx];
+    const row = normalizeVisaCsvImportRow(dataRows[idx]);
     const line = rowLineNumbers[idx] ?? idx + 2;
     const idRaw = (row.id ?? "").trim();
     const form = visaPayloadFromCsvRow(row);
@@ -240,6 +286,10 @@ function bodyFromForm(form: VisaPayload, mode: "create" | "update"): VisaPayload
     description: (form.description ?? "").trim(),
     required_documents,
   };
+  const locationId = form.location_id;
+  if (locationId !== "" && locationId !== undefined && locationId !== null && Number.isFinite(Number(locationId)) && Number(locationId) > 0) {
+    out.location_id = Number(locationId);
+  }
   const cid = form.country_id;
   if (cid !== "" && cid !== undefined && cid !== null && Number.isFinite(Number(cid)) && Number(cid) > 0) {
     out.country_id = Number(cid);
@@ -307,6 +357,7 @@ export default function OperatorVisasPage() {
     setForm({
       offer_id: undefined,
       country: "",
+        location_id: "",
       country_id: "",
       visa_type: "",
       name: "",
@@ -463,6 +514,22 @@ export default function OperatorVisasPage() {
           <div>
           <h3 className={sectionTitleClass}>{t("admin.crud.visas.section.general")}</h3>
           <div className="grid gap-4 sm:grid-cols-2">
+            <LocationCascadeSelect
+              token={token}
+              value={form.location_id === "" || form.location_id == null ? null : Number(form.location_id)}
+              label="Location (select country/region/city)"
+              onChange={(locationId, meta) =>
+                setForm((p) =>
+                  p
+                    ? {
+                        ...p,
+                        location_id: locationId ?? "",
+                        country: meta.country?.name ?? p.country,
+                      }
+                    : p
+                )
+              }
+            />
             {editId == null && (
               <label className="flex flex-col gap-1.5 text-sm sm:col-span-2">
                 <span className={labelTextClass}>

@@ -4,6 +4,7 @@ import { CsvImportModal } from "@/components/CsvImportModal";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { ImportExportButtons } from "@/components/ImportExportButtons";
 import { PaginationBar } from "@/components/PaginationBar";
+import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ApiRequestError } from "@/lib/api-client";
@@ -658,12 +659,60 @@ export default function OperatorTransfersPage() {
           </div>
 
           {wizardStep !== "review" ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {STEP_FIELDS[wizardStep as TransferWizardStepNonReview].map((key) => {
-                const field = fieldByKey.get(key);
-                return field ? renderTransferField(field) : null;
-              })}
-            </div>
+            <>
+              {wizardStep === "route" && (
+                <div className="mb-3 grid gap-3 sm:grid-cols-2">
+                  <LocationCascadeSelect
+                    token={token}
+                    value={
+                      form.origin_location_id === "" || form.origin_location_id == null
+                        ? null
+                        : Number(form.origin_location_id)
+                    }
+                    label="Origin location"
+                    onChange={(locationId, meta) =>
+                      setForm((p) =>
+                        p
+                          ? {
+                              ...p,
+                              origin_location_id: locationId ?? "",
+                              pickup_country: meta.country?.name ?? p.pickup_country,
+                              pickup_city: meta.city?.name ?? meta.region?.name ?? p.pickup_city,
+                            }
+                          : p
+                      )
+                    }
+                  />
+                  <LocationCascadeSelect
+                    token={token}
+                    value={
+                      form.destination_location_id === "" || form.destination_location_id == null
+                        ? null
+                        : Number(form.destination_location_id)
+                    }
+                    label="Destination location"
+                    onChange={(locationId, meta) =>
+                      setForm((p) =>
+                        p
+                          ? {
+                              ...p,
+                              destination_location_id: locationId ?? "",
+                              dropoff_country: meta.country?.name ?? p.dropoff_country,
+                              dropoff_city: meta.city?.name ?? meta.region?.name ?? p.dropoff_city,
+                            }
+                          : p
+                      )
+                    }
+                  />
+                </div>
+              )}
+              <div className="grid gap-3 sm:grid-cols-2">
+                {STEP_FIELDS[wizardStep as TransferWizardStepNonReview].map((key) => {
+                  const field = fieldByKey.get(key);
+                  return field ? renderTransferField(field) : null;
+                })}
+              </div>
+            </>
           ) : (
             <div className="grid gap-2 sm:grid-cols-2">
               <div className="rounded border border-slate-200 px-3 py-2 text-sm">

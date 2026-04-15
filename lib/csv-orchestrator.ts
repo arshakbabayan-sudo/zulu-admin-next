@@ -11,6 +11,7 @@ import {
   apiCreateCar,
   apiCreateExcursion,
   apiCreateFlight,
+  apiCreateHotel,
   apiCreateTransfer,
   apiExcursions,
   apiFlight,
@@ -23,11 +24,14 @@ import {
   apiUpdateCar,
   apiUpdateExcursion,
   apiUpdateFlight,
+  apiUpdateHotel,
   apiUpdateTransfer,
   type CarCreatePayload,
   type CarUpdatePayload,
   type ExcursionCreatePayload,
   type ExcursionUpdatePayload,
+  hotelCreateBodyFromForm,
+  hotelUpdateBodyFromForm,
 } from "@/lib/inventory-crud-api";
 import {
   fetchAllListPages,
@@ -49,11 +53,17 @@ import {
   expandedPayloadFromWizard,
   FLIGHT_CSV_FIELDS,
   flightDetailToCsvRow,
+  normalizeFlightCsvImportRow,
+  normalizeTransferCsvImportRow,
+  normalizeCarCsvImportRow,
+  normalizeExcursionCsvImportRow,
   flightRowToPayload,
   flightTemplateCsv,
   hotelFormToFlatCsv,
+  hotelRowToFormPayload,
   HOTEL_CSV_FIELDS,
   hotelTemplateCsv,
+  normalizeHotelCsvImportRow,
   TRANSFER_CSV_FIELDS,
   transferDetailToCsvRow,
   transferRowToFormValues,
@@ -93,7 +103,7 @@ export async function runFlightCsvImport(
   let success = 0;
 
   for (let idx = 0; idx < dataRows.length; idx++) {
-    const row = dataRows[idx];
+    const row = normalizeFlightCsvImportRow(dataRows[idx]);
     const r = rowLineNumbers[idx] ?? idx + 2;
     const idRaw = (row.id ?? "").trim();
     const payload = flightRowToPayload(row);
@@ -143,6 +153,51 @@ export async function exportHotelsCsv(token: string): Promise<string> {
   return stringifyCsv([...HOTEL_CSV_FIELDS], rows);
 }
 
+export async function runHotelCsvImport(
+  token: string,
+  dataRows: Record<string, string>[],
+  rowLineNumbers: number[]
+): Promise<ImportRunResult> {
+  const errors: ImportRowError[] = [];
+  let success = 0;
+
+  for (let idx = 0; idx < dataRows.length; idx++) {
+    const row = normalizeHotelCsvImportRow(dataRows[idx]);
+    const r = rowLineNumbers[idx] ?? idx + 2;
+    const idRaw = (row.id ?? "").trim();
+    const form = hotelRowToFormPayload(row);
+
+    const offerId = Number(form.offer_id);
+    if (form.offer_id === "" || !Number.isFinite(offerId) || offerId <= 0) {
+      errors.push({ rowNumber: r, message: "offer_id is required and must be a positive number." });
+      continue;
+    }
+    if (!form.hotel_name.trim() || !form.country.trim() || !form.city.trim()) {
+      errors.push({ rowNumber: r, message: "hotel_name, country, and city are required." });
+      continue;
+    }
+
+    try {
+      if (idRaw) {
+        const id = Number(idRaw);
+        if (!Number.isFinite(id)) {
+          errors.push({ rowNumber: r, message: "Invalid id." });
+        } else {
+          await apiUpdateHotel(token, id, hotelUpdateBodyFromForm(form));
+          success++;
+        }
+      } else {
+        await apiCreateHotel(token, hotelCreateBodyFromForm(form));
+        success++;
+      }
+    } catch (e) {
+      errors.push({ rowNumber: r, message: formatImportApiError(e) });
+    }
+  }
+
+  return { success, failed: errors.length, errors };
+}
+
 // ─── Transfers ────────────────────────────────────────────────────────────────
 
 export async function exportTransfersCsv(token: string): Promise<string> {
@@ -159,7 +214,7 @@ export async function runTransferCsvImport(
   let success = 0;
 
   for (let idx = 0; idx < dataRows.length; idx++) {
-    const row = dataRows[idx];
+    const row = normalizeTransferCsvImportRow(dataRows[idx]);
     const r = rowLineNumbers[idx] ?? idx + 2;
     const idRaw = (row.id ?? "").trim();
     const offerRaw = (row.offer_id ?? "").trim();
@@ -218,7 +273,7 @@ export async function runCarCsvImport(
   let success = 0;
 
   for (let idx = 0; idx < dataRows.length; idx++) {
-    const row = dataRows[idx];
+    const row = normalizeCarCsvImportRow(dataRows[idx]);
     const r = rowLineNumbers[idx] ?? idx + 2;
     const idRaw = (row.id ?? "").trim();
     const offerRaw = (row.offer_id ?? "").trim();
@@ -294,7 +349,7 @@ export async function runExcursionCsvImport(
   let success = 0;
 
   for (let idx = 0; idx < dataRows.length; idx++) {
-    const row = dataRows[idx];
+    const row = normalizeExcursionCsvImportRow(dataRows[idx]);
     const r = rowLineNumbers[idx] ?? idx + 2;
     const idRaw = (row.id ?? "").trim();
     const offerRaw = (row.offer_id ?? "").trim();

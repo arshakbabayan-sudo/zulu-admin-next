@@ -35,6 +35,12 @@ function rowIsAllBlank(obj: Record<string, string>): boolean {
 export function parseCsv(text: string): CsvParseResult {
   let t = text;
   if (t.charCodeAt(0) === 0xfeff) t = t.slice(1);
+  let delimiter = ",";
+  const excelSepMatch = t.match(/^sep=(.)\r?\n/i);
+  if (excelSepMatch) {
+    delimiter = excelSepMatch[1];
+    t = t.slice(excelSepMatch[0].length);
+  }
 
   const rowsRaw: string[][] = [];
   let field = "";
@@ -54,7 +60,7 @@ export function parseCsv(text: string): CsvParseResult {
       field += c; i++; continue;
     }
     if (c === '"') { inQuotes = true; i++; continue; }
-    if (c === ",") { pushField(); i++; continue; }
+    if (c === delimiter) { pushField(); i++; continue; }
     if (c === "\n") { pushField(); pushRow(); i++; continue; }
     if (c === "\r") {
       if (t[i + 1] === "\n") i++;
@@ -122,7 +128,9 @@ function triggerBrowserDownload(filename: string, blob: Blob) {
  * Operator CSV template + export downloads: UTF-8 BOM (Excel) and CRLF from {@link stringifyCsv}.
  */
 export function downloadCsvFile(filename: string, csvBody: string) {
-  triggerBrowserDownload(filename, new Blob(["\uFEFF" + csvBody], { type: "text/csv;charset=utf-8" }));
+  // `sep=,` helps locale-specific Excel builds open CSV into separate columns immediately.
+  const excelFriendlyBody = `sep=,\r\n${csvBody}`;
+  triggerBrowserDownload(filename, new Blob(["\uFEFF" + excelFriendlyBody], { type: "text/csv;charset=utf-8" }));
 }
 
 // ─── Pagination helper ────────────────────────────────────────────────────────

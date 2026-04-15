@@ -2,6 +2,7 @@
 
 import { InventoryOversightList } from "../_components/InventoryOversightList";
 import { useMemo, useState } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   backendFlightStatusLabel,
   flightUiStatusLabel,
@@ -114,6 +115,7 @@ function companyLabel(row: Record<string, unknown>): string {
 }
 
 export default function FlightsInventoryPage() {
+  const { t } = useLanguage();
   const [draft, setDraft] = useState<FlightFilterDraft>(DEFAULT_DRAFT);
   const [applied, setApplied] = useState<FlightFilterApplied>(DEFAULT_APPLIED);
 
@@ -159,72 +161,72 @@ export default function FlightsInventoryPage() {
 
   return (
     <InventoryOversightList
-      title="Flights inventory"
+      title={t("admin.inventory.flights.title")}
       segment="flights"
       permission="flights.view"
       queryParams={queryParams}
       columns={[
-        { header: "ID", getCell: (r) => cell(r.id) },
-        { header: "Company", getCell: (r) => companyLabel(r) },
-        { header: "Route", getCell: (r) => `${cell(r.departure_city)} (${cell(r.departure_airport_code)}) → ${cell(r.arrival_city)} (${cell(r.arrival_airport_code)})` },
-        { header: "Departure", getCell: (r) => cell(r.departure_at) },
-        { header: "Status", getCell: (r) => backendFlightStatusLabel(typeof r.status === "string" ? r.status : null) },
-        { header: "Offer", getCell: (r) => offerTitle(r) },
+        { header: t("admin.inventory.flights.col.id"), getCell: (r) => cell(r.id) },
+        { header: t("admin.inventory.flights.col.company"), getCell: (r) => companyLabel(r) },
+        { header: t("admin.inventory.flights.col.route"), getCell: (r) => `${cell(r.departure_city)} (${cell(r.departure_airport_code)}) → ${cell(r.arrival_city)} (${cell(r.arrival_airport_code)})` },
+        { header: t("admin.inventory.flights.col.departure"), getCell: (r) => cell(r.departure_at) },
+        { header: t("admin.inventory.flights.col.status"), getCell: (r) => backendFlightStatusLabel(typeof r.status === "string" ? r.status : null) },
+        { header: t("admin.inventory.flights.col.offer"), getCell: (r) => offerTitle(r) },
       ]}
       filterBar={
         <>
           <label className="text-sm text-slate-600">
-            company_id
+            {t("admin.inventory.flights.filter.label.company_id")}
             <input
               value={draft.company}
               onChange={(e) => setDraft((prev) => ({ ...prev, company: e.target.value }))}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
               className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
-              placeholder="Filter by company"
+              placeholder={t("admin.inventory.flights.filter.placeholder.company")}
             />
           </label>
           <label className="text-sm text-slate-600">
-            departure_city
+            {t("admin.inventory.flights.filter.label.departure_city")}
             <input
               value={draft.departureCity}
               onChange={(e) => setDraft((prev) => ({ ...prev, departureCity: e.target.value }))}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
               className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
-              placeholder="Filter"
+              placeholder={t("admin.inventory.flights.filter.placeholder.text")}
             />
           </label>
           <label className="text-sm text-slate-600">
-            arrival_city
+            {t("admin.inventory.flights.filter.label.arrival_city")}
             <input
               value={draft.arrivalCity}
               onChange={(e) => setDraft((prev) => ({ ...prev, arrivalCity: e.target.value }))}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
               className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
-              placeholder="Filter"
+              placeholder={t("admin.inventory.flights.filter.placeholder.text")}
             />
           </label>
           <label className="text-sm text-slate-600">
-            dep_airport_code
+            {t("admin.inventory.flights.filter.label.departure_airport_code")}
             <input
               value={draft.departureAirportCode}
               onChange={(e) => setDraft((prev) => ({ ...prev, departureAirportCode: e.target.value }))}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
               className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
-              placeholder="EVN"
+              placeholder={t("admin.inventory.flights.filter.placeholder.departure_airport_code")}
             />
           </label>
           <label className="text-sm text-slate-600">
-            arr_airport_code
+            {t("admin.inventory.flights.filter.label.arrival_airport_code")}
             <input
               value={draft.arrivalAirportCode}
               onChange={(e) => setDraft((prev) => ({ ...prev, arrivalAirportCode: e.target.value }))}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
               className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
-              placeholder="DXB"
+              placeholder={t("admin.inventory.flights.filter.placeholder.arrival_airport_code")}
             />
           </label>
           <label className="text-sm text-slate-600">
-            dep_date_from
+            {t("admin.inventory.flights.filter.label.departure_date_from")}
             <input
               type="date"
               value={draft.departureDateFrom}
@@ -233,7 +235,7 @@ export default function FlightsInventoryPage() {
             />
           </label>
           <label className="text-sm text-slate-600">
-            dep_date_to
+            {t("admin.inventory.flights.filter.label.departure_date_to")}
             <input
               type="date"
               value={draft.departureDateTo}
@@ -242,7 +244,7 @@ export default function FlightsInventoryPage() {
             />
           </label>
           <label className="text-sm text-slate-600">
-            status
+            {t("admin.inventory.flights.filter.label.status")}
             <select
               value={draft.status}
               onChange={(e) => setDraft((prev) => ({ ...prev, status: e.target.value as FlightUiStatusFilter }))}
@@ -256,17 +258,17 @@ export default function FlightsInventoryPage() {
             </select>
           </label>
           <label className="text-sm text-slate-600">
-            cabin_class
+            {t("admin.inventory.flights.filter.label.cabin_class")}
             <input
               value={draft.cabinClass}
               onChange={(e) => setDraft((prev) => ({ ...prev, cabinClass: e.target.value }))}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
               className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
-              placeholder="economy"
+              placeholder={t("admin.inventory.flights.filter.placeholder.cabin_class")}
             />
           </label>
           <label className="text-sm text-slate-600">
-            min_price
+            {t("admin.inventory.flights.filter.label.min_price")}
             <input
               type="number"
               min={0}
@@ -274,11 +276,11 @@ export default function FlightsInventoryPage() {
               onChange={(e) => setDraft((prev) => ({ ...prev, minPrice: e.target.value }))}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
               className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
-              placeholder="0"
+              placeholder={t("admin.inventory.flights.filter.placeholder.min_price")}
             />
           </label>
           <label className="text-sm text-slate-600">
-            max_price
+            {t("admin.inventory.flights.filter.label.max_price")}
             <input
               type="number"
               min={0}
@@ -286,7 +288,7 @@ export default function FlightsInventoryPage() {
               onChange={(e) => setDraft((prev) => ({ ...prev, maxPrice: e.target.value }))}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
               className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
-              placeholder="1000"
+              placeholder={t("admin.inventory.flights.filter.placeholder.max_price")}
             />
           </label>
           <button
@@ -294,10 +296,10 @@ export default function FlightsInventoryPage() {
             onClick={applyFilters}
             className="rounded border border-slate-300 bg-white px-3 py-1 text-sm"
           >
-            Apply filters
+            {t("admin.inventory.flights.filter.action.apply")}
           </button>
           <button type="button" onClick={clearFilters} className="rounded border border-slate-300 bg-white px-3 py-1 text-sm">
-            Clear
+            {t("admin.inventory.flights.filter.action.clear")}
           </button>
         </>
       }

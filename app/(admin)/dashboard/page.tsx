@@ -8,6 +8,10 @@ import { apiPlatformStats, type PlatformStats } from "@/lib/platform-admin-api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useEffect, useState } from "react";
 
+function humanizeStatKey(statKey: string): string {
+  return statKey.replace(/_/g, " ");
+}
+
 export default function DashboardPage() {
   const { t } = useLanguage();
   const { token, user } = useAdminAuth();
@@ -85,6 +89,11 @@ export default function DashboardPage() {
   }
 
   const keys = Object.keys(stats).sort();
+  const resolveStatLabel = (statKey: string): string => {
+    const key = `admin.dashboard.stats.${statKey}`;
+    const translated = t(key);
+    return translated === key ? humanizeStatKey(statKey) : translated;
+  };
 
   return (
     <div>
@@ -96,7 +105,7 @@ export default function DashboardPage() {
             className="admin-card px-5 py-4"
           >
             <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              {k.replace(/_/g, " ")}
+              {resolveStatLabel(k)}
             </div>
             <div className="mt-2 text-3xl font-semibold tabular-nums text-slate-800">
               {stats[k]}

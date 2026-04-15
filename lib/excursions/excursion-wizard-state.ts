@@ -13,6 +13,7 @@ export type PriceByDateRow = { date: string; price: number | "" };
 export type ExcursionWizardState = {
   offer_id: number | "";
   company_id: number | "";
+  location_id: number | "";
   country: string;
   city: string;
   general_category: string;
@@ -44,6 +45,7 @@ export type ExcursionWizardState = {
 
 export function emptyExcursionWizardTail(): Omit<ExcursionWizardState, "offer_id" | "company_id"> {
   return {
+    location_id: "",
     country: "",
     city: "",
     general_category: "",
@@ -124,6 +126,7 @@ export function excursionWizardFromRow(r: ExcursionRow): ExcursionWizardState {
   return {
     offer_id: r.offer_id != null ? Number(r.offer_id) : "",
     company_id: cid,
+    location_id: r.location_id != null ? Number(r.location_id) : "",
     country: r.country ?? "",
     city: r.city ?? "",
     general_category: r.general_category ?? "",
@@ -190,8 +193,9 @@ export function validateExcursionWizardStep(
       if (form.offer_id === "") e.offer_id = ["Select an offer."];
       if (form.company_id === "") e.company_id = ["Company is required."];
     }
-    if (!form.country.trim()) e.country = ["Country is required."];
-    if (!form.city.trim()) e.city = ["City is required."];
+    if (form.location_id === "" && !form.country.trim() && !form.city.trim()) {
+      e.location_id = ["Select at least one location level."];
+    }
   }
   if (step === 2) {
     const g = form.general_category.trim();
@@ -258,12 +262,15 @@ export function validateExcursionWizardFull(form: ExcursionWizardState, isCreate
     if (part) Object.assign(merged, part);
   }
   const loc = derivedLocationFromWizard(form);
-  if (!loc.trim()) merged.location = ["Location (from city/country) is empty."];
+  if (!loc.trim() && form.location_id === "") merged.location = ["Location is required."];
   return Object.keys(merged).length ? merged : null;
 }
 
 export function expandedPayloadFromWizard(form: ExcursionWizardState): ExcursionExpandedWritePayload {
   const out: ExcursionExpandedWritePayload = {};
+  if (form.location_id !== "") {
+    out.location_id = Number(form.location_id);
+  }
   const setIf = (key: keyof ExcursionExpandedWritePayload, val: string) => {
     const t = val.trim();
     if (t) (out as Record<string, unknown>)[key as string] = t;
@@ -327,10 +334,20 @@ export function coreWritePayloadFromWizard(form: ExcursionWizardState): {
   location: string;
   duration: string;
   group_size: number;
+  location_id?: number;
 } {
-  return {
+  const out: {
+    location: string;
+    duration: string;
+    group_size: number;
+    location_id?: number;
+  } = {
     location: derivedLocationFromWizard(form),
     duration: form.duration.trim(),
     group_size: Number(form.group_size),
   };
+  if (form.location_id !== "") {
+    out.location_id = Number(form.location_id);
+  }
+  return out;
 }

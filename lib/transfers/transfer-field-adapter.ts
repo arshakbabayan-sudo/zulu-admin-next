@@ -8,10 +8,12 @@ export type TransferCanonicalFields = {
   transfer_title: string;
   transfer_type: string;
   pickup_country: string;
+  origin_location_id: number | "";
   pickup_city: string;
   pickup_point_type: string;
   pickup_point_name: string;
   dropoff_country: string;
+  destination_location_id: number | "";
   dropoff_city: string;
   dropoff_point_type: string;
   dropoff_point_name: string;
@@ -183,10 +185,12 @@ export function emptyTransferOperatorForm(): TransferFormValues {
     transfer_title: "",
     transfer_type: "city_transfer",
     pickup_country: "",
+    origin_location_id: "",
     pickup_city: "",
     pickup_point_type: "address",
     pickup_point_name: "",
     dropoff_country: "",
+    destination_location_id: "",
     dropoff_city: "",
     dropoff_point_type: "address",
     dropoff_point_name: "",
@@ -236,10 +240,12 @@ export function newTransferForm(offerId: number | null, currency: string): Trans
     transfer_title: "",
     transfer_type: "city_transfer",
     pickup_country: "Unknown",
+    origin_location_id: "",
     pickup_city: "",
     pickup_point_type: "address",
     pickup_point_name: "Unknown",
     dropoff_country: "Unknown",
+    destination_location_id: "",
     dropoff_city: "",
     dropoff_point_type: "address",
     dropoff_point_name: "Unknown",
@@ -289,10 +295,12 @@ export function transferFormFromRow(row: TransferRow): TransferFormValues {
     transfer_title: row.transfer_title ?? "",
     transfer_type: row.transfer_type ?? "city_transfer",
     pickup_country: row.pickup_country ?? "",
+    origin_location_id: row.origin_location_id != null ? Number(row.origin_location_id) : "",
     pickup_city: row.pickup_city ?? "",
     pickup_point_type: row.pickup_point_type ?? "address",
     pickup_point_name: row.pickup_point_name ?? "",
     dropoff_country: row.dropoff_country ?? "",
+    destination_location_id: row.destination_location_id != null ? Number(row.destination_location_id) : "",
     dropoff_city: row.dropoff_city ?? "",
     dropoff_point_type: row.dropoff_point_type ?? "address",
     dropoff_point_name: row.dropoff_point_name ?? "",
@@ -357,10 +365,12 @@ export function transferCreateBodyFromForm(form: TransferFormValues): Record<str
     transfer_title: title.slice(0, 255),
     transfer_type: normalizeTransferType(form.transfer_type),
     pickup_country: (trimOrEmpty(form.pickup_country) || "Unknown").slice(0, 120),
+    origin_location_id: form.origin_location_id === "" ? null : Number(form.origin_location_id),
     pickup_city: pickupCity,
     pickup_point_type: normalizePointType(form.pickup_point_type),
     pickup_point_name: trimOrEmpty(form.pickup_point_name) || pickupCity || "Unknown",
     dropoff_country: (trimOrEmpty(form.dropoff_country) || "Unknown").slice(0, 120),
+    destination_location_id: form.destination_location_id === "" ? null : Number(form.destination_location_id),
     dropoff_city: dropoffCity,
     dropoff_point_type: normalizePointType(form.dropoff_point_type),
     dropoff_point_name: trimOrEmpty(form.dropoff_point_name) || dropoffCity || "Unknown",
@@ -415,10 +425,12 @@ export function transferUpdateBodyFromForm(form: TransferFormValues): Record<str
     transfer_title: trimOrEmpty(form.transfer_title).slice(0, 255),
     transfer_type: normalizeTransferType(form.transfer_type),
     pickup_country: trimOrEmpty(form.pickup_country).slice(0, 120),
+    origin_location_id: form.origin_location_id === "" ? null : Number(form.origin_location_id),
     pickup_city: trimOrEmpty(form.pickup_city),
     pickup_point_type: normalizePointType(form.pickup_point_type),
     pickup_point_name: trimOrEmpty(form.pickup_point_name),
     dropoff_country: trimOrEmpty(form.dropoff_country).slice(0, 120),
+    destination_location_id: form.destination_location_id === "" ? null : Number(form.destination_location_id),
     dropoff_city: trimOrEmpty(form.dropoff_city),
     dropoff_point_type: normalizePointType(form.dropoff_point_type),
     dropoff_point_name: trimOrEmpty(form.dropoff_point_name),

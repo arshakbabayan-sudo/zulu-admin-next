@@ -1,8 +1,10 @@
 "use client";
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
+import { CsvImportModal } from "@/components/CsvImportModal";
 import { ImportExportButtons } from "@/components/ImportExportButtons";
 import { PaginationBar } from "@/components/PaginationBar";
+import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
@@ -20,7 +22,7 @@ import {
   type HotelRow,
   type HotelFormPayload,
 } from "@/lib/inventory-crud-api";
-import { csvExportFilename, downloadCsvFile, exportHotelsCsv, hotelTemplateCsv } from "@/lib/csv-import-export";
+import { csvExportFilename, downloadCsvFile, exportHotelsCsv, hotelTemplateCsv, runHotelCsvImport } from "@/lib/csv-import-export";
 import {
   HOTEL_API_STAR_RATING_KEY,
   HOTEL_AVAILABILITY_STATUSES,
@@ -48,6 +50,7 @@ import { useCallback, useEffect, useState } from "react";
 
 const EMPTY: HotelFormPayload = {
   offer_id: "",
+  location_id: "",
   hotel_name: "",
   property_type: "hotel",
   hotel_type: "resort",
@@ -102,6 +105,7 @@ export default function OperatorHotelsPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [formErrLines, setFormErrLines] = useState<string[]>([]);
   const [exportBusy, setExportBusy] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -218,7 +222,6 @@ export default function OperatorHotelsPage() {
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <ImportExportButtons
-            showImport={false}
             busy={busy || exportBusy}
             exportDisabled={!token}
             onTemplate={() => downloadCsvFile("hotels-template.csv", hotelTemplateCsv())}
@@ -234,6 +237,7 @@ export default function OperatorHotelsPage() {
                 setExportBusy(false);
               }
             }}
+            onImport={() => setImportOpen(true)}
           />
           <button
             type="button"
@@ -244,6 +248,23 @@ export default function OperatorHotelsPage() {
           </button>
         </div>
       </div>
+      <CsvImportModal
+        open={importOpen}
+        title={t("admin.crud.hotels.import_title")}
+        onClose={() => setImportOpen(false)}
+        onRun={async (rows, rowLineNumbers) => {
+          if (!token) {
+            return {
+              success: 0,
+              failed: rows.length,
+              errors: [{ rowNumber: rowLineNumbers[0] ?? 2, message: "Not signed in." }],
+            };
+          }
+          const res = await runHotelCsvImport(token, rows, rowLineNumbers);
+          if (res.success > 0) await load();
+          return res;
+        }}
+      />
       {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
       {formLoading && editId != null && !form && (
         <div className="mt-4 rounded border border-slate-200 bg-white p-4 text-sm text-slate-600">{t("admin.crud.hotels.loading")}</div>
@@ -293,6 +314,24 @@ export default function OperatorHotelsPage() {
                 className="rounded border border-slate-300 px-2 py-1.5 text-sm"
               />
             </label>
+            <LocationCascadeSelect
+              token={token}
+              value={form.location_id === "" ? null : Number(form.location_id)}
+              label="Location (Country -> Region -> City)"
+              onChange={(locationId, meta) =>
+                setForm((p) =>
+                  p
+                    ? {
+                        ...p,
+                        location_id: locationId ?? "",
+                        country: meta.country?.name ?? p.country,
+                        region_or_state: meta.region?.name ?? p.region_or_state,
+                        city: meta.city?.name ?? p.city,
+                      }
+                    : p
+                )
+              }
+            />
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.latitude")}</span>
               <input

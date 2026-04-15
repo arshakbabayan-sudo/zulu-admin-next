@@ -40,6 +40,20 @@ export type LocationCityRow = {
   updated_at?: string | null;
 };
 
+export type TreeLocationNode = {
+  id: number;
+  name: string;
+  type: "country" | "region" | "city" | string;
+  parent_id?: number | null;
+  path?: string | null;
+  depth?: number | null;
+};
+
+export type TreeLocationNodeDetail = TreeLocationNode & {
+  full_path_name?: string;
+  ancestors?: TreeLocationNode[];
+};
+
 export async function apiLocationCountries(
   token: string
 ): Promise<ApiSuccessEnvelope<LocationCountryRow[]>> {
@@ -185,4 +199,21 @@ export async function apiLocationCityDelete(
     token,
     body: { action: "delete", id },
   });
+}
+
+export async function apiTreeLocationChildren(
+  token: string,
+  parentId?: number | null
+): Promise<ApiSuccessEnvelope<TreeLocationNode[]>> {
+  const search = new URLSearchParams();
+  if (parentId != null) search.set("parent_id", String(parentId));
+  const qs = search.toString();
+  return apiFetchJson(`/locations/tree/children${qs ? `?${qs}` : ""}`, { method: "GET", token });
+}
+
+export async function apiTreeLocationNode(
+  token: string,
+  id: number
+): Promise<ApiSuccessEnvelope<TreeLocationNodeDetail>> {
+  return apiFetchJson(`/locations/tree/node/${id}`, { method: "GET", token });
 }

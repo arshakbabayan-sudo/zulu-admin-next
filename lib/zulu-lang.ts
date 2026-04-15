@@ -75,6 +75,24 @@ export function getDefaultLanguageCodeFromRows(rows: SupportedLanguageRow[]): st
   return def?.code ?? rows[0]?.code ?? DEFAULT_LANG;
 }
 
+function canonicalizeLanguageCode(raw: string | null | undefined, allowedCodes: string[]): string | null {
+  if (!raw) return null;
+  const normalized = raw.trim().toLowerCase();
+  if (!normalized) return null;
+
+  const lowerToCanonical = new Map<string, string>();
+  for (const code of allowedCodes) {
+    lowerToCanonical.set(code.toLowerCase(), code);
+  }
+
+  const exact = lowerToCanonical.get(normalized);
+  if (exact) return exact;
+
+  const primary = normalized.replace(/_/g, "-").split("-")[0] ?? "";
+  if (!primary) return null;
+  return lowerToCanonical.get(primary) ?? null;
+}
+
 export function getLanguageMeta(
   code: string,
   options: LanguageOption[] = getCachedLanguageOptions()
@@ -84,13 +102,18 @@ export function getLanguageMeta(
 }
 
 export function resolveInitialLanguage(allowedCodes: string[], defaultCode: string): LangCode {
-  const allowed = new Set(allowedCodes);
+  const fallback =
+    canonicalizeLanguageCode(defaultCode, allowedCodes) ??
+    canonicalizeLanguageCode(allowedCodes[0] ?? DEFAULT_LANG, allowedCodes) ??
+    DEFAULT_LANG;
+
   if (typeof window === "undefined") {
-    return allowed.has(defaultCode) ? defaultCode : (allowedCodes[0] ?? DEFAULT_LANG);
+    return fallback;
   }
   try {
     const raw = window.localStorage.getItem(ZULU_LANG_KEY);
-    if (raw && allowed.has(raw)) return raw;
+    const stored = canonicalizeLanguageCode(raw, allowedCodes);
+    if (stored) return stored;
   } catch {
     // ignore
   }
@@ -99,24 +122,26 @@ export function resolveInitialLanguage(allowedCodes: string[], defaultCode: stri
       new RegExp(`(?:^|;\\s*)${ZULU_LANG_KEY.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}=([^;]*)`)
     );
     const fromCookie = match?.[1] ? decodeURIComponent(match[1].trim()) : "";
-    if (fromCookie && allowed.has(fromCookie)) return fromCookie;
+    const cookieValue = canonicalizeLanguageCode(fromCookie, allowedCodes);
+    if (cookieValue) return cookieValue;
   } catch {
     // ignore
   }
-  return allowed.has(defaultCode) ? defaultCode : (allowedCodes[0] ?? DEFAULT_LANG);
+  return fallback;
 }
 
 export function writeStoredLanguage(lang: string): void {
   if (typeof window === "undefined") return;
-  const allowed = new Set(getCachedLanguageOptions().map((o) => o.code));
-  if (!allowed.has(lang)) return;
+  const allowedCodes = getCachedLanguageOptions().map((o) => o.code);
+  const canonical = canonicalizeLanguageCode(lang, allowedCodes);
+  if (!canonical) return;
   try {
-    window.localStorage.setItem(ZULU_LANG_KEY, lang);
+    window.localStorage.setItem(ZULU_LANG_KEY, canonical);
   } catch {
     // ignore
   }
   try {
-    document.cookie = `${ZULU_LANG_KEY}=${encodeURIComponent(lang)}; path=/; max-age=31536000; SameSite=Lax`;
+    document.cookie = `${ZULU_LANG_KEY}=${encodeURIComponent(canonical)}; path=/; max-age=31536000; SameSite=Lax`;
   } catch {
     // ignore
   }

@@ -13,6 +13,8 @@
 import { toCanonicalFlightCabinClass } from "@/lib/flight-cabin-class";
 import {
   hotelFormFromDetail,
+  newHotelPricingFormRow,
+  newHotelRoomFormRow,
   type CarAdvancedOptionsRow,
   type CarCreatePayload,
   type CarRow,
@@ -20,9 +22,11 @@ import {
   type ExcursionRow,
   type FlightPayload,
   type FlightRow,
+  type HotelFormPayload,
   type TransferRow,
 } from "@/lib/inventory-crud-api";
 import { transferFormFromRow, type TransferFormValues } from "@/lib/transfers/transfer-field-adapter";
+import { TRANSFER_FIELD_LABELS } from "@/lib/transfers/transfer-ui";
 import {
   coreWritePayloadFromWizard,
   expandedPayloadFromWizard,
@@ -64,6 +68,133 @@ export const FLIGHT_CSV_FIELDS: (keyof FlightPayload)[] = [
   "appears_in_web", "appears_in_admin", "appears_in_zulu_admin",
   "status",
 ];
+
+const FLIGHT_REQUIRED_TEMPLATE_FIELDS = new Set<keyof FlightPayload>([
+  "offer_id",
+  "flight_code_internal",
+  "service_type",
+  "departure_country",
+  "departure_city",
+  "departure_airport",
+  "arrival_country",
+  "arrival_city",
+  "arrival_airport",
+  "departure_at",
+  "arrival_at",
+  "duration_minutes",
+  "connection_type",
+  "stops_count",
+  "cabin_class",
+  "seat_capacity_total",
+  "seat_capacity_available",
+  "seat_map_available",
+  "adult_age_from",
+  "child_age_from",
+  "child_age_to",
+  "infant_age_from",
+  "infant_age_to",
+  "adult_price",
+  "child_price",
+  "infant_price",
+  "hand_baggage_included",
+  "checked_baggage_included",
+  "extra_baggage_allowed",
+  "reservation_allowed",
+  "online_checkin_allowed",
+  "airport_checkin_allowed",
+  "cancellation_policy_type",
+  "change_policy_type",
+  "is_package_eligible",
+  "appears_in_web",
+  "appears_in_admin",
+  "appears_in_zulu_admin",
+  "status",
+]);
+
+const FLIGHT_TEMPLATE_LABELS: Record<keyof FlightPayload, string> = {
+  offer_id: "Offer ID",
+  flight_code_internal: "Flight Code Internal",
+  service_type: "Service Type",
+  departure_country: "Departure Country",
+  departure_city: "Departure City",
+  departure_airport: "Departure Airport",
+  arrival_country: "Arrival Country",
+  arrival_city: "Arrival City",
+  arrival_airport: "Arrival Airport",
+  departure_airport_code: "Departure Airport Code",
+  arrival_airport_code: "Arrival Airport Code",
+  departure_terminal: "Departure Terminal",
+  arrival_terminal: "Arrival Terminal",
+  departure_at: "Departure At",
+  arrival_at: "Arrival At",
+  duration_minutes: "Duration Minutes",
+  timezone_context: "Timezone Context",
+  check_in_close_at: "Check-in Close At",
+  boarding_close_at: "Boarding Close At",
+  connection_type: "Connection Type",
+  stops_count: "Stops Count",
+  connection_notes: "Connection Notes",
+  layover_summary: "Layover Summary",
+  cabin_class: "Cabin Class",
+  seat_capacity_total: "Seat Capacity Total",
+  seat_capacity_available: "Seat Capacity Available",
+  fare_family: "Fare Family",
+  seat_map_available: "Seat Map Available",
+  seat_selection_policy: "Seat Selection Policy",
+  adult_age_from: "Adult Age From",
+  child_age_from: "Child Age From",
+  child_age_to: "Child Age To",
+  infant_age_from: "Infant Age From",
+  infant_age_to: "Infant Age To",
+  adult_price: "Adult Price",
+  child_price: "Child Price",
+  infant_price: "Infant Price",
+  hand_baggage_included: "Hand Baggage Included",
+  checked_baggage_included: "Checked Baggage Included",
+  hand_baggage_weight: "Hand Baggage Weight",
+  checked_baggage_weight: "Checked Baggage Weight",
+  extra_baggage_allowed: "Extra Baggage Allowed",
+  baggage_notes: "Baggage Notes",
+  reservation_allowed: "Reservation Allowed",
+  online_checkin_allowed: "Online Check-in Allowed",
+  airport_checkin_allowed: "Airport Check-in Allowed",
+  cancellation_policy_type: "Cancellation Policy Type",
+  change_policy_type: "Change Policy Type",
+  reservation_deadline_at: "Reservation Deadline At",
+  cancellation_deadline_at: "Cancellation Deadline At",
+  change_deadline_at: "Change Deadline At",
+  policy_notes: "Policy Notes",
+  is_package_eligible: "Is Package Eligible",
+  appears_in_web: "Appears In Web",
+  appears_in_admin: "Appears In Admin",
+  appears_in_zulu_admin: "Appears In Zulu Admin",
+  status: "Status",
+};
+
+function normalizeCsvTemplateHeader(header: string): string {
+  return header.replace(/\*/g, "").replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+const FLIGHT_IMPORT_HEADER_KEY_MAP: Record<string, "id" | keyof FlightPayload> = (() => {
+  const map: Record<string, "id" | keyof FlightPayload> = {
+    id: "id",
+    "id (update existing; leave blank to create)": "id",
+  };
+  for (const key of FLIGHT_CSV_FIELDS) {
+    map[normalizeCsvTemplateHeader(String(key))] = key;
+    map[normalizeCsvTemplateHeader(FLIGHT_TEMPLATE_LABELS[key])] = key;
+  }
+  return map;
+})();
+
+export function normalizeFlightCsvImportRow(row: Record<string, string>): Record<string, string> {
+  const normalized: Record<string, string> = {};
+  for (const [header, value] of Object.entries(row)) {
+    const mapped = FLIGHT_IMPORT_HEADER_KEY_MAP[normalizeCsvTemplateHeader(header)] ?? header.trim();
+    normalized[mapped] = value;
+  }
+  return normalized;
+}
 
 const FLIGHT_NULLABLE: (keyof FlightPayload)[] = [
   "departure_airport_code", "arrival_airport_code",
@@ -174,7 +305,15 @@ export function flightDetailToCsvRow(f: FlightRow): Record<string, unknown> {
 }
 
 export function flightTemplateCsv(): string {
-  return stringifyCsv(["id", ...FLIGHT_CSV_FIELDS.map(String)], [{}]);
+  const headers = [
+    "ID (Update Existing; leave blank to create)",
+    ...FLIGHT_CSV_FIELDS.map((key) =>
+      FLIGHT_REQUIRED_TEMPLATE_FIELDS.has(key)
+        ? `${FLIGHT_TEMPLATE_LABELS[key]} *`
+        : FLIGHT_TEMPLATE_LABELS[key]
+    ),
+  ];
+  return stringifyCsv(headers, [{}]);
 }
 
 // ─── Hotels (template + export shape only — no flat import) ──────────────────
@@ -191,6 +330,148 @@ export const HOTEL_CSV_FIELDS = [
   "cancellation_policy_type", "cancellation_deadline_at", "no_show_policy",
   "review_score", "review_count", "review_label", "room_inventory_mode",
 ] as const;
+
+const HOTEL_REQUIRED_TEMPLATE_FIELDS = new Set<string>([
+  "offer_id",
+  "hotel_name",
+  "property_type",
+  "hotel_type",
+  "country",
+  "city",
+  "meal_type",
+  "availability_status",
+  "status",
+]);
+
+const HOTEL_TEMPLATE_LABELS: Record<string, string> = {
+  id: "ID (Update Existing; leave blank to create)",
+  offer_id: "Offer ID",
+  hotel_name: "Hotel Name",
+  property_type: "Property Type",
+  hotel_type: "Hotel Type",
+  country: "Country",
+  region_or_state: "Region or State",
+  city: "City",
+  district_or_area: "District or Area",
+  full_address: "Full Address",
+  latitude: "Latitude",
+  longitude: "Longitude",
+  meal_type: "Meal Type",
+  star_rating: "Star Rating",
+  availability_status: "Availability Status",
+  status: "Status",
+  bookable: "Bookable",
+  is_package_eligible: "Is Package Eligible",
+  visibility_rule: "Visibility Rule",
+  appears_in_packages: "Appears In Packages",
+  free_wifi: "Free WiFi",
+  parking: "Parking",
+  airport_shuttle: "Airport Shuttle",
+  indoor_pool: "Indoor Pool",
+  outdoor_pool: "Outdoor Pool",
+  room_service: "Room Service",
+  front_desk_24h: "Front Desk 24h",
+  child_friendly: "Child Friendly",
+  accessibility_support: "Accessibility Support",
+  pets_allowed: "Pets Allowed",
+  free_cancellation: "Free Cancellation",
+  prepayment_required: "Prepayment Required",
+  cancellation_policy_type: "Cancellation Policy Type",
+  cancellation_deadline_at: "Cancellation Deadline At",
+  no_show_policy: "No-show Policy",
+  review_score: "Review Score",
+  review_count: "Review Count",
+  review_label: "Review Label",
+  room_inventory_mode: "Room Inventory Mode",
+};
+
+const HOTEL_IMPORT_HEADER_KEY_MAP: Record<string, string> = (() => {
+  const map: Record<string, string> = {
+    id: "id",
+    "id (update existing; leave blank to create)": "id",
+  };
+  for (const key of HOTEL_CSV_FIELDS) {
+    map[normalizeCsvTemplateHeader(String(key))] = key;
+    map[normalizeCsvTemplateHeader(HOTEL_TEMPLATE_LABELS[key] ?? String(key))] = key;
+  }
+  return map;
+})();
+
+export function normalizeHotelCsvImportRow(row: Record<string, string>): Record<string, string> {
+  const normalized: Record<string, string> = {};
+  for (const [header, value] of Object.entries(row)) {
+    const mapped = HOTEL_IMPORT_HEADER_KEY_MAP[normalizeCsvTemplateHeader(header)] ?? header.trim();
+    normalized[mapped] = value;
+  }
+  return normalized;
+}
+
+export function hotelRowToFormPayload(row: Record<string, string>): HotelFormPayload {
+  const get = (k: string) => (row[k] ?? "").trim();
+  const num = (k: string): number | "" => {
+    const t = get(k);
+    if (t === "") return "";
+    const n = Number(t);
+    return Number.isFinite(n) ? n : "";
+  };
+  const bool = (k: string, fallback = false): boolean => {
+    const t = get(k);
+    if (t === "") return fallback;
+    return parseBool(t);
+  };
+
+  const room = newHotelRoomFormRow();
+  room.room_type = "standard";
+  room.room_name = "Standard Room";
+  room.capacity = 2;
+  room.pricings = [newHotelPricingFormRow()];
+  room.pricings[0].price = "100";
+  room.pricings[0].currency = "USD";
+  room.pricings[0].pricing_mode = "per_night";
+  room.pricings[0].status = "active";
+
+  return {
+    offer_id: num("offer_id"),
+    hotel_name: get("hotel_name"),
+    property_type: get("property_type") || "hotel",
+    hotel_type: get("hotel_type") || "resort",
+    country: get("country"),
+    region_or_state: get("region_or_state"),
+    city: get("city"),
+    district_or_area: get("district_or_area"),
+    full_address: get("full_address"),
+    latitude: get("latitude"),
+    longitude: get("longitude"),
+    meal_type: get("meal_type") || "bed_and_breakfast",
+    star_rating: num("star_rating"),
+    availability_status: get("availability_status") || "available",
+    status: get("status") || "draft",
+    bookable: bool("bookable", true),
+    is_package_eligible: bool("is_package_eligible", false),
+    visibility_rule: get("visibility_rule") || "show_all",
+    appears_in_packages: bool("appears_in_packages", true),
+    free_wifi: bool("free_wifi", false),
+    parking: bool("parking", false),
+    airport_shuttle: bool("airport_shuttle", false),
+    indoor_pool: bool("indoor_pool", false),
+    outdoor_pool: bool("outdoor_pool", false),
+    room_service: bool("room_service", false),
+    front_desk_24h: bool("front_desk_24h", false),
+    child_friendly: bool("child_friendly", false),
+    accessibility_support: bool("accessibility_support", false),
+    pets_allowed: bool("pets_allowed", false),
+    free_cancellation: bool("free_cancellation", false),
+    prepayment_required: bool("prepayment_required", false),
+    cancellation_policy_type: get("cancellation_policy_type"),
+    cancellation_deadline_at: get("cancellation_deadline_at"),
+    no_show_policy: get("no_show_policy"),
+    review_score: num("review_score"),
+    review_count: num("review_count"),
+    review_label: get("review_label"),
+    room_inventory_mode: get("room_inventory_mode"),
+    rooms: [room],
+  };
+}
 
 export function hotelFormToFlatCsv(h: ReturnType<typeof hotelFormFromDetail>): Record<string, unknown> {
   return {
@@ -236,7 +517,11 @@ export function hotelFormToFlatCsv(h: ReturnType<typeof hotelFormFromDetail>): R
 }
 
 export function hotelTemplateCsv(): string {
-  return stringifyCsv([...HOTEL_CSV_FIELDS], [{}]);
+  const headers = HOTEL_CSV_FIELDS.map((key) => {
+    const label = HOTEL_TEMPLATE_LABELS[key] ?? key;
+    return HOTEL_REQUIRED_TEMPLATE_FIELDS.has(key) ? `${label} *` : label;
+  });
+  return stringifyCsv(headers, [{}]);
 }
 
 // ─── Transfers ────────────────────────────────────────────────────────────────
@@ -260,6 +545,115 @@ export const TRANSFER_CSV_FIELDS: (keyof TransferFormValues)[] = [
   "free_cancellation", "cancellation_policy_type", "cancellation_deadline_at",
   "availability_status", "bookable", "is_package_eligible", "status",
 ];
+
+const TRANSFER_REQUIRED_TEMPLATE_FIELDS = new Set<keyof TransferFormValues>([
+  "offer_id",
+  "transfer_title",
+  "transfer_type",
+  "service_date",
+  "pickup_time",
+  "estimated_duration_minutes",
+  "pickup_country",
+  "pickup_city",
+  "pickup_point_type",
+  "pickup_point_name",
+  "dropoff_country",
+  "dropoff_city",
+  "dropoff_point_type",
+  "dropoff_point_name",
+  "vehicle_category",
+  "passenger_capacity",
+  "luggage_capacity",
+  "minimum_passengers",
+  "maximum_passengers",
+  "child_seat_available",
+  "accessibility_support",
+  "special_assistance_supported",
+  "pricing_mode",
+  "base_price",
+  "free_cancellation",
+  "cancellation_policy_type",
+  "visibility_rule",
+  "appears_in_web",
+  "appears_in_admin",
+  "appears_in_zulu_admin",
+  "availability_status",
+  "bookable",
+  "is_package_eligible",
+  "status",
+]);
+
+const TRANSFER_TEMPLATE_LABELS: Record<keyof TransferFormValues, string> = {
+  offer_id: "Offer ID",
+  currency: "Currency",
+  visibility_rule: TRANSFER_FIELD_LABELS.visibility_rule,
+  appears_in_web: TRANSFER_FIELD_LABELS.appears_in_web,
+  appears_in_admin: TRANSFER_FIELD_LABELS.appears_in_admin,
+  appears_in_zulu_admin: TRANSFER_FIELD_LABELS.appears_in_zulu_admin,
+  transfer_title: TRANSFER_FIELD_LABELS.transfer_title,
+  transfer_type: TRANSFER_FIELD_LABELS.transfer_type,
+  pickup_country: TRANSFER_FIELD_LABELS.pickup_country,
+  pickup_city: TRANSFER_FIELD_LABELS.pickup_city,
+  pickup_point_type: TRANSFER_FIELD_LABELS.pickup_point_type,
+  pickup_point_name: TRANSFER_FIELD_LABELS.pickup_point_name,
+  dropoff_country: TRANSFER_FIELD_LABELS.dropoff_country,
+  dropoff_city: TRANSFER_FIELD_LABELS.dropoff_city,
+  dropoff_point_type: TRANSFER_FIELD_LABELS.dropoff_point_type,
+  dropoff_point_name: TRANSFER_FIELD_LABELS.dropoff_point_name,
+  pickup_latitude: TRANSFER_FIELD_LABELS.pickup_latitude,
+  pickup_longitude: TRANSFER_FIELD_LABELS.pickup_longitude,
+  dropoff_latitude: TRANSFER_FIELD_LABELS.dropoff_latitude,
+  dropoff_longitude: TRANSFER_FIELD_LABELS.dropoff_longitude,
+  route_distance_km: TRANSFER_FIELD_LABELS.route_distance_km,
+  route_label: TRANSFER_FIELD_LABELS.route_label,
+  service_date: TRANSFER_FIELD_LABELS.service_date,
+  pickup_time: TRANSFER_FIELD_LABELS.pickup_time,
+  estimated_duration_minutes: TRANSFER_FIELD_LABELS.estimated_duration_minutes,
+  availability_window_start: TRANSFER_FIELD_LABELS.availability_window_start,
+  availability_window_end: TRANSFER_FIELD_LABELS.availability_window_end,
+  vehicle_category: TRANSFER_FIELD_LABELS.vehicle_category,
+  vehicle_class: TRANSFER_FIELD_LABELS.vehicle_class,
+  private_or_shared: TRANSFER_FIELD_LABELS.private_or_shared,
+  passenger_capacity: TRANSFER_FIELD_LABELS.passenger_capacity,
+  luggage_capacity: TRANSFER_FIELD_LABELS.luggage_capacity,
+  minimum_passengers: TRANSFER_FIELD_LABELS.minimum_passengers,
+  maximum_passengers: TRANSFER_FIELD_LABELS.maximum_passengers,
+  maximum_luggage: TRANSFER_FIELD_LABELS.maximum_luggage,
+  child_seat_available: TRANSFER_FIELD_LABELS.child_seat_available,
+  child_seat_required_rule: TRANSFER_FIELD_LABELS.child_seat_required_rule,
+  accessibility_support: TRANSFER_FIELD_LABELS.accessibility_support,
+  special_assistance_supported: TRANSFER_FIELD_LABELS.special_assistance_supported,
+  pricing_mode: TRANSFER_FIELD_LABELS.pricing_mode,
+  base_price: TRANSFER_FIELD_LABELS.base_price,
+  free_cancellation: TRANSFER_FIELD_LABELS.free_cancellation,
+  cancellation_policy_type: TRANSFER_FIELD_LABELS.cancellation_policy_type,
+  cancellation_deadline_at: TRANSFER_FIELD_LABELS.cancellation_deadline_at,
+  availability_status: TRANSFER_FIELD_LABELS.availability_status,
+  bookable: TRANSFER_FIELD_LABELS.bookable,
+  is_package_eligible: TRANSFER_FIELD_LABELS.is_package_eligible,
+  status: TRANSFER_FIELD_LABELS.status,
+};
+
+const TRANSFER_IMPORT_HEADER_KEY_MAP: Record<string, "id" | keyof TransferFormValues> = (() => {
+  const map: Record<string, "id" | keyof TransferFormValues> = {
+    id: "id",
+    "id (update existing; leave blank to create)": "id",
+  };
+  for (const key of TRANSFER_CSV_FIELDS) {
+    map[normalizeCsvTemplateHeader(String(key))] = key;
+    map[normalizeCsvTemplateHeader(TRANSFER_TEMPLATE_LABELS[key])] = key;
+  }
+  return map;
+})();
+
+export function normalizeTransferCsvImportRow(row: Record<string, string>): Record<string, string> {
+  const normalized: Record<string, string> = {};
+  for (const [header, value] of Object.entries(row)) {
+    const mapped = TRANSFER_IMPORT_HEADER_KEY_MAP[normalizeCsvTemplateHeader(header)] ?? header.trim();
+    normalized[mapped] = value;
+  }
+  return normalized;
+}
 
 export function transferRowToFormValues(row: Record<string, string>, currencyDefault: string): TransferFormValues {
   const get = (k: string) => (row[k] ?? "").trim();
@@ -332,7 +726,15 @@ export function transferDetailToCsvRow(r: TransferRow): Record<string, unknown> 
 }
 
 export function transferTemplateCsv(): string {
-  return stringifyCsv(["id", ...TRANSFER_CSV_FIELDS.map(String)], [{}]);
+  const headers = [
+    "ID (Update Existing; leave blank to create)",
+    ...TRANSFER_CSV_FIELDS.map((key) =>
+      TRANSFER_REQUIRED_TEMPLATE_FIELDS.has(key)
+        ? `${TRANSFER_TEMPLATE_LABELS[key]} *`
+        : TRANSFER_TEMPLATE_LABELS[key]
+    ),
+  ];
+  return stringifyCsv(headers, [{}]);
 }
 
 // ─── Cars ─────────────────────────────────────────────────────────────────────
@@ -346,6 +748,61 @@ export const CAR_CSV_FIELDS = [
   "availability_window_start", "availability_window_end",
   "pricing_mode", "base_price", "status", "availability_status",
 ] as const;
+
+type CarCsvField = (typeof CAR_CSV_FIELDS)[number];
+
+const CAR_REQUIRED_TEMPLATE_FIELDS = new Set<CarCsvField>([
+  "offer_id",
+  "pickup_location",
+  "dropoff_location",
+  "vehicle_class",
+]);
+
+const CAR_TEMPLATE_LABELS: Record<CarCsvField, string> = {
+  offer_id: "Offer ID",
+  company_id: "Company ID",
+  pickup_location: "Pickup Location",
+  dropoff_location: "Drop-off Location",
+  vehicle_class: "Vehicle Class",
+  vehicle_type: "Vehicle Type",
+  brand: "Brand",
+  model: "Model",
+  year: "Year",
+  transmission_type: "Transmission Type",
+  fuel_type: "Fuel Type",
+  fleet: "Fleet",
+  category: "Category",
+  seats: "Seats",
+  suitcases: "Suitcases",
+  small_bag: "Small Bag",
+  availability_window_start: "Availability Window Start",
+  availability_window_end: "Availability Window End",
+  pricing_mode: "Pricing Mode",
+  base_price: "Base Price",
+  status: "Status",
+  availability_status: "Availability Status",
+};
+
+const CAR_IMPORT_HEADER_KEY_MAP: Record<string, "id" | CarCsvField> = (() => {
+  const map: Record<string, "id" | CarCsvField> = {
+    id: "id",
+    "id (update existing; leave blank to create)": "id",
+  };
+  for (const key of CAR_CSV_FIELDS) {
+    map[normalizeCsvTemplateHeader(String(key))] = key;
+    map[normalizeCsvTemplateHeader(CAR_TEMPLATE_LABELS[key])] = key;
+  }
+  return map;
+})();
+
+export function normalizeCarCsvImportRow(row: Record<string, string>): Record<string, string> {
+  const normalized: Record<string, string> = {};
+  for (const [header, value] of Object.entries(row)) {
+    const mapped = CAR_IMPORT_HEADER_KEY_MAP[normalizeCsvTemplateHeader(header)] ?? header.trim();
+    normalized[mapped] = value;
+  }
+  return normalized;
+}
 
 export function defaultCarAdvancedForCsv(): CarAdvancedOptionsRow {
   return {
@@ -445,7 +902,15 @@ export function carCsvRowToPayload(
 }
 
 export function carTemplateCsv(): string {
-  return stringifyCsv(["id", ...CAR_CSV_FIELDS.map(String)], [{}]);
+  const headers = [
+    "ID (Update Existing; leave blank to create)",
+    ...CAR_CSV_FIELDS.map((key) =>
+      CAR_REQUIRED_TEMPLATE_FIELDS.has(key)
+        ? `${CAR_TEMPLATE_LABELS[key]} *`
+        : CAR_TEMPLATE_LABELS[key]
+    ),
+  ];
+  return stringifyCsv(headers, [{}]);
 }
 
 // ─── Excursions ───────────────────────────────────────────────────────────────
@@ -461,6 +926,68 @@ export const EXCURSION_CSV_FIELDS = [
   "includes_json", "photos_json",
   "visibility_rule", "appears_in_web", "appears_in_admin", "appears_in_zulu_admin",
 ] as const;
+
+type ExcursionCsvField = (typeof EXCURSION_CSV_FIELDS)[number];
+
+const EXCURSION_REQUIRED_TEMPLATE_FIELDS = new Set<ExcursionCsvField>([
+  "offer_id",
+  "country",
+  "city",
+  "duration",
+  "language",
+  "group_size",
+]);
+
+const EXCURSION_TEMPLATE_LABELS: Record<ExcursionCsvField, string> = {
+  offer_id: "Offer ID",
+  company_id: "Company ID",
+  country: "Country",
+  city: "City",
+  general_category: "General Category",
+  category: "Category",
+  excursion_type: "Excursion Type",
+  tour_name: "Tour Name",
+  overview: "Overview",
+  duration: "Duration",
+  starts_at: "Starts At",
+  ends_at: "Ends At",
+  language: "Language",
+  group_size: "Group Size",
+  ticket_max_count: "Ticket Max Count",
+  status: "Status",
+  is_available: "Is Available",
+  is_bookable: "Is Bookable",
+  meeting_pickup: "Meeting / Pickup",
+  additional_info: "Additional Info",
+  cancellation_policy: "Cancellation Policy",
+  includes_json: "Includes (JSON Array)",
+  photos_json: "Photos (JSON Array)",
+  visibility_rule: "Visibility Rule",
+  appears_in_web: "Appears In Web",
+  appears_in_admin: "Appears In Admin",
+  appears_in_zulu_admin: "Appears In Zulu Admin",
+};
+
+const EXCURSION_IMPORT_HEADER_KEY_MAP: Record<string, "id" | ExcursionCsvField> = (() => {
+  const map: Record<string, "id" | ExcursionCsvField> = {
+    id: "id",
+    "id (update existing; leave blank to create)": "id",
+  };
+  for (const key of EXCURSION_CSV_FIELDS) {
+    map[normalizeCsvTemplateHeader(String(key))] = key;
+    map[normalizeCsvTemplateHeader(EXCURSION_TEMPLATE_LABELS[key])] = key;
+  }
+  return map;
+})();
+
+export function normalizeExcursionCsvImportRow(row: Record<string, string>): Record<string, string> {
+  const normalized: Record<string, string> = {};
+  for (const [header, value] of Object.entries(row)) {
+    const mapped = EXCURSION_IMPORT_HEADER_KEY_MAP[normalizeCsvTemplateHeader(header)] ?? header.trim();
+    normalized[mapped] = value;
+  }
+  return normalized;
+}
 
 function parseJsonStringArray(raw: string): string[] | null {
   const t = raw.trim();
@@ -563,7 +1090,15 @@ export function excursionDetailToCsvRow(r: ExcursionRow): Record<string, unknown
 }
 
 export function excursionTemplateCsv(): string {
-  return stringifyCsv(["id", ...EXCURSION_CSV_FIELDS.map(String)], [{}]);
+  const headers = [
+    "ID (Update Existing; leave blank to create)",
+    ...EXCURSION_CSV_FIELDS.map((key) =>
+      EXCURSION_REQUIRED_TEMPLATE_FIELDS.has(key)
+        ? `${EXCURSION_TEMPLATE_LABELS[key]} *`
+        : EXCURSION_TEMPLATE_LABELS[key]
+    ),
+  ];
+  return stringifyCsv(headers, [{}]);
 }
 
 // Re-export wizard helpers needed by orchestrator
