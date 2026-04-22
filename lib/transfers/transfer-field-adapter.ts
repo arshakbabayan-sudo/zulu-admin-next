@@ -62,6 +62,13 @@ export type TransferFormValues = TransferCanonicalFields & {
   currency: string;
 };
 
+type VisibilityRowShape = {
+  visibility_rule?: string;
+  appears_in_web?: boolean;
+  appears_in_admin?: boolean;
+  appears_in_zulu_admin?: boolean;
+};
+
 const TRANSFER_VEHICLE_CATEGORIES = [
   "sedan",
   "suv",
@@ -285,13 +292,14 @@ export function newTransferForm(offerId: number | null, currency: string): Trans
 }
 
 export function transferFormFromRow(row: TransferRow): TransferFormValues {
+  const vr = row as TransferRow & VisibilityRowShape;
   return {
     offer_id: row.offer_id != null ? Number(row.offer_id) : null,
     currency: row.offer?.currency ?? "USD",
-    visibility_rule: (row as any).visibility_rule ?? "show_all",
-    appears_in_web: (row as any).appears_in_web !== false,
-    appears_in_admin: (row as any).appears_in_admin !== false,
-    appears_in_zulu_admin: (row as any).appears_in_zulu_admin !== false,
+    visibility_rule: vr.visibility_rule ?? "show_all",
+    appears_in_web: vr.appears_in_web !== false,
+    appears_in_admin: vr.appears_in_admin !== false,
+    appears_in_zulu_admin: vr.appears_in_zulu_admin !== false,
     transfer_title: row.transfer_title ?? "",
     transfer_type: row.transfer_type ?? "city_transfer",
     pickup_country: row.pickup_country ?? "",

@@ -40,7 +40,6 @@ export default function UiTranslationsPage() {
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [page, setPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
@@ -71,7 +70,6 @@ export default function UiTranslationsPage() {
       const res = await apiUiTranslationsGetAdmin(token, { lang: selectedLang, page, per_page: PER_PAGE, search });
       setRows(res.data.data);
       setLastPage(res.data.last_page);
-      setTotal(res.data.total);
       setEdits({});
     } catch (e) {
       setErr(e instanceof ApiRequestError ? e.message : t("admin.localization.err_load"));

@@ -7,7 +7,6 @@ import { canAccessLocalizationLanguagesNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import {
   apiAdminLanguages,
-  apiLocalizationToggleLanguage,
   apiLocalizationCreateLanguage,
   apiLocalizationDeleteLanguage,
   apiSetDefaultLanguage,
@@ -285,14 +284,6 @@ export default function LocalizationLanguagesPage() {
   }, [token, allowed, t]);
 
   useEffect(() => { load(); }, [load]);
-
-  async function handleToggleEnabled(row: LocalizationLanguageRow) {
-    if (!token) return;
-    setBusyId(row.id);
-    try { await apiLocalizationToggleLanguage(token, row.id); await load(); }
-    catch (e) { alert(e instanceof ApiRequestError ? e.message : t("admin.languages.err_toggle")); }
-    finally { setBusyId(null); }
-  }
 
   async function handleSetDefault(row: LocalizationLanguageRow) {
     if (!token || row.is_default) return;
