@@ -87,7 +87,7 @@ export default function SupportTicketsPage() {
     <div>
       <h1 className="text-xl font-semibold">{t("admin.support.tickets_title")}</h1>
       <div className="mt-4 flex flex-wrap items-end gap-3 text-sm">
-        <label className="text-slate-600">
+        <label className="text-fg-t6">
           {t("admin.support.status")}
           <select
             value={statusFilter}
@@ -95,7 +95,7 @@ export default function SupportTicketsPage() {
               setPage(1);
               setStatusFilter(e.target.value);
             }}
-            className="ml-2 rounded border border-slate-300 px-2 py-1"
+            className="ml-2 rounded border border-default px-2 py-1"
           >
             <option value="">{t("common.all")}</option>
             {STATUSES.map((s) => (
@@ -105,7 +105,7 @@ export default function SupportTicketsPage() {
             ))}
           </select>
         </label>
-        <label className="text-slate-600">
+        <label className="text-fg-t6">
           {t("admin.support.priority")}
           <select
             value={priorityFilter}
@@ -113,7 +113,7 @@ export default function SupportTicketsPage() {
               setPage(1);
               setPriorityFilter(e.target.value);
             }}
-            className="ml-2 rounded border border-slate-300 px-2 py-1"
+            className="ml-2 rounded border border-default px-2 py-1"
           >
             <option value="">{t("common.all")}</option>
             {PRIORITIES.map((p) => (
@@ -123,24 +123,24 @@ export default function SupportTicketsPage() {
             ))}
           </select>
         </label>
-        <label className="text-slate-600">
+        <label className="text-fg-t6">
           {t("admin.support.search_subject")}
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onBlur={() => setPage(1)}
-            className="ml-2 rounded border border-slate-300 px-2 py-1"
+            className="ml-2 rounded border border-default px-2 py-1"
             placeholder={t("admin.support.placeholder_substring")}
           />
         </label>
         {isSuper && (
-          <label className="text-slate-600">
+          <label className="text-fg-t6">
             {t("admin.support.company_id")}
             <input
               value={companyIdFilter}
               onChange={(e) => setCompanyIdFilter(e.target.value)}
               onBlur={() => setPage(1)}
-              className="ml-2 w-24 rounded border border-slate-300 px-2 py-1 tabular-nums"
+              className="ml-2 w-24 rounded border border-default px-2 py-1 tabular-nums"
               placeholder={t("admin.support.placeholder_all")}
             />
           </label>
@@ -151,15 +151,15 @@ export default function SupportTicketsPage() {
             setPage(1);
             load();
           }}
-          className="rounded border border-slate-300 bg-white px-3 py-1"
+          className="rounded border border-default bg-white px-3 py-1"
         >
           {t("admin.support.apply")}
         </button>
       </div>
-      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
-      <div className="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
+      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
+      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
         <table className="w-full min-w-[640px] text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
+          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
               <th className="px-3 py-2">{t("admin.support.table.id")}</th>
               <th className="px-3 py-2">{t("admin.support.table.subject")}</th>
@@ -173,7 +173,7 @@ export default function SupportTicketsPage() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-slate-100">
+              <tr key={r.id} className="border-b border-default">
                 <td className="px-3 py-2 tabular-nums">{r.id}</td>
                 <td className="max-w-xs px-3 py-2">{r.subject}</td>
                 <td className="px-3 py-2">{r.status}</td>
@@ -182,7 +182,7 @@ export default function SupportTicketsPage() {
                 <td className="px-3 py-2 text-xs">{r.user?.name ?? "-"}</td>
                 <td className="px-3 py-2 tabular-nums">{r.messages_count ?? "-"}</td>
                 <td className="px-3 py-2">
-                  <Link href={`/support/tickets/${r.id}`} className="text-slate-700 underline">
+                  <Link href={`/support/tickets/${r.id}`} className="text-fg-t7 underline">
                     {t("admin.support.open")}
                   </Link>
                 </td>

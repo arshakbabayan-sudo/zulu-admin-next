@@ -228,25 +228,25 @@ export default function ConnectionsPage() {
       <h1 className="text-xl font-semibold">Service connections</h1>
 
       {canCreate && (
-        <div className="mt-4 rounded border border-slate-200 bg-white p-4">
+        <div className="mt-4 rounded border border-default bg-white p-4">
           <button
             type="button"
             onClick={() => setCreateOpen((o) => !o)}
-            className="text-sm font-medium text-slate-800 underline"
+            className="text-sm font-medium text-fg-t11 underline"
           >
             {createOpen ? "Hide create form" : "Create connection"}
           </button>
           {createOpen && (
             <form onSubmit={onCreate} className="mt-3 grid max-w-xl gap-3 text-sm">
               <div className="grid grid-cols-2 gap-2">
-                <label className="text-slate-600">
+                <label className="text-fg-t6">
                   Source type
                   <select
                     value={createForm.source_type}
                     onChange={(e) =>
                       setCreateForm((f) => ({ ...f, source_type: e.target.value }))
                     }
-                    className="mt-1 w-full rounded border border-slate-300 px-2 py-1"
+                    className="mt-1 w-full rounded border border-default px-2 py-1"
                   >
                     {CONNECTION_SOURCE_TYPES.map((t) => (
                       <option key={t} value={t}>
@@ -255,7 +255,7 @@ export default function ConnectionsPage() {
                     ))}
                   </select>
                 </label>
-                <label className="text-slate-600">
+                <label className="text-fg-t6">
                   Source ID
                   <input
                     type="number"
@@ -265,19 +265,19 @@ export default function ConnectionsPage() {
                     onChange={(e) =>
                       setCreateForm((f) => ({ ...f, source_id: Number(e.target.value) }))
                     }
-                    className="mt-1 w-full rounded border border-slate-300 px-2 py-1"
+                    className="mt-1 w-full rounded border border-default px-2 py-1"
                   />
                 </label>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <label className="text-slate-600">
+                <label className="text-fg-t6">
                   Target type
                   <select
                     value={createForm.target_type}
                     onChange={(e) =>
                       setCreateForm((f) => ({ ...f, target_type: e.target.value }))
                     }
-                    className="mt-1 w-full rounded border border-slate-300 px-2 py-1"
+                    className="mt-1 w-full rounded border border-default px-2 py-1"
                   >
                     {CONNECTION_TARGET_TYPES.map((t) => (
                       <option key={t} value={t}>
@@ -286,7 +286,7 @@ export default function ConnectionsPage() {
                     ))}
                   </select>
                 </label>
-                <label className="text-slate-600">
+                <label className="text-fg-t6">
                   Target ID
                   <input
                     type="number"
@@ -296,12 +296,12 @@ export default function ConnectionsPage() {
                     onChange={(e) =>
                       setCreateForm((f) => ({ ...f, target_id: Number(e.target.value) }))
                     }
-                    className="mt-1 w-full rounded border border-slate-300 px-2 py-1"
+                    className="mt-1 w-full rounded border border-default px-2 py-1"
                   />
                 </label>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <label className="text-slate-600">
+                <label className="text-fg-t6">
                   Connection type
                   <select
                     value={createForm.connection_type}
@@ -311,13 +311,13 @@ export default function ConnectionsPage() {
                         connection_type: e.target.value as ConnectionCreateBody["connection_type"],
                       }))
                     }
-                    className="mt-1 w-full rounded border border-slate-300 px-2 py-1"
+                    className="mt-1 w-full rounded border border-default px-2 py-1"
                   >
                     <option value="only">only</option>
                     <option value="both">both</option>
                   </select>
                 </label>
-                <label className="text-slate-600">
+                <label className="text-fg-t6">
                   Client targeting
                   <select
                     value={createForm.client_targeting ?? "all"}
@@ -329,7 +329,7 @@ export default function ConnectionsPage() {
                           e.target.value === "selected" ? f.selected_client_ids ?? [] : [],
                       }))
                     }
-                    className="mt-1 w-full rounded border border-slate-300 px-2 py-1"
+                    className="mt-1 w-full rounded border border-default px-2 py-1"
                   >
                     <option value="all">all</option>
                     <option value="selected">selected</option>
@@ -337,25 +337,25 @@ export default function ConnectionsPage() {
                 </label>
               </div>
               {createForm.client_targeting === "selected" && (
-                <div className="rounded border border-slate-200 p-3">
+                <div className="rounded border border-default p-3">
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <p className="text-slate-700">Selected clients</p>
+                    <p className="text-fg-t7">Selected clients</p>
                     <input
                       type="text"
                       placeholder="Search by name/email"
                       value={clientQuery}
                       onChange={(e) => setClientQuery(e.target.value)}
-                      className="w-56 rounded border border-slate-300 px-2 py-1 text-xs"
+                      className="w-56 rounded border border-default px-2 py-1 text-xs"
                     />
                   </div>
                   {clientsBusy ? (
-                    <p className="text-xs text-slate-600">Loading clients...</p>
+                    <p className="text-xs text-fg-t6">Loading clients...</p>
                   ) : clientLoadError ? (
-                    <p className="text-xs text-red-600">{clientLoadError}</p>
+                    <p className="text-xs text-error-600">{clientLoadError}</p>
                   ) : clientOptions.length === 0 ? (
-                    <p className="text-xs text-slate-600">No company clients found.</p>
+                    <p className="text-xs text-fg-t6">No company clients found.</p>
                   ) : (
-                    <div className="max-h-48 overflow-y-auto rounded border border-slate-200 p-2">
+                    <div className="max-h-48 overflow-y-auto rounded border border-default p-2">
                       {clientOptions
                         .filter((c) => {
                           const q = clientQuery.trim().toLowerCase();
@@ -371,7 +371,7 @@ export default function ConnectionsPage() {
                               key={c.id}
                               className="flex cursor-pointer items-center justify-between gap-3 py-1 text-xs"
                             >
-                              <span className="truncate text-slate-700">
+                              <span className="truncate text-fg-t7">
                                 {c.name} ({c.email})
                               </span>
                               <input
@@ -393,13 +393,13 @@ export default function ConnectionsPage() {
                   )}
                 </div>
               )}
-              <label className="text-slate-600">
+              <label className="text-fg-t6">
                 Notes (optional)
                 <input
                   type="text"
                   value={createForm.notes ?? ""}
                   onChange={(e) => setCreateForm((f) => ({ ...f, notes: e.target.value }))}
-                  className="mt-1 w-full rounded border border-slate-300 px-2 py-1"
+                  className="mt-1 w-full rounded border border-default px-2 py-1"
                 />
               </label>
               <div>
@@ -428,7 +428,7 @@ export default function ConnectionsPage() {
               }}
               className={
                 "rounded border px-2 py-1 " +
-                (statusFilter === s ? "border-slate-800 bg-slate-800 text-white" : "border-slate-300 bg-white")
+                (statusFilter === s ? "border-slate-800 bg-slate-800 text-white" : "border-default bg-white")
               }
             >
               {s === "" ? "All" : s}
@@ -444,14 +444,14 @@ export default function ConnectionsPage() {
             setTargetTypeFilter("");
             setCompanyIdFilter("");
           }}
-          className="rounded border border-slate-300 bg-white px-2 py-1"
+          className="rounded border border-default bg-white px-2 py-1"
         >
           Reset filters
         </button>
       </div>
 
       <div className="mt-3 flex flex-wrap gap-4 text-sm">
-        <label className="text-slate-600">
+        <label className="text-fg-t6">
           Source type
           <select
             value={sourceTypeFilter}
@@ -459,7 +459,7 @@ export default function ConnectionsPage() {
               setPage(1);
               setSourceTypeFilter(e.target.value);
             }}
-            className="ml-2 rounded border border-slate-300 px-2 py-1"
+            className="ml-2 rounded border border-default px-2 py-1"
           >
             <option value="">All</option>
             {CONNECTION_SOURCE_TYPES.map((t) => (
@@ -469,7 +469,7 @@ export default function ConnectionsPage() {
             ))}
           </select>
         </label>
-        <label className="text-slate-600">
+        <label className="text-fg-t6">
           Target type
           <select
             value={targetTypeFilter}
@@ -477,7 +477,7 @@ export default function ConnectionsPage() {
               setPage(1);
               setTargetTypeFilter(e.target.value);
             }}
-            className="ml-2 rounded border border-slate-300 px-2 py-1"
+            className="ml-2 rounded border border-default px-2 py-1"
           >
             <option value="">All</option>
             {CONNECTION_TARGET_TYPES.map((t) => (
@@ -488,7 +488,7 @@ export default function ConnectionsPage() {
           </select>
         </label>
         {isSuper && (
-          <label className="text-slate-600">
+          <label className="text-fg-t6">
             Company ID
             <input
               type="number"
@@ -499,17 +499,17 @@ export default function ConnectionsPage() {
                 setPage(1);
                 setCompanyIdFilter(e.target.value);
               }}
-              className="ml-2 w-28 rounded border border-slate-300 px-2 py-1"
+              className="ml-2 w-28 rounded border border-default px-2 py-1"
             />
           </label>
         )}
       </div>
 
-      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
+      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
 
-      <div className="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
+      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
         <table className="w-full min-w-[900px] text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
+          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
               <th className="px-3 py-2">ID</th>
               <th className="px-3 py-2">Source</th>
@@ -525,19 +525,19 @@ export default function ConnectionsPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={9} className="px-3 py-8 text-center text-slate-700">
+                <td colSpan={9} className="px-3 py-8 text-center text-fg-t7">
                   Loading...
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-3 py-8 text-center text-slate-700">
+                <td colSpan={9} className="px-3 py-8 text-center text-fg-t7">
                   No connections found
                 </td>
               </tr>
             ) : (
               rows.map((c) => (
-                <tr key={c.id} className="border-b border-slate-100">
+                <tr key={c.id} className="border-b border-default">
                   <td className="px-3 py-2 tabular-nums font-medium">{c.id}</td>
                   <td className="px-3 py-2">{entityLabel(c.source_type, c.source_id)}</td>
                   <td className="px-3 py-2">{entityLabel(c.target_type, c.target_id)}</td>
@@ -547,12 +547,12 @@ export default function ConnectionsPage() {
                       className={
                         "rounded px-1.5 py-0.5 text-xs " +
                         (c.status === "pending"
-                          ? "bg-amber-100 text-amber-900"
+                          ? "bg-warning-50 text-amber-900"
                           : c.status === "accepted"
                             ? "bg-emerald-100 text-emerald-900"
                             : c.status === "rejected"
-                              ? "bg-red-100 text-red-800"
-                              : "bg-slate-200 text-slate-700")
+                              ? "bg-error-50 text-error-800"
+                              : "bg-figma-bg-1 text-fg-t7")
                       }
                     >
                       {c.status ?? "-"}
@@ -560,7 +560,7 @@ export default function ConnectionsPage() {
                   </td>
                   <td className="max-w-[160px] truncate px-3 py-2">{companyLabel(c)}</td>
                   <td className="px-3 py-2">{c.client_targeting === "selected" ? "selected" : "all"}</td>
-                  <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-700">
+                  <td className="whitespace-nowrap px-3 py-2 text-xs text-fg-t7">
                     {c.created_at ? String(c.created_at).slice(0, 10) : "-"}
                   </td>
                   <td className="px-3 py-2">
@@ -579,7 +579,7 @@ export default function ConnectionsPage() {
                             type="button"
                             disabled={busyId === c.id}
                             onClick={() => onAction(c.id, "reject")}
-                            className="rounded border border-red-500 px-2 py-0.5 text-red-700 disabled:opacity-40"
+                            className="rounded border border-red-500 px-2 py-0.5 text-error-700 disabled:opacity-40"
                           >
                             Reject
                           </button>
@@ -590,7 +590,7 @@ export default function ConnectionsPage() {
                           type="button"
                           disabled={busyId === c.id}
                           onClick={() => onAction(c.id, "cancel")}
-                          className="rounded border border-slate-300 px-2 py-0.5 text-slate-700 disabled:opacity-40"
+                          className="rounded border border-default px-2 py-0.5 text-fg-t7 disabled:opacity-40"
                         >
                           Cancel
                         </button>
@@ -606,7 +606,7 @@ export default function ConnectionsPage() {
 
       {meta && !loading && <PaginationBar meta={meta} onPage={setPage} />}
 
-      <p className="mt-3 text-xs text-slate-700">
+      <p className="mt-3 text-xs text-fg-t7">
         Filters mirror Blade admin: status, source_type, target_type. Super admins may narrow by{" "}
         <code className="text-[11px]">company_id</code>. Create assigns the actor&apos;s first company
         per API (<code className="text-[11px]">POST /api/connections</code>).

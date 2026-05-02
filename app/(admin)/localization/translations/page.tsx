@@ -169,16 +169,16 @@ export default function LocalizationTranslationsPage() {
     <div>
       <h1 className="text-xl font-semibold">Content translations</h1>
       {msg && <p className="mt-2 text-sm text-emerald-700">{msg}</p>}
-      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
+      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
 
-      <div className="mt-4 space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="mt-4 space-y-3 rounded-xl border border-default bg-white p-4 shadow-sm">
         <div className="flex flex-wrap gap-3">
-          <label className="flex flex-col text-xs text-slate-600">
+          <label className="flex flex-col text-xs text-fg-t6">
             Entity type
             <select
               value={entityType}
               onChange={(e) => setEntityType(e.target.value)}
-              className="mt-1 rounded border border-slate-300 px-2 py-1 text-sm"
+              className="mt-1 rounded border border-default px-2 py-1 text-sm"
             >
               {LOCALIZATION_ENTITY_TYPES.map((t) => (
                 <option key={t} value={t}>
@@ -187,22 +187,22 @@ export default function LocalizationTranslationsPage() {
               ))}
             </select>
           </label>
-          <label className="flex flex-col text-xs text-slate-600">
+          <label className="flex flex-col text-xs text-fg-t6">
             Entity id
             <input
               type="number"
               min={1}
               value={entityId}
               onChange={(e) => setEntityId(e.target.value)}
-              className="mt-1 w-32 rounded border border-slate-300 px-2 py-1 text-sm"
+              className="mt-1 w-32 rounded border border-default px-2 py-1 text-sm"
             />
           </label>
-          <label className="flex flex-col text-xs text-slate-600">
+          <label className="flex flex-col text-xs text-fg-t6">
             Language
             <select
               value={languageCode}
               onChange={(e) => setLanguageCode(e.target.value)}
-              className="mt-1 rounded border border-slate-300 px-2 py-1 text-sm"
+              className="mt-1 rounded border border-default px-2 py-1 text-sm"
             >
               {langs.length === 0 ? (
                 <option value={languageCode}>{languageCode}</option>
@@ -221,7 +221,7 @@ export default function LocalizationTranslationsPage() {
             type="button"
             disabled={busy || !token}
             onClick={() => loadTranslations()}
-            className="rounded bg-slate-200 px-3 py-1 text-sm disabled:opacity-50"
+            className="rounded bg-figma-bg-1 px-3 py-1 text-sm disabled:opacity-50"
           >
             Load
           </button>
@@ -235,7 +235,7 @@ export default function LocalizationTranslationsPage() {
           </button>
         </div>
         {loadedMeta && (
-          <p className="text-xs text-slate-700">
+          <p className="text-xs text-fg-t7">
             Editing {loadedMeta.entity_type} #{loadedMeta.entity_id} | {loadedMeta.language_code}
           </p>
         )}
@@ -243,13 +243,13 @@ export default function LocalizationTranslationsPage() {
 
       <div className="mt-4 space-y-3">
         {LOCALIZATION_TRANSLATABLE_FIELDS.map((field) => (
-          <div key={field} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-            <div className="text-xs font-mono text-slate-700">{field}</div>
+          <div key={field} className="rounded-xl border border-default bg-white p-3 shadow-sm">
+            <div className="text-xs font-mono text-fg-t7">{field}</div>
             <textarea
               value={drafts[field] ?? ""}
               onChange={(e) => setDrafts((p) => ({ ...p, [field]: e.target.value }))}
               rows={3}
-              className="mt-1 w-full max-w-3xl rounded border border-slate-300 px-2 py-1 text-sm"
+              className="mt-1 w-full max-w-3xl rounded border border-default px-2 py-1 text-sm"
             />
           </div>
         ))}
@@ -258,7 +258,7 @@ export default function LocalizationTranslationsPage() {
       {isSuper && (
         <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
           <h2 className="text-sm font-semibold text-amber-900">Delete translations (super admin)</h2>
-          <p className="mt-1 text-xs text-amber-800">
+          <p className="mt-1 text-xs text-warning-800">
             Optional language code - leave empty to delete all languages for this entity.
           </p>
           <input

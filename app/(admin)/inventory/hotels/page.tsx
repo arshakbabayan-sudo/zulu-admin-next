@@ -182,51 +182,51 @@ export default function HotelsInventoryPage() {
       ]}
       filterBar={
         <>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-fg-t6">
             Advanced phase
             <select
               value={advancedPhase}
               onChange={(e) => setAdvancedPhase(Number(e.target.value) as 1 | 2 | 3)}
-              className="ml-2 rounded border border-slate-300 bg-white px-2 py-1 text-sm"
+              className="ml-2 rounded border border-default bg-white px-2 py-1 text-sm"
             >
               <option value={1}>1</option>
               <option value={2}>2</option>
               <option value={3}>3</option>
             </select>
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-fg-t6">
             Company ID
             <input
               value={draftCompany}
               onChange={(e) => setDraftCompany(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-              className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
+              className="ml-2 rounded border border-default px-2 py-1 text-sm"
             />
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-fg-t6">
             Country
             <input
               value={draftCountry}
               onChange={(e) => setDraftCountry(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-              className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
+              className="ml-2 rounded border border-default px-2 py-1 text-sm"
             />
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-fg-t6">
             City
             <input
               value={draftCity}
               onChange={(e) => setDraftCity(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-              className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
+              className="ml-2 rounded border border-default px-2 py-1 text-sm"
             />
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-fg-t6">
             Lifecycle status
             <select
               value={draftStatus}
               onChange={(e) => setDraftStatus(e.target.value)}
-              className="ml-2 rounded border border-slate-300 bg-white px-2 py-1 text-sm"
+              className="ml-2 rounded border border-default bg-white px-2 py-1 text-sm"
             >
               <option value="">Any</option>
               {HOTEL_LIFECYCLE_STATUSES.map((s) => (
@@ -236,12 +236,12 @@ export default function HotelsInventoryPage() {
               ))}
             </select>
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-fg-t6">
             Availability
             <select
               value={draftAvailability}
               onChange={(e) => setDraftAvailability(e.target.value)}
-              className="ml-2 rounded border border-slate-300 bg-white px-2 py-1 text-sm"
+              className="ml-2 rounded border border-default bg-white px-2 py-1 text-sm"
             >
               <option value="">Any</option>
               {HOTEL_AVAILABILITY_STATUSES.map((s) => (
@@ -251,24 +251,24 @@ export default function HotelsInventoryPage() {
               ))}
             </select>
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-fg-t6">
             Package eligible
             <select
               value={draftPackageEligible}
               onChange={(e) => setDraftPackageEligible(e.target.value)}
-              className="ml-2 rounded border border-slate-300 bg-white px-2 py-1 text-sm"
+              className="ml-2 rounded border border-default bg-white px-2 py-1 text-sm"
             >
               <option value="">Any</option>
               <option value="1">Yes</option>
               <option value="0">No</option>
             </select>
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-fg-t6">
             Free cancellation
             <select
               value={draftFreeCancellation}
               onChange={(e) => setDraftFreeCancellation(e.target.value)}
-              className="ml-2 rounded border border-slate-300 bg-white px-2 py-1 text-sm"
+              className="ml-2 rounded border border-default bg-white px-2 py-1 text-sm"
             >
               <option value="">Any</option>
               <option value="1">Yes</option>
@@ -276,77 +276,77 @@ export default function HotelsInventoryPage() {
             </select>
           </label>
           {advancedPhase >= 1 ? (
-            <label className="text-sm text-slate-600">
+            <label className="text-sm text-fg-t6">
               Room type
               <input
                 value={draftRoomType}
                 onChange={(e) => setDraftRoomType(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-                className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
+                className="ml-2 rounded border border-default px-2 py-1 text-sm"
                 placeholder="e.g. double"
               />
             </label>
           ) : null}
           {advancedPhase >= 2 ? (
             <>
-              <label className="text-sm text-slate-600">
+              <label className="text-sm text-fg-t6">
                 Invoice id
                 <input
                   value={draftInvoiceId}
                   onChange={(e) => setDraftInvoiceId(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-                  className="ml-2 w-28 rounded border border-slate-300 px-2 py-1 text-sm"
+                  className="ml-2 w-28 rounded border border-default px-2 py-1 text-sm"
                   placeholder="123"
                 />
               </label>
-              <label className="text-sm text-slate-600">
+              <label className="text-sm text-fg-t6">
                 Date
                 <input
                   type="date"
                   value={draftDate}
                   onChange={(e) => setDraftDate(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-                  className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
+                  className="ml-2 rounded border border-default px-2 py-1 text-sm"
                 />
               </label>
             </>
           ) : null}
           {advancedPhase >= 3 ? (
-            <label className="text-sm text-slate-600">
+            <label className="text-sm text-fg-t6">
               User email
               <input
                 value={draftUserEmail}
                 onChange={(e) => setDraftUserEmail(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-                className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
+                className="ml-2 rounded border border-default px-2 py-1 text-sm"
                 placeholder="email@domain.com"
               />
             </label>
           ) : null}
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-fg-t6">
             Min price
             <input
               value={draftPriceMin}
               onChange={(e) => setDraftPriceMin(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-              className="ml-2 w-24 rounded border border-slate-300 px-2 py-1 text-sm"
+              className="ml-2 w-24 rounded border border-default px-2 py-1 text-sm"
               placeholder="from"
             />
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-fg-t6">
             Max price
             <input
               value={draftPriceMax}
               onChange={(e) => setDraftPriceMax(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-              className="ml-2 w-24 rounded border border-slate-300 px-2 py-1 text-sm"
+              className="ml-2 w-24 rounded border border-default px-2 py-1 text-sm"
               placeholder="to"
             />
           </label>
-          <button type="button" onClick={applyFilters} className="rounded border border-slate-300 bg-white px-3 py-1 text-sm">
+          <button type="button" onClick={applyFilters} className="rounded border border-default bg-white px-3 py-1 text-sm">
             Apply filters
           </button>
-          <button type="button" onClick={clearFilters} className="rounded border border-slate-300 bg-white px-3 py-1 text-sm">
+          <button type="button" onClick={clearFilters} className="rounded border border-default bg-white px-3 py-1 text-sm">
             Clear
           </button>
         </>

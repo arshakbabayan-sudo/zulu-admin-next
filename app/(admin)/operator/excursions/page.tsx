@@ -359,7 +359,7 @@ export default function OperatorExcursionsPage() {
   const fieldMsgs = (key: string) => (fieldErrs && Array.isArray(fieldErrs[key]) ? fieldErrs[key] : []);
   const inputClass = (key: string) =>
     `rounded border px-2 py-1.5 text-sm ${
-      hasFieldErr(fieldErrs, key) ? "border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200" : "border-slate-300"
+      hasFieldErr(fieldErrs, key) ? "border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200" : "border-default"
     }`;
 
   function offerTitle(r: ExcursionRow): string {
@@ -418,10 +418,10 @@ export default function OperatorExcursionsPage() {
           return res;
         }}
       />
-      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
-      {formErr && !form && <p className="mt-2 text-sm text-red-600">{formErr}</p>}
+      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
+      {formErr && !form && <p className="mt-2 text-sm text-error-600">{formErr}</p>}
       {form && (
-        <div className="mt-4 rounded border border-slate-200 bg-white p-4">
+        <div className="mt-4 rounded border border-default bg-white p-4">
           <h2 className="mb-3 text-base font-medium">{editId ? t("admin.crud.excursions.form_edit") : t("admin.crud.excursions.form_new")}</h2>
           <nav className="mb-4 flex flex-wrap gap-1 text-xs sm:text-sm" aria-label="Steps">
             {STEP_TITLES.map((stepTitle, i) => {
@@ -430,7 +430,7 @@ export default function OperatorExcursionsPage() {
               return (
                 <span
                   key={stepTitle}
-                  className={`rounded px-2 py-1 ${active ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-600"}`}
+                  className={`rounded px-2 py-1 ${active ? "bg-slate-800 text-white" : "bg-figma-bg-1 text-fg-t6"}`}
                 >
                   {t(EXCURSION_STEP_LABEL_KEYS[i] ?? "")}
                 </span>
@@ -438,7 +438,7 @@ export default function OperatorExcursionsPage() {
             })}
           </nav>
           {fieldSummary && (
-            <div className="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+            <div className="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-error-800">
               <div className="font-medium">{fieldSummary.title}</div>
               <ul className="mt-1 list-disc pl-5">
                 {fieldSummary.items.slice(0, 20).map((it, idx) => (
@@ -452,7 +452,7 @@ export default function OperatorExcursionsPage() {
           <div className="space-y-4">
             {step === 1 && (
               <div>
-                <h3 className="mb-2 text-sm font-semibold text-slate-700">{t(EXCURSION_STEP_LABEL_KEYS[0] ?? "")}</h3>
+                <h3 className="mb-2 text-sm font-semibold text-fg-t7">{t(EXCURSION_STEP_LABEL_KEYS[0] ?? "")}</h3>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <LocationCascadeSelect
                     token={token}
@@ -473,7 +473,7 @@ export default function OperatorExcursionsPage() {
                   />
                   {isCreate && excursionOffers && (
                     <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-                      <span className="font-medium text-slate-600">{t("admin.crud.excursions.field.offer_id")}</span>
+                      <span className="font-medium text-fg-t6">{t("admin.crud.excursions.field.offer_id")}</span>
                       <select
                         value={form.offer_id === "" ? "" : String(form.offer_id)}
                         onChange={(e) => onOfferChange(e.target.value)}
@@ -490,7 +490,7 @@ export default function OperatorExcursionsPage() {
                         })}
                       </select>
                       {fieldMsgs("offer_id").map((m, i) => (
-                        <span key={i} className="text-xs text-red-600">
+                        <span key={i} className="text-xs text-error-600">
                           {m}
                         </span>
                       ))}
@@ -498,53 +498,53 @@ export default function OperatorExcursionsPage() {
                   )}
                   {!isCreate && (
                     <div className="text-sm sm:col-span-2">
-                      <span className="font-medium text-slate-600">{t("admin.crud.excursions.field.offer_id")} </span>
-                      <span className="text-slate-800">
+                      <span className="font-medium text-fg-t6">{t("admin.crud.excursions.field.offer_id")} </span>
+                      <span className="text-fg-t11">
                         {editRow && form.offer_id !== "" ? `#${form.offer_id} — ${offerTitle(editRow)}` : "—"}
                       </span>
                     </div>
                   )}
                   <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-                    <span className="font-medium text-slate-600">{t("admin.crud.excursions.field.company_id")}</span>
+                    <span className="font-medium text-fg-t6">{t("admin.crud.excursions.field.company_id")}</span>
                     <input
                       readOnly
                       value={form.company_id === "" ? "" : String(form.company_id)}
-                      className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm text-slate-700"
+                      className="rounded border border-default bg-figma-bg-1 px-2 py-1.5 text-sm text-fg-t7"
                     />
                     {fieldMsgs("company_id").map((m, i) => (
-                      <span key={i} className="text-xs text-red-600">
+                      <span key={i} className="text-xs text-error-600">
                         {m}
                       </span>
                     ))}
                   </label>
                   <label className="flex flex-col gap-1 text-sm">
-                    <span className="font-medium text-slate-600">{t("admin.crud.excursions.field.country")}</span>
+                    <span className="font-medium text-fg-t6">{t("admin.crud.excursions.field.country")}</span>
                     <input
                       value={form.country}
                       onChange={(e) => setForm((p) => (p ? { ...p, country: e.target.value } : p))}
                       className={inputClass("country")}
                     />
                     {fieldMsgs("country").map((m, i) => (
-                      <span key={i} className="text-xs text-red-600">
+                      <span key={i} className="text-xs text-error-600">
                         {m}
                       </span>
                     ))}
                   </label>
                   <label className="flex flex-col gap-1 text-sm">
-                    <span className="font-medium text-slate-600">{t("admin.crud.excursions.field.city")}</span>
+                    <span className="font-medium text-fg-t6">{t("admin.crud.excursions.field.city")}</span>
                     <input
                       value={form.city}
                       onChange={(e) => setForm((p) => (p ? { ...p, city: e.target.value } : p))}
                       className={inputClass("city")}
                     />
                     {fieldMsgs("city").map((m, i) => (
-                      <span key={i} className="text-xs text-red-600">
+                      <span key={i} className="text-xs text-error-600">
                         {m}
                       </span>
                     ))}
                   </label>
-                  <p className="text-xs text-slate-500 sm:col-span-2">
-                    Listing location sent to API: <span className="font-mono text-slate-700">{derivedLocationFromWizard(form)}</span>
+                  <p className="text-xs text-fg-t6 sm:col-span-2">
+                    Listing location sent to API: <span className="font-mono text-fg-t7">{derivedLocationFromWizard(form)}</span>
                   </p>
                 </div>
               </div>
@@ -552,43 +552,43 @@ export default function OperatorExcursionsPage() {
 
             {step === 2 && (
               <div>
-                <h3 className="mb-2 text-sm font-semibold text-slate-700">{t(EXCURSION_STEP_LABEL_KEYS[1] ?? "")}</h3>
+                <h3 className="mb-2 text-sm font-semibold text-fg-t7">{t(EXCURSION_STEP_LABEL_KEYS[1] ?? "")}</h3>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <label className="flex flex-col gap-1 text-sm">
-                    <span className="font-medium text-slate-600">{t("admin.crud.excursions.field.general_category")}</span>
+                    <span className="font-medium text-fg-t6">{t("admin.crud.excursions.field.general_category")}</span>
                     <input
                       value={form.general_category}
                       onChange={(e) => setForm((p) => (p ? { ...p, general_category: e.target.value } : p))}
                       className={inputClass("general_category")}
                     />
                     {fieldMsgs("general_category").map((m, i) => (
-                      <span key={i} className="text-xs text-red-600">
+                      <span key={i} className="text-xs text-error-600">
                         {m}
                       </span>
                     ))}
                   </label>
                   <label className="flex flex-col gap-1 text-sm">
-                    <span className="font-medium text-slate-600">{t("admin.crud.excursions.field.category")}</span>
+                    <span className="font-medium text-fg-t6">{t("admin.crud.excursions.field.category")}</span>
                     <input
                       value={form.category}
                       onChange={(e) => setForm((p) => (p ? { ...p, category: e.target.value } : p))}
                       className={inputClass("category")}
                     />
                     {fieldMsgs("category").map((m, i) => (
-                      <span key={i} className="text-xs text-red-600">
+                      <span key={i} className="text-xs text-error-600">
                         {m}
                       </span>
                     ))}
                   </label>
                   <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-                    <span className="font-medium text-slate-600">{t("admin.crud.excursions.field.excursion_type")}</span>
+                    <span className="font-medium text-fg-t6">{t("admin.crud.excursions.field.excursion_type")}</span>
                     <input
                       value={form.excursion_type}
                       onChange={(e) => setForm((p) => (p ? { ...p, excursion_type: e.target.value } : p))}
                       className={inputClass("excursion_type")}
                     />
                     {fieldMsgs("excursion_type").map((m, i) => (
-                      <span key={i} className="text-xs text-red-600">
+                      <span key={i} className="text-xs text-error-600">
                         {m}
                       </span>
                     ))}
@@ -599,23 +599,23 @@ export default function OperatorExcursionsPage() {
 
             {step === 3 && (
               <div>
-                <h3 className="mb-2 text-sm font-semibold text-slate-700">{t(EXCURSION_STEP_LABEL_KEYS[2] ?? "")}</h3>
+                <h3 className="mb-2 text-sm font-semibold text-fg-t7">{t(EXCURSION_STEP_LABEL_KEYS[2] ?? "")}</h3>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-                    <span className="font-medium text-slate-600">{t("admin.crud.excursions.field.tour_name")}</span>
+                    <span className="font-medium text-fg-t6">{t("admin.crud.excursions.field.tour_name")}</span>
                     <input
                       value={form.tour_name}
                       onChange={(e) => setForm((p) => (p ? { ...p, tour_name: e.target.value } : p))}
                       className={inputClass("tour_name")}
                     />
                     {fieldMsgs("tour_name").map((m, i) => (
-                      <span key={i} className="text-xs text-red-600">
+                      <span key={i} className="text-xs text-error-600">
                         {m}
                       </span>
                     ))}
                   </label>
                   <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-                    <span className="font-medium text-slate-600">{t("admin.crud.excursions.field.overview")}</span>
+                    <span className="font-medium text-fg-t6">{t("admin.crud.excursions.field.overview")}</span>
                     <textarea
                       rows={3}
                       value={form.overview}
@@ -623,13 +623,13 @@ export default function OperatorExcursionsPage() {
                       className={inputClass("overview")}
                     />
                     {fieldMsgs("overview").map((m, i) => (
-                      <span key={i} className="text-xs text-red-600">
+                      <span key={i} className="text-xs text-error-600">
                         {m}
                       </span>
                     ))}
                   </label>
                   <div className="sm:col-span-2">
-                    <span className="font-medium text-slate-600 text-sm">{t("admin.crud.excursions.field.photos")}</span>
+                    <span className="font-medium text-fg-t6 text-sm">{t("admin.crud.excursions.field.photos")}</span>
                     <div className="mt-1 space-y-2">
                       {form.photos.map((url, i) => (
                         <div key={i} className="flex flex-wrap gap-2">
@@ -648,7 +648,7 @@ export default function OperatorExcursionsPage() {
                           />
                           <button
                             type="button"
-                            className="rounded border border-slate-300 px-2 py-1 text-xs"
+                            className="rounded border border-default px-2 py-1 text-xs"
                             onClick={() =>
                               setForm((p) => {
                                 if (!p) return p;
@@ -660,7 +660,7 @@ export default function OperatorExcursionsPage() {
                             Remove
                           </button>
                           {fieldMsgs(`photos.${i}`).map((m, j) => (
-                            <span key={j} className="w-full text-xs text-red-600">
+                            <span key={j} className="w-full text-xs text-error-600">
                               {m}
                             </span>
                           ))}
@@ -668,7 +668,7 @@ export default function OperatorExcursionsPage() {
                       ))}
                       <button
                         type="button"
-                        className="rounded border border-slate-300 px-2 py-1 text-xs"
+                        className="rounded border border-default px-2 py-1 text-xs"
                         onClick={() => setForm((p) => (p ? { ...p, photos: [...p.photos, ""] } : p))}
                       >
                         + Add photo URL
@@ -676,7 +676,7 @@ export default function OperatorExcursionsPage() {
                     </div>
                   </div>
                   <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-                    <span className="font-medium text-slate-600">{t("admin.crud.excursions.field.duration")}</span>
+                    <span className="font-medium text-fg-t6">{t("admin.crud.excursions.field.duration")}</span>
                     <input
                       value={form.duration}
                       onChange={(e) => setForm((p) => (p ? { ...p, duration: e.target.value } : p))}
@@ -684,13 +684,13 @@ export default function OperatorExcursionsPage() {
                       className={inputClass("duration")}
                     />
                     {fieldMsgs("duration").map((m, i) => (
-                      <span key={i} className="text-xs text-red-600">
+                      <span key={i} className="text-xs text-error-600">
                         {m}
                       </span>
                     ))}
                   </label>
                   <label className="flex flex-col gap-1 text-sm">
-                    <span className="font-medium text-slate-600">{t("admin.crud.excursions.field.starts_at")}</span>
+                    <span className="font-medium text-fg-t6">{t("admin.crud.excursions.field.starts_at")}</span>
                     <input
                       type="datetime-local"
                       value={form.starts_at}
@@ -698,13 +698,13 @@ export default function OperatorExcursionsPage() {
                       className={inputClass("starts_at")}
                     />
                     {fieldMsgs("starts_at").map((m, i) => (
-                      <span key={i} className="text-xs text-red-600">
+                      <span key={i} className="text-xs text-error-600">
                         {m}
                       </span>
                     ))}
                   </label>
                   <label className="flex flex-col gap-1 text-sm">
-                    <span className="font-medium text-slate-600">{t("admin.crud.excursions.field.ends_at")}</span>
+                    <span className="font-medium text-fg-t6">{t("admin.crud.excursions.field.ends_at")}</span>
                     <input
                       type="datetime-local"
                       value={form.ends_at}
@@ -712,13 +712,13 @@ export default function OperatorExcursionsPage() {
                       className={inputClass("ends_at")}
                     />
                     {fieldMsgs("ends_at").map((m, i) => (
-                      <span key={i} className="text-xs text-red-600">
+                      <span key={i} className="text-xs text-error-600">
                         {m}
                       </span>
                     ))}
                   </label>
                   <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-                    <span className="font-medium text-slate-600">{t("admin.crud.excursions.field.language")}</span>
+                    <span className="font-medium text-fg-t6">{t("admin.crud.excursions.field.language")}</span>
                     <input
                       value={form.language}
                       onChange={(e) => setForm((p) => (p ? { ...p, language: e.target.value } : p))}
@@ -726,13 +726,13 @@ export default function OperatorExcursionsPage() {
                       className={inputClass("language")}
                     />
                     {fieldMsgs("language").map((m, i) => (
-                      <span key={i} className="text-xs text-red-600">
+                      <span key={i} className="text-xs text-error-600">
                         {m}
                       </span>
                     ))}
                   </label>
                   <label className="flex flex-col gap-1 text-sm">
-                    <span className="font-medium text-slate-600">{t("admin.crud.excursions.field.group_size")}</span>
+                    <span className="font-medium text-fg-t6">{t("admin.crud.excursions.field.group_size")}</span>
                     <input
                       type="number"
                       min={1}
@@ -745,13 +745,13 @@ export default function OperatorExcursionsPage() {
                       className={inputClass("group_size")}
                     />
                     {fieldMsgs("group_size").map((m, i) => (
-                      <span key={i} className="text-xs text-red-600">
+                      <span key={i} className="text-xs text-error-600">
                         {m}
                       </span>
                     ))}
                   </label>
                   <label className="flex flex-col gap-1 text-sm">
-                    <span className="font-medium text-slate-600">{t("admin.crud.excursions.field.ticket_max_count")}</span>
+                    <span className="font-medium text-fg-t6">{t("admin.crud.excursions.field.ticket_max_count")}</span>
                     <input
                       type="number"
                       min={1}
@@ -764,13 +764,13 @@ export default function OperatorExcursionsPage() {
                       className={inputClass("ticket_max_count")}
                     />
                     {fieldMsgs("ticket_max_count").map((m, i) => (
-                      <span key={i} className="text-xs text-red-600">
+                      <span key={i} className="text-xs text-error-600">
                         {m}
                       </span>
                     ))}
                   </label>
                   <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-                    <span className="font-medium text-slate-600">{t("admin.crud.excursions.field.status")}</span>
+                    <span className="font-medium text-fg-t6">{t("admin.crud.excursions.field.status")}</span>
                     <input
                       value={form.status}
                       onChange={(e) => setForm((p) => (p ? { ...p, status: e.target.value } : p))}
@@ -778,7 +778,7 @@ export default function OperatorExcursionsPage() {
                       className={inputClass("status")}
                     />
                     {fieldMsgs("status").map((m, i) => (
-                      <span key={i} className="text-xs text-red-600">
+                      <span key={i} className="text-xs text-error-600">
                         {m}
                       </span>
                     ))}
@@ -788,11 +788,11 @@ export default function OperatorExcursionsPage() {
                       type="checkbox"
                       checked={form.is_available}
                       onChange={(e) => setForm((p) => (p ? { ...p, is_available: e.target.checked } : p))}
-                      className={hasFieldErr(fieldErrs, "is_available") ? "rounded border-red-400" : "rounded border-slate-300"}
+                      className={hasFieldErr(fieldErrs, "is_available") ? "rounded border-red-400" : "rounded border-default"}
                     />
-                    <span className="font-medium text-slate-600">{t("admin.crud.excursions.field.is_available")}</span>
+                    <span className="font-medium text-fg-t6">{t("admin.crud.excursions.field.is_available")}</span>
                     {fieldMsgs("is_available").map((m, i) => (
-                      <span key={i} className="text-xs text-red-600">
+                      <span key={i} className="text-xs text-error-600">
                         {m}
                       </span>
                     ))}
@@ -802,11 +802,11 @@ export default function OperatorExcursionsPage() {
                       type="checkbox"
                       checked={form.is_bookable}
                       onChange={(e) => setForm((p) => (p ? { ...p, is_bookable: e.target.checked } : p))}
-                      className={hasFieldErr(fieldErrs, "is_bookable") ? "rounded border-red-400" : "rounded border-slate-300"}
+                      className={hasFieldErr(fieldErrs, "is_bookable") ? "rounded border-red-400" : "rounded border-default"}
                     />
-                    <span className="font-medium text-slate-600">{t("admin.crud.excursions.field.is_bookable")}</span>
+                    <span className="font-medium text-fg-t6">{t("admin.crud.excursions.field.is_bookable")}</span>
                     {fieldMsgs("is_bookable").map((m, i) => (
-                      <span key={i} className="text-xs text-red-600">
+                      <span key={i} className="text-xs text-error-600">
                         {m}
                       </span>
                     ))}
@@ -817,10 +817,10 @@ export default function OperatorExcursionsPage() {
 
             {step === 4 && (
               <div>
-                <h3 className="mb-2 text-sm font-semibold text-slate-700">{t(EXCURSION_STEP_LABEL_KEYS[3] ?? "")}</h3>
+                <h3 className="mb-2 text-sm font-semibold text-fg-t7">{t(EXCURSION_STEP_LABEL_KEYS[3] ?? "")}</h3>
                 <div className="space-y-3">
                   <div>
-                    <span className="font-medium text-slate-600 text-sm">{t("admin.crud.excursions.field.includes")}</span>
+                    <span className="font-medium text-fg-t6 text-sm">{t("admin.crud.excursions.field.includes")}</span>
                     <div className="mt-1 space-y-2">
                       {form.includes.map((line, i) => (
                         <div key={i} className="flex gap-2">
@@ -838,7 +838,7 @@ export default function OperatorExcursionsPage() {
                           />
                           <button
                             type="button"
-                            className="rounded border border-slate-300 px-2 py-1 text-xs"
+                            className="rounded border border-default px-2 py-1 text-xs"
                             onClick={() =>
                               setForm((p) => {
                                 if (!p) return p;
@@ -852,7 +852,7 @@ export default function OperatorExcursionsPage() {
                       ))}
                       <button
                         type="button"
-                        className="rounded border border-slate-300 px-2 py-1 text-xs"
+                        className="rounded border border-default px-2 py-1 text-xs"
                         onClick={() => setForm((p) => (p ? { ...p, includes: [...p.includes, ""] } : p))}
                       >
                         + Add line
@@ -860,7 +860,7 @@ export default function OperatorExcursionsPage() {
                     </div>
                   </div>
                   <label className="flex flex-col gap-1 text-sm">
-                    <span className="font-medium text-slate-600">{t("admin.crud.excursions.field.meeting_pickup")}</span>
+                    <span className="font-medium text-fg-t6">{t("admin.crud.excursions.field.meeting_pickup")}</span>
                     <textarea
                       rows={2}
                       value={form.meeting_pickup}
@@ -868,13 +868,13 @@ export default function OperatorExcursionsPage() {
                       className={inputClass("meeting_pickup")}
                     />
                     {fieldMsgs("meeting_pickup").map((m, i) => (
-                      <span key={i} className="text-xs text-red-600">
+                      <span key={i} className="text-xs text-error-600">
                         {m}
                       </span>
                     ))}
                   </label>
                   <label className="flex flex-col gap-1 text-sm">
-                    <span className="font-medium text-slate-600">{t("admin.crud.excursions.field.additional_info")}</span>
+                    <span className="font-medium text-fg-t6">{t("admin.crud.excursions.field.additional_info")}</span>
                     <textarea
                       rows={3}
                       value={form.additional_info}
@@ -882,13 +882,13 @@ export default function OperatorExcursionsPage() {
                       className={inputClass("additional_info")}
                     />
                     {fieldMsgs("additional_info").map((m, i) => (
-                      <span key={i} className="text-xs text-red-600">
+                      <span key={i} className="text-xs text-error-600">
                         {m}
                       </span>
                     ))}
                   </label>
                   <label className="flex flex-col gap-1 text-sm">
-                    <span className="font-medium text-slate-600">{t("admin.crud.excursions.field.cancellation_policy")}</span>
+                    <span className="font-medium text-fg-t6">{t("admin.crud.excursions.field.cancellation_policy")}</span>
                     <textarea
                       rows={3}
                       value={form.cancellation_policy}
@@ -896,7 +896,7 @@ export default function OperatorExcursionsPage() {
                       className={inputClass("cancellation_policy")}
                     />
                     {fieldMsgs("cancellation_policy").map((m, i) => (
-                      <span key={i} className="text-xs text-red-600">
+                      <span key={i} className="text-xs text-error-600">
                         {m}
                       </span>
                     ))}
@@ -907,8 +907,8 @@ export default function OperatorExcursionsPage() {
 
             {step === 5 && (
               <div>
-                <h3 className="mb-2 text-sm font-semibold text-slate-700">{t(EXCURSION_STEP_LABEL_KEYS[4] ?? "")}</h3>
-                <p className="mb-2 text-xs text-slate-500">
+                <h3 className="mb-2 text-sm font-semibold text-fg-t7">{t(EXCURSION_STEP_LABEL_KEYS[4] ?? "")}</h3>
+                <p className="mb-2 text-xs text-fg-t6">
                   Optional per-date prices (YYYY-MM-DD). Commercial list price remains on the linked offer; these rules extend the excursion contract for dated pricing.
                 </p>
                 <div className="space-y-2">
@@ -946,7 +946,7 @@ export default function OperatorExcursionsPage() {
                       />
                       <button
                         type="button"
-                        className="rounded border border-slate-300 px-2 py-1 text-xs"
+                        className="rounded border border-default px-2 py-1 text-xs"
                         onClick={() =>
                           setForm((p) => {
                             if (!p) return p;
@@ -957,17 +957,17 @@ export default function OperatorExcursionsPage() {
                         Remove
                       </button>
                       {fieldMsgs(`price_by_dates.${i}`).map((m, j) => (
-                        <span key={j} className="w-full text-xs text-red-600">
+                        <span key={j} className="w-full text-xs text-error-600">
                           {m}
                         </span>
                       ))}
                       {fieldMsgs(`price_by_dates.${i}.date`).map((m, j) => (
-                        <span key={j} className="w-full text-xs text-red-600">
+                        <span key={j} className="w-full text-xs text-error-600">
                           {m}
                         </span>
                       ))}
                       {fieldMsgs(`price_by_dates.${i}.price`).map((m, j) => (
-                        <span key={j} className="w-full text-xs text-red-600">
+                        <span key={j} className="w-full text-xs text-error-600">
                           {m}
                         </span>
                       ))}
@@ -975,7 +975,7 @@ export default function OperatorExcursionsPage() {
                   ))}
                   <button
                     type="button"
-                    className="rounded border border-slate-300 px-2 py-1 text-xs"
+                    className="rounded border border-default px-2 py-1 text-xs"
                     onClick={() =>
                       setForm((p) =>
                         p ? { ...p, price_by_dates: [...p.price_by_dates, { date: "", price: "" }] } : p
@@ -985,14 +985,14 @@ export default function OperatorExcursionsPage() {
                     + Add date / price
                   </button>
                 </div>
-                <div className="mt-6 space-y-3 border-t border-slate-200 pt-4">
-                  <h4 className="text-sm font-semibold text-slate-700">Visibility &amp; distribution</h4>
-                  <p className="text-xs text-slate-500">
+                <div className="mt-6 space-y-3 border-t border-default pt-4">
+                  <h4 className="text-sm font-semibold text-fg-t7">Visibility &amp; distribution</h4>
+                  <p className="text-xs text-fg-t6">
                     When the platform enables excursion visibility controls, web catalog and admin lists respect these rules
-                    (rollout via <code className="rounded bg-slate-100 px-1">excursion_visibility_controls_enabled</code>).
+                    (rollout via <code className="rounded bg-figma-bg-1 px-1">excursion_visibility_controls_enabled</code>).
                   </p>
                   <label className="flex flex-col gap-1 text-sm">
-                    <span className="font-medium text-slate-600">{t("admin.crud.excursions.field.visibility_rule")}</span>
+                    <span className="font-medium text-fg-t6">{t("admin.crud.excursions.field.visibility_rule")}</span>
                     <select
                       value={form.visibility_rule}
                       onChange={(e) => setForm((p) => (p ? { ...p, visibility_rule: e.target.value } : p))}
@@ -1003,7 +1003,7 @@ export default function OperatorExcursionsPage() {
                       <option value="hide_rejected">hide_rejected</option>
                     </select>
                     {fieldMsgs("visibility_rule").map((m, i) => (
-                      <span key={i} className="text-xs text-red-600">
+                      <span key={i} className="text-xs text-error-600">
                         {m}
                       </span>
                     ))}
@@ -1014,7 +1014,7 @@ export default function OperatorExcursionsPage() {
                       checked={form.appears_in_web}
                       onChange={(e) => setForm((p) => (p ? { ...p, appears_in_web: e.target.checked } : p))}
                     />
-                    <span className="font-medium text-slate-600">{t("admin.crud.excursions.field.appears_in_web")}</span>
+                    <span className="font-medium text-fg-t6">{t("admin.crud.excursions.field.appears_in_web")}</span>
                   </label>
                   <label className="flex items-center gap-2 text-sm">
                     <input
@@ -1022,7 +1022,7 @@ export default function OperatorExcursionsPage() {
                       checked={form.appears_in_admin}
                       onChange={(e) => setForm((p) => (p ? { ...p, appears_in_admin: e.target.checked } : p))}
                     />
-                    <span className="font-medium text-slate-600">{t("admin.crud.excursions.field.appears_in_admin")}</span>
+                    <span className="font-medium text-fg-t6">{t("admin.crud.excursions.field.appears_in_admin")}</span>
                   </label>
                   <label className="flex items-center gap-2 text-sm">
                     <input
@@ -1030,13 +1030,13 @@ export default function OperatorExcursionsPage() {
                       checked={form.appears_in_zulu_admin}
                       onChange={(e) => setForm((p) => (p ? { ...p, appears_in_zulu_admin: e.target.checked } : p))}
                     />
-                    <span className="font-medium text-slate-600">{t("admin.crud.excursions.field.appears_in_zulu_admin")}</span>
+                    <span className="font-medium text-fg-t6">{t("admin.crud.excursions.field.appears_in_zulu_admin")}</span>
                   </label>
                 </div>
               </div>
             )}
           </div>
-          {formErr && <p className="mt-2 text-sm text-red-600">{formErr}</p>}
+          {formErr && <p className="mt-2 text-sm text-error-600">{formErr}</p>}
           <div className="mt-4 flex flex-wrap gap-2">
             {step > 1 && (
               <button
@@ -1047,7 +1047,7 @@ export default function OperatorExcursionsPage() {
                   setFormErr(null);
                   goPrevious();
                 }}
-                className="rounded border border-slate-300 px-4 py-1.5 text-sm"
+                className="rounded border border-default px-4 py-1.5 text-sm"
               >
                 {t("common.prev")}
               </button>
@@ -1072,15 +1072,15 @@ export default function OperatorExcursionsPage() {
                 {busy ? t("admin.crud.common.saving") : t("common.save")}
               </button>
             )}
-            <button type="button" onClick={closeForm} className="rounded border border-slate-300 px-4 py-1.5 text-sm">
+            <button type="button" onClick={closeForm} className="rounded border border-default px-4 py-1.5 text-sm">
               {t("common.cancel")}
             </button>
           </div>
         </div>
       )}
-      <div className="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
+      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
         <table className="w-full min-w-[700px] text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
+          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
               <th className="px-3 py-2">{t("admin.crud.common.id")}</th>
               <th className="px-3 py-2">{t("admin.crud.excursions.col.title")}</th>
@@ -1094,14 +1094,14 @@ export default function OperatorExcursionsPage() {
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-slate-400">
+                <td colSpan={7} className="px-3 py-6 text-center text-fg-t6">
                   {t("admin.crud.excursions.empty")}
                 </td>
               </tr>
             )}
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-100">
-                <td className="px-3 py-2 tabular-nums text-slate-700">{r.id}</td>
+              <tr key={r.id} className="border-b border-default hover:bg-figma-bg-1">
+                <td className="px-3 py-2 tabular-nums text-fg-t7">{r.id}</td>
                 <td className="px-3 py-2 font-medium">{offerTitle(r) || "-"}</td>
                 <td className="px-3 py-2">{r.location ?? "-"}</td>
                 <td className="px-3 py-2">{r.duration ?? "-"}</td>
@@ -1111,10 +1111,10 @@ export default function OperatorExcursionsPage() {
                 </td>
                 <td className="px-3 py-2">
                   <div className="flex gap-2">
-                    <button type="button" onClick={() => openEdit(r)} className="text-xs text-blue-700 underline">
+                    <button type="button" onClick={() => openEdit(r)} className="text-xs text-info-700 underline">
                       {t("admin.crud.common.edit")}
                     </button>
-                    <button type="button" onClick={() => void handleDelete(r.id)} className="text-xs text-red-600 underline">
+                    <button type="button" onClick={() => void handleDelete(r.id)} className="text-xs text-error-600 underline">
                       {t("admin.crud.common.delete")}
                     </button>
                   </div>

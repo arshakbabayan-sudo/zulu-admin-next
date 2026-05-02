@@ -328,11 +328,11 @@ export default function OperatorVisasPage() {
     `rounded border px-2 py-1.5 text-sm ${
       errFields.has(fieldKey)
         ? "border-red-400 focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200"
-        : "border-slate-300 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+        : "border-default focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
     }`;
-  const labelTextClass = "text-sm font-medium text-slate-700";
-  const hintClass = "text-xs leading-snug text-slate-500";
-  const sectionTitleClass = "mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500";
+  const labelTextClass = "text-sm font-medium text-fg-t7";
+  const hintClass = "text-xs leading-snug text-fg-t6";
+  const sectionTitleClass = "mb-3 text-xs font-semibold uppercase tracking-wide text-fg-t6";
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -502,12 +502,12 @@ export default function OperatorVisasPage() {
         }}
       />
 
-      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
+      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
       {formLoading && editId != null && !form && (
-        <div className="mt-4 rounded border border-slate-200 bg-white p-4 text-sm text-slate-600">{t("admin.crud.visas.loading")}</div>
+        <div className="mt-4 rounded border border-default bg-white p-4 text-sm text-fg-t6">{t("admin.crud.visas.loading")}</div>
       )}
       {form && (
-        <div className="mt-4 rounded border border-slate-200 bg-white p-5">
+        <div className="mt-4 rounded border border-default bg-white p-5">
           <h2 className="mb-4 text-base font-medium">{editId ? t("admin.crud.visas.form_edit") : t("admin.crud.visas.form_new")}</h2>
 
           <div className="space-y-6">
@@ -551,7 +551,7 @@ export default function OperatorVisasPage() {
             {editId != null && (
               <div className="flex flex-col gap-1.5 text-sm sm:col-span-2">
                 <span className={labelTextClass}>{t("admin.crud.visas.field.offer_status")}</span>
-                <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-slate-800">
+                <p className="rounded border border-default bg-figma-bg-1 px-2 py-1.5 text-fg-t11">
                   {(form.offer_status ?? "").trim() || "—"}
                 </p>
                 <p className={hintClass}>{t("admin.crud.visas.hint.offer_status")}</p>
@@ -650,7 +650,7 @@ export default function OperatorVisasPage() {
             {editId != null && (
               <div className="flex flex-col gap-1.5 text-sm">
                 <span className={labelTextClass}>{t("admin.crud.visas.field.offer_price")}</span>
-                <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 tabular-nums text-slate-800">
+                <p className="rounded border border-default bg-figma-bg-1 px-2 py-1.5 tabular-nums text-fg-t11">
                   {form.offer_price != null && !Number.isNaN(Number(form.offer_price))
                     ? visaMoneyCell(form.offer_price, form.currency)
                     : "—"}
@@ -660,7 +660,7 @@ export default function OperatorVisasPage() {
             )}
             <div className="flex flex-col gap-1.5 text-sm sm:col-span-2">
               <span className={labelTextClass}>{t("admin.crud.visas.field.currency")}</span>
-              <p className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 uppercase text-slate-800">
+              <p className="rounded border border-default bg-figma-bg-1 px-2 py-1.5 uppercase text-fg-t11">
                 {(form.currency ?? "").trim() || "—"}
               </p>
               <p className={hintClass}>From the linked offer when present; not saved from this screen.</p>
@@ -696,7 +696,7 @@ export default function OperatorVisasPage() {
           </div>
 
           {formErrLines.length > 0 && (
-            <ul className="mt-4 list-inside list-disc text-sm text-red-600">
+            <ul className="mt-4 list-inside list-disc text-sm text-error-600">
               {formErrLines.map((line, i) => (
                 <li key={i}>{line}</li>
               ))}
@@ -714,22 +714,22 @@ export default function OperatorVisasPage() {
             <button
               type="button"
               onClick={closeForm}
-              className="rounded border border-slate-300 bg-white px-4 py-1.5 text-sm text-slate-800 hover:bg-slate-50"
+              className="rounded border border-default bg-white px-4 py-1.5 text-sm text-fg-t11 hover:bg-figma-bg-1"
             >
               {t("common.cancel")}
             </button>
           </div>
         </div>
       )}
-      <div className="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
+      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
         <table className="w-full min-w-[880px] text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
+          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
               <th className="px-3 py-2">{t("admin.crud.common.id")}</th>
               <th className="px-3 py-2">{t("admin.crud.visas.col.country")}</th>
               <th className="px-3 py-2">{t("admin.crud.visas.col.type")}</th>
-              <th className="px-3 py-2 font-semibold text-slate-800">{t("admin.crud.visas.col.visa_price")}</th>
-              <th className="px-3 py-2 font-normal text-slate-600">{t("admin.crud.visas.col.offer_price")}</th>
+              <th className="px-3 py-2 font-semibold text-fg-t11">{t("admin.crud.visas.col.visa_price")}</th>
+              <th className="px-3 py-2 font-normal text-fg-t6">{t("admin.crud.visas.col.offer_price")}</th>
               <th className="px-3 py-2">{t("admin.crud.visas.col.processing")}</th>
               <th className="px-3 py-2">{t("admin.crud.common.status")}</th>
               <th className="px-3 py-2">{t("admin.crud.common.actions")}</th>
@@ -738,25 +738,25 @@ export default function OperatorVisasPage() {
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-3 py-6 text-center text-slate-400">
+                <td colSpan={8} className="px-3 py-6 text-center text-fg-t6">
                   {t("admin.crud.visas.empty")}
                 </td>
               </tr>
             )}
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-100">
-                <td className="px-3 py-2 tabular-nums text-slate-700">{r.id}</td>
-                <td className="px-3 py-2 font-medium text-slate-800">
+              <tr key={r.id} className="border-b border-default hover:bg-figma-bg-1">
+                <td className="px-3 py-2 tabular-nums text-fg-t7">{r.id}</td>
+                <td className="px-3 py-2 font-medium text-fg-t11">
                   {(r.country ?? "").trim() ? r.country : "—"}
                 </td>
-                <td className="px-3 py-2 text-slate-700">{(r.visa_type ?? "").trim() ? r.visa_type : "—"}</td>
-                <td className="px-3 py-2 tabular-nums font-medium text-slate-900">
+                <td className="px-3 py-2 text-fg-t7">{(r.visa_type ?? "").trim() ? r.visa_type : "—"}</td>
+                <td className="px-3 py-2 tabular-nums font-medium text-fg-t11">
                   {visaMoneyCell(r.visa_price != null ? r.visa_price : r.price ?? null, r.currency)}
                 </td>
-                <td className="px-3 py-2 tabular-nums text-sm text-slate-500">
+                <td className="px-3 py-2 tabular-nums text-sm text-fg-t6">
                   {visaMoneyCell(r.offer_price ?? null, r.currency)}
                 </td>
-                <td className="px-3 py-2 text-slate-700">
+                <td className="px-3 py-2 text-fg-t7">
                   {r.processing_days != null ? `${r.processing_days} days` : "—"}
                 </td>
                 <td className="px-3 py-2">{visaOfferStatusLabel(r)}</td>
@@ -766,7 +766,7 @@ export default function OperatorVisasPage() {
                       type="button"
                       onClick={() => void openEdit(r)}
                       disabled={busy}
-                      className="text-xs text-blue-700 underline disabled:cursor-not-allowed disabled:opacity-40"
+                      className="text-xs text-info-700 underline disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       {t("admin.crud.common.edit")}
                     </button>
@@ -774,7 +774,7 @@ export default function OperatorVisasPage() {
                       type="button"
                       onClick={() => void handleDelete(r.id)}
                       disabled={busy}
-                      className="text-xs text-red-600 underline disabled:cursor-not-allowed disabled:opacity-40"
+                      className="text-xs text-error-600 underline disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       {t("admin.crud.common.delete")}
                     </button>

@@ -116,7 +116,7 @@ export default function NotificationsPage() {
       <h1 className="text-xl font-semibold">Notifications</h1>
       <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
         {unreadCount !== null && (
-          <span className="rounded border border-slate-200 bg-white px-2 py-1 tabular-nums text-slate-700">
+          <span className="rounded border border-default bg-white px-2 py-1 tabular-nums text-fg-t7">
             Unread: {unreadCount}
           </span>
         )}
@@ -124,15 +124,15 @@ export default function NotificationsPage() {
           type="button"
           disabled={busyAll || (unreadCount !== null && unreadCount === 0)}
           onClick={() => onMarkAllRead()}
-          className="rounded border border-slate-300 bg-white px-3 py-1 disabled:opacity-40"
+          className="rounded border border-default bg-white px-3 py-1 disabled:opacity-40"
         >
           {busyAll ? "Marking..." : "Mark all as read"}
         </button>
       </div>
-      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
-      <div className="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
+      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
+      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
         <table className="w-full min-w-[720px] text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
+          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
               <th className="px-3 py-2">ID</th>
               <th className="px-3 py-2">Status</th>
@@ -147,15 +147,15 @@ export default function NotificationsPage() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-slate-100">
+              <tr key={r.id} className="border-b border-default">
                 <td className="px-3 py-2 tabular-nums">{r.id}</td>
                 <td className="px-3 py-2">{r.status}</td>
                 <td className="px-3 py-2">{r.priority ?? "-"}</td>
                 <td className="max-w-[140px] truncate px-3 py-2 text-xs">{r.event_type}</td>
                 <td className="max-w-xs px-3 py-2">{r.title}</td>
-                <td className="max-w-md truncate px-3 py-2 text-xs text-slate-600">{r.message}</td>
+                <td className="max-w-md truncate px-3 py-2 text-xs text-fg-t6">{r.message}</td>
                 <td className="px-3 py-2 tabular-nums">{r.related_company_id ?? "-"}</td>
-                <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-700">
+                <td className="whitespace-nowrap px-3 py-2 text-xs text-fg-t7">
                   {r.created_at ?? "-"}
                 </td>
                 <td className="px-3 py-2">
@@ -164,12 +164,12 @@ export default function NotificationsPage() {
                       type="button"
                       disabled={busyId === r.id}
                       onClick={() => onMarkRead(r.id)}
-                      className="text-slate-700 underline disabled:opacity-40"
+                      className="text-fg-t7 underline disabled:opacity-40"
                     >
                       {busyId === r.id ? "..." : "Mark read"}
                     </button>
                   ) : (
-                    <span className="text-slate-400">-</span>
+                    <span className="text-fg-t6">-</span>
                   )}
                 </td>
               </tr>
@@ -178,7 +178,7 @@ export default function NotificationsPage() {
         </table>
       </div>
       {meta && <PaginationBar meta={meta} onPage={setPage} />}
-      <p className="mt-3 text-xs text-slate-700">
+      <p className="mt-3 text-xs text-fg-t7">
         List pagination uses server ordering (newest first). Query filters are not exposed on this API;
         use mark-as-read to clear unread items.
       </p>

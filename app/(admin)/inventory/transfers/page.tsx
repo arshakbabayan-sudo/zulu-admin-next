@@ -167,146 +167,146 @@ export default function TransfersInventoryPage() {
       ]}
       filterBar={
         <>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-fg-t6">
             company_id
             <input
               value={draftCompany}
               onChange={(e) => setDraftCompany(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-              className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
+              className="ml-2 rounded border border-default px-2 py-1 text-sm"
             />
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-fg-t6">
             status
             <input
               value={draftStatus}
               onChange={(e) => setDraftStatus(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-              className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
+              className="ml-2 rounded border border-default px-2 py-1 text-sm"
             />
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-fg-t6">
             country
             <input
               value={draftCountry}
               onChange={(e) => setDraftCountry(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-              className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
+              className="ml-2 rounded border border-default px-2 py-1 text-sm"
             />
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-fg-t6">
             city
             <input
               value={draftCity}
               onChange={(e) => setDraftCity(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-              className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
+              className="ml-2 rounded border border-default px-2 py-1 text-sm"
             />
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-fg-t6">
             fleet
             <input
               value={draftFleet}
               onChange={(e) => setDraftFleet(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-              className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
+              className="ml-2 rounded border border-default px-2 py-1 text-sm"
             />
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-fg-t6">
             origin
             <input
               value={draftOrigin}
               onChange={(e) => setDraftOrigin(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-              className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
+              className="ml-2 rounded border border-default px-2 py-1 text-sm"
             />
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-fg-t6">
             destination
             <input
               value={draftDestination}
               onChange={(e) => setDraftDestination(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-              className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
+              className="ml-2 rounded border border-default px-2 py-1 text-sm"
             />
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-fg-t6">
             vehicle_category
             <input
               value={draftVehicleCategory}
               onChange={(e) => setDraftVehicleCategory(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-              className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
+              className="ml-2 rounded border border-default px-2 py-1 text-sm"
             />
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-fg-t6">
             trip_date
             <input
               value={draftTripDate}
               onChange={(e) => setDraftTripDate(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
               placeholder="YYYY-MM-DD"
-              className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
+              className="ml-2 rounded border border-default px-2 py-1 text-sm"
             />
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-fg-t6">
             passenger
             <input
               value={draftPassengers}
               onChange={(e) => setDraftPassengers(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-              className="ml-2 w-[96px] rounded border border-slate-300 px-2 py-1 text-sm"
+              className="ml-2 w-[96px] rounded border border-default px-2 py-1 text-sm"
             />
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-fg-t6">
             user_email
             <input
               value={draftUserEmail}
               onChange={(e) => setDraftUserEmail(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-              className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
+              className="ml-2 rounded border border-default px-2 py-1 text-sm"
             />
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-fg-t6">
             order_number
             <input
               value={draftOrderNumber}
               onChange={(e) => setDraftOrderNumber(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-              className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
+              className="ml-2 rounded border border-default px-2 py-1 text-sm"
             />
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-fg-t6">
             invoice_id
             <input
               value={draftInvoiceId}
               onChange={(e) => setDraftInvoiceId(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-              className="ml-2 w-[96px] rounded border border-slate-300 px-2 py-1 text-sm"
+              className="ml-2 w-[96px] rounded border border-default px-2 py-1 text-sm"
             />
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-fg-t6">
             price_min
             <input
               value={draftPriceMin}
               onChange={(e) => setDraftPriceMin(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-              className="ml-2 w-[96px] rounded border border-slate-300 px-2 py-1 text-sm"
+              className="ml-2 w-[96px] rounded border border-default px-2 py-1 text-sm"
             />
           </label>
-          <label className="text-sm text-slate-600">
+          <label className="text-sm text-fg-t6">
             price_max
             <input
               value={draftPriceMax}
               onChange={(e) => setDraftPriceMax(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-              className="ml-2 w-[96px] rounded border border-slate-300 px-2 py-1 text-sm"
+              className="ml-2 w-[96px] rounded border border-default px-2 py-1 text-sm"
             />
           </label>
-          <button type="button" onClick={applyFilters} className="rounded border border-slate-300 bg-white px-3 py-1 text-sm">
+          <button type="button" onClick={applyFilters} className="rounded border border-default bg-white px-3 py-1 text-sm">
             Apply filters
           </button>
-          <button type="button" onClick={clearFilters} className="rounded border border-slate-300 bg-white px-3 py-1 text-sm">
+          <button type="button" onClick={clearFilters} className="rounded border border-default bg-white px-3 py-1 text-sm">
             Clear
           </button>
         </>

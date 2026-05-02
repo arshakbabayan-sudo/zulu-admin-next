@@ -264,17 +264,17 @@ export default function OperatorHotelsPage() {
           return res;
         }}
       />
-      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
+      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
       {formLoading && editId != null && !form && (
-        <div className="mt-4 rounded border border-slate-200 bg-white p-4 text-sm text-slate-600">{t("admin.crud.hotels.loading")}</div>
+        <div className="mt-4 rounded border border-default bg-white p-4 text-sm text-fg-t6">{t("admin.crud.hotels.loading")}</div>
       )}
       {form && (
-        <div className="mt-4 rounded border border-slate-200 bg-white p-4">
+        <div className="mt-4 rounded border border-default bg-white p-4">
           <h2 className="mb-3 text-base font-medium">{editId ? t("admin.crud.hotels.form_edit") : t("admin.crud.hotels.form_new")}</h2>
           <div className="grid gap-3 sm:grid-cols-2">
             {editId == null && (
               <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.offer_id")}</span>
+                <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.offer_id")}</span>
                 <input
                   type="number"
                   min={1}
@@ -289,28 +289,28 @@ export default function OperatorHotelsPage() {
                         : p
                     )
                   }
-                  className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                  className="rounded border border-default px-2 py-1.5 text-sm"
                 />
               </label>
             )}
             {(["hotel_name", "property_type", "hotel_type", "country", "region_or_state", "city", "district_or_area"] as const).map(
               (f) => (
                 <label key={f} className="flex flex-col gap-1 text-sm">
-                  <span className="font-medium text-slate-600">{t(`admin.crud.hotels.field.${f}`)}</span>
+                  <span className="font-medium text-fg-t6">{t(`admin.crud.hotels.field.${f}`)}</span>
                   <input
                     value={form[f]}
                     onChange={(e) => setForm((p) => (p ? { ...p, [f]: e.target.value } : p))}
-                    className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                    className="rounded border border-default px-2 py-1.5 text-sm"
                   />
                 </label>
               )
             )}
             <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-              <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.full_address")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.full_address")}</span>
               <input
                 value={form.full_address}
                 onChange={(e) => setForm((p) => (p ? { ...p, full_address: e.target.value } : p))}
-                className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                className="rounded border border-default px-2 py-1.5 text-sm"
               />
             </label>
             <LocationCascadeSelect
@@ -332,29 +332,29 @@ export default function OperatorHotelsPage() {
               }
             />
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.latitude")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.latitude")}</span>
               <input
                 value={form.latitude}
                 onChange={(e) => setForm((p) => (p ? { ...p, latitude: e.target.value } : p))}
-                className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                className="rounded border border-default px-2 py-1.5 text-sm"
                 placeholder="e.g. 40.1776"
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.longitude")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.longitude")}</span>
               <input
                 value={form.longitude}
                 onChange={(e) => setForm((p) => (p ? { ...p, longitude: e.target.value } : p))}
-                className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                className="rounded border border-default px-2 py-1.5 text-sm"
                 placeholder="e.g. 44.5126"
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.meal_type")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.meal_type")}</span>
               <select
                 value={form.meal_type}
                 onChange={(e) => setForm((p) => (p ? { ...p, meal_type: e.target.value } : p))}
-                className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                className="rounded border border-default px-2 py-1.5 text-sm"
               >
                 {HOTEL_MEAL_TYPES.map((m) => (
                   <option key={m} value={m}>
@@ -364,9 +364,9 @@ export default function OperatorHotelsPage() {
               </select>
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.star_rating")}</span>
-              <span className="text-xs text-slate-500">
-                Optional (1–5) — API field <code className="rounded bg-slate-100 px-1">{HOTEL_API_STAR_RATING_KEY}</code>
+              <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.star_rating")}</span>
+              <span className="text-xs text-fg-t6">
+                Optional (1–5) — API field <code className="rounded bg-figma-bg-1 px-1">{HOTEL_API_STAR_RATING_KEY}</code>
               </span>
               <input
                 type="number"
@@ -383,19 +383,19 @@ export default function OperatorHotelsPage() {
                       : p
                   )
                 }
-                className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                className="rounded border border-default px-2 py-1.5 text-sm"
               />
             </label>
           </div>
-          <div className="mt-4 flex flex-col gap-3 border-t border-slate-200 pt-4">
-            <span className="text-xs font-semibold uppercase text-slate-500">{t("admin.crud.hotels.section.availability")}</span>
+          <div className="mt-4 flex flex-col gap-3 border-t border-default pt-4">
+            <span className="text-xs font-semibold uppercase text-fg-t6">{t("admin.crud.hotels.section.availability")}</span>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.availability_status")}</span>
+                <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.availability_status")}</span>
                 <select
                   value={form.availability_status}
                   onChange={(e) => setForm((p) => (p ? { ...p, availability_status: e.target.value } : p))}
-                  className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                  className="rounded border border-default px-2 py-1.5 text-sm"
                 >
                   {HOTEL_AVAILABILITY_STATUSES.map((m) => (
                     <option key={m} value={m}>
@@ -405,11 +405,11 @@ export default function OperatorHotelsPage() {
                 </select>
               </label>
               <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.status")}</span>
+                <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.status")}</span>
                 <select
                   value={form.status}
                   onChange={(e) => setForm((p) => (p ? { ...p, status: e.target.value } : p))}
-                  className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                  className="rounded border border-default px-2 py-1.5 text-sm"
                 >
                   {HOTEL_LIFECYCLE_STATUSES.map((m) => (
                     <option key={m} value={m}>
@@ -419,11 +419,11 @@ export default function OperatorHotelsPage() {
                 </select>
               </label>
               <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.room_inventory_mode")}</span>
+                <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.room_inventory_mode")}</span>
                 <input
                   value={form.room_inventory_mode}
                   onChange={(e) => setForm((p) => (p ? { ...p, room_inventory_mode: e.target.value } : p))}
-                  className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                  className="rounded border border-default px-2 py-1.5 text-sm"
                   maxLength={64}
                   list="hotel-room-inventory-mode"
                   placeholder="e.g. per_room"
@@ -435,11 +435,11 @@ export default function OperatorHotelsPage() {
                 </datalist>
               </label>
               <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.visibility_rule")}</span>
+                <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.visibility_rule")}</span>
                 <select
                   value={form.visibility_rule}
                   onChange={(e) => setForm((p) => (p ? { ...p, visibility_rule: e.target.value } : p))}
-                  className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                  className="rounded border border-default px-2 py-1.5 text-sm"
                 >
                   {HOTEL_VISIBILITY_RULES.map((r) => (
                     <option key={r} value={r}>
@@ -454,33 +454,33 @@ export default function OperatorHotelsPage() {
                     type="checkbox"
                     checked={form.bookable}
                     onChange={(e) => setForm((p) => (p ? { ...p, bookable: e.target.checked } : p))}
-                    className="rounded border border-slate-300"
+                    className="rounded border border-default"
                   />
-                  <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.bookable")}</span>
+                  <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.bookable")}</span>
                 </label>
                 <label className="flex items-center gap-2 text-sm">
                   <input
                     type="checkbox"
                     checked={form.is_package_eligible}
                     onChange={(e) => setForm((p) => (p ? { ...p, is_package_eligible: e.target.checked } : p))}
-                    className="rounded border border-slate-300"
+                    className="rounded border border-default"
                   />
-                  <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.is_package_eligible")}</span>
+                  <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.is_package_eligible")}</span>
                 </label>
                 <label className="flex items-center gap-2 text-sm">
                   <input
                     type="checkbox"
                     checked={form.appears_in_packages}
                     onChange={(e) => setForm((p) => (p ? { ...p, appears_in_packages: e.target.checked } : p))}
-                    className="rounded border border-slate-300"
+                    className="rounded border border-default"
                   />
-                  <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.appears_in_packages")}</span>
+                  <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.appears_in_packages")}</span>
                 </label>
               </div>
             </div>
           </div>
-          <div className="mt-4 flex flex-col gap-2 border-t border-slate-200 pt-4">
-            <span className="text-xs font-semibold uppercase text-slate-500">{t("admin.crud.hotels.section.facilities")}</span>
+          <div className="mt-4 flex flex-col gap-2 border-t border-default pt-4">
+            <span className="text-xs font-semibold uppercase text-fg-t6">{t("admin.crud.hotels.section.facilities")}</span>
             <div className="grid gap-2 sm:grid-cols-2">
               {HOTEL_FACILITY_AMENITY_KEYS.map((key) => (
                 <label key={key} className="flex items-center gap-2 text-sm">
@@ -488,15 +488,15 @@ export default function OperatorHotelsPage() {
                     type="checkbox"
                     checked={form[key]}
                     onChange={(e) => setForm((p) => (p ? { ...p, [key]: e.target.checked } : p))}
-                    className="rounded border border-slate-300"
+                    className="rounded border border-default"
                   />
                   <span>{t(`admin.crud.hotels.field.${key}`)}</span>
                 </label>
               ))}
             </div>
           </div>
-          <div className="mt-4 flex flex-col gap-3 border-t border-slate-200 pt-4">
-            <span className="text-xs font-semibold uppercase text-slate-500">{t("admin.crud.hotels.section.policies")}</span>
+          <div className="mt-4 flex flex-col gap-3 border-t border-default pt-4">
+            <span className="text-xs font-semibold uppercase text-fg-t6">{t("admin.crud.hotels.section.policies")}</span>
             <div className="grid gap-2 sm:grid-cols-2">
               {HOTEL_POLICY_BOOLEAN_KEYS.map((key) => (
                 <label key={key} className="flex items-center gap-2 text-sm">
@@ -504,7 +504,7 @@ export default function OperatorHotelsPage() {
                     type="checkbox"
                     checked={form[key]}
                     onChange={(e) => setForm((p) => (p ? { ...p, [key]: e.target.checked } : p))}
-                    className="rounded border border-slate-300"
+                    className="rounded border border-default"
                   />
                   <span>{t(`admin.crud.hotels.field.${key}`)}</span>
                 </label>
@@ -512,11 +512,11 @@ export default function OperatorHotelsPage() {
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.cancellation_policy_type")}</span>
+                <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.cancellation_policy_type")}</span>
                 <input
                   value={form.cancellation_policy_type}
                   onChange={(e) => setForm((p) => (p ? { ...p, cancellation_policy_type: e.target.value } : p))}
-                  className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                  className="rounded border border-default px-2 py-1.5 text-sm"
                   maxLength={64}
                   list="hotel-cancellation-policy-type"
                 />
@@ -527,34 +527,34 @@ export default function OperatorHotelsPage() {
                 </datalist>
               </label>
               <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.cancellation_deadline_at")}</span>
+                <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.cancellation_deadline_at")}</span>
                 <input
                   type="datetime-local"
                   value={form.cancellation_deadline_at}
                   onChange={(e) =>
                     setForm((p) => (p ? { ...p, cancellation_deadline_at: e.target.value } : p))
                   }
-                  className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                  className="rounded border border-default px-2 py-1.5 text-sm"
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-                <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.no_show_policy")}</span>
+                <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.no_show_policy")}</span>
                 <input
                   value={form.no_show_policy}
                   onChange={(e) => setForm((p) => (p ? { ...p, no_show_policy: e.target.value } : p))}
-                  className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                  className="rounded border border-default px-2 py-1.5 text-sm"
                   maxLength={255}
                   placeholder="Short no-show terms"
                 />
               </label>
             </div>
           </div>
-          <div className="mt-4 flex flex-col gap-3 border-t border-slate-200 pt-4">
-            <span className="text-xs font-semibold uppercase text-slate-500">{t("admin.crud.hotels.section.review_data")}</span>
+          <div className="mt-4 flex flex-col gap-3 border-t border-default pt-4">
+            <span className="text-xs font-semibold uppercase text-fg-t6">{t("admin.crud.hotels.section.review_data")}</span>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.review_score")}</span>
-                <span className="text-xs text-slate-500">0–10, optional</span>
+                <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.review_score")}</span>
+                <span className="text-xs text-fg-t6">0–10, optional</span>
                 <input
                   type="number"
                   min={0}
@@ -571,11 +571,11 @@ export default function OperatorHotelsPage() {
                         : p
                     )
                   }
-                  className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                  className="rounded border border-default px-2 py-1.5 text-sm"
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.review_count")}</span>
+                <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.review_count")}</span>
                 <input
                   type="number"
                   min={0}
@@ -591,15 +591,15 @@ export default function OperatorHotelsPage() {
                         : p
                     )
                   }
-                  className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                  className="rounded border border-default px-2 py-1.5 text-sm"
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-                <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.review_label")}</span>
+                <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.review_label")}</span>
                 <input
                   value={form.review_label}
                   onChange={(e) => setForm((p) => (p ? { ...p, review_label: e.target.value } : p))}
-                  className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                  className="rounded border border-default px-2 py-1.5 text-sm"
                   maxLength={255}
                   list="hotel-review-label"
                 />
@@ -611,9 +611,9 @@ export default function OperatorHotelsPage() {
               </label>
             </div>
           </div>
-          <div className="mt-6 flex flex-col gap-3 border-t border-slate-200 pt-4">
+          <div className="mt-6 flex flex-col gap-3 border-t border-default pt-4">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-semibold uppercase text-slate-500">
+              <span className="text-xs font-semibold uppercase text-fg-t6">
                 {t("admin.crud.hotels.section.rooms")}
               </span>
               <button
@@ -621,23 +621,23 @@ export default function OperatorHotelsPage() {
                 onClick={() =>
                   setForm((p) => (p ? { ...p, rooms: [...p.rooms, newHotelRoomFormRow()] } : p))
                 }
-                className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                className="rounded border border-default px-2 py-1 text-xs text-fg-t7 hover:bg-figma-bg-1"
               >
                 {t("admin.crud.hotels.add_room")}
               </button>
             </div>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-fg-t6">
               Each room needs at least one rate row. Dates use YYYY-MM-DD (optional). Edit mode replaces all rooms on
               save (sync with API).
             </p>
             {form.rooms.map((room, ri) => (
-              <div key={room.clientKey} className="rounded border border-slate-200 bg-slate-50/80 p-3">
+              <div key={room.clientKey} className="rounded border border-default bg-figma-bg-1/80 p-3">
                 <div className="mb-2 flex items-start justify-between gap-2">
-                  <span className="text-sm font-medium text-slate-700">Room {ri + 1}</span>
+                  <span className="text-sm font-medium text-fg-t7">Room {ri + 1}</span>
                   {form.rooms.length > 1 && (
                     <button
                       type="button"
-                      className="text-xs text-red-600 underline"
+                      className="text-xs text-error-600 underline"
                       onClick={() =>
                         setForm((p) =>
                           p && p.rooms.length > 1
@@ -652,7 +652,7 @@ export default function OperatorHotelsPage() {
                 </div>
                 <div className="grid gap-2 sm:grid-cols-3">
                   <label className="flex flex-col gap-1 text-sm">
-                    <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.room_type")}</span>
+                    <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.room_type")}</span>
                     <input
                       value={room.room_type}
                       onChange={(e) =>
@@ -663,11 +663,11 @@ export default function OperatorHotelsPage() {
                           return { ...p, rooms };
                         })
                       }
-                      className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                      className="rounded border border-default px-2 py-1.5 text-sm"
                     />
                   </label>
                   <label className="flex flex-col gap-1 text-sm">
-                    <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.room_name")}</span>
+                    <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.room_name")}</span>
                     <input
                       value={room.room_name}
                       onChange={(e) =>
@@ -678,11 +678,11 @@ export default function OperatorHotelsPage() {
                           return { ...p, rooms };
                         })
                       }
-                      className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                      className="rounded border border-default px-2 py-1.5 text-sm"
                     />
                   </label>
                   <label className="flex flex-col gap-1 text-sm">
-                    <span className="font-medium text-slate-600">{t("admin.crud.hotels.field.capacity")}</span>
+                    <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.capacity")}</span>
                     <input
                       type="number"
                       min={1}
@@ -699,14 +699,14 @@ export default function OperatorHotelsPage() {
                           return { ...p, rooms };
                         })
                       }
-                      className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                      className="rounded border border-default px-2 py-1.5 text-sm"
                     />
                   </label>
                 </div>
                 <div className="mt-3 overflow-x-auto">
                   <table className="w-full min-w-[720px] border-collapse text-xs">
                     <thead>
-                      <tr className="border-b border-slate-200 bg-white text-left text-slate-600">
+                      <tr className="border-b border-default bg-white text-left text-fg-t6">
                         <th className="px-1 py-1.5 font-medium">{t("admin.crud.hotels.field.price")}</th>
                         <th className="px-1 py-1.5 font-medium">{t("admin.crud.hotels.field.currency")}</th>
                         <th className="px-1 py-1.5 font-medium">{t("admin.crud.hotels.field.pricing_mode")}</th>
@@ -719,7 +719,7 @@ export default function OperatorHotelsPage() {
                     </thead>
                     <tbody>
                       {room.pricings.map((pr, pi) => (
-                        <tr key={pi} className="border-b border-slate-100 bg-white">
+                        <tr key={pi} className="border-b border-default bg-white">
                           <td className="px-1 py-1 align-top">
                             <input
                               type="number"
@@ -736,7 +736,7 @@ export default function OperatorHotelsPage() {
                                   return { ...p, rooms };
                                 })
                               }
-                              className="w-full min-w-[4.5rem] rounded border border-slate-300 px-1 py-1"
+                              className="w-full min-w-[4.5rem] rounded border border-default px-1 py-1"
                             />
                           </td>
                           <td className="px-1 py-1 align-top">
@@ -756,7 +756,7 @@ export default function OperatorHotelsPage() {
                                   return { ...p, rooms };
                                 })
                               }
-                              className="w-full min-w-[3rem] rounded border border-slate-300 px-1 py-1 uppercase"
+                              className="w-full min-w-[3rem] rounded border border-default px-1 py-1 uppercase"
                             />
                           </td>
                           <td className="px-1 py-1 align-top">
@@ -774,7 +774,7 @@ export default function OperatorHotelsPage() {
                                   return { ...p, rooms };
                                 })
                               }
-                              className="w-full min-w-[6rem] rounded border border-slate-300 px-1 py-1"
+                              className="w-full min-w-[6rem] rounded border border-default px-1 py-1"
                               placeholder="per_night"
                               list={`hotel-pricing-mode-${room.clientKey}`}
                             />
@@ -798,7 +798,7 @@ export default function OperatorHotelsPage() {
                                   return { ...p, rooms };
                                 })
                               }
-                              className="w-full min-w-[6.5rem] rounded border border-slate-300 px-1 py-1"
+                              className="w-full min-w-[6.5rem] rounded border border-default px-1 py-1"
                               placeholder="YYYY-MM-DD"
                             />
                           </td>
@@ -816,7 +816,7 @@ export default function OperatorHotelsPage() {
                                   return { ...p, rooms };
                                 })
                               }
-                              className="w-full min-w-[6.5rem] rounded border border-slate-300 px-1 py-1"
+                              className="w-full min-w-[6.5rem] rounded border border-default px-1 py-1"
                               placeholder="YYYY-MM-DD"
                             />
                           </td>
@@ -839,7 +839,7 @@ export default function OperatorHotelsPage() {
                                   return { ...p, rooms };
                                 })
                               }
-                              className="w-full min-w-[3.5rem] rounded border border-slate-300 px-1 py-1"
+                              className="w-full min-w-[3.5rem] rounded border border-default px-1 py-1"
                             />
                           </td>
                           <td className="px-1 py-1 align-top">
@@ -857,7 +857,7 @@ export default function OperatorHotelsPage() {
                                   return { ...p, rooms };
                                 })
                               }
-                              className="w-full min-w-[4rem] rounded border border-slate-300 px-1 py-1"
+                              className="w-full min-w-[4rem] rounded border border-default px-1 py-1"
                               placeholder="active"
                               list={`hotel-pricing-status-${room.clientKey}`}
                             />
@@ -871,7 +871,7 @@ export default function OperatorHotelsPage() {
                             {room.pricings.length > 1 && (
                               <button
                                 type="button"
-                                className="text-[10px] text-red-600 underline"
+                                className="text-[10px] text-error-600 underline"
                                 onClick={() =>
                                   setForm((p) => {
                                     if (!p) return p;
@@ -904,7 +904,7 @@ export default function OperatorHotelsPage() {
                       return { ...p, rooms };
                     })
                   }
-                  className="mt-2 text-xs text-blue-700 underline"
+                  className="mt-2 text-xs text-info-700 underline"
                 >
                   {t("admin.crud.hotels.add_rate")}
                 </button>
@@ -912,7 +912,7 @@ export default function OperatorHotelsPage() {
             ))}
           </div>
           {formErrLines.length > 0 && (
-            <ul className="mt-2 list-inside list-disc text-sm text-red-600">
+            <ul className="mt-2 list-inside list-disc text-sm text-error-600">
               {formErrLines.map((line, i) => (
                 <li key={i}>{line}</li>
               ))}
@@ -927,15 +927,15 @@ export default function OperatorHotelsPage() {
             >
               {busy ? t("admin.crud.common.saving") : t("common.save")}
             </button>
-            <button type="button" onClick={closeForm} className="rounded border border-slate-300 px-4 py-1.5 text-sm">
+            <button type="button" onClick={closeForm} className="rounded border border-default px-4 py-1.5 text-sm">
               {t("common.cancel")}
             </button>
           </div>
         </div>
       )}
-      <div className="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
+      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
         <table className="w-full min-w-[600px] text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
+          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
               <th className="px-3 py-2">{t("admin.crud.common.id")}</th>
               <th className="px-3 py-2">{t("admin.crud.hotels.col.hotel")}</th>
@@ -948,14 +948,14 @@ export default function OperatorHotelsPage() {
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-3 py-6 text-center text-slate-400">
+                <td colSpan={6} className="px-3 py-6 text-center text-fg-t6">
                   {t("admin.crud.hotels.empty")}
                 </td>
               </tr>
             )}
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-100">
-                <td className="px-3 py-2 tabular-nums text-slate-700">{r.id}</td>
+              <tr key={r.id} className="border-b border-default hover:bg-figma-bg-1">
+                <td className="px-3 py-2 tabular-nums text-fg-t7">{r.id}</td>
                 <td className="px-3 py-2 font-medium">{r.hotel_name ?? "-"}</td>
                 <td className="px-3 py-2">{r.city ?? "-"}</td>
                 <td className="px-3 py-2">{r.country ?? "-"}</td>
@@ -965,14 +965,14 @@ export default function OperatorHotelsPage() {
                     <button
                       type="button"
                       onClick={() => void openEdit(r)}
-                      className="text-xs text-blue-700 underline"
+                      className="text-xs text-info-700 underline"
                     >
                       {t("admin.crud.common.edit")}
                     </button>
                     <button
                       type="button"
                       onClick={() => void handleDelete(r.id)}
-                      className="text-xs text-red-600 underline"
+                      className="text-xs text-error-600 underline"
                     >
                       {t("admin.crud.common.delete")}
                     </button>

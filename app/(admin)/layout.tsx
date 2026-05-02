@@ -21,7 +21,7 @@ export default function AdminSectionLayout({
 
   if (!bootstrapped) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-100 text-sm text-slate-600">
+      <div className="flex min-h-screen items-center justify-center bg-figma-bg-1 text-sm text-fg-t6">
         Loading session…
       </div>
     );

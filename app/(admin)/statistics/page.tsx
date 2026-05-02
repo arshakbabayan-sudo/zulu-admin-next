@@ -74,7 +74,7 @@ export default function OperatorStatisticsPage() {
               value={companyIdInput}
               onChange={(e) => setCompanyIdInput(e.target.value)}
               placeholder="Required for super-admin scope"
-              className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
+              className="ml-2 rounded border border-default px-2 py-1 text-sm"
             />
           </label>
           <button
@@ -88,14 +88,14 @@ export default function OperatorStatisticsPage() {
         </div>
       )}
       {!isSuper && defaultCompanyId && (
-        <p className="mt-2 text-xs text-slate-700">
+        <p className="mt-2 text-xs text-fg-t7">
           Using context active company id {defaultCompanyId} (server resolves membership).
         </p>
       )}
-      {err && <p className="mt-4 text-sm text-red-600">{err}</p>}
-      {loading && <p className="mt-4 text-sm text-slate-700">Loading...</p>}
+      {err && <p className="mt-4 text-sm text-error-600">{err}</p>}
+      {loading && <p className="mt-4 text-sm text-fg-t7">Loading...</p>}
       {payload !== null && !loading && (
-        <pre className="mt-4 max-h-[70vh] overflow-auto rounded border border-slate-200 bg-slate-800 p-4 text-xs text-slate-100">
+        <pre className="mt-4 max-h-[70vh] overflow-auto rounded border border-default bg-slate-800 p-4 text-xs text-slate-100">
           {JSON.stringify(payload, null, 2)}
         </pre>
       )}

@@ -295,7 +295,7 @@ export default function OperatorTransfersPage() {
   const fieldMsgs = (key: string) => (fieldErrs && Array.isArray(fieldErrs[key]) ? fieldErrs[key] : []);
   const inputClass = (key: string) =>
     `rounded border px-2 py-1.5 text-sm ${
-      hasFieldErr(key) ? "border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200" : "border-slate-300"
+      hasFieldErr(key) ? "border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200" : "border-default"
     }`;
 
   function renderTransferField(field: TransferField) {
@@ -305,7 +305,7 @@ export default function OperatorTransfersPage() {
     if (field.type === "select" && field.options) {
       return (
         <label key={String(field.key)} className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-slate-600">
+          <span className="font-medium text-fg-t6">
             {t(`admin.crud.transfers.field.${String(field.key)}`)}
             {field.required ? " *" : ""}
           </span>
@@ -320,7 +320,7 @@ export default function OperatorTransfersPage() {
               const v = e.target.value;
               setForm((p) => (p ? { ...p, [field.key]: v as never } : p));
             }}
-            className={inputClass(String(field.key)) + (disabledOffer ? " bg-slate-50 text-slate-600" : "")}
+            className={inputClass(String(field.key)) + (disabledOffer ? " bg-figma-bg-1 text-fg-t6" : "")}
           >
             {field.key === "private_or_shared" && <option value="">(optional)</option>}
             {field.options
@@ -332,7 +332,7 @@ export default function OperatorTransfersPage() {
               ))}
           </select>
           {fieldMsgs(String(field.key)).map((m, i) => (
-            <span key={i} className="text-xs text-red-700">
+            <span key={i} className="text-xs text-error-700">
               {m}
             </span>
           ))}
@@ -343,7 +343,7 @@ export default function OperatorTransfersPage() {
     if (field.type === "boolean") {
       return (
         <label key={String(field.key)} className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-slate-600">
+          <span className="font-medium text-fg-t6">
             {t(`admin.crud.transfers.field.${String(field.key)}`)}
             {field.required ? " *" : ""}
           </span>
@@ -358,7 +358,7 @@ export default function OperatorTransfersPage() {
             <option value="false">false</option>
           </select>
           {fieldMsgs(String(field.key)).map((m, i) => (
-            <span key={i} className="text-xs text-red-700">
+            <span key={i} className="text-xs text-error-700">
               {m}
             </span>
           ))}
@@ -371,7 +371,7 @@ export default function OperatorTransfersPage() {
       const hm = raw.slice(0, 5);
       return (
         <label key={String(field.key)} className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-slate-600">
+          <span className="font-medium text-fg-t6">
             {t(`admin.crud.transfers.field.${String(field.key)}`)}
             {field.required ? " *" : ""}
           </span>
@@ -385,7 +385,7 @@ export default function OperatorTransfersPage() {
             className={inputClass(String(field.key))}
           />
           {fieldMsgs(String(field.key)).map((m, i) => (
-            <span key={i} className="text-xs text-red-700">
+            <span key={i} className="text-xs text-error-700">
               {m}
             </span>
           ))}
@@ -396,7 +396,7 @@ export default function OperatorTransfersPage() {
     if (field.type === "date") {
       return (
         <label key={String(field.key)} className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-slate-600">
+          <span className="font-medium text-fg-t6">
             {t(`admin.crud.transfers.field.${String(field.key)}`)}
             {field.required ? " *" : ""}
           </span>
@@ -407,7 +407,7 @@ export default function OperatorTransfersPage() {
             className={inputClass(String(field.key))}
           />
           {fieldMsgs(String(field.key)).map((m, i) => (
-            <span key={i} className="text-xs text-red-700">
+            <span key={i} className="text-xs text-error-700">
               {m}
             </span>
           ))}
@@ -417,7 +417,7 @@ export default function OperatorTransfersPage() {
 
     return (
       <label key={String(field.key)} className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-slate-600">
+        <span className="font-medium text-fg-t6">
           {t(`admin.crud.transfers.field.${String(field.key)}`)}
           {field.required ? " *" : ""}
         </span>
@@ -451,10 +451,10 @@ export default function OperatorTransfersPage() {
             });
           }}
           type={field.type === "number" ? "number" : field.type === "datetime-local" ? "datetime-local" : "text"}
-          className={inputClass(String(field.key)) + (disabledOffer ? " bg-slate-50 text-slate-600" : "")}
+          className={inputClass(String(field.key)) + (disabledOffer ? " bg-figma-bg-1 text-fg-t6" : "")}
         />
         {fieldMsgs(String(field.key)).map((m, i) => (
-          <span key={i} className="text-xs text-red-700">
+          <span key={i} className="text-xs text-error-700">
             {m}
           </span>
         ))}
@@ -588,14 +588,14 @@ export default function OperatorTransfersPage() {
         }}
       />
 
-      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
+      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
 
       {form && (
-        <div className="mt-4 rounded border border-slate-200 bg-white p-4">
+        <div className="mt-4 rounded border border-default bg-white p-4">
           <h2 className="mb-3 text-base font-medium">{editId ? t("admin.crud.transfers.form_edit") : t("admin.crud.transfers.form_new")}</h2>
 
           {fieldSummary && (
-            <div className="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+            <div className="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-error-800">
               <div className="font-medium">{fieldSummary.title}</div>
               <ul className="mt-1 list-disc pl-5">
                 {fieldSummary.items.slice(0, 8).map((it, idx) => (
@@ -608,7 +608,7 @@ export default function OperatorTransfersPage() {
           )}
 
           {apiErrLines.length > 0 && (
-            <div className="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+            <div className="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-error-800">
               <div className="font-medium">API validation</div>
               <ul className="mt-1 list-disc pl-5">
                 {apiErrLines.slice(0, 10).map((line, i) => (
@@ -620,11 +620,11 @@ export default function OperatorTransfersPage() {
 
           <div className="mb-3 grid gap-3 sm:grid-cols-2">
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">Currency (offer)</span>
+              <span className="font-medium text-fg-t6">Currency (offer)</span>
               <input
                 value={form.currency ?? ""}
                 readOnly
-                className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm text-slate-600"
+                className="rounded border border-default bg-figma-bg-1 px-2 py-1.5 text-sm text-fg-t6"
               />
             </label>
           </div>
@@ -648,8 +648,8 @@ export default function OperatorTransfersPage() {
                     isActive
                       ? "border-slate-800 bg-slate-800 text-white"
                       : isComplete
-                        ? "border-slate-300 bg-slate-100 text-slate-700"
-                        : "border-slate-200 bg-white text-slate-400"
+                        ? "border-default bg-figma-bg-1 text-fg-t7"
+                        : "border-default bg-white text-fg-t6"
                   }`}
                 >
                   {t(TRANSFER_STEP_LABEL_KEYS[step.key] ?? step.key)}
@@ -715,14 +715,14 @@ export default function OperatorTransfersPage() {
             </>
           ) : (
             <div className="grid gap-2 sm:grid-cols-2">
-              <div className="rounded border border-slate-200 px-3 py-2 text-sm">
-                <div className="text-xs text-slate-500">{TRANSFER_FIELD_LABELS.currency}</div>
-                <div className="font-medium text-slate-800">{form.currency ?? "—"}</div>
+              <div className="rounded border border-default px-3 py-2 text-sm">
+                <div className="text-xs text-fg-t6">{TRANSFER_FIELD_LABELS.currency}</div>
+                <div className="font-medium text-fg-t11">{form.currency ?? "—"}</div>
               </div>
               {FIELDS.map((field) => (
-                <div key={String(field.key)} className="rounded border border-slate-200 px-3 py-2 text-sm">
-                  <div className="text-xs text-slate-500">{t(`admin.crud.transfers.field.${String(field.key)}`)}</div>
-                  <div className="font-medium text-slate-800">
+                <div key={String(field.key)} className="rounded border border-default px-3 py-2 text-sm">
+                  <div className="text-xs text-fg-t6">{t(`admin.crud.transfers.field.${String(field.key)}`)}</div>
+                  <div className="font-medium text-fg-t11">
                     {field.type === "boolean"
                       ? String(Boolean(form[field.key]))
                       : String(form[field.key] ?? "—")}
@@ -733,16 +733,16 @@ export default function OperatorTransfersPage() {
           )}
 
           {stepErrors.length > 0 && (
-            <p className="mt-2 text-sm text-red-600">{stepErrors.slice(0, 4).join(" ")}</p>
+            <p className="mt-2 text-sm text-error-600">{stepErrors.slice(0, 4).join(" ")}</p>
           )}
-          {formErr && <p className="mt-2 text-sm text-red-600">{formErr}</p>}
+          {formErr && <p className="mt-2 text-sm text-error-600">{formErr}</p>}
 
           <div className="mt-4 flex gap-2">
             <button
               type="button"
               onClick={handlePreviousStep}
               disabled={currentStepIndex === 0 || busy}
-              className="rounded border border-slate-300 px-4 py-1.5 text-sm disabled:opacity-40"
+              className="rounded border border-default px-4 py-1.5 text-sm disabled:opacity-40"
             >
               {t("common.prev")}
             </button>
@@ -765,16 +765,16 @@ export default function OperatorTransfersPage() {
                 {t("common.next")}
               </button>
             )}
-            <button type="button" onClick={closeForm} className="rounded border border-slate-300 px-4 py-1.5 text-sm">
+            <button type="button" onClick={closeForm} className="rounded border border-default px-4 py-1.5 text-sm">
               {t("common.cancel")}
             </button>
           </div>
         </div>
       )}
 
-      <div className="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
+      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
         <table className="w-full min-w-[800px] text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
+          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
               <th className="px-3 py-2">{t("admin.crud.common.id")}</th>
               <th className="px-3 py-2">{t("admin.crud.transfers.col.title")}</th>
@@ -787,14 +787,14 @@ export default function OperatorTransfersPage() {
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-3 py-6 text-center text-slate-400">
+                <td colSpan={6} className="px-3 py-6 text-center text-fg-t6">
                   {t("admin.crud.transfers.empty")}
                 </td>
               </tr>
             )}
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-100">
-                <td className="px-3 py-2 tabular-nums text-slate-700">{r.id}</td>
+              <tr key={r.id} className="border-b border-default hover:bg-figma-bg-1">
+                <td className="px-3 py-2 tabular-nums text-fg-t7">{r.id}</td>
                 <td className="px-3 py-2 font-medium">{r.transfer_title ?? "—"}</td>
                 <td className="px-3 py-2">{r.vehicle_category ?? "-"}</td>
                 <td className="px-3 py-2">
@@ -808,14 +808,14 @@ export default function OperatorTransfersPage() {
                     <button
                       type="button"
                       onClick={() => void openEdit(r)}
-                      className="text-xs text-blue-700 underline"
+                      className="text-xs text-info-700 underline"
                     >
                       {t("admin.crud.common.edit")}
                     </button>
                     <button
                       type="button"
                       onClick={() => void handleDelete(r.id)}
-                      className="text-xs text-red-600 underline"
+                      className="text-xs text-error-600 underline"
                     >
                       {t("admin.crud.common.delete")}
                     </button>

@@ -692,7 +692,7 @@ export default function OperatorCarsPage() {
   const fieldMsgs = (key: string) => (fieldErrs && Array.isArray(fieldErrs[key]) ? fieldErrs[key] : []);
   const inputClass = (key: string) =>
     `rounded border px-2 py-1.5 text-sm ${
-      hasFieldErr(key) ? "border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200" : "border-slate-300"
+      hasFieldErr(key) ? "border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200" : "border-default"
     }`;
 
   return (
@@ -747,13 +747,13 @@ export default function OperatorCarsPage() {
           return res;
         }}
       />
-      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
-      {formErr && !form && <p className="mt-2 text-sm text-red-600">{formErr}</p>}
+      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
+      {formErr && !form && <p className="mt-2 text-sm text-error-600">{formErr}</p>}
       {form && (
-        <div className="mt-4 rounded border border-slate-200 bg-white p-4">
+        <div className="mt-4 rounded border border-default bg-white p-4">
           <h2 className="mb-3 text-base font-medium">{editId ? t("admin.crud.cars.form_edit") : t("admin.crud.cars.form_new")}</h2>
           {fieldSummary && (
-            <div className="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+            <div className="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-error-800">
               <div className="font-medium">{fieldSummary.title}</div>
               <ul className="mt-1 list-disc pl-5">
                 {fieldSummary.items.slice(0, 12).map((it, idx) => (
@@ -767,7 +767,7 @@ export default function OperatorCarsPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             {isCreate && carOffers && (
               <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-                <span className="font-medium text-slate-600">{t("admin.crud.cars.field.offer_id")}</span>
+                <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.offer_id")}</span>
                 <select
                   value={form.offer_id === "" ? "" : String(form.offer_id)}
                   onChange={(e) => onOfferChange(e.target.value)}
@@ -784,7 +784,7 @@ export default function OperatorCarsPage() {
                   })}
                 </select>
                 {fieldMsgs("offer_id").map((m, i) => (
-                  <span key={i} className="text-xs text-red-600">
+                  <span key={i} className="text-xs text-error-600">
                     {m}
                   </span>
                 ))}
@@ -792,21 +792,21 @@ export default function OperatorCarsPage() {
             )}
             {!isCreate && (
               <div className="text-sm sm:col-span-2">
-                <span className="font-medium text-slate-600">{t("admin.crud.cars.field.offer_id")} </span>
-                <span className="text-slate-800">
+                <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.offer_id")} </span>
+                <span className="text-fg-t11">
                   {editRow && form.offer_id !== "" ? `#${form.offer_id} — ${offerTitle(editRow)}` : "—"}
                 </span>
               </div>
             )}
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.company_id")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.company_id")}</span>
               <input
                 readOnly
                 value={form.company_id === "" ? "" : String(form.company_id)}
-                className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm text-slate-700"
+                className="rounded border border-default bg-figma-bg-1 px-2 py-1.5 text-sm text-fg-t7"
               />
               {fieldMsgs("company_id").map((m, i) => (
-                <span key={i} className="text-xs text-red-600">
+                <span key={i} className="text-xs text-error-600">
                   {m}
                 </span>
               ))}
@@ -820,93 +820,93 @@ export default function OperatorCarsPage() {
               }
             />
 
-            <div className="col-span-2 mt-1 border-t border-slate-100 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <div className="col-span-2 mt-1 border-t border-default pt-2 text-xs font-semibold uppercase tracking-wide text-fg-t6">
               {t("admin.crud.cars.section.route")}
             </div>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.pickup_location")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.pickup_location")}</span>
               <input
                 value={form.pickup_location}
                 onChange={(e) => setForm((p) => (p ? { ...p, pickup_location: e.target.value } : p))}
                 className={inputClass("pickup_location")}
               />
               {fieldMsgs("pickup_location").map((m, i) => (
-                <span key={i} className="text-xs text-red-600">
+                <span key={i} className="text-xs text-error-600">
                   {m}
                 </span>
               ))}
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.dropoff_location")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.dropoff_location")}</span>
               <input
                 value={form.dropoff_location}
                 onChange={(e) => setForm((p) => (p ? { ...p, dropoff_location: e.target.value } : p))}
                 className={inputClass("dropoff_location")}
               />
               {fieldMsgs("dropoff_location").map((m, i) => (
-                <span key={i} className="text-xs text-red-600">
+                <span key={i} className="text-xs text-error-600">
                   {m}
                 </span>
               ))}
             </label>
 
-            <div className="col-span-2 mt-1 border-t border-slate-100 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <div className="col-span-2 mt-1 border-t border-default pt-2 text-xs font-semibold uppercase tracking-wide text-fg-t6">
               {t("admin.crud.cars.section.vehicle_info")}
             </div>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.vehicle_class")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.vehicle_class")}</span>
               <input
                 value={form.vehicle_class}
                 onChange={(e) => setForm((p) => (p ? { ...p, vehicle_class: e.target.value } : p))}
                 className={inputClass("vehicle_class")}
               />
               {fieldMsgs("vehicle_class").map((m, i) => (
-                <span key={i} className="text-xs text-red-600">
+                <span key={i} className="text-xs text-error-600">
                   {m}
                 </span>
               ))}
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.vehicle_type")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.vehicle_type")}</span>
               <input
                 value={form.vehicle_type}
                 onChange={(e) => setForm((p) => (p ? { ...p, vehicle_type: e.target.value } : p))}
                 className={inputClass("vehicle_type")}
               />
               {fieldMsgs("vehicle_type").map((m, i) => (
-                <span key={i} className="text-xs text-red-600">
+                <span key={i} className="text-xs text-error-600">
                   {m}
                 </span>
               ))}
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.brand")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.brand")}</span>
               <input
                 value={form.brand}
                 onChange={(e) => setForm((p) => (p ? { ...p, brand: e.target.value } : p))}
                 className={inputClass("brand")}
               />
               {fieldMsgs("brand").map((m, i) => (
-                <span key={i} className="text-xs text-red-600">
+                <span key={i} className="text-xs text-error-600">
                   {m}
                 </span>
               ))}
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.model")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.model")}</span>
               <input
                 value={form.model}
                 onChange={(e) => setForm((p) => (p ? { ...p, model: e.target.value } : p))}
                 className={inputClass("model")}
               />
               {fieldMsgs("model").map((m, i) => (
-                <span key={i} className="text-xs text-red-600">
+                <span key={i} className="text-xs text-error-600">
                   {m}
                 </span>
               ))}
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.year")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.year")}</span>
               <input
                 type="number"
                 min={1900}
@@ -921,69 +921,69 @@ export default function OperatorCarsPage() {
                 className={inputClass("year")}
               />
               {fieldMsgs("year").map((m, i) => (
-                <span key={i} className="text-xs text-red-600">
+                <span key={i} className="text-xs text-error-600">
                   {m}
                 </span>
               ))}
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.transmission_type")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.transmission_type")}</span>
               <input
                 value={form.transmission_type}
                 onChange={(e) => setForm((p) => (p ? { ...p, transmission_type: e.target.value } : p))}
                 className={inputClass("transmission_type")}
               />
               {fieldMsgs("transmission_type").map((m, i) => (
-                <span key={i} className="text-xs text-red-600">
+                <span key={i} className="text-xs text-error-600">
                   {m}
                 </span>
               ))}
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.fuel_type")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.fuel_type")}</span>
               <input
                 value={form.fuel_type}
                 onChange={(e) => setForm((p) => (p ? { ...p, fuel_type: e.target.value } : p))}
                 className={inputClass("fuel_type")}
               />
               {fieldMsgs("fuel_type").map((m, i) => (
-                <span key={i} className="text-xs text-red-600">
+                <span key={i} className="text-xs text-error-600">
                   {m}
                 </span>
               ))}
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.fleet")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.fleet")}</span>
               <input
                 value={form.fleet}
                 onChange={(e) => setForm((p) => (p ? { ...p, fleet: e.target.value } : p))}
                 className={inputClass("fleet")}
               />
               {fieldMsgs("fleet").map((m, i) => (
-                <span key={i} className="text-xs text-red-600">
+                <span key={i} className="text-xs text-error-600">
                   {m}
                 </span>
               ))}
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.category")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.category")}</span>
               <input
                 value={form.category}
                 onChange={(e) => setForm((p) => (p ? { ...p, category: e.target.value } : p))}
                 className={inputClass("category")}
               />
               {fieldMsgs("category").map((m, i) => (
-                <span key={i} className="text-xs text-red-600">
+                <span key={i} className="text-xs text-error-600">
                   {m}
                 </span>
               ))}
             </label>
 
-            <div className="col-span-2 mt-1 border-t border-slate-100 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <div className="col-span-2 mt-1 border-t border-default pt-2 text-xs font-semibold uppercase tracking-wide text-fg-t6">
               {t("admin.crud.cars.section.capacity")}
             </div>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.seats")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.seats")}</span>
               <input
                 type="number"
                 min={1}
@@ -998,13 +998,13 @@ export default function OperatorCarsPage() {
                 className={inputClass("seats")}
               />
               {fieldMsgs("seats").map((m, i) => (
-                <span key={i} className="text-xs text-red-600">
+                <span key={i} className="text-xs text-error-600">
                   {m}
                 </span>
               ))}
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.suitcases")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.suitcases")}</span>
               <input
                 type="number"
                 min={0}
@@ -1019,13 +1019,13 @@ export default function OperatorCarsPage() {
                 className={inputClass("suitcases")}
               />
               {fieldMsgs("suitcases").map((m, i) => (
-                <span key={i} className="text-xs text-red-600">
+                <span key={i} className="text-xs text-error-600">
                   {m}
                 </span>
               ))}
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.small_bag")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.small_bag")}</span>
               <input
                 type="number"
                 min={0}
@@ -1040,17 +1040,17 @@ export default function OperatorCarsPage() {
                 className={inputClass("small_bag")}
               />
               {fieldMsgs("small_bag").map((m, i) => (
-                <span key={i} className="text-xs text-red-600">
+                <span key={i} className="text-xs text-error-600">
                   {m}
                 </span>
               ))}
             </label>
 
-            <div className="col-span-2 mt-1 border-t border-slate-100 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <div className="col-span-2 mt-1 border-t border-default pt-2 text-xs font-semibold uppercase tracking-wide text-fg-t6">
               {t("admin.crud.cars.section.pricing")}
             </div>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.pricing_mode")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.pricing_mode")}</span>
               <select
                 value={form.pricing_mode}
                 onChange={(e) => setForm((p) => (p ? { ...p, pricing_mode: e.target.value } : p))}
@@ -1064,13 +1064,13 @@ export default function OperatorCarsPage() {
                 ))}
               </select>
               {fieldMsgs("pricing_mode").map((m, i) => (
-                <span key={i} className="text-xs text-red-600">
+                <span key={i} className="text-xs text-error-600">
                   {m}
                 </span>
               ))}
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.base_price")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.base_price")}</span>
               <input
                 type="number"
                 min={0}
@@ -1085,17 +1085,17 @@ export default function OperatorCarsPage() {
                 className={inputClass("base_price")}
               />
               {fieldMsgs("base_price").map((m, i) => (
-                <span key={i} className="text-xs text-red-600">
+                <span key={i} className="text-xs text-error-600">
                   {m}
                 </span>
               ))}
             </label>
 
-            <div className="col-span-2 mt-1 border-t border-slate-100 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <div className="col-span-2 mt-1 border-t border-default pt-2 text-xs font-semibold uppercase tracking-wide text-fg-t6">
               {t("admin.crud.cars.section.status")}
             </div>
             <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.availability_window_start")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.availability_window_start")}</span>
               <input
                 type="datetime-local"
                 value={form.availability_window_start}
@@ -1105,13 +1105,13 @@ export default function OperatorCarsPage() {
                 className={inputClass("availability_window_start")}
               />
               {fieldMsgs("availability_window_start").map((m, i) => (
-                <span key={i} className="text-xs text-red-600">
+                <span key={i} className="text-xs text-error-600">
                   {m}
                 </span>
               ))}
             </label>
             <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.availability_window_end")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.availability_window_end")}</span>
               <input
                 type="datetime-local"
                 value={form.availability_window_end}
@@ -1121,13 +1121,13 @@ export default function OperatorCarsPage() {
                 className={inputClass("availability_window_end")}
               />
               {fieldMsgs("availability_window_end").map((m, i) => (
-                <span key={i} className="text-xs text-red-600">
+                <span key={i} className="text-xs text-error-600">
                   {m}
                 </span>
               ))}
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.status")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.status")}</span>
               <select
                 value={form.status}
                 onChange={(e) => setForm((p) => (p ? { ...p, status: e.target.value } : p))}
@@ -1141,13 +1141,13 @@ export default function OperatorCarsPage() {
                 ))}
               </select>
               {fieldMsgs("status").map((m, i) => (
-                <span key={i} className="text-xs text-red-600">
+                <span key={i} className="text-xs text-error-600">
                   {m}
                 </span>
               ))}
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.availability_status")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.availability_status")}</span>
               <select
                 value={form.availability_status}
                 onChange={(e) =>
@@ -1163,13 +1163,13 @@ export default function OperatorCarsPage() {
                 ))}
               </select>
               {fieldMsgs("availability_status").map((m, i) => (
-                <span key={i} className="text-xs text-red-600">
+                <span key={i} className="text-xs text-error-600">
                   {m}
                 </span>
               ))}
             </label>
 
-            <div className="col-span-2 mt-1 border-t border-slate-100 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <div className="col-span-2 mt-1 border-t border-default pt-2 text-xs font-semibold uppercase tracking-wide text-fg-t6">
               {t("admin.crud.cars.section.advanced")}
             </div>
             <label className="flex items-center gap-2 text-sm sm:col-span-2">
@@ -1193,10 +1193,10 @@ export default function OperatorCarsPage() {
                   )
                 }
               />
-              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.child_seats_available")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.child_seats_available")}</span>
             </label>
             <div className="col-span-2 flex flex-wrap gap-3 text-sm">
-              <span className="w-full min-w-[8rem] font-medium text-slate-600">{t("admin.crud.cars.field.child_seat_types")}</span>
+              <span className="w-full min-w-[8rem] font-medium text-fg-t6">{t("admin.crud.cars.field.child_seat_types")}</span>
               {CAR_CHILD_SEAT_TYPES.map((t) => (
                 <label key={t} className="flex items-center gap-1.5">
                   <input
@@ -1224,7 +1224,7 @@ export default function OperatorCarsPage() {
               ))}
             </div>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.additional_suitcases_max")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.additional_suitcases_max")}</span>
               <input
                 type="number"
                 min={0}
@@ -1251,7 +1251,7 @@ export default function OperatorCarsPage() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.additional_small_bags_max")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.additional_small_bags_max")}</span>
               <input
                 type="number"
                 min={0}
@@ -1278,7 +1278,7 @@ export default function OperatorCarsPage() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.extra_luggage_notes")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.extra_luggage_notes")}</span>
               <textarea
                 rows={2}
                 value={form.advanced_options.extra_luggage.notes ?? ""}
@@ -1302,7 +1302,7 @@ export default function OperatorCarsPage() {
               />
             </label>
             <div className="col-span-2 flex flex-wrap gap-3 text-sm">
-              <span className="w-full min-w-[8rem] font-medium text-slate-600">{t("admin.crud.cars.field.services")}</span>
+              <span className="w-full min-w-[8rem] font-medium text-fg-t6">{t("admin.crud.cars.field.services")}</span>
               {CAR_SERVICE_KEYS.map((k) => (
                 <label key={k} className="flex items-center gap-1.5">
                   <input
@@ -1327,7 +1327,7 @@ export default function OperatorCarsPage() {
               ))}
             </div>
             <div className="col-span-2 flex flex-wrap gap-3 text-sm">
-              <span className="w-full min-w-[8rem] font-medium text-slate-600">{t("admin.crud.cars.field.driver_languages")}</span>
+              <span className="w-full min-w-[8rem] font-medium text-fg-t6">{t("admin.crud.cars.field.driver_languages")}</span>
               {DRIVER_LANG_PRESETS.map(({ code, label }) => (
                 <label key={code} className="flex items-center gap-1.5">
                   <input
@@ -1354,19 +1354,19 @@ export default function OperatorCarsPage() {
               ))}
             </div>
 
-            <div className="col-span-2 mt-2 border-t border-slate-100 pt-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <div className="col-span-2 mt-2 border-t border-default pt-3 text-xs font-semibold uppercase tracking-wide text-fg-t6">
               6b) Pricing rules (Step C2)
             </div>
-            <p className="col-span-2 text-xs leading-relaxed text-slate-600">
+            <p className="col-span-2 text-xs leading-relaxed text-fg-t6">
               Base rent is on the offer above. Here you only define add-ons and limits: mileage cap and overage,
               border policy, and an optional service radius with what happens outside it.
             </p>
 
-            <p className="col-span-2 text-xs text-slate-500">
+            <p className="col-span-2 text-xs text-fg-t6">
               Mileage — unlimited = no cap; limited = included km per rental, optional price per extra km beyond that.
             </p>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.mileage")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.mileage")}</span>
               <select
                 value={form.advanced_options.pricing_rules.mileage.mode}
                 onChange={(e) => {
@@ -1398,7 +1398,7 @@ export default function OperatorCarsPage() {
             {form.advanced_options.pricing_rules.mileage.mode === "limited" && (
               <>
                 <label className="flex flex-col gap-1 text-sm">
-                  <span className="font-medium text-slate-600">{t("admin.crud.cars.field.included_km_per_rental")}</span>
+                  <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.included_km_per_rental")}</span>
                   <input
                     type="number"
                     min={1}
@@ -1429,13 +1429,13 @@ export default function OperatorCarsPage() {
                     className={inputClass("pr_included_km")}
                   />
                   {fieldMsgs("pr_included_km").map((m, i) => (
-                    <span key={i} className="text-xs text-red-600">
+                    <span key={i} className="text-xs text-error-600">
                       {m}
                     </span>
                   ))}
                 </label>
                 <label className="flex flex-col gap-1 text-sm">
-                  <span className="font-medium text-slate-600">{t("admin.crud.cars.field.extra_km_price")}</span>
+                  <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.extra_km_price")}</span>
                   <input
                     type="number"
                     min={0}
@@ -1467,12 +1467,12 @@ export default function OperatorCarsPage() {
               </>
             )}
 
-            <p className="col-span-2 text-xs text-slate-500">
+            <p className="col-span-2 text-xs text-fg-t6">
               Cross-border — “included” allows travel without extra charge; surcharges are in offer currency (one-time vs
               per rental day).
             </p>
             <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.cross_border")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.cross_border")}</span>
               <select
                 value={form.advanced_options.pricing_rules.cross_border.policy}
                 onChange={(e) => {
@@ -1506,7 +1506,7 @@ export default function OperatorCarsPage() {
             {(form.advanced_options.pricing_rules.cross_border.policy === "surcharge_fixed" ||
               form.advanced_options.pricing_rules.cross_border.policy === "surcharge_daily") && (
               <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-600">{t("admin.crud.cars.field.border_surcharge_amount")}</span>
+                <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.border_surcharge_amount")}</span>
                 <input
                   type="number"
                   min={0}
@@ -1535,19 +1535,19 @@ export default function OperatorCarsPage() {
                   className={inputClass("pr_surcharge")}
                 />
                 {fieldMsgs("pr_surcharge").map((m, i) => (
-                  <span key={i} className="text-xs text-red-600">
+                  <span key={i} className="text-xs text-error-600">
                     {m}
                   </span>
                 ))}
               </label>
             )}
 
-            <p className="col-span-2 text-xs text-slate-500">
+            <p className="col-span-2 text-xs text-fg-t6">
               Radius — optional max distance from pickup/hub; if set, choose how trips beyond that radius are priced or
               blocked.
             </p>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-600">{t("admin.crud.cars.field.service_radius_km")}</span>
+              <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.service_radius_km")}</span>
               <input
                 type="number"
                 min={1}
@@ -1594,7 +1594,7 @@ export default function OperatorCarsPage() {
               form.advanced_options.pricing_rules.radius.service_radius_km > 0 && (
                 <>
                   <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-                    <span className="font-medium text-slate-600">{t("admin.crud.cars.field.out_of_radius_mode")}</span>
+                    <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.out_of_radius_mode")}</span>
                     <select
                       value={form.advanced_options.pricing_rules.radius.out_of_radius_mode}
                       onChange={(e) => {
@@ -1635,14 +1635,14 @@ export default function OperatorCarsPage() {
                       ))}
                     </select>
                     {fieldMsgs("pr_out_mode").map((m, i) => (
-                      <span key={i} className="text-xs text-red-600">
+                      <span key={i} className="text-xs text-error-600">
                         {m}
                       </span>
                     ))}
                   </label>
                   {form.advanced_options.pricing_rules.radius.out_of_radius_mode === "flat_fee" && (
                     <label className="flex flex-col gap-1 text-sm">
-                      <span className="font-medium text-slate-600">{t("admin.crud.cars.field.out_of_radius_flat_fee")}</span>
+                      <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.out_of_radius_flat_fee")}</span>
                       <input
                         type="number"
                         min={0}
@@ -1671,7 +1671,7 @@ export default function OperatorCarsPage() {
                         className={inputClass("pr_flat")}
                       />
                       {fieldMsgs("pr_flat").map((m, i) => (
-                        <span key={i} className="text-xs text-red-600">
+                        <span key={i} className="text-xs text-error-600">
                           {m}
                         </span>
                       ))}
@@ -1679,7 +1679,7 @@ export default function OperatorCarsPage() {
                   )}
                   {form.advanced_options.pricing_rules.radius.out_of_radius_mode === "per_km" && (
                     <label className="flex flex-col gap-1 text-sm">
-                      <span className="font-medium text-slate-600">{t("admin.crud.cars.field.out_of_radius_per_km")}</span>
+                      <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.out_of_radius_per_km")}</span>
                       <input
                         type="number"
                         min={0}
@@ -1708,7 +1708,7 @@ export default function OperatorCarsPage() {
                         className={inputClass("pr_per_km")}
                       />
                       {fieldMsgs("pr_per_km").map((m, i) => (
-                        <span key={i} className="text-xs text-red-600">
+                        <span key={i} className="text-xs text-error-600">
                           {m}
                         </span>
                       ))}
@@ -1717,7 +1717,7 @@ export default function OperatorCarsPage() {
                 </>
               )}
           </div>
-          {formErr && <p className="mt-2 text-sm text-red-600">{formErr}</p>}
+          {formErr && <p className="mt-2 text-sm text-error-600">{formErr}</p>}
           <div className="mt-4 flex gap-2">
             <button
               type="button"
@@ -1730,16 +1730,16 @@ export default function OperatorCarsPage() {
             <button
               type="button"
               onClick={closeForm}
-              className="rounded border border-slate-300 px-4 py-1.5 text-sm"
+              className="rounded border border-default px-4 py-1.5 text-sm"
             >
               {t("common.cancel")}
             </button>
           </div>
         </div>
       )}
-      <div className="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
+      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
         <table className="w-full min-w-[640px] text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
+          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
               <th className="px-3 py-2">{t("admin.crud.common.id")}</th>
               <th className="px-3 py-2">{t("admin.crud.cars.col.company")}</th>
@@ -1753,14 +1753,14 @@ export default function OperatorCarsPage() {
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-slate-400">
+                <td colSpan={7} className="px-3 py-6 text-center text-fg-t6">
                   {t("admin.crud.cars.empty")}
                 </td>
               </tr>
             )}
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-100">
-                <td className="px-3 py-2 tabular-nums text-slate-700">{r.id}</td>
+              <tr key={r.id} className="border-b border-default hover:bg-figma-bg-1">
+                <td className="px-3 py-2 tabular-nums text-fg-t7">{r.id}</td>
                 <td className="px-3 py-2 tabular-nums">{companyCell(r)}</td>
                 <td className="px-3 py-2">{r.pickup_location ?? "—"}</td>
                 <td className="px-3 py-2">{r.dropoff_location ?? "—"}</td>
@@ -1771,14 +1771,14 @@ export default function OperatorCarsPage() {
                     <button
                       type="button"
                       onClick={() => openEdit(r)}
-                      className="text-xs text-blue-700 underline"
+                      className="text-xs text-info-700 underline"
                     >
                       {t("admin.crud.common.edit")}
                     </button>
                     <button
                       type="button"
                       onClick={() => void handleDelete(r.id)}
-                      className="text-xs text-red-600 underline"
+                      className="text-xs text-error-600 underline"
                     >
                       {t("admin.crud.common.delete")}
                     </button>

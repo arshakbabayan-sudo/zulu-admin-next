@@ -87,10 +87,10 @@ export function InventoryOversightList({
     <div>
       <h1 className="text-xl font-semibold">{title}</h1>
       {filterBar ? <div className="mt-4 flex flex-wrap items-end gap-3">{filterBar}</div> : null}
-      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
-      <div className={`mt-4 overflow-x-auto rounded border border-slate-200 bg-white transition-opacity ${isLoading ? "opacity-50 pointer-events-none" : "opacity-100"}`}>
+      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
+      <div className={`mt-4 overflow-x-auto rounded border border-default bg-white transition-opacity ${isLoading ? "opacity-50 pointer-events-none" : "opacity-100"}`}>
         <table className="w-full min-w-[720px] text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
+          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
               {columns.map((c, idx) => (
                 <th key={`h-${idx}-${c.header}`} className="px-3 py-2">
@@ -103,7 +103,7 @@ export function InventoryOversightList({
             {rows.map((r, i) => {
               const key = typeof r.id === "number" || typeof r.id === "string" ? String(r.id) : `row-${i}`;
               return (
-                <tr key={key} className="border-b border-slate-100">
+                <tr key={key} className="border-b border-default">
                   {columns.map((c, ci) => (
                     <td key={`c-${key}-${ci}`} className="max-w-[280px] truncate px-3 py-2">
                       {c.getCell(r)}

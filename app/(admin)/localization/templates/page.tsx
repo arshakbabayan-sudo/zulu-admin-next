@@ -120,16 +120,16 @@ export default function LocalizationTemplatesPage() {
     <div>
       <h1 className="text-xl font-semibold">Notification templates</h1>
       {msg && <p className="mt-2 text-sm text-emerald-700">{msg}</p>}
-      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
+      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
 
-      <div className="mt-4 space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="mt-4 space-y-3 rounded-xl border border-default bg-white p-4 shadow-sm">
         <div className="flex flex-wrap gap-3">
-          <label className="flex flex-col text-xs text-slate-600">
+          <label className="flex flex-col text-xs text-fg-t6">
             Event
             <select
               value={event}
               onChange={(e) => setEvent(e.target.value)}
-              className="mt-1 max-w-md rounded border border-slate-300 px-2 py-1 text-sm"
+              className="mt-1 max-w-md rounded border border-default px-2 py-1 text-sm"
             >
               {NOTIFICATION_TEMPLATE_EVENTS.map((ev) => (
                 <option key={ev} value={ev}>
@@ -138,12 +138,12 @@ export default function LocalizationTemplatesPage() {
               ))}
             </select>
           </label>
-          <label className="flex flex-col text-xs text-slate-600">
+          <label className="flex flex-col text-xs text-fg-t6">
             Language
             <select
               value={lang}
               onChange={(e) => setLang(e.target.value)}
-              className="mt-1 rounded border border-slate-300 px-2 py-1 text-sm"
+              className="mt-1 rounded border border-default px-2 py-1 text-sm"
             >
               {langs.length === 0 ? (
                 <option value={lang}>{lang}</option>
@@ -156,12 +156,12 @@ export default function LocalizationTemplatesPage() {
               )}
             </select>
           </label>
-          <label className="flex flex-col text-xs text-slate-600">
+          <label className="flex flex-col text-xs text-fg-t6">
             Channel
             <select
               value={channel}
               onChange={(e) => setChannel(e.target.value)}
-              className="mt-1 rounded border border-slate-300 px-2 py-1 text-sm"
+              className="mt-1 rounded border border-default px-2 py-1 text-sm"
             >
               {CHANNELS.map((c) => (
                 <option key={c} value={c}>
@@ -176,7 +176,7 @@ export default function LocalizationTemplatesPage() {
             type="button"
             disabled={busy}
             onClick={() => loadTemplate()}
-            className="rounded bg-slate-200 px-3 py-1 text-sm disabled:opacity-50"
+            className="rounded bg-figma-bg-1 px-3 py-1 text-sm disabled:opacity-50"
           >
             Load
           </button>
@@ -191,23 +191,23 @@ export default function LocalizationTemplatesPage() {
         </div>
       </div>
 
-      <div className="mt-4 space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <label className="block text-xs text-slate-600">
+      <div className="mt-4 space-y-3 rounded-xl border border-default bg-white p-4 shadow-sm">
+        <label className="block text-xs text-fg-t6">
           Title template
           <input
             value={titleTemplate}
             onChange={(e) => setTitleTemplate(e.target.value)}
             maxLength={512}
-            className="mt-1 w-full max-w-3xl rounded border border-slate-300 px-2 py-1 text-sm"
+            className="mt-1 w-full max-w-3xl rounded border border-default px-2 py-1 text-sm"
           />
         </label>
-        <label className="block text-xs text-slate-600">
+        <label className="block text-xs text-fg-t6">
           Body template
           <textarea
             value={bodyTemplate}
             onChange={(e) => setBodyTemplate(e.target.value)}
             rows={12}
-            className="mt-1 w-full max-w-3xl rounded border border-slate-300 px-2 py-1 font-mono text-sm"
+            className="mt-1 w-full max-w-3xl rounded border border-default px-2 py-1 font-mono text-sm"
           />
         </label>
         <label className="flex items-center gap-2 text-sm">

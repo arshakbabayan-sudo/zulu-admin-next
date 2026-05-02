@@ -27,6 +27,7 @@ import {
   toCanonicalFlightCabinClass,
 } from "@/lib/flight-cabin-class";
 import { useLanguage } from "@/contexts/LanguageContext";
+import Link from "next/link";
 import { Fragment, useCallback, useEffect, useState } from "react";
 
 type FieldType = "text" | "number" | "datetime-local" | "select" | "boolean";
@@ -478,7 +479,7 @@ export default function OperatorFlightsPage() {
     if (!form) return null;
     return (
       <label key={String(field.key)} className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-slate-600">
+        <span className="font-medium text-fg-t6">
           {t(`admin.crud.flights.field.${String(field.key)}`)}
           {field.required ? " *" : ""}
         </span>
@@ -486,7 +487,7 @@ export default function OperatorFlightsPage() {
           <select
             value={String(form[field.key] ?? "")}
             onChange={(e) => setForm((p) => (p ? { ...p, [field.key]: e.target.value } : p))}
-            className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+            className="rounded border border-default px-2 py-1.5 text-sm"
           >
             {field.options.map((opt) => (
               <option key={opt} value={opt}>
@@ -502,7 +503,7 @@ export default function OperatorFlightsPage() {
           <select
             value={String(Boolean(form[field.key]))}
             onChange={(e) => setForm((p) => (p ? { ...p, [field.key]: e.target.value === "true" } : p))}
-            className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+            className="rounded border border-default px-2 py-1.5 text-sm"
           >
             <option value="true">true</option>
             <option value="false">false</option>
@@ -517,7 +518,7 @@ export default function OperatorFlightsPage() {
               setForm((p) => (p ? { ...p, [field.key]: nextValue } : p));
             }}
             type={field.type}
-            className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+            className="rounded border border-default px-2 py-1.5 text-sm"
           />
         )}
       </label>
@@ -720,10 +721,10 @@ export default function OperatorFlightsPage() {
         }}
       />
 
-      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
+      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
 
       {form && (
-        <div className="mt-4 rounded border border-slate-200 bg-white p-4">
+        <div className="mt-4 rounded border border-default bg-white p-4">
           <h2 className="mb-3 text-base font-medium">{editId ? t("admin.crud.flights.form_edit") : t("admin.crud.flights.form_new")}</h2>
           <div className="mb-3 flex flex-wrap gap-2">
             {WIZARD_STEPS.map((step, idx) => {
@@ -744,8 +745,8 @@ export default function OperatorFlightsPage() {
                     isActive
                       ? "border-slate-800 bg-slate-800 text-white"
                       : isComplete
-                        ? "border-slate-300 bg-slate-100 text-slate-700"
-                        : "border-slate-200 bg-white text-slate-400"
+                        ? "border-default bg-figma-bg-1 text-fg-t7"
+                        : "border-default bg-white text-fg-t6"
                   }`}
                 >
                   {t(FLIGHT_STEP_LABEL_KEYS[step.key])}
@@ -777,9 +778,9 @@ export default function OperatorFlightsPage() {
           ) : (
             <div className="grid gap-2 sm:grid-cols-2">
               {FIELDS.map((field) => (
-                <div key={String(field.key)} className="rounded border border-slate-200 px-3 py-2 text-sm">
-                  <div className="text-xs text-slate-500">{t(`admin.crud.flights.field.${String(field.key)}`)}</div>
-                  <div className="font-medium text-slate-800">
+                <div key={String(field.key)} className="rounded border border-default px-3 py-2 text-sm">
+                  <div className="text-xs text-fg-t6">{t(`admin.crud.flights.field.${String(field.key)}`)}</div>
+                  <div className="font-medium text-fg-t11">
                     {field.type === "boolean"
                       ? String(Boolean(form[field.key]))
                       : field.key === "cabin_class"
@@ -793,15 +794,15 @@ export default function OperatorFlightsPage() {
             </div>
           )}
           {stepErrors.length > 0 && (
-            <p className="mt-2 text-sm text-red-600">{stepErrors.slice(0, 3).join(" ")}</p>
+            <p className="mt-2 text-sm text-error-600">{stepErrors.slice(0, 3).join(" ")}</p>
           )}
-          {formErr && <p className="mt-2 text-sm text-red-600">{formErr}</p>}
+          {formErr && <p className="mt-2 text-sm text-error-600">{formErr}</p>}
           <div className="mt-4 flex gap-2">
             <button
               type="button"
               onClick={handlePreviousStep}
               disabled={currentStepIndex === 0 || busy}
-              className="rounded border border-slate-300 px-4 py-1.5 text-sm disabled:opacity-40"
+              className="rounded border border-default px-4 py-1.5 text-sm disabled:opacity-40"
             >
               {t("common.prev")}
             </button>
@@ -825,14 +826,14 @@ export default function OperatorFlightsPage() {
               </button>
             )}
             <button type="button" onClick={closeForm}
-              className="rounded border border-slate-300 px-4 py-1.5 text-sm">{t("common.cancel")}</button>
+              className="rounded border border-default px-4 py-1.5 text-sm">{t("common.cancel")}</button>
           </div>
         </div>
       )}
 
-      <div className="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
+      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
         <table className="w-full min-w-[800px] text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
+          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
               <th className="px-3 py-2">{t("admin.crud.common.id")}</th>
               <th className="px-3 py-2">{t("admin.crud.flights.col.flight_num")}</th>
@@ -845,46 +846,52 @@ export default function OperatorFlightsPage() {
           </thead>
           <tbody>
             {rows.length === 0 && (
-              <tr><td colSpan={7} className="px-3 py-6 text-center text-slate-400">{t("admin.crud.flights.empty")}</td></tr>
+              <tr><td colSpan={7} className="px-3 py-6 text-center text-fg-t6">{t("admin.crud.flights.empty")}</td></tr>
             )}
             {rows.map((r) => (
               <Fragment key={r.id}>
-              <tr className="border-b border-slate-100 hover:bg-slate-100">
-                <td className="px-3 py-2 tabular-nums text-slate-700">{r.id}</td>
+              <tr className="border-b border-default hover:bg-figma-bg-1">
+                <td className="px-3 py-2 tabular-nums text-fg-t7">{r.id}</td>
                 <td className="px-3 py-2 font-medium">{r.flight_code_internal ?? r.flight_number ?? "-"}</td>
                 <td className="px-3 py-2">{r.company?.name ?? r.airline ?? "-"}</td>
                 <td className="px-3 py-2">{r.departure_city ?? r.origin ?? "-"} {"->"} {r.arrival_city ?? r.destination ?? "-"}</td>
-                <td className="px-3 py-2 text-xs text-slate-600">{r.departure_at ? new Date(r.departure_at).toLocaleString() : "-"}</td>
-                <td className="px-3 py-2 text-xs text-slate-600">{r.arrival_at ? new Date(r.arrival_at).toLocaleString() : "-"}</td>
+                <td className="px-3 py-2 text-xs text-fg-t6">{r.departure_at ? new Date(r.departure_at).toLocaleString() : "-"}</td>
+                <td className="px-3 py-2 text-xs text-fg-t6">{r.arrival_at ? new Date(r.arrival_at).toLocaleString() : "-"}</td>
                 <td className="px-3 py-2">
                   <div className="flex gap-2">
                     <button type="button" onClick={() => openEdit(r)}
-                      className="text-xs text-blue-700 underline">{t("admin.crud.common.edit")}</button>
+                      className="text-xs text-info-700 underline">{t("admin.crud.common.edit")}</button>
                     <button type="button" onClick={() => openCabinManager(r.id)}
-                      className="text-xs text-slate-700 underline">{t("admin.crud.flights.cabins")}</button>
+                      className="text-xs text-fg-t7 underline">{t("admin.crud.flights.cabins")}</button>
+                    <Link
+                      href={`/operator/flights/${r.id}/cabins`}
+                      className="text-xs text-indigo-700 underline"
+                    >
+                      Seat map
+                    </Link>
                     <button type="button" onClick={() => void handleDelete(r.id)}
-                      className="text-xs text-red-600 underline">{t("admin.crud.common.delete")}</button>
+                      className="text-xs text-error-600 underline">{t("admin.crud.common.delete")}</button>
                   </div>
                 </td>
               </tr>
             {activeCabinFlightId === r.id && (
-              <tr className="border-b border-slate-100 bg-slate-50">
+              <tr className="border-b border-default bg-figma-bg-1">
                 <td colSpan={7} className="px-3 py-3">
-                  <div className="rounded border border-slate-200 bg-white p-3">
+                  <div className="rounded border border-default bg-white p-3">
                     <div className="mb-3 flex items-center justify-between">
-                      <h3 className="text-sm font-semibold text-slate-800">{t("admin.crud.flights.cabins")} #{r.id}</h3>
+                      <h3 className="text-sm font-semibold text-fg-t11">{t("admin.crud.flights.cabins")} #{r.id}</h3>
                       <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={openCreateCabin}
-                          className="rounded border border-slate-300 px-2 py-1 text-xs"
+                          className="rounded border border-default px-2 py-1 text-xs"
                         >
                           {t("admin.crud.flights.cabin.new_btn")}
                         </button>
                         <button
                           type="button"
                           onClick={() => setActiveCabinFlightId(null)}
-                          className="rounded border border-slate-300 px-2 py-1 text-xs"
+                          className="rounded border border-default px-2 py-1 text-xs"
                         >
                           Close
                         </button>
@@ -892,15 +899,15 @@ export default function OperatorFlightsPage() {
                     </div>
 
                     {cabinForm && (
-                      <div className="mb-3 rounded border border-slate-200 p-3">
+                      <div className="mb-3 rounded border border-default p-3">
                         <h4 className="mb-2 text-sm font-medium">{editCabinId ? t("admin.crud.flights.cabin.form_edit") : t("admin.crud.flights.cabin.form_new")}</h4>
                         <div className="grid gap-3 sm:grid-cols-2">
                           <label className="flex flex-col gap-1 text-sm">
-                            <span className="font-medium text-slate-600">{t("admin.crud.flights.field.cabin_class")} *</span>
+                            <span className="font-medium text-fg-t6">{t("admin.crud.flights.field.cabin_class")} *</span>
                             <select
                               value={String(cabinForm.cabin_class ?? "economy")}
                               onChange={(e) => setCabinForm((p) => p ? { ...p, cabin_class: e.target.value } : p)}
-                              className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                              className="rounded border border-default px-2 py-1.5 text-sm"
                             >
                               {FLIGHT_CABIN_CLASS_OPTIONS.map((opt) => (
                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -908,48 +915,48 @@ export default function OperatorFlightsPage() {
                             </select>
                           </label>
                           <label className="flex flex-col gap-1 text-sm">
-                            <span className="font-medium text-slate-600">{t("admin.crud.flights.field.seat_capacity_total")} *</span>
+                            <span className="font-medium text-fg-t6">{t("admin.crud.flights.field.seat_capacity_total")} *</span>
                             <input
                               type="number"
                               value={String(cabinForm.seat_capacity_total ?? 0)}
                               onChange={(e) => setCabinForm((p) => p ? { ...p, seat_capacity_total: e.target.value === "" ? "" : Number(e.target.value) } : p)}
-                              className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                              className="rounded border border-default px-2 py-1.5 text-sm"
                             />
                           </label>
                           <label className="flex flex-col gap-1 text-sm">
-                            <span className="font-medium text-slate-600">{t("admin.crud.flights.field.seat_capacity_available")} *</span>
+                            <span className="font-medium text-fg-t6">{t("admin.crud.flights.field.seat_capacity_available")} *</span>
                             <input
                               type="number"
                               value={String(cabinForm.seat_capacity_available ?? 0)}
                               onChange={(e) => setCabinForm((p) => p ? { ...p, seat_capacity_available: e.target.value === "" ? "" : Number(e.target.value) } : p)}
-                              className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                              className="rounded border border-default px-2 py-1.5 text-sm"
                             />
                           </label>
                           <label className="flex flex-col gap-1 text-sm">
-                            <span className="font-medium text-slate-600">{t("admin.crud.flights.field.adult_price")} *</span>
+                            <span className="font-medium text-fg-t6">{t("admin.crud.flights.field.adult_price")} *</span>
                             <input
                               type="number"
                               value={String(cabinForm.adult_price ?? 1)}
                               onChange={(e) => setCabinForm((p) => p ? { ...p, adult_price: e.target.value === "" ? "" : Number(e.target.value) } : p)}
-                              className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                              className="rounded border border-default px-2 py-1.5 text-sm"
                             />
                           </label>
                           <label className="flex flex-col gap-1 text-sm">
-                            <span className="font-medium text-slate-600">{t("admin.crud.flights.field.child_price")} *</span>
+                            <span className="font-medium text-fg-t6">{t("admin.crud.flights.field.child_price")} *</span>
                             <input
                               type="number"
                               value={String(cabinForm.child_price ?? 0)}
                               onChange={(e) => setCabinForm((p) => p ? { ...p, child_price: e.target.value === "" ? "" : Number(e.target.value) } : p)}
-                              className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                              className="rounded border border-default px-2 py-1.5 text-sm"
                             />
                           </label>
                           <label className="flex flex-col gap-1 text-sm">
-                            <span className="font-medium text-slate-600">{t("admin.crud.flights.field.infant_price")} *</span>
+                            <span className="font-medium text-fg-t6">{t("admin.crud.flights.field.infant_price")} *</span>
                             <input
                               type="number"
                               value={String(cabinForm.infant_price ?? 0)}
                               onChange={(e) => setCabinForm((p) => p ? { ...p, infant_price: e.target.value === "" ? "" : Number(e.target.value) } : p)}
-                              className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                              className="rounded border border-default px-2 py-1.5 text-sm"
                             />
                           </label>
                           {[
@@ -959,11 +966,11 @@ export default function OperatorFlightsPage() {
                             "seat_map_available",
                           ].map((key) => (
                             <label key={key} className="flex flex-col gap-1 text-sm">
-                              <span className="font-medium text-slate-600">{t(`admin.crud.flights.field.${key}`)} *</span>
+                              <span className="font-medium text-fg-t6">{t(`admin.crud.flights.field.${key}`)} *</span>
                               <select
                                 value={String(Boolean(cabinForm[key as keyof FlightCabinPayload]))}
                                 onChange={(e) => setCabinForm((p) => p ? { ...p, [key]: e.target.value === "true" } : p)}
-                                className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                                className="rounded border border-default px-2 py-1.5 text-sm"
                               >
                                 <option value="true">true</option>
                                 <option value="false">false</option>
@@ -971,48 +978,48 @@ export default function OperatorFlightsPage() {
                             </label>
                           ))}
                           <label className="flex flex-col gap-1 text-sm">
-                            <span className="font-medium text-slate-600">{t("admin.crud.flights.field.hand_baggage_weight")}</span>
+                            <span className="font-medium text-fg-t6">{t("admin.crud.flights.field.hand_baggage_weight")}</span>
                             <input
                               type="text"
                               value={String(cabinForm.hand_baggage_weight ?? "")}
                               onChange={(e) => setCabinForm((p) => p ? { ...p, hand_baggage_weight: e.target.value } : p)}
-                              className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                              className="rounded border border-default px-2 py-1.5 text-sm"
                             />
                           </label>
                           <label className="flex flex-col gap-1 text-sm">
-                            <span className="font-medium text-slate-600">{t("admin.crud.flights.field.checked_baggage_weight")}</span>
+                            <span className="font-medium text-fg-t6">{t("admin.crud.flights.field.checked_baggage_weight")}</span>
                             <input
                               type="text"
                               value={String(cabinForm.checked_baggage_weight ?? "")}
                               onChange={(e) => setCabinForm((p) => p ? { ...p, checked_baggage_weight: e.target.value } : p)}
-                              className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                              className="rounded border border-default px-2 py-1.5 text-sm"
                             />
                           </label>
                           <label className="flex flex-col gap-1 text-sm">
-                            <span className="font-medium text-slate-600">{t("admin.crud.flights.field.fare_family")}</span>
+                            <span className="font-medium text-fg-t6">{t("admin.crud.flights.field.fare_family")}</span>
                             <input
                               type="text"
                               value={String(cabinForm.fare_family ?? "")}
                               onChange={(e) => setCabinForm((p) => p ? { ...p, fare_family: e.target.value } : p)}
-                              className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                              className="rounded border border-default px-2 py-1.5 text-sm"
                             />
                           </label>
                           <label className="flex flex-col gap-1 text-sm">
-                            <span className="font-medium text-slate-600">{t("admin.crud.flights.field.seat_selection_policy")}</span>
+                            <span className="font-medium text-fg-t6">{t("admin.crud.flights.field.seat_selection_policy")}</span>
                             <input
                               type="text"
                               value={String(cabinForm.seat_selection_policy ?? "")}
                               onChange={(e) => setCabinForm((p) => p ? { ...p, seat_selection_policy: e.target.value } : p)}
-                              className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                              className="rounded border border-default px-2 py-1.5 text-sm"
                             />
                           </label>
                           <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-                            <span className="font-medium text-slate-600">{t("admin.crud.flights.field.baggage_notes")}</span>
+                            <span className="font-medium text-fg-t6">{t("admin.crud.flights.field.baggage_notes")}</span>
                             <input
                               type="text"
                               value={String(cabinForm.baggage_notes ?? "")}
                               onChange={(e) => setCabinForm((p) => p ? { ...p, baggage_notes: e.target.value } : p)}
-                              className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                              className="rounded border border-default px-2 py-1.5 text-sm"
                             />
                           </label>
                         </div>
@@ -1028,7 +1035,7 @@ export default function OperatorFlightsPage() {
                           <button
                             type="button"
                             onClick={closeCabinForm}
-                            className="rounded border border-slate-300 px-4 py-1.5 text-sm"
+                            className="rounded border border-default px-4 py-1.5 text-sm"
                           >
                             {t("common.cancel")}
                           </button>
@@ -1036,11 +1043,11 @@ export default function OperatorFlightsPage() {
                       </div>
                     )}
 
-                    {cabinErr && <p className="mb-2 text-sm text-red-600">{cabinErr}</p>}
+                    {cabinErr && <p className="mb-2 text-sm text-error-600">{cabinErr}</p>}
 
-                    <div className="overflow-x-auto rounded border border-slate-200">
+                    <div className="overflow-x-auto rounded border border-default">
                       <table className="w-full min-w-[700px] text-left text-xs">
-                        <thead className="border-b border-slate-200 bg-slate-100 uppercase text-slate-700">
+                        <thead className="border-b border-default bg-figma-bg-1 uppercase text-fg-t7">
                           <tr>
                             <th className="px-2 py-2">{t("admin.crud.flights.cabin.col.class")}</th>
                             <th className="px-2 py-2">{t("admin.crud.flights.cabin.col.seats")}</th>
@@ -1053,13 +1060,13 @@ export default function OperatorFlightsPage() {
                         <tbody>
                           {(cabinsByFlight[r.id] ?? []).length === 0 && (
                             <tr>
-                              <td colSpan={6} className="px-2 py-4 text-center text-slate-400">
+                              <td colSpan={6} className="px-2 py-4 text-center text-fg-t6">
                                 {cabinBusy ? t("admin.crud.flights.cabin.loading") : t("admin.crud.flights.cabin.empty")}
                               </td>
                             </tr>
                           )}
                           {(cabinsByFlight[r.id] ?? []).map((cabin) => (
-                            <tr key={cabin.id} className="border-b border-slate-100">
+                            <tr key={cabin.id} className="border-b border-default">
                               <td className="px-2 py-2">{flightCabinClassLabel(cabin.cabin_class)}</td>
                               <td className="px-2 py-2">{cabin.seat_capacity_available} / {cabin.seat_capacity_total}</td>
                               <td className="px-2 py-2">{cabin.adult_price}</td>
@@ -1070,14 +1077,14 @@ export default function OperatorFlightsPage() {
                                   <button
                                     type="button"
                                     onClick={() => openEditCabin(cabin)}
-                                    className="text-xs text-blue-700 underline"
+                                    className="text-xs text-info-700 underline"
                                   >
                                     {t("admin.crud.common.edit")}
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => void handleDeleteCabin(cabin.id)}
-                                    className="text-xs text-red-600 underline"
+                                    className="text-xs text-error-600 underline"
                                   >
                                     {t("admin.crud.common.delete")}
                                   </button>
