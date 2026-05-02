@@ -2,21 +2,470 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #eceef0;
-  --foreground: #2b2c34;
-  --admin-primary: #923081;
-  --admin-primary-soft: #f3e6f0;
-  --admin-surface: #fafafa;
-  --admin-text-muted: #717689;
-  --admin-border: #d5d6dc;
-  --admin-header-bg: #d5d6dc;
+/* Hide native date-picker glyph when we already show Figma calendar icon (lucide) in FlightField */
+@layer utilities {
+  .hide-native-date-picker {
+    position: relative;
+  }
+  .hide-native-date-picker::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+  }
+  .hide-native-date-picker::-moz-calendar-picker-indicator {
+    opacity: 0;
+  }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: "Inter", "Segoe UI", var(--font-geist-sans), Arial, Helvetica, sans-serif;
+/*
+ * Design tokens — Figma (source of truth)
+ * File: https://www.figma.com/design/A6KZcUWQanpfKiU2jjMYGj/Zulu1_Components_Colors_Typography
+ * Color documentation: section node 1:15326 (primary / secondary / tertiary / validation swatches)
+ * Typography specimen: frame 1:22396 (Inter text styles)
+ * Font family: Inter (Next.js `next/font` in layout.tsx)
+ */
+
+:root {
+  /* --- Text palette (Figma: Text color/T1…T9) — hex + space-separated RGB for rgba() --- */
+  --text-t1: #ffffff;
+  --text-t1-rgb: 255 255 255;
+  --text-t2: #eceef0;
+  --text-t2-rgb: 236 238 240;
+  --text-t3: #d5d6dc;
+  --text-t3-rgb: 213 214 220;
+  --text-t4: #c2c3cc;
+  --text-t4-rgb: 194 195 204;
+  --text-t6: #717689;
+  --text-t6-rgb: 113 118 137;
+  --text-t7: #3b3d45;
+  --text-t7-rgb: 59 61 69;
+  --text-t8: #2b2c34;
+  --text-t8-rgb: 43 44 52;
+  --text-t9: #161343;
+  --text-t9-rgb: 22 19 67;
+  /* Figma Text color/T11 (e.g. header nav) */
+  --text-t11: #282828;
+  --text-t11-rgb: 40 40 40;
+
+  /* Typography frame text styles use “Text/T8” at #354153 (see Figma style metadata on node 1:22396) */
+  --text-typography-t8: #354153;
+  --text-typography-t8-rgb: 53 65 83;
+  --text-typography-t6: #9ea0a4;
+  --text-typography-t6-rgb: 158 160 164;
+
+  --white: #ffffff;
+  --white-rgb: 255 255 255;
+
+  /* Background (Figma: Background/BG1 on Typography frame; bg-2 = elevated surface) */
+  --bg-1: #fafbfc;
+  --bg-1-rgb: 250 251 252;
+  --bg-2: #ffffff;
+  --bg-2-rgb: 255 255 255;
+
+  /* Gray */
+  --gray-2: #464b56;
+  --gray-2-rgb: 70 75 86;
+
+  /* Primary scale (Figma: primary/primary-*) */
+  --color-primary-900: #631351;
+  --color-primary-900-rgb: 99 19 81;
+  --color-primary-800: #751e64;
+  --color-primary-800-rgb: 117 30 100;
+  --color-primary-700: #7f246e;
+  --color-primary-700-rgb: 127 36 110;
+  --color-primary-600: #8a2b79;
+  --color-primary-600-rgb: 138 43 121;
+  --color-primary-500: #923081;
+  --color-primary-500-rgb: 146 48 129;
+  --color-primary-400: #a24f94;
+  --color-primary-400-rgb: 162 79 148;
+  --color-primary-300: #b36ea7;
+  --color-primary-300-rgb: 179 110 167;
+  --color-primary-200: #c998c0;
+  --color-primary-200-rgb: 201 152 192;
+  --color-primary-100: #dec1d9;
+  --color-primary-100-rgb: 222 193 217;
+  --color-primary-50: #f2e6f0;
+  --color-primary-50-rgb: 242 230 240;
+  --color-primary-10: #fbf8fb;
+  --color-primary-10-rgb: 251 248 251;
+
+  /* Secondary scale */
+  --color-secondary-900: #0a0614;
+  --color-secondary-800: #120c20;
+  --color-secondary-700: #170f27;
+  --color-secondary-600: #1b122e;
+  --color-secondary-500: #1f1533;
+  --color-secondary-400: #413852;
+  --color-secondary-300: #625b70;
+  --color-secondary-200: #8f8a99;
+  --color-secondary-100: #bcb9c2;
+  --color-secondary-50: #e4e3e7;
+  --color-secondary-10: #ecebee;
+
+  /* Tertiary scale */
+  --color-tertiary-900: #2c144d;
+  --color-tertiary-800: #3c1f60;
+  --color-tertiary-700: #46256a;
+  --color-tertiary-600: #4f2b75;
+  --color-tertiary-500: #57307c;
+  --color-tertiary-400: #704f90;
+  --color-tertiary-300: #896ea4;
+  --color-tertiary-200: #ab97be;
+  --color-tertiary-100: #cdc1d7;
+  --color-tertiary-50: #ebe6f0;
+
+  /* Validation — Error */
+  --color-error-900: #ac2c2b;
+  --color-error-800: #bc3436;
+  --color-error-700: #c93a3d;
+  --color-error-600: #db4343;
+  --color-error-500: #ea4b45;
+  --color-error-400: #e55a5b;
+  --color-error-300: #db777b;
+  --color-error-200: #e79c9f;
+  --color-error-100: #faced4;
+  --color-error-50: #fcedf0;
+
+  /* Validation — Success */
+  --color-success-900: #1f6225;
+  --color-success-800: #318137;
+  --color-success-700: #3b9241;
+  --color-success-600: #46a44c;
+  --color-success-500: #4fb356;
+  --color-success-400: #69bf6f;
+  --color-success-300: #83ca88;
+  --color-success-200: #a7d8aa;
+  --color-success-100: #c9e7cb;
+  --color-success-50: #e8f6ea;
+
+  /* Validation — Info */
+  --color-info-900: #0f409f;
+  --color-info-800: #145ebe;
+  --color-info-700: #1770d0;
+  --color-info-600: #1981e3;
+  --color-info-500: #198ff1;
+  --color-info-400: #3d9ff4;
+  --color-info-300: #60b0f5;
+  --color-info-200: #8dc6f8;
+  --color-info-100: #badcfb;
+  --color-info-50: #e2f1fd;
+
+  /* Validation — Warning */
+  --color-warning-900: #ff6e01;
+  --color-warning-800: #ff8e00;
+  --color-warning-700: #ffa000;
+  --color-warning-600: #ffb300;
+  --color-warning-500: #ffc007;
+  --color-warning-400: #ffca28;
+  --color-warning-300: #ffca28;
+  --color-warning-200: #ffe082;
+  --color-warning-100: #ffecb3;
+  --color-warning-50: #fff8e1;
+
+  /* Semantic aliases (app shell) — map to Figma tokens above */
+  --zulu-primary: var(--color-primary-500);
+  --zulu-purple-dark: #3d2645;
+  --zulu-accent-pink: #d946a6;
+  --text-primary: var(--text-t8);
+  --surface: var(--bg-2);
+  --surface-muted: var(--bg-1);
+  --border-default: #e1e5ec;
+  --border-default-rgb: 225 229 236;
+  --status-success: var(--color-success-500);
+  --status-error: var(--color-error-500);
+  --status-warning: var(--color-warning-500);
+  --status-info: var(--color-info-500);
+
+  --background: var(--white);
+  --foreground: var(--text-typography-t8);
+  --card: var(--white);
+  --card-foreground: var(--text-typography-t8);
+  --popover: var(--white);
+  --popover-foreground: var(--text-typography-t8);
+  --primary: var(--color-primary-500);
+  --primary-foreground: var(--white);
+  --secondary: var(--zulu-purple-dark);
+  --secondary-foreground: var(--white);
+  --muted: var(--surface-muted);
+  --muted-foreground: var(--text-t6);
+  --accent: var(--zulu-accent-pink);
+  --accent-foreground: var(--white);
+  --destructive: var(--color-error-500);
+  --destructive-foreground: var(--white);
+  --border: var(--border-default);
+  --input: var(--border-default);
+  --ring: var(--zulu-primary);
+  --radius: 8px;
+  --input-placeholder: #999999;
+  --radius-card: 12px;
+  --radius-modal: 16px;
+
+  /* Elevation: not present in Figma variable export for nodes 1:15326 / 1:22396 — keep for UI until specified in file */
+  --shadow-card: 0px 2px 8px rgba(0, 0, 0, 0.1);
+  --shadow-modal: 0px 8px 24px rgba(0, 0, 0, 0.15);
+  --shadow-dropdown: 0px 4px 24px rgba(0, 0, 0, 0.1);
+
+  /* Flag assets (GB union mask chroma — LanguageCurrencyModal / NewHeader) */
+  --zulu-flag-union-blue: #0a17a7;
+
+  /* Layout */
+  --zulu-max-width: 1440px;
+  /** Main content rail width (home sections, hero search) */
+  --zulu-home-content: 1200px;
+  /** Landing band backgrounds (Figma 1:19184) */
+  --zulu-home-band: #f6f7f8;
+  --zulu-home-band-md: #f7f7f7;
+  --zulu-section-y-sm: 3rem;
+  --zulu-section-y-md: 4rem;
+  --zulu-section-y-lg: 5rem;
+
+  /* Typography scale — Inter, sizes/line-heights/weights from Figma text styles (node 1:22396 + variables) */
+  --font-display-h1-size: 288px;
+  --font-display-h1-weight: 300;
+  --font-display-h1-line-height: 250px;
+
+  --font-h1-size: 60px;
+  --font-h1-line-height: 76px;
+  --font-h1-weight: 700;
+
+  --font-h2-size: 48px;
+  --font-h2-line-height: 56px;
+  --font-h2-weight: 700;
+
+  --font-h3-size: 32px;
+  --font-h3-line-height: 44px;
+  --font-h3-weight: 700;
+
+  --font-h4-size: 30px;
+  --font-h4-line-height: 44px;
+  --font-h4-weight: 600;
+
+  --font-h5-size: 24px;
+  --font-h5-line-height: 36px;
+  --font-h5-weight: 600;
+
+  --font-h6-size: 20px;
+  --font-h6-line-height: 32px;
+  --font-h6-weight-semibold: 600;
+  --font-h6-weight-medium: 500;
+
+  --font-subtitle-1-size: 18px;
+  --font-subtitle-1-line-height: 26px;
+
+  --font-subtitle-2-size: 16px;
+  --font-subtitle-2-line-height: 24px;
+
+  --font-body-1-size: 16px;
+  --font-body-1-line-height: 24px;
+
+  --font-body-2-size: 14px;
+  --font-body-2-line-height: 20px;
+
+  --font-body-3-size: 12px;
+  --font-body-3-line-height: 16px;
+
+  --font-button-l-size: 16px;
+  --font-button-l-line-height: 24px;
+  --font-button-m-size: 14px;
+  --font-button-m-line-height: 20px;
+  --font-button-s-size: 12px;
+  --font-button-s-line-height: 16px;
+
+  --font-caption-size: 12px;
+  --font-caption-line-height: 16px;
+
+  --font-input-label-size: 12px;
+  --font-input-label-line-height: 16px;
+
+  --font-input-text-size: 14px;
+  --font-input-text-line-height: 20px;
+
+  --font-helper-text-size: 12px;
+  --font-helper-text-line-height: 16px;
+
+  /* Inter weights — Typography frame 1:22396 (text style metadata) */
+  --font-subtitle-1-weight-medium: 500;
+  --font-subtitle-1-weight-semibold: 600;
+  --font-subtitle-2-weight-medium: 500;
+  --font-subtitle-2-weight-semibold: 600;
+  --font-body-1-weight-regular: 400;
+  --font-body-1-weight-medium: 500;
+  --font-body-1-weight-semibold: 600;
+  --font-body-2-weight-regular: 400;
+  --font-body-2-weight-medium: 500;
+  --font-body-3-weight-regular: 400;
+  --font-body-3-weight-medium: 500;
+  --font-button-l-weight: 500;
+  --font-button-m-weight: 500;
+  --font-button-s-weight: 500;
+  --font-caption-weight: 500;
+  --font-input-label-weight: 500;
+  --font-input-text-weight: 500;
+  --font-helper-text-weight: 500;
+
+  /* Variables collection: Body 14 / Caption 12 */
+  --font-body-14-regular-size: 14px;
+  --font-body-14-regular-line-height: 20px;
+  --font-body-14-regular-weight: 400;
+  --font-caption-12-regular-size: 12px;
+  --font-caption-12-regular-line-height: 18px;
+  --font-caption-12-regular-weight: 400;
+}
+
+.dark {
+  --text-primary: #f8f8fc;
+  --surface: #120c20;
+  --surface-muted: #1b122e;
+  --border-default: #1b122e;
+  --border-default-rgb: 27 18 46;
+
+  --background: #0a0614;
+  --foreground: var(--text-primary);
+  --card: #120c20;
+  --card-foreground: var(--text-primary);
+  --popover: #120c20;
+  --popover-foreground: var(--text-primary);
+  --primary: var(--color-primary-500);
+  --primary-foreground: #ffffff;
+  --secondary: var(--zulu-purple-dark);
+  --secondary-foreground: #ffffff;
+  --muted: var(--surface-muted);
+  --muted-foreground: #9ca0b0;
+  --accent: var(--zulu-accent-pink);
+  --accent-foreground: #ffffff;
+  --destructive: var(--color-error-800);
+  --destructive-foreground: #ffffff;
+  --border: var(--border-default);
+  --input: var(--border-default);
+  --ring: var(--zulu-primary);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  h1 {
+    font-size: var(--font-h1-size);
+    line-height: var(--font-h1-line-height);
+    font-weight: var(--font-h1-weight);
+  }
+  h2 {
+    font-size: var(--font-h2-size);
+    line-height: var(--font-h2-line-height);
+    font-weight: var(--font-h2-weight);
+  }
+  h3 {
+    font-size: var(--font-h3-size);
+    line-height: var(--font-h3-line-height);
+    font-weight: var(--font-h3-weight);
+  }
+  h4 {
+    font-size: var(--font-h4-size);
+    line-height: var(--font-h4-line-height);
+    font-weight: var(--font-h4-weight);
+  }
+  h5 {
+    font-size: var(--font-h5-size);
+    line-height: var(--font-h5-line-height);
+    font-weight: var(--font-h5-weight);
+  }
+  h6 {
+    font-size: var(--font-h6-size);
+    line-height: var(--font-h6-line-height);
+    font-weight: var(--font-h6-weight-semibold);
+  }
+}
+
+@layer components {
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .zulu-subtitle-1 {
+    @apply text-ds-subtitle-1 font-ds-subtitle-1-medium;
+  }
+  .zulu-subtitle-1-semibold {
+    @apply text-ds-subtitle-1 font-ds-subtitle-1-semibold;
+  }
+  .zulu-subtitle-2 {
+    @apply text-ds-subtitle-2 font-ds-subtitle-2-medium;
+  }
+  .zulu-subtitle-2-semibold {
+    @apply text-ds-subtitle-2 font-ds-subtitle-2-semibold;
+  }
+
+  .zulu-body-1 {
+    @apply text-ds-body-1 font-ds-body-1-regular;
+  }
+  .zulu-body-1-medium {
+    @apply text-ds-body-1 font-ds-body-1-medium;
+  }
+  .zulu-body-1-semibold {
+    @apply text-ds-body-1 font-ds-body-1-semibold;
+  }
+
+  .zulu-body-2 {
+    @apply text-ds-body-2 font-ds-body-2-regular;
+  }
+  .zulu-body-2-medium {
+    @apply text-ds-body-2 font-ds-body-2-medium;
+  }
+
+  .zulu-body-3 {
+    @apply text-ds-body-3 font-ds-body-3-regular;
+  }
+  .zulu-body-3-medium {
+    @apply text-ds-body-3 font-ds-body-3-medium;
+  }
+
+  .zulu-caption {
+    @apply text-ds-caption font-ds-caption;
+  }
+  .zulu-input-label {
+    @apply text-ds-input-label font-ds-input-label;
+  }
+  .zulu-input-text {
+    @apply text-ds-input-text font-ds-input-text;
+  }
+  .zulu-helper-text {
+    @apply text-ds-helper-text font-ds-helper-text;
+  }
+
+  .zulu-container {
+    @apply mx-auto w-full max-w-zulu px-4 sm:px-6 lg:px-8;
+  }
+
+  .zulu-section-y {
+    @apply py-12 md:py-16 lg:py-20;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+ * Admin-app additions (preserved from earlier admin globals.css; do not
+ * remove — used by AdminShell + .admin-content scoped styles).
+ * ───────────────────────────────────────────────────────────────────── */
+
+:root {
+  --admin-primary: var(--color-primary-500);
+  --admin-primary-soft: var(--color-primary-50);
+  --admin-surface: var(--bg-1);
+  --admin-text-muted: var(--text-t6);
+  --admin-border: var(--border-default);
+  --admin-header-bg: #d5d6dc;
 }
 
 @layer utilities {
@@ -72,5 +521,4 @@ body {
   .admin-content button:disabled {
     @apply cursor-not-allowed opacity-50;
   }
-
 }
