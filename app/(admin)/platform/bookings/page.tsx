@@ -13,10 +13,10 @@ const STATUSES = ["", "pending", "confirmed", "cancelled", "completed"];
 
 function StatusBadge({ status }: { status: string }) {
   const cls =
-    status === "confirmed" ? "bg-green-100 text-green-800" :
-    status === "cancelled" ? "bg-red-100 text-red-800" :
-    status === "pending"   ? "bg-amber-100 text-amber-800" :
-    "bg-slate-100 text-slate-700";
+    status === "confirmed" ? "bg-success-50 text-success-800" :
+    status === "cancelled" ? "bg-error-50 text-error-800" :
+    status === "pending"   ? "bg-warning-50 text-warning-800" :
+    "bg-figma-bg-1 text-fg-t7";
   return <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${cls}`}>{status}</span>;
 }
 
@@ -70,21 +70,21 @@ export default function PlatformBookingsPage() {
       <h1 className="text-xl font-semibold">Bookings</h1>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <label className="text-sm text-slate-600">
+        <label className="text-sm text-fg-t6">
           Status
           <select value={statusFilter} onChange={(e) => { setPage(1); setStatusFilter(e.target.value); }}
-            className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm">
+            className="ml-2 rounded border border-default px-2 py-1 text-sm">
             {STATUSES.map((s) => <option key={s} value={s}>{s || "All"}</option>)}
           </select>
         </label>
-        <button type="button" onClick={load} className="rounded border border-slate-300 bg-white px-3 py-1 text-sm">Refresh</button>
+        <button type="button" onClick={load} className="rounded border border-default bg-white px-3 py-1 text-sm">Refresh</button>
       </div>
 
-      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
+      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
 
-      <div className="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
+      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
         <table className="w-full min-w-[900px] text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
+          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
               <th className="px-3 py-2">ID</th>
               <th className="px-3 py-2">Reference</th>
@@ -99,11 +99,11 @@ export default function PlatformBookingsPage() {
           </thead>
           <tbody>
             {rows.length === 0 && (
-              <tr><td colSpan={9} className="px-3 py-6 text-center text-slate-400">No bookings found</td></tr>
+              <tr><td colSpan={9} className="px-3 py-6 text-center text-fg-t6">No bookings found</td></tr>
             )}
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-100">
-                <td className="px-3 py-2 tabular-nums text-slate-700">{r.id}</td>
+              <tr key={r.id} className="border-b border-default hover:bg-figma-bg-1">
+                <td className="px-3 py-2 tabular-nums text-fg-t7">{r.id}</td>
                 <td className="px-3 py-2 font-mono text-xs">{r.booking_reference ?? "-"}</td>
                 <td className="px-3 py-2"><StatusBadge status={r.status} /></td>
                 <td className="px-3 py-2 tabular-nums">
@@ -112,18 +112,18 @@ export default function PlatformBookingsPage() {
                 <td className="px-3 py-2">{r.company?.name ?? "-"}</td>
                 <td className="px-3 py-2 text-xs">{r.user?.name ?? "-"}</td>
                 <td className="px-3 py-2 text-xs">{r.offer ? `${r.offer.title} (${r.offer.type})` : "-"}</td>
-                <td className="px-3 py-2 text-xs text-slate-700">
+                <td className="px-3 py-2 text-xs text-fg-t7">
                   {r.created_at ? new Date(r.created_at).toLocaleDateString() : "-"}
                 </td>
                 <td className="px-3 py-2">
                   <div className="flex flex-col gap-1">
                     {r.status === "pending" && (
                       <button type="button" disabled={busyId === r.id} onClick={() => void handleConfirm(r.id)}
-                        className="text-left text-xs text-blue-700 underline disabled:opacity-40">Confirm</button>
+                        className="text-left text-xs text-info-700 underline disabled:opacity-40">Confirm</button>
                     )}
                     {(r.status === "pending" || r.status === "confirmed") && (
                       <button type="button" disabled={busyId === r.id} onClick={() => void handleCancel(r.id)}
-                        className="text-left text-xs text-red-600 underline disabled:opacity-40">Cancel</button>
+                        className="text-left text-xs text-error-600 underline disabled:opacity-40">Cancel</button>
                     )}
                   </div>
                 </td>
