@@ -71,24 +71,24 @@ export default function CommissionsPage() {
   );
 
   const tabCls = (t: Tab) =>
-    `px-4 py-2 text-sm font-medium border-b-2 ${tab === t ? "border-slate-800 text-slate-800" : "border-transparent text-slate-700 hover:text-slate-700"}`;
+    `px-4 py-2 text-sm font-medium border-b-2 ${tab === t ? "border-slate-800 text-fg-t11" : "border-transparent text-fg-t7 hover:text-fg-t7"}`;
 
   return (
     <div>
       <h1 className="text-xl font-semibold">Commissions</h1>
 
-      <div className="mt-4 flex gap-0 border-b border-slate-200">
+      <div className="mt-4 flex gap-0 border-b border-default">
         <button type="button" className={tabCls("policies")} onClick={() => setTab("policies")}>Policies</button>
         <button type="button" className={tabCls("records")} onClick={() => setTab("records")}>Records</button>
       </div>
 
-      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
+      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
 
       {tab === "policies" && (
         <>
-          <div className="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
+          <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
             <table className="w-full min-w-[700px] text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
+              <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
                 <tr>
                   <th className="px-3 py-2">ID</th>
                   <th className="px-3 py-2">Name</th>
@@ -101,24 +101,24 @@ export default function CommissionsPage() {
               </thead>
               <tbody>
                 {policies.length === 0 && (
-                  <tr><td colSpan={7} className="px-3 py-6 text-center text-slate-400">No policies found</td></tr>
+                  <tr><td colSpan={7} className="px-3 py-6 text-center text-fg-t6">No policies found</td></tr>
                 )}
                 {policies.map((r) => (
-                  <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-100">
-                    <td className="px-3 py-2 tabular-nums text-slate-700">{r.id}</td>
+                  <tr key={r.id} className="border-b border-default hover:bg-figma-bg-1">
+                    <td className="px-3 py-2 tabular-nums text-fg-t7">{r.id}</td>
                     <td className="px-3 py-2">{r.name ?? "-"}</td>
                     <td className="px-3 py-2">{r.type}</td>
                     <td className="px-3 py-2 tabular-nums">{r.rate}%</td>
                     <td className="px-3 py-2">{r.service_type ?? "all"}</td>
                     <td className="px-3 py-2">
                       <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${
-                        r.status === "active" ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-600"
+                        r.status === "active" ? "bg-success-50 text-success-800" : "bg-figma-bg-1 text-fg-t6"
                       }`}>{r.status}</span>
                     </td>
                     <td className="px-3 py-2">
                       {r.status === "active" && (
                         <button type="button" disabled={busyId === r.id} onClick={() => void handleDeactivate(r.id)}
-                          className="text-xs text-red-600 underline disabled:opacity-40">Deactivate</button>
+                          className="text-xs text-error-600 underline disabled:opacity-40">Deactivate</button>
                       )}
                     </td>
                   </tr>
@@ -132,9 +132,9 @@ export default function CommissionsPage() {
 
       {tab === "records" && (
         <>
-          <div className="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
+          <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
             <table className="w-full min-w-[600px] text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
+              <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
                 <tr>
                   <th className="px-3 py-2">ID</th>
                   <th className="px-3 py-2">Amount</th>
@@ -146,22 +146,22 @@ export default function CommissionsPage() {
               </thead>
               <tbody>
                 {records.length === 0 && (
-                  <tr><td colSpan={6} className="px-3 py-6 text-center text-slate-400">No records found</td></tr>
+                  <tr><td colSpan={6} className="px-3 py-6 text-center text-fg-t6">No records found</td></tr>
                 )}
                 {records.map((r) => (
-                  <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-100">
-                    <td className="px-3 py-2 tabular-nums text-slate-700">{r.id}</td>
+                  <tr key={r.id} className="border-b border-default hover:bg-figma-bg-1">
+                    <td className="px-3 py-2 tabular-nums text-fg-t7">{r.id}</td>
                     <td className="px-3 py-2 tabular-nums font-medium">{r.currency} {Number(r.amount).toFixed(2)}</td>
                     <td className="px-3 py-2">
                       <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${
-                        r.status === "paid" ? "bg-green-100 text-green-800" :
-                        r.status === "pending" ? "bg-amber-100 text-amber-800" :
-                        "bg-slate-100 text-slate-700"
+                        r.status === "paid" ? "bg-success-50 text-success-800" :
+                        r.status === "pending" ? "bg-warning-50 text-warning-800" :
+                        "bg-figma-bg-1 text-fg-t7"
                       }`}>{r.status}</span>
                     </td>
                     <td className="px-3 py-2">{r.company?.name ?? r.company_id ?? "-"}</td>
-                    <td className="px-3 py-2 tabular-nums text-slate-700">{r.booking_id ?? "-"}</td>
-                    <td className="px-3 py-2 text-xs text-slate-700">
+                    <td className="px-3 py-2 tabular-nums text-fg-t7">{r.booking_id ?? "-"}</td>
+                    <td className="px-3 py-2 text-xs text-fg-t7">
                       {r.created_at ? new Date(r.created_at).toLocaleDateString() : "-"}
                     </td>
                   </tr>

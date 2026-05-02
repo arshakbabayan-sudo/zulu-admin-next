@@ -93,16 +93,16 @@ export default function PlatformUsersPage() {
           placeholder="Search name or email"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
-          className="rounded border border-slate-300 px-2 py-1 text-sm"
+          className="rounded border border-default px-2 py-1 text-sm"
         />
         <button type="submit" className="rounded bg-slate-800 px-3 py-1 text-sm text-white">
           Search
         </button>
       </form>
-      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
-      <div className="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
+      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
+      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
         <table className="w-full min-w-[640px] text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
+          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
               <th className="px-3 py-2">ID</th>
               <th className="px-3 py-2">Name</th>
@@ -114,12 +114,12 @@ export default function PlatformUsersPage() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-slate-100">
+              <tr key={r.id} className="border-b border-default">
                 <td className="px-3 py-2 tabular-nums">{r.id}</td>
                 <td className="px-3 py-2">{r.name}</td>
                 <td className="px-3 py-2">{r.email}</td>
                 <td className="px-3 py-2">{r.status}</td>
-                <td className="px-3 py-2 text-xs text-slate-600">
+                <td className="px-3 py-2 text-xs text-fg-t6">
                   {r.companies?.map((c) => `${c.name} (${c.role})`).join("; ") || "-"}
                 </td>
                 <td className="px-3 py-2">
@@ -127,7 +127,7 @@ export default function PlatformUsersPage() {
                     type="button"
                     disabled={busyId === r.id || r.status === "inactive"}
                     onClick={() => deactivate(r.id)}
-                    className="text-xs text-red-700 underline disabled:opacity-40"
+                    className="text-xs text-error-700 underline disabled:opacity-40"
                   >
                     Deactivate
                   </button>

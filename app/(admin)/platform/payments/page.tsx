@@ -67,7 +67,7 @@ export default function PlatformPaymentsPage() {
     <div>
       <h1 className="text-xl font-semibold">Platform payments</h1>
       <div className="mt-4">
-        <label className="text-sm text-slate-600">
+        <label className="text-sm text-fg-t6">
           Status
           <input
             value={statusFilter}
@@ -76,14 +76,14 @@ export default function PlatformPaymentsPage() {
               setStatusFilter(e.target.value);
             }}
             placeholder="e.g. completed"
-            className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
+            className="ml-2 rounded border border-default px-2 py-1 text-sm"
           />
         </label>
       </div>
-      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
-      <div className="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
+      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
+      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
         <table className="w-full min-w-[800px] text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
+          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
               <th className="px-3 py-2">ID</th>
               <th className="px-3 py-2">Amount</th>
@@ -96,13 +96,13 @@ export default function PlatformPaymentsPage() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-slate-100">
+              <tr key={r.id} className="border-b border-default">
                 <td className="px-3 py-2 tabular-nums">{r.id}</td>
                 <td className="px-3 py-2 tabular-nums">{r.amount}</td>
                 <td className="px-3 py-2">{r.currency}</td>
                 <td className="px-3 py-2">{r.status}</td>
                 <td className="px-3 py-2">{r.payment_method ?? "-"}</td>
-                <td className="px-3 py-2 text-xs text-slate-600">{r.paid_at ?? "-"}</td>
+                <td className="px-3 py-2 text-xs text-fg-t6">{r.paid_at ?? "-"}</td>
                 <td className="px-3 py-2 text-xs">
                   {r.invoice
                     ? `#${r.invoice.id} ${r.invoice.unique_booking_reference ?? ""}`

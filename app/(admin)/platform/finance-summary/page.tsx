@@ -20,10 +20,10 @@ function SummaryCard({
   sub?: string;
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="text-xs font-medium uppercase tracking-wide text-slate-700">{label}</div>
-      <div className="mt-1 text-2xl font-semibold tabular-nums text-slate-800">{value}</div>
-      {sub && <div className="mt-1 text-xs text-slate-700">{sub}</div>}
+    <div className="rounded-xl border border-default bg-white p-4 shadow-sm">
+      <div className="text-xs font-medium uppercase tracking-wide text-fg-t7">{label}</div>
+      <div className="mt-1 text-2xl font-semibold tabular-nums text-fg-t11">{value}</div>
+      {sub && <div className="mt-1 text-xs text-fg-t7">{sub}</div>}
     </div>
   );
 }
@@ -80,11 +80,11 @@ export default function PlatformFinanceSummaryPage() {
       <button
         type="button"
         onClick={() => load()}
-        className="mt-4 rounded border border-slate-300 bg-white px-3 py-1.5 text-sm hover:bg-slate-100"
+        className="mt-4 rounded border border-default bg-white px-3 py-1.5 text-sm hover:bg-figma-bg-1"
       >
         Refresh
       </button>
-      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
+      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
       {data && (
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <SummaryCard

@@ -97,7 +97,7 @@ export default function GenericApprovalsPage() {
     <div>
       <h1 className="text-xl font-semibold">Generic approvals</h1>
       <div className="mt-4 flex flex-wrap items-end gap-3">
-        <label className="text-sm text-slate-600">
+        <label className="text-sm text-fg-t6">
           Status
           <select
             value={statusFilter}
@@ -105,7 +105,7 @@ export default function GenericApprovalsPage() {
               setPage(1);
               setStatusFilter(e.target.value);
             }}
-            className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
+            className="ml-2 rounded border border-default px-2 py-1 text-sm"
           >
             <option value="">Any</option>
             <option value="pending">pending</option>
@@ -114,7 +114,7 @@ export default function GenericApprovalsPage() {
             <option value="rejected">rejected</option>
           </select>
         </label>
-        <label className="text-sm text-slate-600">
+        <label className="text-sm text-fg-t6">
           Entity type
           <input
             value={entityTypeDraft}
@@ -125,7 +125,7 @@ export default function GenericApprovalsPage() {
                 setEntityType(entityTypeDraft.trim());
               }
             }}
-            className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
+            className="ml-2 rounded border border-default px-2 py-1 text-sm"
             placeholder="Filter by entity_type"
           />
         </label>
@@ -135,15 +135,15 @@ export default function GenericApprovalsPage() {
             setPage(1);
             setEntityType(entityTypeDraft.trim());
           }}
-          className="rounded border border-slate-300 bg-white px-3 py-1 text-sm"
+          className="rounded border border-default bg-white px-3 py-1 text-sm"
         >
           Apply entity filter
         </button>
       </div>
-      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
-      <div className="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
+      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
+      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
         <table className="w-full min-w-[900px] text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
+          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
               <th className="px-3 py-2">ID</th>
               <th className="px-3 py-2">Entity</th>
@@ -156,7 +156,7 @@ export default function GenericApprovalsPage() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-slate-100">
+              <tr key={r.id} className="border-b border-default">
                 <td className="px-3 py-2 tabular-nums">{r.id}</td>
                 <td className="px-3 py-2">
                   <span className="font-mono text-xs">{r.entity_type}</span> #{r.entity_id}
@@ -168,13 +168,13 @@ export default function GenericApprovalsPage() {
                     <>
                       {r.requested_by.name}
                       <br />
-                      <span className="text-slate-700">{r.requested_by.email}</span>
+                      <span className="text-fg-t7">{r.requested_by.email}</span>
                     </>
                   ) : (
                     "-"
                   )}
                 </td>
-                <td className="px-3 py-2 text-xs text-slate-600">{r.created_at ?? "-"}</td>
+                <td className="px-3 py-2 text-xs text-fg-t6">{r.created_at ?? "-"}</td>
                 <td className="space-x-2 px-3 py-2">
                   {canActOnApproval(r.status) ? (
                     <>
@@ -190,13 +190,13 @@ export default function GenericApprovalsPage() {
                         type="button"
                         disabled={busyId === r.id}
                         onClick={() => reject(r.id)}
-                        className="text-xs text-red-700 underline disabled:opacity-40"
+                        className="text-xs text-error-700 underline disabled:opacity-40"
                       >
                         Reject
                       </button>
                     </>
                   ) : (
-                    <span className="text-xs text-slate-400">-</span>
+                    <span className="text-xs text-fg-t6">-</span>
                   )}
                 </td>
               </tr>

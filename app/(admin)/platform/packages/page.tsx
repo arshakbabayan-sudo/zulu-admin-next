@@ -110,7 +110,7 @@ export default function PlatformPackagesGovernancePage() {
     <div>
       <h1 className="text-xl font-semibold">Packages governance</h1>
       <div className="mt-4 flex flex-wrap items-end gap-3">
-        <label className="text-sm text-slate-600">
+        <label className="text-sm text-fg-t6">
           Status
           <input
             value={statusFilter}
@@ -119,30 +119,30 @@ export default function PlatformPackagesGovernancePage() {
               setStatusFilter(e.target.value);
             }}
             placeholder="package status"
-            className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
+            className="ml-2 rounded border border-default px-2 py-1 text-sm"
           />
         </label>
-        <label className="text-sm text-slate-600">
+        <label className="text-sm text-fg-t6">
           Company ID
           <input
             value={companyIdDraft}
             onChange={(e) => setCompanyIdDraft(e.target.value)}
             placeholder="optional"
-            className="ml-2 w-24 rounded border border-slate-300 px-2 py-1 text-sm tabular-nums"
+            className="ml-2 w-24 rounded border border-default px-2 py-1 text-sm tabular-nums"
           />
         </label>
         <button
           type="button"
           onClick={applyCompanyFilter}
-          className="rounded border border-slate-300 bg-white px-3 py-1 text-sm hover:bg-slate-100"
+          className="rounded border border-default bg-white px-3 py-1 text-sm hover:bg-figma-bg-1"
         >
           Apply company
         </button>
       </div>
-      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
-      <div className="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
+      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
+      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
         <table className="w-full min-w-[880px] text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
+          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
               <th className="px-3 py-2">ID</th>
               <th className="px-3 py-2">Title</th>
@@ -155,7 +155,7 @@ export default function PlatformPackagesGovernancePage() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-slate-100">
+              <tr key={r.id} className="border-b border-default">
                 <td className="px-3 py-2 tabular-nums">{r.id}</td>
                 <td className="px-3 py-2">{r.package_title}</td>
                 <td className="px-3 py-2 text-xs">{r.package_type}</td>
@@ -171,7 +171,7 @@ export default function PlatformPackagesGovernancePage() {
                     type="button"
                     disabled={busyId === r.id}
                     onClick={() => deactivate(r)}
-                    className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-800 hover:bg-red-100 disabled:opacity-50"
+                    className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-error-800 hover:bg-error-50 disabled:opacity-50"
                   >
                     {busyId === r.id ? "..." : "Force deactivate"}
                   </button>

@@ -106,7 +106,7 @@ export default function SellerApplicationsPage() {
     <div>
       <h1 className="text-xl font-semibold">Seller applications</h1>
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <label className="text-sm text-slate-600">
+        <label className="text-sm text-fg-t6">
           Status filter
           <select
             value={statusFilter}
@@ -114,7 +114,7 @@ export default function SellerApplicationsPage() {
               setPage(1);
               setStatusFilter(e.target.value);
             }}
-            className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
+            className="ml-2 rounded border border-default px-2 py-1 text-sm"
           >
             <option value="">Default queue (pending / under review)</option>
             <option value="pending">pending</option>
@@ -124,10 +124,10 @@ export default function SellerApplicationsPage() {
           </select>
         </label>
       </div>
-      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
-      <div className="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
+      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
+      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
         <table className="w-full min-w-[800px] text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
+          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
               <th className="px-3 py-2">ID</th>
               <th className="px-3 py-2">Company</th>
@@ -139,12 +139,12 @@ export default function SellerApplicationsPage() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-slate-100">
+              <tr key={r.id} className="border-b border-default">
                 <td className="px-3 py-2 tabular-nums">{r.id}</td>
                 <td className="px-3 py-2">{r.company_name ?? r.company_id}</td>
                 <td className="px-3 py-2">{r.service_type}</td>
                 <td className="px-3 py-2">{r.status}</td>
-                <td className="px-3 py-2 text-xs text-slate-600">{r.applied_at ?? "-"}</td>
+                <td className="px-3 py-2 text-xs text-fg-t6">{r.applied_at ?? "-"}</td>
                 <td className="space-x-2 px-3 py-2">
                   <button
                     type="button"
@@ -158,7 +158,7 @@ export default function SellerApplicationsPage() {
                     type="button"
                     disabled={busyId === r.id}
                     onClick={() => reject(r.id)}
-                    className="text-xs text-red-700 underline disabled:opacity-40"
+                    className="text-xs text-error-700 underline disabled:opacity-40"
                   >
                     Reject
                   </button>

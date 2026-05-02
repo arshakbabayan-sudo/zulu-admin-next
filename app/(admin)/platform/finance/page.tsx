@@ -115,19 +115,19 @@ export default function FinancePage() {
   );
 
   const tabCls = (t: Tab) =>
-    `px-4 py-2 text-sm font-medium border-b-2 ${tab === t ? "border-slate-800 text-slate-800" : "border-transparent text-slate-700 hover:text-slate-700"}`;
+    `px-4 py-2 text-sm font-medium border-b-2 ${tab === t ? "border-slate-800 text-fg-t11" : "border-transparent text-fg-t7 hover:text-fg-t7"}`;
 
   return (
     <div>
       <h1 className="text-xl font-semibold">Finance</h1>
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <label className="text-sm text-slate-700" htmlFor="finance-company-id">Company</label>
+        <label className="text-sm text-fg-t7" htmlFor="finance-company-id">Company</label>
         {companyOptions.length > 0 ? (
           <select
             id="finance-company-id"
             value={companyId ?? ""}
             onChange={(e) => setCompanyId(e.target.value ? Number(e.target.value) : null)}
-            className="rounded border border-slate-300 bg-white px-2 py-1 text-sm"
+            className="rounded border border-default bg-white px-2 py-1 text-sm"
           >
             {companyOptions.map((c) => (
               <option key={c.id} value={c.id}>{c.name} (#{c.id})</option>
@@ -141,28 +141,28 @@ export default function FinancePage() {
             value={companyId ?? ""}
             onChange={(e) => setCompanyId(e.target.value ? Number(e.target.value) : null)}
             placeholder="Enter company ID"
-            className="w-44 rounded border border-slate-300 bg-white px-2 py-1 text-sm"
+            className="w-44 rounded border border-default bg-white px-2 py-1 text-sm"
           />
         )}
       </div>
       {!hasValidCompanyId && (
-        <p className="mt-2 text-sm text-amber-700">Finance endpoints require a valid company ID greater than 0.</p>
+        <p className="mt-2 text-sm text-warning-700">Finance endpoints require a valid company ID greater than 0.</p>
       )}
 
-      <div className="mt-4 flex gap-0 border-b border-slate-200">
+      <div className="mt-4 flex gap-0 border-b border-default">
         <button type="button" className={tabCls("summary")} onClick={() => setTab("summary")}>Summary</button>
         <button type="button" className={tabCls("entitlements")} onClick={() => setTab("entitlements")}>Entitlements</button>
         <button type="button" className={tabCls("settlements")} onClick={() => setTab("settlements")}>Settlements</button>
       </div>
 
-      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
+      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
 
       {tab === "summary" && summary && (
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {Object.entries(summary).map(([k, v]) => (
-            <div key={k} className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-              <div className="text-xs font-medium uppercase text-slate-700">{k.replace(/_/g, " ")}</div>
-              <div className="mt-1 text-2xl font-semibold tabular-nums text-slate-800">
+            <div key={k} className="rounded-xl border border-default bg-white px-4 py-3 shadow-sm">
+              <div className="text-xs font-medium uppercase text-fg-t7">{k.replace(/_/g, " ")}</div>
+              <div className="mt-1 text-2xl font-semibold tabular-nums text-fg-t11">
                 {typeof v === "number" ? Number(v).toFixed(2) : String(v ?? "-")}
               </div>
             </div>
@@ -178,9 +178,9 @@ export default function FinancePage() {
               Mark {selectedEnt.size > 0 ? `(${selectedEnt.size}) ` : ""}payable
             </button>
           </div>
-          <div className="mt-3 overflow-x-auto rounded border border-slate-200 bg-white">
+          <div className="mt-3 overflow-x-auto rounded border border-default bg-white">
             <table className="w-full min-w-[700px] text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
+              <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
                 <tr>
                   <th className="px-3 py-2">
                     <input
@@ -200,10 +200,10 @@ export default function FinancePage() {
               </thead>
               <tbody>
                 {entitlements.length === 0 && (
-                  <tr><td colSpan={7} className="px-3 py-6 text-center text-slate-400">No entitlements</td></tr>
+                  <tr><td colSpan={7} className="px-3 py-6 text-center text-fg-t6">No entitlements</td></tr>
                 )}
                 {entitlements.map((r) => (
-                  <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-100">
+                  <tr key={r.id} className="border-b border-default hover:bg-figma-bg-1">
                     <td className="px-3 py-2">
                       <input
                         type="checkbox"
@@ -211,18 +211,18 @@ export default function FinancePage() {
                         onChange={(e) => toggleEntitlement(r.id, e.target.checked)}
                       />
                     </td>
-                    <td className="px-3 py-2 tabular-nums text-slate-700">{r.id}</td>
+                    <td className="px-3 py-2 tabular-nums text-fg-t7">{r.id}</td>
                     <td className="px-3 py-2 tabular-nums font-medium">{r.currency} {Number(r.net_amount).toFixed(2)}</td>
                     <td className="px-3 py-2">
                       <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${
-                        r.status === "payable" ? "bg-green-100 text-green-800" :
-                        r.status === "paid" ? "bg-blue-100 text-blue-800" :
-                        "bg-amber-100 text-amber-800"
+                        r.status === "payable" ? "bg-success-50 text-success-800" :
+                        r.status === "paid" ? "bg-info-50 text-info-800" :
+                        "bg-warning-50 text-warning-800"
                       }`}>{r.status}</span>
                     </td>
                     <td className="px-3 py-2">{r.company_id}</td>
-                    <td className="px-3 py-2 tabular-nums text-slate-700">{r.package_order_id ?? "-"}</td>
-                    <td className="px-3 py-2 text-xs text-slate-700">
+                    <td className="px-3 py-2 tabular-nums text-fg-t7">{r.package_order_id ?? "-"}</td>
+                    <td className="px-3 py-2 text-xs text-fg-t7">
                       {r.payable_at ? new Date(r.payable_at).toLocaleDateString() : "-"}
                     </td>
                   </tr>
@@ -236,9 +236,9 @@ export default function FinancePage() {
 
       {tab === "settlements" && (
         <>
-          <div className="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
+          <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
             <table className="w-full min-w-[700px] text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-100 text-xs uppercase text-slate-700">
+              <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
                 <tr>
                   <th className="px-3 py-2">ID</th>
                   <th className="px-3 py-2">Amount</th>
@@ -250,27 +250,27 @@ export default function FinancePage() {
               </thead>
               <tbody>
                 {settlements.length === 0 && (
-                  <tr><td colSpan={6} className="px-3 py-6 text-center text-slate-400">No settlements</td></tr>
+                  <tr><td colSpan={6} className="px-3 py-6 text-center text-fg-t6">No settlements</td></tr>
                 )}
                 {settlements.map((r) => (
-                  <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-100">
-                    <td className="px-3 py-2 tabular-nums text-slate-700">{r.id}</td>
+                  <tr key={r.id} className="border-b border-default hover:bg-figma-bg-1">
+                    <td className="px-3 py-2 tabular-nums text-fg-t7">{r.id}</td>
                     <td className="px-3 py-2 tabular-nums font-medium">{r.currency} {Number(r.total_net_amount).toFixed(2)}</td>
                     <td className="px-3 py-2">
                       <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${
-                        r.status === "completed" ? "bg-green-100 text-green-800" :
-                        r.status === "pending" ? "bg-amber-100 text-amber-800" :
-                        "bg-slate-100 text-slate-700"
+                        r.status === "completed" ? "bg-success-50 text-success-800" :
+                        r.status === "pending" ? "bg-warning-50 text-warning-800" :
+                        "bg-figma-bg-1 text-fg-t7"
                       }`}>{r.status}</span>
                     </td>
                     <td className="px-3 py-2">{r.company?.name ?? r.company_id}</td>
-                    <td className="px-3 py-2 text-xs text-slate-700">
+                    <td className="px-3 py-2 text-xs text-fg-t7">
                       {r.settled_at ? new Date(r.settled_at).toLocaleDateString() : "-"}
                     </td>
                     <td className="px-3 py-2">
                       {r.status === "pending" && (
                         <button type="button" disabled={busy} onClick={() => void handleSettlementStatus(r.id, "completed")}
-                          className="text-xs text-blue-700 underline disabled:opacity-40">Mark completed</button>
+                          className="text-xs text-info-700 underline disabled:opacity-40">Mark completed</button>
                       )}
                     </td>
                   </tr>

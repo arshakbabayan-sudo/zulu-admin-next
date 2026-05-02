@@ -80,25 +80,25 @@ export default function PlatformSettingsPage() {
     <div>
       <h1 className="text-xl font-semibold">Platform settings</h1>
       {msg && <p className="mt-2 text-sm text-emerald-700">{msg}</p>}
-      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
+      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
       <div className="mt-4 space-y-4">
         {rows.map((r) => (
           <div
             key={r.id}
-            className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+            className="rounded-xl border border-default bg-white p-4 shadow-sm"
           >
-            <div className="text-xs font-mono text-slate-700">{r.key}</div>
+            <div className="text-xs font-mono text-fg-t7">{r.key}</div>
             {r.description && (
-              <p className="mt-1 text-xs text-slate-600">{r.description}</p>
+              <p className="mt-1 text-xs text-fg-t6">{r.description}</p>
             )}
-            <div className="mt-2 text-xs text-slate-400">
+            <div className="mt-2 text-xs text-fg-t6">
               type: {r.type} | id: {r.id}
             </div>
             <textarea
               value={drafts[r.key] ?? r.value}
               onChange={(e) => setDrafts((prev) => ({ ...prev, [r.key]: e.target.value }))}
               rows={3}
-              className="mt-2 w-full max-w-xl rounded border border-slate-300 px-2 py-1 font-mono text-sm"
+              className="mt-2 w-full max-w-xl rounded border border-default px-2 py-1 font-mono text-sm"
             />
             <button
               type="button"
