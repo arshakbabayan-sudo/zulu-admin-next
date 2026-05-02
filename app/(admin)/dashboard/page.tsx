@@ -74,7 +74,7 @@ export default function DashboardPage() {
     return (
       <div className="space-y-3">
         <h1 className="admin-page-title">{t("admin.dashboard.title")}</h1>
-        <p className="text-sm text-red-600">{err}</p>
+        <p className="text-sm text-error-600">{err}</p>
       </div>
     );
   }
@@ -104,10 +104,10 @@ export default function DashboardPage() {
             key={k}
             className="admin-card px-5 py-4"
           >
-            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <div className="text-xs font-semibold uppercase tracking-wide text-fg-t6">
               {resolveStatLabel(k)}
             </div>
-            <div className="mt-2 text-3xl font-semibold tabular-nums text-slate-800">
+            <div className="mt-2 text-3xl font-semibold tabular-nums text-fg-t11">
               {stats[k]}
             </div>
           </div>

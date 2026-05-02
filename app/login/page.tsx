@@ -5,7 +5,18 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ApiRequestError } from "@/lib/api-client";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 
+/**
+ * Admin login. Refactored 2026-05-02 (Sprint 36) to consume the adopted
+ * design system: Button + Input + Card primitives, design tokens via Tailwind
+ * config (no zinc/slate utilities, no hex literals).
+ *
+ * No Figma frame — admin design pass is pragmatic per ADR-008 §3 until
+ * designer authors admin-specific frames.
+ */
 export default function LoginPage() {
   const { t } = useLanguage();
   const { login, token, user, bootstrapped, loading, error } = useAdminAuth();
@@ -32,47 +43,51 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-100 px-4">
-      <div className="w-full max-w-sm rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-        <h1 className="text-lg font-semibold text-zinc-900">{t("admin.login.title")}</h1>
-        <p className="mt-1 text-xs text-zinc-500">
-          {t("admin.login.api_hint")}
-        </p>
-        <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-3">
-          <label className="text-xs font-medium text-zinc-700">
-            {t("admin.login.email")}
-            <input
-              type="email"
-              autoComplete="username"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 w-full rounded border border-zinc-300 px-2 py-1.5 text-sm"
-            />
-          </label>
-          <label className="text-xs font-medium text-zinc-700">
-            {t("admin.login.password")}
-            <input
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full rounded border border-zinc-300 px-2 py-1.5 text-sm"
-            />
-          </label>
-          {(localError || error) && (
-            <p className="text-xs text-red-600">{localError || error}</p>
-          )}
-          <button
-            type="submit"
-            disabled={loading}
-            className="mt-2 rounded bg-zinc-900 py-2 text-sm font-medium text-white disabled:opacity-50"
-          >
-            {loading ? t("admin.login.signing_in") : t("admin.login.sign_in")}
-          </button>
-        </form>
-      </div>
+    <div className="flex min-h-screen items-center justify-center bg-figma-bg-1 px-4">
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle className="text-fg-t11">{t("admin.login.title")}</CardTitle>
+          <p className="text-ds-body-3 text-fg-t6">{t("admin.login.api_hint")}</p>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={onSubmit} className="flex flex-col gap-4">
+            <div className="space-y-1.5">
+              <label htmlFor="admin-login-email" className="block text-ds-input-label font-ds-input-label text-fg-t7">
+                {t("admin.login.email")}
+              </label>
+              <Input
+                id="admin-login-email"
+                type="email"
+                autoComplete="username"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="admin-login-password" className="block text-ds-input-label font-ds-input-label text-fg-t7">
+                {t("admin.login.password")}
+              </label>
+              <Input
+                id="admin-login-password"
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            {(localError || error) && (
+              <p className="rounded-zulu border border-error-200 bg-error-50 px-3 py-2 text-ds-body-3 text-error-700">
+                {localError || error}
+              </p>
+            )}
+            <Button type="submit" loading={loading} className="mt-2">
+              {loading ? t("admin.login.signing_in") : t("admin.login.sign_in")}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }
