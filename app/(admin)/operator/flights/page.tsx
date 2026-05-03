@@ -743,7 +743,7 @@ export default function OperatorFlightsPage() {
                   }}
                   className={`rounded border px-2 py-1 text-xs ${
                     isActive
-                      ? "border-slate-800 bg-slate-800 text-white"
+                      ? "border-primary bg-primary text-white"
                       : isComplete
                         ? "border-default bg-figma-bg-1 text-fg-t7"
                         : "border-default bg-white text-fg-t6"

@@ -430,7 +430,7 @@ export default function OperatorExcursionsPage() {
               return (
                 <span
                   key={stepTitle}
-                  className={`rounded px-2 py-1 ${active ? "bg-slate-800 text-white" : "bg-figma-bg-1 text-fg-t6"}`}
+                  className={`rounded px-2 py-1 ${active ? "bg-primary text-white" : "bg-figma-bg-1 text-fg-t6"}`}
                 >
                   {t(EXCURSION_STEP_LABEL_KEYS[i] ?? "")}
                 </span>

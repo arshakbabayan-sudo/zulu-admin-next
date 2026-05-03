@@ -406,7 +406,7 @@ export default function ConnectionsPage() {
                 <button
                   type="submit"
                   disabled={createBusy}
-                  className="rounded border border-slate-800 bg-slate-800 px-3 py-1 text-white disabled:opacity-40"
+                  className="admin-btn-primary"
                 >
                   {createBusy ? "Creating..." : "Submit"}
                 </button>
@@ -428,7 +428,7 @@ export default function ConnectionsPage() {
               }}
               className={
                 "rounded border px-2 py-1 " +
-                (statusFilter === s ? "border-slate-800 bg-slate-800 text-white" : "border-default bg-white")
+                (statusFilter === s ? "border-primary bg-primary text-white" : "border-default bg-white")
               }
             >
               {s === "" ? "All" : s}
