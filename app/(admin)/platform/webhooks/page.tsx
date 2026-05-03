@@ -171,19 +171,20 @@ export default function PlatformWebhooksPage() {
                   <th className="px-3 py-2">HTTP</th>
                   <th className="px-3 py-2">Last attempt</th>
                   <th className="px-3 py-2">Created</th>
+                  <th className="px-3 py-2"></th>
                 </tr>
               </thead>
               <tbody>
                 {loading && (
                   <tr>
-                    <td colSpan={8} className="px-3 py-6 text-center text-fg-t6">
+                    <td colSpan={9} className="px-3 py-6 text-center text-fg-t6">
                       Loading…
                     </td>
                   </tr>
                 )}
                 {!loading && deliveries.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-3 py-6 text-center text-fg-t6">
+                    <td colSpan={9} className="px-3 py-6 text-center text-fg-t6">
                       No deliveries found.
                     </td>
                   </tr>
@@ -203,6 +204,15 @@ export default function PlatformWebhooksPage() {
                     </td>
                     <td className="px-3 py-2 text-xs text-fg-t7">
                       {new Date(d.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      {d.status === "failed" && (
+                        <ReplayButton
+                          deliveryId={d.id}
+                          token={token ?? ""}
+                          onReplayed={() => setStatusFilter((s) => s)}
+                        />
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -283,6 +293,57 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
       }`}
     >
       {children}
+    </button>
+  );
+}
+
+function ReplayButton({
+  deliveryId,
+  token,
+  onReplayed,
+}: {
+  deliveryId: number;
+  token: string;
+  onReplayed: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const replay = async () => {
+    if (!confirm("Replay this failed delivery? It will be retried with the same payload.")) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const baseURL = process.env.NEXT_PUBLIC_API_URL || "https://api.zulu.am";
+      const res = await fetch(
+        `${baseURL}/api/platform-admin/webhooks/deliveries/${deliveryId}/replay`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+        }
+      );
+      const json = await res.json();
+      if (json?.success) {
+        onReplayed();
+      } else {
+        setError(json?.message ?? "Replay failed");
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Replay failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={replay}
+      disabled={busy}
+      title={error ?? "Reset to pending so the dispatcher can retry"}
+      className="text-xs text-primary-500 hover:underline disabled:opacity-40"
+    >
+      {busy ? "…" : "Replay"}
     </button>
   );
 }
