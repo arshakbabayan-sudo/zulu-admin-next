@@ -96,6 +96,7 @@ function NavLink({
     "/inventory/transfers": "/icons/menu/transfer.svg",
     "/inventory/cars": "/icons/menu/car.svg",
     "/inventory/excursions": "/icons/menu/excursion.svg",
+    "/pages": "/icons/menu/template.svg",
 
     "/localization/languages": "/icons/menu/language.svg",
     "/localization/ui-translations": "/icons/menu/translation.svg",
@@ -149,7 +150,8 @@ function GroupHeader({
           checked={isOpen}
           readOnly
           aria-hidden
-          className="h-3 w-3 cursor-pointer accent-sky-600"
+          className="h-3 w-3 cursor-pointer"
+          style={{ accentColor: "var(--admin-primary)" }}
         />
         <span>{label}</span>
       </span>
@@ -169,6 +171,16 @@ function GroupHeader({
   );
 }
 
+/**
+ * Figma layout reference: Quest CRM Copy template
+ *   - Sidebar Open & Collapse: 4042:3863
+ *   - Mobile drawer (admin):    10243:30233
+ *   - Dashboard layout pattern:  9350:15768
+ * File: https://www.figma.com/design/bEqM5rja1g3DjRugNRPjJr/Quest-CRM-Design--Copy-?node-id=4042-3863
+ * Brand tokens: ZULU purple primary (--admin-primary, see globals.css). Template's blue is NOT applied.
+ * Mobile rule: <md (under 960px) → drawer overlay; ≥md → persistent sidebar with collapse-to-icon.
+ * Last synced: 2026-05-03
+ */
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, token, logout } = useAdminAuth();
@@ -179,6 +191,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const lastPathname = useRef<string | null>(null);
   const [isNavigating, setIsNavigating] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [groupOpen, setGroupOpen] = useState({
     platform: true,
     operator: true,
@@ -196,6 +209,24 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     lastScreenPing.current = { path: pathname, t: now };
     reportAdminNextScreenView(token, pathname);
   }, [token, pathname]);
+
+  useEffect(() => {
+    setMobileDrawerOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!mobileDrawerOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileDrawerOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [mobileDrawerOpen]);
 
   // Lightweight navigation indicator: turns on when pathname changes and
   // turns off right after the next paint (no API coupling, no design changes).
@@ -246,7 +277,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen flex-col overflow-hidden bg-slate-100 text-slate-900">
       <header className="z-20 flex h-14 shrink-0 items-center justify-between border-b px-4 text-slate-800" style={{ backgroundColor: "var(--admin-header-bg)", borderColor: "var(--admin-border)" }}>
         <div className="flex items-center">
-          <div className={`flex items-center gap-2 border-r pr-4 ${sidebarOpen ? "w-72" : "w-20 justify-center pr-0"}`} style={{ borderColor: "var(--admin-border)" }}>
+          <div className={`hidden md:flex items-center gap-2 border-r pr-4 ${sidebarOpen ? "md:w-72" : "md:w-20 md:justify-center md:pr-0"}`} style={{ borderColor: "var(--admin-border)" }}>
             {sidebarOpen && (
               <>
                 <img src="/branding/brand-icon.svg" alt="Brand icon" className="h-6 w-6" />
@@ -256,11 +287,18 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               <img src="/branding/brand-icon.svg" alt="Brand icon" className="h-5 w-5" />
             )}
           </div>
+          <img src="/branding/brand-icon.svg" alt="Brand icon" className="h-6 w-6 md:hidden" />
           <button
             type="button"
             aria-label={t("admin.header.toggle_sidebar")}
             title={t("admin.header.toggle_sidebar")}
-            onClick={() => setSidebarOpen((v) => !v)}
+            onClick={() => {
+              if (typeof window !== "undefined" && window.matchMedia("(min-width: 960px)").matches) {
+                setSidebarOpen((v) => !v);
+              } else {
+                setMobileDrawerOpen((v) => !v);
+              }
+            }}
             className="ml-3 inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-700 transition hover:bg-black/5"
           >
             <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round">
@@ -330,9 +368,12 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <div className="mx-1 h-6 w-px" style={{ backgroundColor: "var(--admin-border)" }} />
           <button
             type="button"
-            className="inline-flex items-center gap-2 rounded-full bg-white/10 px-2 py-1 text-left transition hover:bg-white/20"
+            className="inline-flex items-center gap-2 rounded-full px-2 py-1 text-left transition hover:bg-black/5"
           >
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white text-xs font-semibold text-sky-600">
+            <span
+              className="inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold text-white"
+              style={{ backgroundColor: "var(--admin-primary)" }}
+            >
               {(user?.name ?? t("admin.user.fallback_initial")).slice(0, 1).toUpperCase()}
             </span>
               <span className="hidden max-w-[160px] truncate text-xs font-medium text-slate-700 md:block">
@@ -341,10 +382,19 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
       </header>
-      <div className="flex min-h-0 flex-1" style={{ backgroundColor: "var(--background)" }}>
+      <div className="relative flex min-h-0 flex-1" style={{ backgroundColor: "var(--background)" }}>
+      {mobileDrawerOpen && (
+        <div
+          className="fixed inset-x-0 bottom-0 top-14 z-20 bg-black/40 md:hidden"
+          onClick={() => setMobileDrawerOpen(false)}
+          aria-hidden
+        />
+      )}
       <aside
-        className={`min-h-0 shrink-0 overflow-y-auto border-r bg-white transition-[width] duration-200 ${
-          sidebarOpen ? "w-72" : "w-20"
+        className={`overflow-y-auto border-r bg-white fixed inset-y-0 left-0 top-14 z-30 w-72 transition-transform duration-200 ${
+          mobileDrawerOpen ? "translate-x-0" : "-translate-x-full"
+        } md:static md:top-0 md:z-auto md:min-h-0 md:shrink-0 md:translate-x-0 md:transition-[width] ${
+          sidebarOpen ? "md:w-72" : "md:w-20"
         }`}
         style={{ borderColor: "var(--admin-border)", backgroundColor: "var(--admin-surface)" }}
       >
@@ -395,6 +445,13 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 if (!userHasPermission(user, l.perm)) return null;
                 return <NavLink key={l.href} href={l.href} label={t(l.labelKey)} pathname={pathname} collapsed={!sidebarOpen} />;
               })}
+            </>
+          )}
+
+          {showPlatform && (
+            <>
+              {!sidebarOpen && <div className="my-1 border-t" style={{ borderColor: "var(--admin-border)" }} />}
+              <NavLink href="/pages" label="Pages" pathname={pathname} collapsed={!sidebarOpen} />
             </>
           )}
 
@@ -495,7 +552,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         className={`h-[2px] w-full transition-opacity duration-150 ${isNavigating ? "opacity-100" : "opacity-0"}`}
         style={{
           background:
-            "linear-gradient(90deg, var(--admin-primary) 0%, rgba(2,132,199,0.15) 45%, var(--admin-primary) 100%)",
+            "linear-gradient(90deg, var(--admin-primary) 0%, var(--admin-primary-soft) 45%, var(--admin-primary) 100%)",
         }}
       />
     </div>

@@ -465,7 +465,7 @@
   --admin-surface: var(--bg-1);
   --admin-text-muted: var(--text-t6);
   --admin-border: var(--border-default);
-  --admin-header-bg: #d5d6dc;
+  --admin-header-bg: #ffffff;
 }
 
 @layer utilities {
