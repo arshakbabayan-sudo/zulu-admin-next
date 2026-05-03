@@ -53,7 +53,7 @@ export default function OperatorStatisticsPage() {
   if (!allowed) {
     return (
       <div>
-        <h1 className="text-xl font-semibold">Operator statistics</h1>
+        <h1 className="admin-page-title">Operator statistics</h1>
         <div className="mt-4">
           <ForbiddenNotice messageKey="admin.forbidden.statistics_scope" />
         </div>
@@ -63,7 +63,7 @@ export default function OperatorStatisticsPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">Operator statistics</h1>
+      <h1 className="admin-page-title">Operator statistics</h1>
       {isSuper && (
         <div className="mt-4 flex flex-wrap items-end gap-2">
           <label className="text-sm">

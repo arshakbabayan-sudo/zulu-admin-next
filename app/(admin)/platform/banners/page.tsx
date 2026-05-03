@@ -140,7 +140,7 @@ export default function PlatformBannersPage() {
   if (!allowed || forbidden) {
     return (
       <div>
-        <h1 className="text-xl font-semibold">Banners</h1>
+        <h1 className="admin-page-title">Banners</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -150,7 +150,7 @@ export default function PlatformBannersPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">Banner CMS</h1>
+      <h1 className="admin-page-title">Banner CMS</h1>
       <p className="mt-1 text-sm text-fg-t7">
         GET|POST|PATCH|DELETE /api/platform-admin/banners* | multipart image on create / optional on update
       </p>

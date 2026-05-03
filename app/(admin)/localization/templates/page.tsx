@@ -97,7 +97,7 @@ export default function LocalizationTemplatesPage() {
   if (!allowed) {
     return (
       <div>
-        <h1 className="text-xl font-semibold">Notification templates</h1>
+        <h1 className="admin-page-title">Notification templates</h1>
         <div className="mt-4">
           <ForbiddenNotice messageKey="admin.forbidden.templates" />
         </div>
@@ -108,7 +108,7 @@ export default function LocalizationTemplatesPage() {
   if (forbidden) {
     return (
       <div>
-        <h1 className="text-xl font-semibold">Notification templates</h1>
+        <h1 className="admin-page-title">Notification templates</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -118,7 +118,7 @@ export default function LocalizationTemplatesPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">Notification templates</h1>
+      <h1 className="admin-page-title">Notification templates</h1>
       {msg && <p className="mt-2 text-sm text-emerald-700">{msg}</p>}
       {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
 

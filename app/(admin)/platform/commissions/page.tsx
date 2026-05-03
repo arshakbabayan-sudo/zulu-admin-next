@@ -67,7 +67,7 @@ export default function CommissionsPage() {
   }
 
   if (!allowed || forbidden) return (
-    <div><h1 className="text-xl font-semibold">Commissions</h1><div className="mt-4"><ForbiddenNotice /></div></div>
+    <div><h1 className="admin-page-title">Commissions</h1><div className="mt-4"><ForbiddenNotice /></div></div>
   );
 
   const tabCls = (t: Tab) =>
@@ -75,7 +75,7 @@ export default function CommissionsPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">Commissions</h1>
+      <h1 className="admin-page-title">Commissions</h1>
 
       <div className="mt-4 flex gap-0 border-b border-default">
         <button type="button" className={tabCls("policies")} onClick={() => setTab("policies")}>Policies</button>

@@ -60,9 +60,15 @@ export function InventoryOversightList({
       setMeta(res.meta);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else setErr(e instanceof ApiRequestError ? e.message : "Failed to load");
-      setRows([]);
-      setMeta(null);
+      else if (e instanceof ApiRequestError && (e.status === 404 || e.message === "Not found")) {
+        // Treat backend "Not found" as empty list, not as an error
+        setRows([]);
+        setMeta(null);
+      } else {
+        setErr(e instanceof ApiRequestError ? e.message : "Failed to load");
+        setRows([]);
+        setMeta(null);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -74,9 +80,9 @@ export function InventoryOversightList({
 
   if (!allowed || forbidden) {
     return (
-      <div>
-        <h1 className="text-xl font-semibold">{title}</h1>
-        <div className="mt-4">
+      <div className="space-y-4">
+        <h1 className="admin-page-title">{title}</h1>
+        <div className="admin-card p-4">
           <ForbiddenNotice messageKey="admin.forbidden.inventory_oversight" />
         </div>
       </div>
@@ -84,28 +90,56 @@ export function InventoryOversightList({
   }
 
   return (
-    <div>
-      <h1 className="text-xl font-semibold">{title}</h1>
-      {filterBar ? <div className="mt-4 flex flex-wrap items-end gap-3">{filterBar}</div> : null}
-      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
-      <div className={`mt-4 overflow-x-auto rounded border border-default bg-white transition-opacity ${isLoading ? "opacity-50 pointer-events-none" : "opacity-100"}`}>
+    <div className="space-y-6">
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="admin-page-title">{title}</h1>
+          {meta && (
+            <p className="mt-1 text-sm text-fg-t6">
+              {meta.total} total · page {meta.current_page} of {meta.last_page}
+            </p>
+          )}
+        </div>
+      </header>
+
+      {filterBar ? (
+        <div className="admin-card p-4">
+          <div className="flex flex-wrap items-end gap-3">{filterBar}</div>
+        </div>
+      ) : null}
+
+      {err && (
+        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
+          {err}
+        </div>
+      )}
+
+      <div className={`admin-card overflow-hidden transition-opacity ${isLoading ? "opacity-50 pointer-events-none" : "opacity-100"}`}>
+        <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] text-left text-sm">
-          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
+          <thead className="border-b border-default bg-figma-bg-1 text-xs font-medium uppercase tracking-wide text-fg-t6">
             <tr>
               {columns.map((c, idx) => (
-                <th key={`h-${idx}-${c.header}`} className="px-3 py-2">
+                <th key={`h-${idx}-${c.header}`} className="px-4 py-3">
                   {c.header}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
+            {rows.length === 0 && !isLoading && (
+              <tr>
+                <td colSpan={columns.length} className="px-4 py-12 text-center text-sm text-fg-t6">
+                  No items found.
+                </td>
+              </tr>
+            )}
             {rows.map((r, i) => {
               const key = typeof r.id === "number" || typeof r.id === "string" ? String(r.id) : `row-${i}`;
               return (
-                <tr key={key} className="border-b border-default">
+                <tr key={key} className="border-b border-default last:border-0 hover:bg-figma-bg-1">
                   {columns.map((c, ci) => (
-                    <td key={`c-${key}-${ci}`} className="max-w-[280px] truncate px-3 py-2">
+                    <td key={`c-${key}-${ci}`} className="max-w-[280px] truncate px-4 py-3">
                       {c.getCell(r)}
                     </td>
                   ))}
@@ -114,6 +148,7 @@ export function InventoryOversightList({
             })}
           </tbody>
         </table>
+        </div>
       </div>
       {meta && <PaginationBar meta={meta} onPage={setPage} />}
     </div>

@@ -411,7 +411,7 @@ export default function AdminPageEditorLayoutPage() {
   if (!allowed || forbidden) {
     return (
       <div>
-        <h1 className="text-xl font-semibold">Page Editor</h1>
+        <h1 className="admin-page-title">Page Editor</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -425,7 +425,7 @@ export default function AdminPageEditorLayoutPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">Page Visual Editor</h1>
+      <h1 className="admin-page-title">Page Visual Editor</h1>
       <div className="mt-3 rounded border border-default bg-white p-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">

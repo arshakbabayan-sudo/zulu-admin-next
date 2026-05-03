@@ -62,12 +62,12 @@ export default function OperatorOffersPage() {
   }
 
   if (!allowed || forbidden) return (
-    <div><h1 className="text-xl font-semibold">{t("admin.crud.offers.title")}</h1><div className="mt-4"><ForbiddenNotice /></div></div>
+    <div><h1 className="admin-page-title">{t("admin.crud.offers.title")}</h1><div className="mt-4"><ForbiddenNotice /></div></div>
   );
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">{t("admin.crud.offers.title")}</h1>
+      <h1 className="admin-page-title">{t("admin.crud.offers.title")}</h1>
 
       <div className="mt-4 flex items-center gap-3">
         <label className="text-sm text-fg-t6">

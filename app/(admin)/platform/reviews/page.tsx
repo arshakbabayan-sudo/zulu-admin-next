@@ -64,7 +64,7 @@ export default function PlatformReviewsPage() {
   if (!allowed) {
     return (
       <div>
-        <h1 className="text-xl font-semibold">Reviews</h1>
+        <h1 className="admin-page-title">Reviews</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -75,7 +75,7 @@ export default function PlatformReviewsPage() {
   if (forbidden) {
     return (
       <div>
-        <h1 className="text-xl font-semibold">Reviews</h1>
+        <h1 className="admin-page-title">Reviews</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -85,7 +85,7 @@ export default function PlatformReviewsPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">Reviews moderation</h1>
+      <h1 className="admin-page-title">Reviews moderation</h1>
       <div className="mt-4">
         <label className="text-sm text-fg-t6">
           Status filter

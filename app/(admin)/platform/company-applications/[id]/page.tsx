@@ -82,7 +82,7 @@ export default function CompanyApplicationDetailPage() {
   if (!allowed || forbidden) {
     return (
       <div>
-        <h1 className="text-xl font-semibold">Company application</h1>
+        <h1 className="admin-page-title">Company application</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -116,7 +116,7 @@ export default function CompanyApplicationDetailPage() {
           ← Company applications
         </button>
       </div>
-      <h1 className="text-xl font-semibold">Application #{row.id}</h1>
+      <h1 className="admin-page-title">Application #{row.id}</h1>
       {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
 
       <dl className="mt-6 grid max-w-2xl gap-3 text-sm sm:grid-cols-2">

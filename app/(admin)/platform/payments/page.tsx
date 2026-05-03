@@ -44,7 +44,7 @@ export default function PlatformPaymentsPage() {
   if (!allowed) {
     return (
       <div>
-        <h1 className="text-xl font-semibold">Payments</h1>
+        <h1 className="admin-page-title">Payments</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -55,7 +55,7 @@ export default function PlatformPaymentsPage() {
   if (forbidden) {
     return (
       <div>
-        <h1 className="text-xl font-semibold">Payments</h1>
+        <h1 className="admin-page-title">Payments</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -65,7 +65,7 @@ export default function PlatformPaymentsPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">Platform payments</h1>
+      <h1 className="admin-page-title">Platform payments</h1>
       <div className="mt-4">
         <label className="text-sm text-fg-t6">
           Status

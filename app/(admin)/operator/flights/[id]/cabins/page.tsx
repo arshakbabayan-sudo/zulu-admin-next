@@ -108,7 +108,7 @@ export default function FlightCabinsSeatMapPage() {
     return (
       <div>
         <div className="mb-4">
-          <h1 className="text-xl font-semibold">Flight cabin seat maps</h1>
+          <h1 className="admin-page-title">Flight cabin seat maps</h1>
           <p className="mt-1 text-sm text-fg-t6">Flight #{flightId}</p>
         </div>
         <ForbiddenNotice />
@@ -120,7 +120,7 @@ export default function FlightCabinsSeatMapPage() {
     <div>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h1 className="text-xl font-semibold">Flight cabin seat maps</h1>
+          <h1 className="admin-page-title">Flight cabin seat maps</h1>
           <p className="mt-1 text-sm text-fg-t6">
             {flight
               ? `Flight #${flight.id} - ${flight.flight_code_internal ?? flight.flight_number ?? "N/A"}`

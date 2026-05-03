@@ -252,7 +252,7 @@ export default function AdminPagesListPage() {
   if (!allowed || forbidden) {
     return (
       <div>
-        <h1 className="text-xl font-semibold">Pages</h1>
+        <h1 className="admin-page-title">Pages</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -267,7 +267,7 @@ export default function AdminPagesListPage() {
       ) : null}
 
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">Pages</h1>
+        <h1 className="admin-page-title">Pages</h1>
         <button
           type="button"
           onClick={() => setShowAddModal(true)}

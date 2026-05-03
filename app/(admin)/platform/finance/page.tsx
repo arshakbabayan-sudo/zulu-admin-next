@@ -111,7 +111,7 @@ export default function FinancePage() {
   }
 
   if (!allowed || forbidden) return (
-    <div><h1 className="text-xl font-semibold">Finance</h1><div className="mt-4"><ForbiddenNotice /></div></div>
+    <div><h1 className="admin-page-title">Finance</h1><div className="mt-4"><ForbiddenNotice /></div></div>
   );
 
   const tabCls = (t: Tab) =>
@@ -119,7 +119,7 @@ export default function FinancePage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">Finance</h1>
+      <h1 className="admin-page-title">Finance</h1>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <label className="text-sm text-fg-t7" htmlFor="finance-company-id">Company</label>
         {companyOptions.length > 0 ? (

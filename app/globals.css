@@ -521,4 +521,87 @@
   .admin-content button:disabled {
     @apply cursor-not-allowed opacity-50;
   }
+
+  /* Reusable admin button classes — anchor on Quest CRM template patterns. */
+  .admin-btn-primary {
+    @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-zulu px-3.5 text-sm font-medium text-white transition disabled:opacity-50 disabled:cursor-not-allowed;
+    background-color: var(--admin-primary);
+  }
+  .admin-btn-primary:hover:not(:disabled) {
+    background-color: var(--zulu-purple-dark, var(--color-primary-700));
+  }
+
+  .admin-btn-secondary {
+    @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-zulu border bg-white px-3.5 text-sm font-medium text-fg-t7 transition hover:bg-figma-bg-1 disabled:opacity-50 disabled:cursor-not-allowed;
+    border-color: var(--admin-border);
+  }
+
+  .admin-btn-danger {
+    @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-zulu border border-error-200 bg-white px-3.5 text-sm font-medium text-error-700 transition hover:bg-error-50 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .admin-btn-ghost {
+    @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-zulu px-3 text-sm font-medium text-fg-t7 transition hover:bg-figma-bg-1 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Reusable empty-state row inside a table (use `<tr><td colSpan>...empty...</td></tr>`). */
+  .admin-empty-row {
+    @apply px-4 py-12 text-center text-sm text-fg-t6;
+  }
+}
+
+/* ─── Dark mode (Phase 1.5) ──────────────────────────────────────────────
+ * The admin theme toggle sets `<html class="dark">`. These overrides re-point
+ * the --admin-* CSS variables so sidebar / cards / borders adapt instead of
+ * staying white. Tailwind's `darkMode: "class"` config also applies any
+ * dark:bg-* / dark:text-* utility on individual elements.
+ * ───────────────────────────────────────────────────────────────────── */
+html.dark {
+  --admin-surface: #0a0614;
+  --admin-header-bg: #14102a;
+  --admin-sidebar-bg: #14102a;
+  --admin-card-bg: #1c1838;
+  --admin-text-muted: #8b8aa0;
+  --admin-border: #2c2750;
+  --admin-primary-soft: rgba(149, 76, 233, 0.18);
+  --bg-1: #0a0614;
+  --bg-2: #14102a;
+  --border-default: #2c2750;
+}
+
+html.dark body {
+  background-color: var(--admin-surface);
+  color: #e9e7f0;
+}
+
+html.dark .admin-card {
+  background-color: var(--admin-card-bg);
+  border-color: var(--admin-border);
+  color: #e9e7f0;
+}
+
+html.dark .admin-page-title {
+  color: #f5f3fc;
+}
+
+html.dark .admin-btn-secondary {
+  background-color: var(--admin-card-bg);
+  color: #e9e7f0;
+  border-color: var(--admin-border);
+}
+html.dark .admin-btn-secondary:hover:not(:disabled) {
+  background-color: #221d42;
+}
+
+html.dark .admin-btn-ghost:hover:not(:disabled) {
+  background-color: #221d42;
+  color: #f5f3fc;
+}
+
+html.dark .admin-btn-danger {
+  background-color: var(--admin-card-bg);
+}
+
+html.dark .admin-empty-row {
+  color: var(--admin-text-muted);
 }

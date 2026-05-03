@@ -85,7 +85,7 @@ export default function GenericApprovalsPage() {
   if (!allowed || forbidden) {
     return (
       <div>
-        <h1 className="text-xl font-semibold">Approvals</h1>
+        <h1 className="admin-page-title">Approvals</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -95,7 +95,7 @@ export default function GenericApprovalsPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">Generic approvals</h1>
+      <h1 className="admin-page-title">Generic approvals</h1>
       <div className="mt-4 flex flex-wrap items-end gap-3">
         <label className="text-sm text-fg-t6">
           Status

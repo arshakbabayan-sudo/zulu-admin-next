@@ -306,7 +306,7 @@ export default function PlatformLocationsPage() {
   if (!allowed || forbidden) {
     return (
       <div>
-        <h1 className="text-xl font-semibold">Locations</h1>
+        <h1 className="admin-page-title">Locations</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -316,7 +316,7 @@ export default function PlatformLocationsPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">Locations / destinations</h1>
+      <h1 className="admin-page-title">Locations / destinations</h1>
       <p className="mt-1 text-sm text-fg-t7">
         GET|POST /api/locations/countries, /countries/{"{id}"}/regions, POST /regions, GET
         /regions/{"{id}"}/cities, POST /cities - super admin only

@@ -94,12 +94,12 @@ export default function OperatorPackagesPage() {
     finally { setBusyId(null); }
   }
 
-  if (forbidden) return <div><h1 className="text-xl font-semibold">{t("admin.crud.packages.title")}</h1><div className="mt-4"><ForbiddenNotice /></div></div>;
+  if (forbidden) return <div><h1 className="admin-page-title">{t("admin.crud.packages.title")}</h1><div className="mt-4"><ForbiddenNotice /></div></div>;
 
   return (
     <div>
       <div className="flex items-center justify-between">
-        <div><h1 className="text-xl font-semibold">{t("admin.crud.packages.title")}</h1></div>
+        <div><h1 className="admin-page-title">{t("admin.crud.packages.title")}</h1></div>
         <button type="button" onClick={openCreate} className="rounded bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700">{t("admin.crud.packages.new_btn")}</button>
       </div>
 

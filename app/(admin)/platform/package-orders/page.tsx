@@ -69,7 +69,7 @@ export default function PlatformPackageOrdersPage() {
   if (!allowed) {
     return (
       <div>
-        <h1 className="text-xl font-semibold">Package orders</h1>
+        <h1 className="admin-page-title">Package orders</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -80,7 +80,7 @@ export default function PlatformPackageOrdersPage() {
   if (forbidden) {
     return (
       <div>
-        <h1 className="text-xl font-semibold">Package orders</h1>
+        <h1 className="admin-page-title">Package orders</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -90,7 +90,7 @@ export default function PlatformPackageOrdersPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">Platform package orders</h1>
+      <h1 className="admin-page-title">Platform package orders</h1>
       <div className="mt-4 flex flex-wrap items-end gap-3">
         <label className="text-sm text-fg-t6">
           Status

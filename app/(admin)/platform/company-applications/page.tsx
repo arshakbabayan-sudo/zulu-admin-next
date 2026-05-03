@@ -44,7 +44,7 @@ export default function CompanyApplicationsPage() {
   if (!allowed || forbidden) {
     return (
       <div>
-        <h1 className="text-xl font-semibold">Company applications</h1>
+        <h1 className="admin-page-title">Company applications</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -54,7 +54,7 @@ export default function CompanyApplicationsPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">Company applications</h1>
+      <h1 className="admin-page-title">Company applications</h1>
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <label className="text-sm text-fg-t6">
           Status

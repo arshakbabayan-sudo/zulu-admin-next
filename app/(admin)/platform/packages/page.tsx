@@ -87,7 +87,7 @@ export default function PlatformPackagesGovernancePage() {
   if (!allowed) {
     return (
       <div>
-        <h1 className="text-xl font-semibold">Packages</h1>
+        <h1 className="admin-page-title">Packages</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -98,7 +98,7 @@ export default function PlatformPackagesGovernancePage() {
   if (forbidden) {
     return (
       <div>
-        <h1 className="text-xl font-semibold">Packages</h1>
+        <h1 className="admin-page-title">Packages</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -108,7 +108,7 @@ export default function PlatformPackagesGovernancePage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">Packages governance</h1>
+      <h1 className="admin-page-title">Packages governance</h1>
       <div className="mt-4 flex flex-wrap items-end gap-3">
         <label className="text-sm text-fg-t6">
           Status

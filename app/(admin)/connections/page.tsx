@@ -204,7 +204,7 @@ export default function ConnectionsPage() {
   if (!allowed) {
     return (
       <div>
-        <h1 className="text-xl font-semibold">Service connections</h1>
+        <h1 className="admin-page-title">Service connections</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -215,7 +215,7 @@ export default function ConnectionsPage() {
   if (forbidden) {
     return (
       <div>
-        <h1 className="text-xl font-semibold">Service connections</h1>
+        <h1 className="admin-page-title">Service connections</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -225,7 +225,7 @@ export default function ConnectionsPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">Service connections</h1>
+      <h1 className="admin-page-title">Service connections</h1>
 
       {canCreate && (
         <div className="mt-4 rounded border border-default bg-white p-4">

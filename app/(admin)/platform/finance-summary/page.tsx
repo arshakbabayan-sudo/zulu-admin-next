@@ -55,7 +55,7 @@ export default function PlatformFinanceSummaryPage() {
   if (!allowed) {
     return (
       <div>
-        <h1 className="text-xl font-semibold">Finance summary</h1>
+        <h1 className="admin-page-title">Finance summary</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -66,7 +66,7 @@ export default function PlatformFinanceSummaryPage() {
   if (forbidden) {
     return (
       <div>
-        <h1 className="text-xl font-semibold">Finance summary</h1>
+        <h1 className="admin-page-title">Finance summary</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -76,7 +76,7 @@ export default function PlatformFinanceSummaryPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">Platform finance summary</h1>
+      <h1 className="admin-page-title">Platform finance summary</h1>
       <button
         type="button"
         onClick={() => load()}

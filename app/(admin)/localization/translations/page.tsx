@@ -157,7 +157,7 @@ export default function LocalizationTranslationsPage() {
   if (!allowed) {
     return (
       <div>
-        <h1 className="text-xl font-semibold">Translations</h1>
+        <h1 className="admin-page-title">Translations</h1>
         <div className="mt-4">
           <ForbiddenNotice messageKey="admin.forbidden.managing_translations" />
         </div>
@@ -167,11 +167,11 @@ export default function LocalizationTranslationsPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">Content translations</h1>
-      {msg && <p className="mt-2 text-sm text-emerald-700">{msg}</p>}
+      <h1 className="admin-page-title">Content translations</h1>
+      {msg && <p className="mt-2 text-sm text-success-700">{msg}</p>}
       {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
 
-      <div className="mt-4 space-y-3 rounded-xl border border-default bg-white p-4 shadow-sm">
+      <div className="admin-card mt-4 space-y-3 p-4">
         <div className="flex flex-wrap gap-3">
           <label className="flex flex-col text-xs text-fg-t6">
             Entity type
@@ -221,7 +221,7 @@ export default function LocalizationTranslationsPage() {
             type="button"
             disabled={busy || !token}
             onClick={() => loadTranslations()}
-            className="rounded bg-figma-bg-1 px-3 py-1 text-sm disabled:opacity-50"
+            className="admin-btn-secondary"
           >
             Load
           </button>
@@ -229,7 +229,7 @@ export default function LocalizationTranslationsPage() {
             type="button"
             disabled={busy || !token}
             onClick={() => saveTranslations()}
-            className="rounded bg-slate-800 px-3 py-1 text-sm text-white disabled:opacity-50"
+            className="admin-btn-primary"
           >
             Save
           </button>
@@ -243,13 +243,13 @@ export default function LocalizationTranslationsPage() {
 
       <div className="mt-4 space-y-3">
         {LOCALIZATION_TRANSLATABLE_FIELDS.map((field) => (
-          <div key={field} className="rounded-xl border border-default bg-white p-3 shadow-sm">
+          <div key={field} className="admin-card p-3">
             <div className="text-xs font-mono text-fg-t7">{field}</div>
             <textarea
               value={drafts[field] ?? ""}
               onChange={(e) => setDrafts((p) => ({ ...p, [field]: e.target.value }))}
               rows={3}
-              className="mt-1 w-full max-w-3xl rounded border border-default px-2 py-1 text-sm"
+              className="mt-1 w-full max-w-3xl rounded-zulu border border-default bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
             />
           </div>
         ))}

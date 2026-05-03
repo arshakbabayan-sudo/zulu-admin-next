@@ -83,7 +83,7 @@ export default function SellerApplicationsPage() {
   if (!allowed) {
     return (
       <div>
-        <h1 className="text-xl font-semibold">Seller applications</h1>
+        <h1 className="admin-page-title">Seller applications</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -94,7 +94,7 @@ export default function SellerApplicationsPage() {
   if (forbidden) {
     return (
       <div>
-        <h1 className="text-xl font-semibold">Seller applications</h1>
+        <h1 className="admin-page-title">Seller applications</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -104,7 +104,7 @@ export default function SellerApplicationsPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">Seller applications</h1>
+      <h1 className="admin-page-title">Seller applications</h1>
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <label className="text-sm text-fg-t6">
           Status filter
