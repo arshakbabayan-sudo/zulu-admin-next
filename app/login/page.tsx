@@ -10,12 +10,13 @@ import { Input } from "@/components/ui/Input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 
 /**
- * Admin login. Refactored 2026-05-02 (Sprint 36) to consume the adopted
- * design system: Button + Input + Card primitives, design tokens via Tailwind
- * config (no zinc/slate utilities, no hex literals).
- *
- * No Figma frame — admin design pass is pragmatic per ADR-008 §3 until
- * designer authors admin-specific frames.
+ * Figma layout reference: Quest CRM Copy template
+ *   - Login (desktop):  4299:7448
+ *   - Sign in (mobile): 10171:23225
+ * Brand tokens: ZULU purple primary (--admin-primary).
+ * Logo + tagline above card, centered card form.
+ * Last synced: 2026-05-03 (replaces earlier ADR-008 §3 "pragmatic" note —
+ * we now have an admin design reference via the Quest CRM template).
  */
 export default function LoginPage() {
   const { t } = useLanguage();
@@ -43,11 +44,16 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-figma-bg-1 px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-figma-bg-1 px-4 py-10">
+      <div className="mb-6 flex flex-col items-center text-center">
+        <img src="/branding/brand-icon.svg" alt="ZULU" className="h-10 w-10" />
+        <p className="mt-3 max-w-xs text-ds-body-2 text-fg-t6">
+          {t("admin.login.api_hint")}
+        </p>
+      </div>
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle className="text-fg-t11">{t("admin.login.title")}</CardTitle>
-          <p className="text-ds-body-3 text-fg-t6">{t("admin.login.api_hint")}</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="flex flex-col gap-4">
