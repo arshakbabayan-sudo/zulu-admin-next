@@ -126,6 +126,10 @@ export default function PlatformAuditLogsPage() {
         if (json?.success) {
           setRows(json.data ?? []);
           setMeta(json.meta ?? null);
+        } else if (res.status === 404 || json?.message === "Not found") {
+          // Treat backend "Not found" as empty list, not as an error
+          setRows([]);
+          setMeta(null);
         } else {
           setError(json?.message ?? "Failed to load audit logs");
         }

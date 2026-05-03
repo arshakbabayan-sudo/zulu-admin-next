@@ -26,9 +26,17 @@ const FALLBACK_LANGUAGE_OPTIONS: LanguageOption[] = [
 
 export type LangCode = string;
 
-let cachedLanguageOptions: LanguageOption[] | null = null;
-
 export const DEFAULT_LANG: LangCode = "en";
+
+let cachedLanguageOptions: LanguageOption[] | null = null;
+let cachedLanguageDefaultCode: string = DEFAULT_LANG;
+let languageMetaFetchedAt = 0;
+let languageMetaPromise: Promise<{ options: LanguageOption[]; defaultCode: string }> | null = null;
+const languageTranslationsCache = new Map<string, { data: Record<string, string>; fetchedAt: number }>();
+const languageTranslationsPromises = new Map<string, Promise<Record<string, string>>>();
+
+const LANGUAGE_META_TTL_MS = 5 * 60 * 1000;
+const UI_TRANSLATIONS_TTL_MS = 60 * 1000;
 
 function buildOptionsFromApi(rows: SupportedLanguageRow[]): LanguageOption[] {
   return rows.map((row) => ({
@@ -42,28 +50,49 @@ export async function fetchSupportedLanguagesMeta(): Promise<{
   options: LanguageOption[];
   defaultCode: string;
 }> {
-  try {
-    const url = `${getApiBaseUrl()}/localization/languages`;
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) {
-      return { options: [...FALLBACK_LANGUAGE_OPTIONS], defaultCode: DEFAULT_LANG };
-    }
-    const json = (await res.json()) as {
-      success: boolean;
-      data: SupportedLanguageRow[];
-    };
-    if (!json.success || !Array.isArray(json.data) || json.data.length === 0) {
-      return { options: [...FALLBACK_LANGUAGE_OPTIONS], defaultCode: DEFAULT_LANG };
-    }
-    const opts = buildOptionsFromApi(json.data);
-    cachedLanguageOptions = opts;
-    return {
-      options: opts,
-      defaultCode: getDefaultLanguageCodeFromRows(json.data),
-    };
-  } catch {
-    return { options: [...FALLBACK_LANGUAGE_OPTIONS], defaultCode: DEFAULT_LANG };
+  const now = Date.now();
+  if (
+    cachedLanguageOptions &&
+    now - languageMetaFetchedAt < LANGUAGE_META_TTL_MS
+  ) {
+    return { options: cachedLanguageOptions, defaultCode: cachedLanguageDefaultCode };
   }
+
+  if (languageMetaPromise) {
+    return languageMetaPromise;
+  }
+
+  languageMetaPromise = (async () => {
+    try {
+      const url = `${getApiBaseUrl()}/localization/languages`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        return { options: [...FALLBACK_LANGUAGE_OPTIONS], defaultCode: DEFAULT_LANG };
+      }
+      const json = (await res.json()) as {
+        success: boolean;
+        data: SupportedLanguageRow[];
+      };
+      if (!json.success || !Array.isArray(json.data) || json.data.length === 0) {
+        return { options: [...FALLBACK_LANGUAGE_OPTIONS], defaultCode: DEFAULT_LANG };
+      }
+      const opts = buildOptionsFromApi(json.data);
+      const defaultCode = getDefaultLanguageCodeFromRows(json.data);
+      cachedLanguageOptions = opts;
+      cachedLanguageDefaultCode = defaultCode;
+      languageMetaFetchedAt = Date.now();
+      return {
+        options: opts,
+        defaultCode,
+      };
+    } catch {
+      return { options: [...FALLBACK_LANGUAGE_OPTIONS], defaultCode: DEFAULT_LANG };
+    } finally {
+      languageMetaPromise = null;
+    }
+  })();
+
+  return languageMetaPromise;
 }
 
 export function getCachedLanguageOptions(): LanguageOption[] {
@@ -148,18 +177,35 @@ export function writeStoredLanguage(lang: string): void {
 }
 
 export async function fetchUiTranslations(lang: string): Promise<Record<string, string>> {
-  try {
-    const url = `${getApiBaseUrl()}/localization/ui-translations?lang=${encodeURIComponent(lang)}`;
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) return {};
-    const json = (await res.json()) as {
-      success: boolean;
-      data: { translations: Record<string, string> };
-    };
-    return json.success ? (json.data.translations ?? {}) : {};
-  } catch {
-    return {};
+  const cacheHit = languageTranslationsCache.get(lang);
+  if (cacheHit && Date.now() - cacheHit.fetchedAt < UI_TRANSLATIONS_TTL_MS) {
+    return cacheHit.data;
   }
+
+  const inFlight = languageTranslationsPromises.get(lang);
+  if (inFlight) return inFlight;
+
+  const request = (async () => {
+    try {
+      const url = `${getApiBaseUrl()}/localization/ui-translations?lang=${encodeURIComponent(lang)}`;
+      const res = await fetch(url);
+      if (!res.ok) return {};
+      const json = (await res.json()) as {
+        success: boolean;
+        data: { translations: Record<string, string> };
+      };
+      const data = json.success ? (json.data.translations ?? {}) : {};
+      languageTranslationsCache.set(lang, { data, fetchedAt: Date.now() });
+      return data;
+    } catch {
+      return {};
+    } finally {
+      languageTranslationsPromises.delete(lang);
+    }
+  })();
+
+  languageTranslationsPromises.set(lang, request);
+  return request;
 }
 
 export function t(

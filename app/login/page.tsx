@@ -47,8 +47,9 @@ export default function LoginPage() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-figma-bg-1 px-4 py-10">
       <div className="mb-6 flex flex-col items-center text-center">
         <img src="/branding/brand-icon.svg" alt="ZULU" className="h-10 w-10" />
-        <p className="mt-3 max-w-xs text-ds-body-2 text-fg-t6">
-          {t("admin.login.api_hint")}
+        <p className="mt-1 text-ds-h6 font-ds-h6-semibold text-fg-t11">ZULU</p>
+        <p className="mt-2 max-w-xs text-ds-body-2 text-fg-t6">
+          Operations console — internal access only
         </p>
       </div>
       <Card className="w-full max-w-sm">

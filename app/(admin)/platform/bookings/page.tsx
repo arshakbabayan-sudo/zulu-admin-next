@@ -75,6 +75,11 @@ export default function PlatformBookingsPage() {
       setMeta(res.meta);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
+      else if (e instanceof ApiRequestError && (e.status === 404 || e.message === "Not found")) {
+        // Treat backend "Not found" as empty list, not as an error
+        setRows([]);
+        setMeta(null);
+      }
       else setErr(e instanceof ApiRequestError ? e.message : "Failed to load");
     }
   }, [token, allowed, page, statusFilter]);

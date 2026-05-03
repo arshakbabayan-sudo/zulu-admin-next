@@ -31,9 +31,11 @@ import {
 
 function TopIconButton({
   label,
+  onClick,
   children,
 }: {
   label: string;
+  onClick?: () => void;
   children: React.ReactNode;
 }) {
   return (
@@ -41,11 +43,38 @@ function TopIconButton({
       type="button"
       aria-label={label}
       title={label}
+      onClick={onClick}
       className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-700 transition hover:bg-black/5"
     >
       {children}
     </button>
   );
+}
+
+const ZULU_ADMIN_THEME_KEY = "zulu_admin_theme";
+
+type AdminTheme = "light" | "dark";
+
+function readStoredAdminTheme(): AdminTheme {
+  if (typeof window === "undefined") return "light";
+  try {
+    const stored = window.localStorage.getItem(ZULU_ADMIN_THEME_KEY);
+    if (stored === "dark" || stored === "light") return stored;
+  } catch {
+    // ignore
+  }
+  // System preference fallback
+  if (typeof window !== "undefined" && window.matchMedia) {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+  return "light";
+}
+
+function applyAdminTheme(theme: AdminTheme): void {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  if (theme === "dark") root.classList.add("dark");
+  else root.classList.remove("dark");
 }
 
 function NavLink({
@@ -192,6 +221,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const [isNavigating, setIsNavigating] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [adminTheme, setAdminTheme] = useState<AdminTheme>("light");
   const [groupOpen, setGroupOpen] = useState({
     platform: true,
     operator: true,
@@ -213,6 +243,28 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setMobileDrawerOpen(false);
   }, [pathname]);
+
+  // Initialize admin theme from localStorage / system preference, then keep <html> in sync.
+  useEffect(() => {
+    const initial = readStoredAdminTheme();
+    setAdminTheme(initial);
+    applyAdminTheme(initial);
+  }, []);
+
+  const toggleAdminTheme = () => {
+    setAdminTheme((prev) => {
+      const next: AdminTheme = prev === "dark" ? "light" : "dark";
+      applyAdminTheme(next);
+      try {
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem(ZULU_ADMIN_THEME_KEY, next);
+        }
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!mobileDrawerOpen) return;
@@ -344,18 +396,30 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               </div>
             ) : null}
           </div>
-          <TopIconButton label={t("admin.header.theme")}>
-            <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2">
-              <path d="M12 3a7 7 0 1 0 7 7 6 6 0 0 1-7-7Z" />
-            </svg>
+          <TopIconButton
+            label={adminTheme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+            onClick={toggleAdminTheme}
+          >
+            {adminTheme === "dark" ? (
+              // Sun icon (currently dark, click to go light)
+              <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round">
+                <circle cx="12" cy="12" r="4" />
+                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+              </svg>
+            ) : (
+              // Moon icon (currently light, click to go dark)
+              <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2">
+                <path d="M12 3a7 7 0 1 0 7 7 6 6 0 0 1-7-7Z" />
+              </svg>
+            )}
           </TopIconButton>
-          <TopIconButton label="Notifications">
+          <TopIconButton label="Notifications (coming soon)">
             <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2">
               <path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5" />
               <path d="M9 17a3 3 0 0 0 6 0" />
             </svg>
           </TopIconButton>
-          <TopIconButton label={t("admin.header.apps")}>
+          <TopIconButton label={`${t("admin.header.apps")} (coming soon)`}>
             <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current">
               <circle cx="6" cy="6" r="1.8" />
               <circle cx="12" cy="6" r="1.8" />
