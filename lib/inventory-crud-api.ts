@@ -246,6 +246,67 @@ export type FlightCabinPayload = {
   [key: string]: unknown;
 };
 
+export type FlightCabinSeatStatus =
+  | "available"
+  | "held"
+  | "booked"
+  | "blocked"
+  | "reserved"
+  | "sold";
+
+export type FlightCabinSeatModifierType = "none" | "fixed" | "percent";
+
+export type FlightCabinSeatRow = {
+  id?: number;
+  seat_map_id?: number;
+  flight_id?: number;
+  flight_cabin_id?: number;
+  seat_code: string;
+  row_number: number;
+  column_code: string;
+  zone_code?: string | null;
+  seat_type: string;
+  status: FlightCabinSeatStatus;
+  held_at?: string | null;
+  booking_id?: number | null;
+  price_modifier_type: FlightCabinSeatModifierType;
+  price_modifier_value: number;
+  currency?: string | null;
+  meta?: Record<string, unknown> | null;
+};
+
+export type FlightCabinSeatMapRow = {
+  id: number;
+  flight_id: number;
+  flight_cabin_id: number;
+  version: number;
+  layout_schema: Record<string, unknown> | null;
+  legend_schema: Record<string, unknown> | null;
+  is_active: boolean;
+  seats: FlightCabinSeatRow[];
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export type FlightCabinSeatMapPayload = {
+  version: number;
+  is_active?: boolean;
+  layout_schema: Record<string, unknown>;
+  legend_schema?: Record<string, unknown> | null;
+  seats: Array<{
+    seat_code: string;
+    row_number: number;
+    column_code: string;
+    zone_code?: string | null;
+    seat_type: string;
+    status: FlightCabinSeatStatus;
+    price_modifier_type: FlightCabinSeatModifierType;
+    price_modifier_value?: number | null;
+    currency?: string | null;
+    meta?: Record<string, unknown> | null;
+  }>;
+};
+
 export async function apiFlights(
   token: string,
   params: { page?: number; per_page?: number }
@@ -316,6 +377,23 @@ export async function apiDeleteFlightCabin(
   cabinId: number
 ): Promise<ApiSuccessEnvelope<null>> {
   return apiFetchJson(`/flights/${flightId}/cabins/${cabinId}`, { method: "DELETE", token });
+}
+
+export async function apiFlightCabinSeatMap(
+  token: string,
+  flightId: number,
+  cabinId: number
+): Promise<ApiSuccessEnvelope<FlightCabinSeatMapRow | null>> {
+  return apiFetchJson(`/flights/${flightId}/cabins/${cabinId}/seat-map`, { method: "GET", token });
+}
+
+export async function apiUpsertFlightCabinSeatMap(
+  token: string,
+  flightId: number,
+  cabinId: number,
+  body: FlightCabinSeatMapPayload
+): Promise<ApiSuccessEnvelope<FlightCabinSeatMapRow>> {
+  return apiFetchJson(`/flights/${flightId}/cabins/${cabinId}/seat-map`, { method: "PUT", token, body });
 }
 
 // ─── Hotels ──────────────────────────────────────────────────────────────────
