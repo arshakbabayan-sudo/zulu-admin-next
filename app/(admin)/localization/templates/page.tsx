@@ -122,7 +122,7 @@ export default function LocalizationTemplatesPage() {
       {msg && <p className="mt-2 text-sm text-emerald-700">{msg}</p>}
       {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
 
-      <div className="mt-4 space-y-3 rounded-xl border border-default bg-white p-4 shadow-sm">
+      <div className="mt-4 space-y-3 admin-card p-4">
         <div className="flex flex-wrap gap-3">
           <label className="flex flex-col text-xs text-fg-t6">
             Event
@@ -184,14 +184,14 @@ export default function LocalizationTemplatesPage() {
             type="button"
             disabled={busy || !token}
             onClick={() => saveTemplate()}
-            className="rounded bg-slate-800 px-3 py-1 text-sm text-white disabled:opacity-50"
+            className="admin-btn-primary"
           >
             Save
           </button>
         </div>
       </div>
 
-      <div className="mt-4 space-y-3 rounded-xl border border-default bg-white p-4 shadow-sm">
+      <div className="mt-4 space-y-3 admin-card p-4">
         <label className="block text-xs text-fg-t6">
           Title template
           <input

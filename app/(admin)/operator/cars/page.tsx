@@ -724,7 +724,7 @@ export default function OperatorCarsPage() {
             type="button"
             onClick={() => void openCreate()}
             disabled={busy}
-            className="rounded bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700 disabled:opacity-40"
+            className="admin-btn-primary"
           >
             {busy ? "Loading…" : t("admin.crud.cars.new_btn")}
           </button>
@@ -1723,7 +1723,7 @@ export default function OperatorCarsPage() {
               type="button"
               disabled={busy}
               onClick={() => void handleSubmit()}
-              className="rounded bg-slate-800 px-4 py-1.5 text-sm text-white disabled:opacity-40"
+              className="admin-btn-primary"
             >
               {busy ? t("admin.crud.common.saving") : t("common.save")}
             </button>

@@ -241,7 +241,7 @@ export default function OperatorHotelsPage() {
           <button
             type="button"
             onClick={openCreate}
-            className="rounded bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700"
+            className="admin-btn-primary"
           >
             {t("admin.crud.hotels.new_btn")}
           </button>
@@ -923,7 +923,7 @@ export default function OperatorHotelsPage() {
               type="button"
               disabled={busy}
               onClick={() => void handleSubmit()}
-              className="rounded bg-slate-800 px-4 py-1.5 text-sm text-white disabled:opacity-40"
+              className="admin-btn-primary"
             >
               {busy ? t("admin.crud.common.saving") : t("common.save")}
             </button>

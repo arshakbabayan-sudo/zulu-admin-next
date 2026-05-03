@@ -699,7 +699,7 @@ export default function OperatorFlightsPage() {
             onImport={() => setImportOpen(true)}
           />
           <button type="button" onClick={openCreate}
-            className="rounded bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700">{t("admin.crud.flights.new_btn")}</button>
+            className="admin-btn-primary">{t("admin.crud.flights.new_btn")}</button>
         </div>
       </div>
 
@@ -811,7 +811,7 @@ export default function OperatorFlightsPage() {
                 type="button"
                 disabled={busy}
                 onClick={() => void handleSubmit()}
-                className="rounded bg-slate-800 px-4 py-1.5 text-sm text-white disabled:opacity-40"
+                className="admin-btn-primary"
               >
                 {busy ? t("admin.crud.common.saving") : t("admin.crud.flights.submit")}
               </button>
@@ -820,7 +820,7 @@ export default function OperatorFlightsPage() {
                 type="button"
                 disabled={busy}
                 onClick={handleNextStep}
-                className="rounded bg-slate-800 px-4 py-1.5 text-sm text-white disabled:opacity-40"
+                className="admin-btn-primary"
               >
                 {t("common.next")}
               </button>
@@ -1028,7 +1028,7 @@ export default function OperatorFlightsPage() {
                             type="button"
                             disabled={cabinBusy}
                             onClick={() => void handleSubmitCabin()}
-                            className="rounded bg-slate-800 px-4 py-1.5 text-sm text-white disabled:opacity-40"
+                            className="admin-btn-primary"
                           >
                             {cabinBusy ? t("admin.crud.common.saving") : t("common.save")}
                           </button>

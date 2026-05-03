@@ -605,3 +605,70 @@ html.dark .admin-btn-danger {
 html.dark .admin-empty-row {
   color: var(--admin-text-muted);
 }
+
+/* Dark-mode form controls — input/select/textarea inside admin pages. */
+html.dark input[type="text"],
+html.dark input[type="email"],
+html.dark input[type="password"],
+html.dark input[type="number"],
+html.dark input[type="search"],
+html.dark input[type="date"],
+html.dark input[type="time"],
+html.dark input[type="datetime-local"],
+html.dark input[type="tel"],
+html.dark input[type="url"],
+html.dark input:not([type]),
+html.dark select,
+html.dark textarea {
+  background-color: #221d42;
+  color: #e9e7f0;
+  border-color: var(--admin-border);
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #6f6c85;
+}
+html.dark select option {
+  background-color: #221d42;
+  color: #e9e7f0;
+}
+
+/* Dark-mode sidebar nav text contrast — items use inline text-slate-700 in JSX. */
+html.dark a.flex.items-center.rounded-lg,
+html.dark .admin-sidebar a {
+  color: #c9c5dc;
+}
+html.dark a.flex.items-center.rounded-lg:hover {
+  background-color: #221d42;
+  color: #f5f3fc;
+}
+
+/* Dark-mode top header contrast — page title and inline icon buttons. */
+html.dark header.z-20 {
+  color: #e9e7f0;
+}
+html.dark header.z-20 .text-slate-800,
+html.dark header.z-20 button.text-slate-700 {
+  color: #c9c5dc;
+}
+html.dark header.z-20 button:hover {
+  background-color: #221d42;
+}
+
+/* Dark-mode group headers in sidebar (operator/inventory etc.). */
+html.dark button[aria-expanded] {
+  color: var(--admin-text-muted);
+}
+html.dark button[aria-expanded]:hover {
+  background-color: #221d42;
+}
+
+/* Dark-mode tables — header rows and row hover. */
+html.dark thead.bg-figma-bg-1 {
+  background-color: #221d42;
+  color: #c9c5dc;
+}
+html.dark tr.hover\\:bg-figma-bg-1:hover,
+html.dark tr.hover\\:bg-slate-50:hover {
+  background-color: #221d42;
+}

@@ -20,7 +20,7 @@ function SummaryCard({
   sub?: string;
 }) {
   return (
-    <div className="rounded-xl border border-default bg-white p-4 shadow-sm">
+    <div className="admin-card p-4">
       <div className="text-xs font-medium uppercase tracking-wide text-fg-t7">{label}</div>
       <div className="mt-1 text-2xl font-semibold tabular-nums text-fg-t11">{value}</div>
       {sub && <div className="mt-1 text-xs text-fg-t7">{sub}</div>}

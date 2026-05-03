@@ -81,7 +81,7 @@ export default function OperatorStatisticsPage() {
             type="button"
             onClick={() => load()}
             disabled={loading}
-            className="rounded bg-slate-800 px-3 py-1 text-sm text-white disabled:opacity-50"
+            className="admin-btn-primary"
           >
             Load
           </button>

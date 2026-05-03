@@ -174,7 +174,7 @@ export default function FinancePage() {
         <>
           <div className="mt-4 flex items-center gap-3">
             <button type="button" disabled={busy || selectedEnt.size === 0} onClick={() => void handleMarkPayable()}
-              className="rounded bg-slate-800 px-3 py-1 text-sm text-white disabled:opacity-40">
+              className="admin-btn-primary">
               Mark {selectedEnt.size > 0 ? `(${selectedEnt.size}) ` : ""}payable
             </button>
           </div>

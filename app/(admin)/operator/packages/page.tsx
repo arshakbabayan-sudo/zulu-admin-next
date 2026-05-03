@@ -100,7 +100,7 @@ export default function OperatorPackagesPage() {
     <div>
       <div className="flex items-center justify-between">
         <div><h1 className="admin-page-title">{t("admin.crud.packages.title")}</h1></div>
-        <button type="button" onClick={openCreate} className="rounded bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700">{t("admin.crud.packages.new_btn")}</button>
+        <button type="button" onClick={openCreate} className="admin-btn-primary">{t("admin.crud.packages.new_btn")}</button>
       </div>
 
       <div className="mt-4 flex items-center gap-3">
@@ -154,7 +154,7 @@ export default function OperatorPackagesPage() {
           </div>
           {formErr && <p className="mt-2 text-sm text-error-600">{formErr}</p>}
           <div className="mt-4 flex gap-2">
-            <button type="button" disabled={busy} onClick={() => void handleSubmit()} className="rounded bg-slate-800 px-4 py-1.5 text-sm text-white disabled:opacity-40">{busy ? t("admin.crud.common.saving") : t("common.save")}</button>
+            <button type="button" disabled={busy} onClick={() => void handleSubmit()} className="admin-btn-primary">{busy ? t("admin.crud.common.saving") : t("common.save")}</button>
             <button type="button" onClick={closeForm} className="rounded border border-default px-4 py-1.5 text-sm">{t("common.cancel")}</button>
           </div>
         </div>

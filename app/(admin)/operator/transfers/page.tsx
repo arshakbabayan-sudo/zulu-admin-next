@@ -563,7 +563,7 @@ export default function OperatorTransfersPage() {
             type="button"
             onClick={openCreate}
             disabled={busy}
-            className="rounded bg-slate-800 px-3 py-1.5 text-sm text-white hover:bg-slate-700 disabled:opacity-40"
+            className="admin-btn-primary"
           >
             {t("admin.crud.transfers.new_btn")}
           </button>
@@ -751,7 +751,7 @@ export default function OperatorTransfersPage() {
                 type="button"
                 disabled={busy}
                 onClick={() => void handleSubmit()}
-                className="rounded bg-slate-800 px-4 py-1.5 text-sm text-white disabled:opacity-40"
+                className="admin-btn-primary"
               >
                 {busy ? t("admin.crud.common.saving") : t("admin.crud.transfers.submit")}
               </button>
@@ -760,7 +760,7 @@ export default function OperatorTransfersPage() {
                 type="button"
                 disabled={busy}
                 onClick={handleNextStep}
-                className="rounded bg-slate-800 px-4 py-1.5 text-sm text-white disabled:opacity-40"
+                className="admin-btn-primary"
               >
                 {t("common.next")}
               </button>
