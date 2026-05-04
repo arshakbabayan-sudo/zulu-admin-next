@@ -28,6 +28,7 @@ import {
   canAccessSuperAdminOnlyPlatformNav,
   canAccessSupportNav,
   userHasPermission,
+  userHasSellerServiceType,
 } from "@/lib/access";
 
 function TopIconButton({
@@ -490,9 +491,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   onToggle={() => setGroupOpen((v) => ({ ...v, operator: !v.operator }))}
                 />
               )}
-              {(!sidebarOpen || groupOpen.operator) && ADMIN_OPERATOR_LINKS.map((l) => (
-                <NavLink key={l.href} href={l.href} label={t(l.labelKey)} pathname={pathname} collapsed={!sidebarOpen} />
-              ))}
+              {(!sidebarOpen || groupOpen.operator) && ADMIN_OPERATOR_LINKS.map((l) => {
+                if (l.serviceType && !userHasSellerServiceType(user, l.serviceType)) return null;
+                return <NavLink key={l.href} href={l.href} label={t(l.labelKey)} pathname={pathname} collapsed={!sidebarOpen} />;
+              })}
             </>
           )}
 

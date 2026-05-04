@@ -1,4 +1,4 @@
-import type { AdminUser } from "./auth-types";
+import type { AdminUser, SellerServiceType } from "./auth-types";
 
 /** Platform access: super admin or canonical platform admin. */
 export function canAccessPlatformAdminNav(user: AdminUser | null): boolean {
@@ -52,6 +52,14 @@ export function canAccessOperatorToolsNav(user: AdminUser | null): boolean {
   if (!user) return false;
   if (user.is_super_admin) return true;
   return OPERATOR_TOOLS_PERMISSIONS.some((p) => user.permissions?.includes(p));
+}
+
+/** Whether the user's active company has the given seller service type granted. Super admin: always true. */
+export function userHasSellerServiceType(user: AdminUser | null, type: SellerServiceType): boolean {
+  if (!user) return false;
+  if (user.is_super_admin) return true;
+  const enabled = user.context?.active_seller_service_types ?? [];
+  return enabled.includes(type);
 }
 
 const INVENTORY_VIEW_PERMISSIONS = [

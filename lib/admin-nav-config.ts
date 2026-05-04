@@ -33,14 +33,23 @@ export const ADMIN_PLATFORM_LINKS: AdminPlatformNavLink[] = [
   { href: "/platform/locations", labelKey: "admin.nav.locations", superAdminOnly: true },
 ];
 
-export const ADMIN_OPERATOR_LINKS: { href: string; labelKey: string }[] = [
-  { href: "/operator/flights", labelKey: "admin.nav.operator_flights" },
-  { href: "/operator/hotels", labelKey: "admin.nav.operator_hotels" },
-  { href: "/operator/transfers", labelKey: "admin.nav.operator_transfers" },
-  { href: "/operator/cars", labelKey: "admin.nav.operator_cars" },
-  { href: "/operator/excursions", labelKey: "admin.nav.operator_excursions" },
-  { href: "/operator/visas", labelKey: "admin.nav.operator_visas" },
-  { href: "/operator/packages", labelKey: "admin.nav.operator_packages" },
+import type { SellerServiceType } from "./auth-types";
+
+export type AdminOperatorNavLink = {
+  href: string;
+  labelKey: string;
+  /** When set, link is shown only if the user's active company has this seller service type enabled. Super admin sees all. */
+  serviceType?: SellerServiceType;
+};
+
+export const ADMIN_OPERATOR_LINKS: AdminOperatorNavLink[] = [
+  { href: "/operator/flights", labelKey: "admin.nav.operator_flights", serviceType: "flight" },
+  { href: "/operator/hotels", labelKey: "admin.nav.operator_hotels", serviceType: "hotel" },
+  { href: "/operator/transfers", labelKey: "admin.nav.operator_transfers", serviceType: "transfer" },
+  { href: "/operator/cars", labelKey: "admin.nav.operator_cars", serviceType: "car" },
+  { href: "/operator/excursions", labelKey: "admin.nav.operator_excursions", serviceType: "excursion" },
+  { href: "/operator/visas", labelKey: "admin.nav.operator_visas", serviceType: "visa" },
+  { href: "/operator/packages", labelKey: "admin.nav.operator_packages", serviceType: "package" },
   { href: "/operator/offers", labelKey: "admin.nav.operator_offers" },
 ];
 
