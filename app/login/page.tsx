@@ -54,7 +54,7 @@ export default function LoginPage() {
         {/* Real ZULU wordmark from Figma Zulu_1 (node 1:19165). The earlier
             bullseye placeholder + standalone "ZULU" text was wrong — bullseye
             is just the decorative dot of the "i" in "spin" of the wordmark. */}
-        <img src="/branding/logo-zulu.svg" alt="ZULU" className="h-12 w-auto" />
+        <img src="/branding/logo-zulu.svg" alt="ZULU" className="h-16 w-auto" />
         <p className="mt-3 max-w-xs text-ds-body-2 text-fg-t6">
           Operations console — internal access only
         </p>
