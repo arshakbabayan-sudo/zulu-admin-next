@@ -2,6 +2,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { PaginationBar } from "@/components/PaginationBar";
+import { StatusPill } from "@/components/ui/StatusPill";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
@@ -154,8 +155,8 @@ export default function PlatformPackageOrdersPage() {
               <tr key={r.id} className="border-b border-default">
                 <td className="px-3 py-2 tabular-nums">{r.id}</td>
                 <td className="px-3 py-2 font-mono text-xs">{r.order_number}</td>
-                <td className="px-3 py-2">{r.status}</td>
-                <td className="px-3 py-2">{r.payment_status}</td>
+                <td className="px-3 py-2"><StatusPill status={r.status} /></td>
+                <td className="px-3 py-2"><StatusPill status={r.payment_status} /></td>
                 <td className="px-3 py-2 tabular-nums">
                   {r.final_total_snapshot} {r.currency}
                 </td>

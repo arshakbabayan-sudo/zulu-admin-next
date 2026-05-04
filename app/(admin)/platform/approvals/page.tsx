@@ -2,6 +2,8 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { PaginationBar } from "@/components/PaginationBar";
+import { Button } from "@/components/ui/Button";
+import { StatusPill } from "@/components/ui/StatusPill";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
@@ -129,16 +131,16 @@ export default function GenericApprovalsPage() {
             placeholder="Filter by entity_type"
           />
         </label>
-        <button
+        <Button
           type="button"
+          size="sm"
           onClick={() => {
             setPage(1);
             setEntityType(entityTypeDraft.trim());
           }}
-          className="rounded border border-default bg-white px-3 py-1 text-sm"
         >
           Apply entity filter
-        </button>
+        </Button>
       </div>
       {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
       <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
@@ -161,7 +163,7 @@ export default function GenericApprovalsPage() {
                 <td className="px-3 py-2">
                   <span className="font-mono text-xs">{r.entity_type}</span> #{r.entity_id}
                 </td>
-                <td className="px-3 py-2">{r.status}</td>
+                <td className="px-3 py-2"><StatusPill status={r.status} /></td>
                 <td className="px-3 py-2">{r.priority ?? "-"}</td>
                 <td className="px-3 py-2 text-xs">
                   {r.requested_by ? (

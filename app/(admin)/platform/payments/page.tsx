@@ -2,6 +2,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { PaginationBar } from "@/components/PaginationBar";
+import { StatusPill } from "@/components/ui/StatusPill";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
@@ -100,7 +101,7 @@ export default function PlatformPaymentsPage() {
                 <td className="px-3 py-2 tabular-nums">{r.id}</td>
                 <td className="px-3 py-2 tabular-nums">{r.amount}</td>
                 <td className="px-3 py-2">{r.currency}</td>
-                <td className="px-3 py-2">{r.status}</td>
+                <td className="px-3 py-2"><StatusPill status={r.status} /></td>
                 <td className="px-3 py-2">{r.payment_method ?? "-"}</td>
                 <td className="px-3 py-2 text-xs text-fg-t6">{r.paid_at ?? "-"}</td>
                 <td className="px-3 py-2 text-xs">

@@ -2,6 +2,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { PaginationBar } from "@/components/PaginationBar";
+import { StatusPill } from "@/components/ui/StatusPill";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
@@ -93,7 +94,7 @@ export default function CompanyApplicationsPage() {
                 <td className="px-3 py-2 tabular-nums">{r.id}</td>
                 <td className="px-3 py-2">{r.company_name}</td>
                 <td className="px-3 py-2">{r.business_email}</td>
-                <td className="px-3 py-2">{r.status}</td>
+                <td className="px-3 py-2"><StatusPill status={r.status} /></td>
                 <td className="px-3 py-2 text-xs text-fg-t6">{r.submitted_at ?? "-"}</td>
                 <td className="px-3 py-2">
                   <Link
