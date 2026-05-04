@@ -35,6 +35,25 @@ export function userHasPermission(user: AdminUser | null, permission: string): b
   return user.permissions?.includes(permission) ?? false;
 }
 
+const OPERATOR_TOOLS_PERMISSIONS = [
+  "hotels.create",
+  "flights.create",
+  "cars.create",
+  "transfers.create",
+  "excursions.create",
+  "visas.create",
+  "packages.create",
+] as const;
+
+/** Operator/Agent CRUD section: any user with at least one operator-tier
+ * write permission scoped to their company. Super admin always sees it.
+ */
+export function canAccessOperatorToolsNav(user: AdminUser | null): boolean {
+  if (!user) return false;
+  if (user.is_super_admin) return true;
+  return OPERATOR_TOOLS_PERMISSIONS.some((p) => user.permissions?.includes(p));
+}
+
 const INVENTORY_VIEW_PERMISSIONS = [
   "flights.view",
   "hotels.view",

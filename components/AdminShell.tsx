@@ -23,6 +23,7 @@ import {
   canAccessConnectionsNav,
   canAccessNotificationsNav,
   canAccessOperatorStatisticsNav,
+  canAccessOperatorToolsNav,
   canAccessPlatformAdminNav,
   canAccessSuperAdminOnlyPlatformNav,
   canAccessSupportNav,
@@ -315,6 +316,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   const showPlatform = canAccessPlatformAdminNav(user);
+  const showOperatorTools = canAccessOperatorToolsNav(user);
   const showSuperAdminOnlyPlatform = canAccessSuperAdminOnlyPlatformNav(user);
   const showSupport = canAccessSupportNav(user);
   const showConnections = canAccessConnectionsNav(user);
@@ -479,7 +481,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </>
           )}
 
-          {showPlatform && (
+          {showOperatorTools && (
             <>
               {!sidebarOpen && <div className="my-1 border-t" style={{ borderColor: "var(--admin-border)" }} />}
               {sidebarOpen && (
@@ -581,7 +583,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </>
           )}
 
-          {!showPlatform && !showSupport && !showConnections && !showNotifications && !showStats && !showInventory && !showLocalization && (
+          {!showPlatform && !showOperatorTools && !showSupport && !showConnections && !showNotifications && !showStats && !showInventory && !showLocalization && (
             <p className="px-3 text-xs text-slate-500">
               {t("admin.shell.no_navigation")}
             </p>
