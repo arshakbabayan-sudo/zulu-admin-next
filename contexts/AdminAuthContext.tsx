@@ -28,7 +28,7 @@ type AdminAuthState = {
   loading: boolean;
   bootstrapped: boolean;
   error: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<AdminUser>;
   logout: () => Promise<void>;
   refreshMe: () => Promise<void>;
 };
@@ -186,6 +186,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
       setToken(res.data.token);
       setUser(res.data.user);
       setCachedUser(res.data.user);
+      return res.data.user;
     } catch (e) {
       const msg = e instanceof ApiRequestError ? e.message : "Login failed";
       setError(msg);

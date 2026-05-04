@@ -3,7 +3,7 @@
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { PaginationBar } from "@/components/PaginationBar";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
-import { canAccessPlatformAdminNav } from "@/lib/access";
+import { canAccessOperatorToolsNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { apiOffers, apiPublishOffer, apiArchiveOffer, type OfferRow } from "@/lib/inventory-crud-api";
@@ -22,7 +22,7 @@ function StatusBadge({ status }: { status: string }) {
 export default function OperatorOffersPage() {
   const { token, user } = useAdminAuth();
   const { t } = useLanguage();
-  const allowed = canAccessPlatformAdminNav(user);
+  const allowed = canAccessOperatorToolsNav(user);
   const [rows, setRows] = useState<OfferRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
   const [page, setPage] = useState(1);

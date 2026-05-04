@@ -102,6 +102,18 @@ export function canAccessNotificationsNav(user: AdminUser | null): boolean {
   return user != null;
 }
 
+/**
+ * Default landing page for a user after admin login.
+ * Platform admins (super, platform) → /dashboard (platform KPIs).
+ * Operator/agency admins → /operator/offers (their inventory home).
+ * Anyone else with no operator tools → /dashboard (will show ForbiddenNotice).
+ */
+export function defaultLandingPath(user: AdminUser | null): string {
+  if (canAccessPlatformAdminNav(user)) return "/dashboard";
+  if (canAccessOperatorToolsNav(user)) return "/operator/offers";
+  return "/dashboard";
+}
+
 /** Service connections: `GET|POST|PATCH /api/connections*` — `auth:sanctum`; server enforces business rules on mutations. */
 export function canAccessConnectionsNav(user: AdminUser | null): boolean {
   return user != null;

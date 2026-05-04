@@ -5,6 +5,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ApiRequestError } from "@/lib/api-client";
+import { defaultLandingPath } from "@/lib/access";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -33,7 +34,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (bootstrapped && token && user) {
-      router.replace("/dashboard");
+      router.replace(defaultLandingPath(user));
     }
   }, [bootstrapped, token, user, router]);
 
@@ -41,8 +42,8 @@ export default function LoginPage() {
     e.preventDefault();
     setLocalError(null);
     try {
-      await login(email, password);
-      router.replace("/dashboard");
+      const loggedInUser = await login(email, password);
+      router.replace(defaultLandingPath(loggedInUser));
     } catch (err) {
       setLocalError(err instanceof ApiRequestError ? err.message : t("admin.login.failed"));
     }
