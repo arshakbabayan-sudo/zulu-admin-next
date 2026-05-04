@@ -377,7 +377,7 @@ export default function CarsInventoryPage() {
               />
             </label>
           ) : null}
-          <button type="button" onClick={applyFilters} className="rounded border border-default bg-white px-3 py-1 text-sm">
+          <button type="button" onClick={applyFilters} className="rounded-zulu bg-primary-500 px-3 py-1 text-sm font-medium text-white hover:bg-purple-dark">
             Apply filters
           </button>
           <button type="button" onClick={clearFilters} className="rounded border border-default bg-white px-3 py-1 text-sm">

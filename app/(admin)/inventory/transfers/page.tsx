@@ -303,7 +303,7 @@ export default function TransfersInventoryPage() {
               className="ml-2 w-[96px] rounded border border-default px-2 py-1 text-sm"
             />
           </label>
-          <button type="button" onClick={applyFilters} className="rounded border border-default bg-white px-3 py-1 text-sm">
+          <button type="button" onClick={applyFilters} className="rounded-zulu bg-primary-500 px-3 py-1 text-sm font-medium text-white hover:bg-purple-dark">
             Apply filters
           </button>
           <button type="button" onClick={clearFilters} className="rounded border border-default bg-white px-3 py-1 text-sm">

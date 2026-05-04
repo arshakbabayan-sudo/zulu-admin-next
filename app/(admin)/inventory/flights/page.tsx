@@ -294,7 +294,7 @@ export default function FlightsInventoryPage() {
           <button
             type="button"
             onClick={applyFilters}
-            className="rounded border border-default bg-white px-3 py-1 text-sm"
+            className="rounded-zulu bg-primary-500 px-3 py-1 text-sm font-medium text-white hover:bg-purple-dark"
           >
             {t("admin.inventory.flights.filter.action.apply")}
           </button>
