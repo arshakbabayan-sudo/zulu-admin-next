@@ -15,8 +15,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
  *   - Sign in (mobile): 10171:23225
  * Brand tokens: ZULU purple primary (--admin-primary).
  * Logo + tagline above card, centered card form.
- * Last synced: 2026-05-03 (replaces earlier ADR-008 §3 "pragmatic" note —
- * we now have an admin design reference via the Quest CRM template).
+ *
+ * Remember me + Forgot password? row added to match Quest CRM spec.
+ * - Remember me: UI-only state today; backend doesn't yet expose a long-lived
+ *   session option. Wire-up tracked for a later sprint.
+ * - Forgot password?: route /forgot-password not implemented yet — link is a
+ *   non-functional placeholder that preserves the layout.
  */
 export default function LoginPage() {
   const { t } = useLanguage();
@@ -24,6 +28,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -83,6 +88,27 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
+            </div>
+            <div className="flex items-center justify-between">
+              <label htmlFor="admin-login-remember" className="flex items-center gap-2 text-ds-body-3 text-fg-t7 cursor-pointer select-none">
+                <input
+                  id="admin-login-remember"
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="h-4 w-4 rounded border-border text-primary-500 focus:ring-2 focus:ring-primary-500 focus:ring-offset-1"
+                />
+                Remember me
+              </label>
+              <a
+                href="#"
+                onClick={(e) => e.preventDefault()}
+                className="text-ds-body-3 font-medium text-primary-500 hover:text-primary-700 cursor-not-allowed opacity-60"
+                aria-disabled="true"
+                title="Coming soon"
+              >
+                Forgot password?
+              </a>
             </div>
             {(localError || error) && (
               <p className="rounded-zulu border border-error-200 bg-error-50 px-3 py-2 text-ds-body-3 text-error-700">
