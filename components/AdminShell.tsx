@@ -332,16 +332,15 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       <header className="z-20 flex h-14 shrink-0 items-center justify-between border-b px-4 text-slate-800" style={{ backgroundColor: "var(--admin-header-bg)", borderColor: "var(--admin-border)" }}>
         <div className="flex items-center">
           <div className={`hidden md:flex items-center gap-2 border-r pr-4 ${sidebarOpen ? "md:w-72" : "md:w-20 md:justify-center md:pr-0"}`} style={{ borderColor: "var(--admin-border)" }}>
-            {sidebarOpen && (
-              <>
-                <img src="/branding/brand-icon.svg" alt="Brand icon" className="h-6 w-6" />
-              </>
-            )}
-            {!sidebarOpen && (
-              <img src="/branding/brand-icon.svg" alt="Brand icon" className="h-5 w-5" />
+            {sidebarOpen ? (
+              /* Expanded sidebar: full ZULU wordmark from Figma Zulu_1 */
+              <img src="/branding/logo-zulu.svg" alt="ZULU" className="h-7 w-auto" />
+            ) : (
+              /* Collapsed sidebar: icon mark (the dot of "i" from the wordmark) */
+              <img src="/branding/brand-icon.svg" alt="ZULU" className="h-5 w-5" />
             )}
           </div>
-          <img src="/branding/brand-icon.svg" alt="Brand icon" className="h-6 w-6 md:hidden" />
+          <img src="/branding/logo-zulu.svg" alt="ZULU" className="h-6 w-auto md:hidden" />
           <button
             type="button"
             aria-label={t("admin.header.toggle_sidebar")}
