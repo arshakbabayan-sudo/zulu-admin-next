@@ -62,19 +62,16 @@ export function userHasSellerServiceType(user: AdminUser | null, type: SellerSer
   return enabled.includes(type);
 }
 
-const INVENTORY_VIEW_PERMISSIONS = [
-  "flights.view",
-  "hotels.view",
-  "transfers.view",
-  "cars.view",
-  "excursions.view",
-] as const;
-
-/** Nav: show inventory block when user can access at least one operator inventory list. */
+/** Nav: cross-platform inventory oversight is for super/platform admin only.
+ * Operators view their own inventory through the Operator Tools CRUD pages,
+ * so this section would be redundant (and confusing) in their sidebar.
+ */
 export function canAccessInventoryOversightNav(user: AdminUser | null): boolean {
   if (!user) return false;
   if (user.is_super_admin) return true;
-  return INVENTORY_VIEW_PERMISSIONS.some((p) => user.permissions?.includes(p));
+  if (user.context?.is_platform_admin === true) return true;
+  if (user.canonical_role === "platform_admin") return true;
+  return false;
 }
 
 /** Languages list + PATCH toggle — super admin only (`07` §3.6). */
