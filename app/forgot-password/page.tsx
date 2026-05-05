@@ -25,7 +25,7 @@ export default function AdminForgotPasswordPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await apiFetchJson("/api/forgot-password", {
+      await apiFetchJson("/forgot-password", {
         method: "POST",
         body: { email: email.trim() },
       });

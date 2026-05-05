@@ -45,7 +45,7 @@ function ResetPasswordInner() {
     }
     setSubmitting(true);
     try {
-      await apiFetchJson("/api/reset-password", {
+      await apiFetchJson("/reset-password", {
         method: "POST",
         body: {
           token: tokenFromUrl,
