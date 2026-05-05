@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useRouter } from "next/navigation";
@@ -103,15 +104,12 @@ export default function LoginPage() {
                 />
                 Remember me
               </label>
-              <a
-                href="#"
-                onClick={(e) => e.preventDefault()}
-                className="text-ds-body-3 font-medium text-primary-500 hover:text-primary-700 cursor-not-allowed opacity-60"
-                aria-disabled="true"
-                title="Coming soon"
+              <Link
+                href="/forgot-password"
+                className="text-ds-body-3 font-medium text-primary-500 hover:text-primary-700"
               >
                 Forgot password?
-              </a>
+              </Link>
             </div>
             {(localError || error) && (
               <p className="rounded-zulu border border-error-200 bg-error-50 px-3 py-2 text-ds-body-3 text-error-700">
