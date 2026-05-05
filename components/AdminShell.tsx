@@ -162,15 +162,18 @@ function GroupHeader({
   label,
   isOpen,
   onToggle,
+  title,
 }: {
   label: string;
   isOpen: boolean;
   onToggle: () => void;
+  title?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onToggle}
+      title={title}
       className="mt-3 flex w-full items-center justify-between rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] transition hover:bg-slate-100"
       style={{ color: "var(--admin-text-muted)" }}
       aria-expanded={isOpen}
@@ -489,6 +492,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   label={t("admin.nav.group.operator_tools")}
                   isOpen={groupOpen.operator}
                   onToggle={() => setGroupOpen((v) => ({ ...v, operator: !v.operator }))}
+                  title={t("admin.nav.group.operator_tools_hint")}
                 />
               )}
               {(!sidebarOpen || groupOpen.operator) && ADMIN_OPERATOR_LINKS.map((l) => {
@@ -506,6 +510,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   label={t("admin.nav.group.inventory_oversight")}
                   isOpen={groupOpen.inventory}
                   onToggle={() => setGroupOpen((v) => ({ ...v, inventory: !v.inventory }))}
+                  title={t("admin.nav.group.inventory_oversight_hint")}
                 />
               )}
               {(!sidebarOpen || groupOpen.inventory) && ADMIN_INVENTORY_LINKS.map((l) => {
