@@ -21,9 +21,10 @@
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
-import { ApiRequestError } from "@/lib/api-client";
+import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import { apiPlatformStats, type PlatformStats } from "@/lib/platform-admin-api";
 import { useLanguage } from "@/contexts/LanguageContext";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   Briefcase,
@@ -243,6 +244,7 @@ function MultiDonut({
 /* ─── widget bodies ────────────────────────────────────────────────── */
 
 function BookingOverview({ stats }: { stats: PlatformStats }) {
+  const { t } = useLanguage();
   const total = stats.bookings_total ?? 0;
   const paid = stats.package_orders_paid ?? 0;
   const pending = stats.package_orders_pending_payment ?? 0;
@@ -250,9 +252,9 @@ function BookingOverview({ stats }: { stats: PlatformStats }) {
 
   // Approximate breakdown — when richer API exists, swap to real per-status counts.
   const rows = [
-    { label: "Bookings (legacy)", value: total, color: "#3B82F6", pct: total === 0 ? 0 : 100 },
-    { label: "Package orders pending", value: pending, color: "#F59E0B", pct: packageTotal === 0 ? 0 : (pending / packageTotal) * 100 },
-    { label: "Package orders paid", value: paid, color: "#10B981", pct: packageTotal === 0 ? 0 : (paid / packageTotal) * 100 },
+    { label: t("admin.dashboard.bookings_legacy"), value: total, color: "#3B82F6", pct: total === 0 ? 0 : 100 },
+    { label: t("admin.dashboard.package_orders_pending"), value: pending, color: "#F59E0B", pct: packageTotal === 0 ? 0 : (pending / packageTotal) * 100 },
+    { label: t("admin.dashboard.package_orders_paid"), value: paid, color: "#10B981", pct: packageTotal === 0 ? 0 : (paid / packageTotal) * 100 },
   ];
 
   return (
@@ -265,44 +267,46 @@ function BookingOverview({ stats }: { stats: PlatformStats }) {
 }
 
 function MonthlyEarnings() {
+  const { t } = useLanguage();
   // Placeholder until invoices/finance roll-up endpoint exists.
   return (
     <div className="flex items-center justify-between gap-4">
       <div>
-        <p className="text-xs text-fg-t6">This month</p>
+        <p className="text-xs text-fg-t6">{t("admin.dashboard.this_month")}</p>
         <p className="mt-1 text-3xl font-semibold tabular-nums text-fg-t11">$0</p>
         <p className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-success-700">
           <TrendingUp className="size-3" aria-hidden />
           —
-          <span className="text-fg-t6">vs previous</span>
+          <span className="text-fg-t6">{t("admin.dashboard.vs_previous")}</span>
         </p>
         <button
           type="button"
           className="mt-4 inline-flex items-center gap-1 rounded-full border border-default px-3 py-1.5 text-xs font-medium text-fg-t11 hover:bg-figma-bg-1"
         >
-          View more
+          {t("admin.dashboard.view_more")}
           <ArrowRight className="size-3" aria-hidden />
         </button>
       </div>
-      <DonutGoal pct={0} label="Goal" />
+      <DonutGoal pct={0} label={t("admin.dashboard.goal")} />
     </div>
   );
 }
 
 function ApprovalsProgress({ stats }: { stats: PlatformStats }) {
+  const { t } = useLanguage();
   // Backed by /api/platform-admin/approvals counters in a follow-up.
   // For now, render the layout with an empty-state row.
   const total = (stats.companies_active ?? 0) + (stats.companies_suspended ?? 0);
   const rows = [
-    { label: "Active companies", value: stats.companies_active ?? 0, color: "#10B981", pct: total === 0 ? 0 : ((stats.companies_active ?? 0) / total) * 100 },
-    { label: "Suspended", value: stats.companies_suspended ?? 0, color: "#F59E0B", pct: total === 0 ? 0 : ((stats.companies_suspended ?? 0) / total) * 100 },
-    { label: "Sellers (operators)", value: stats.companies_sellers ?? 0, color: "var(--admin-primary)", pct: total === 0 ? 0 : ((stats.companies_sellers ?? 0) / total) * 100 },
+    { label: t("admin.dashboard.active_companies"), value: stats.companies_active ?? 0, color: "#10B981", pct: total === 0 ? 0 : ((stats.companies_active ?? 0) / total) * 100 },
+    { label: t("admin.dashboard.suspended"), value: stats.companies_suspended ?? 0, color: "#F59E0B", pct: total === 0 ? 0 : ((stats.companies_suspended ?? 0) / total) * 100 },
+    { label: t("admin.dashboard.sellers_operators"), value: stats.companies_sellers ?? 0, color: "var(--admin-primary)", pct: total === 0 ? 0 : ((stats.companies_sellers ?? 0) / total) * 100 },
   ];
   return (
     <>
       <div className="mb-5 flex flex-col items-center">
         <span className="text-3xl font-semibold tabular-nums text-fg-t11">{formatValue(total)}</span>
-        <span className="text-xs text-fg-t6">Total companies</span>
+        <span className="text-xs text-fg-t6">{t("admin.dashboard.total_companies")}</span>
       </div>
       <div className="space-y-3.5">
         {rows.map((r) => (
@@ -314,20 +318,21 @@ function ApprovalsProgress({ stats }: { stats: PlatformStats }) {
 }
 
 function OrderSummaryDonut({ stats }: { stats: PlatformStats }) {
+  const { t } = useLanguage();
   const paid = stats.package_orders_paid ?? 0;
   const pending = stats.package_orders_pending_payment ?? 0;
   const total = stats.package_orders_total ?? 0;
   const other = Math.max(0, total - paid - pending);
 
   const segments = [
-    { label: "Paid", value: paid, color: "#10B981" },
-    { label: "Pending payment", value: pending, color: "#F59E0B" },
-    { label: "Other / draft", value: other, color: "#94A3B8" },
+    { label: t("admin.dashboard.paid"), value: paid, color: "#10B981" },
+    { label: t("admin.dashboard.pending_payment"), value: pending, color: "#F59E0B" },
+    { label: t("admin.dashboard.other_draft"), value: other, color: "#94A3B8" },
   ];
   const totalLabel = formatValue(total);
   return (
     <div className="flex flex-col items-center gap-5 md:flex-row md:items-center md:justify-around">
-      <MultiDonut segments={segments} centerLabel="Orders" centerValue={totalLabel} />
+      <MultiDonut segments={segments} centerLabel={t("admin.dashboard.orders")} centerValue={totalLabel} />
       <ul className="space-y-2 text-xs">
         {segments.map((s) => (
           <li key={s.label} className="flex items-center gap-2.5">
@@ -341,19 +346,139 @@ function OrderSummaryDonut({ stats }: { stats: PlatformStats }) {
   );
 }
 
-function RecentActivity() {
-  // Placeholder — wire to /api/platform-admin/audit-logs?limit=5 in a follow-up.
+type AuditLogRow = {
+  id: string;
+  category: string;
+  actor_name_snapshot: string | null;
+  subject_type: string | null;
+  subject_id: string | null;
+  action: string;
+  created_at: string;
+};
+
+/** Friendly relative-time formatter — "5 mins ago", "2 hours ago", "3 days ago". */
+function timeAgo(iso: string): string {
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return "—";
+  const sec = Math.max(0, Math.floor((Date.now() - t) / 1000));
+  if (sec < 60) return `${sec} sec ago`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min} min${min > 1 ? "s" : ""} ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} hour${hr > 1 ? "s" : ""} ago`;
+  const day = Math.floor(hr / 24);
+  if (day < 30) return `${day} day${day > 1 ? "s" : ""} ago`;
+  const month = Math.floor(day / 30);
+  if (month < 12) return `${month} month${month > 1 ? "s" : ""} ago`;
+  return `${Math.floor(month / 12)} year${Math.floor(month / 12) > 1 ? "s" : ""} ago`;
+}
+
+/** Per-category accent color for the leading bullet. */
+function categoryColor(cat: string): string {
+  switch (cat) {
+    case "auth": return "#3B82F6";
+    case "approval": return "var(--admin-primary)";
+    case "financial": return "#10B981";
+    case "data_change": return "#F59E0B";
+    case "security": return "#EF4444";
+    case "admin_actions": return "#A855F7";
+    default: return "#94A3B8";
+  }
+}
+
+/** Compact human-friendly headline for an audit log row. */
+function humanHeadline(row: AuditLogRow): string {
+  const subject = row.subject_type
+    ? `${row.subject_type}${row.subject_id ? ` #${row.subject_id}` : ""}`
+    : row.category;
+  const actor = row.actor_name_snapshot || "system";
+  const action = row.action.replace(/_/g, " ");
+  return `${actor} ${action} ${subject}`;
+}
+
+function RecentActivity({ token, allowed }: { token: string | null; allowed: boolean }) {
+  const { t } = useLanguage();
+  const [rows, setRows] = useState<AuditLogRow[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!allowed || !token) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiFetchJson<{ success: boolean; data: AuditLogRow[] }>(
+          "/platform-admin/audit-logs?per_page=5",
+          { token }
+        );
+        if (!cancelled) setRows((res.data ?? []).slice(0, 5));
+      } catch (e) {
+        if (cancelled) return;
+        if (e instanceof ApiRequestError && e.status === 404) {
+          setRows([]);
+        } else {
+          setError(e instanceof Error ? e.message : "load failed");
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, allowed]);
+
+  if (rows === null && !error) {
+    return (
+      <ul className="space-y-4">
+        {[1, 2, 3, 4].map((i) => (
+          <li key={i} className="flex items-start gap-3 border-b border-default pb-3 last:border-b-0 last:pb-0">
+            <span className="mt-1 size-2 shrink-0 animate-pulse rounded-full bg-slate-200" aria-hidden />
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <div className="h-3 w-20 animate-pulse rounded bg-slate-100" aria-hidden />
+              <div className="h-4 w-3/4 animate-pulse rounded bg-slate-100" aria-hidden />
+            </div>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  if (error) {
+    return (
+      <p className="text-sm text-error-600">
+        {t("admin.dashboard.activity_load_failed") === "admin.dashboard.activity_load_failed"
+          ? "Couldn't load activity feed."
+          : t("admin.dashboard.activity_load_failed")}
+      </p>
+    );
+  }
+
+  if (rows && rows.length === 0) {
+    return (
+      <p className="py-2 text-sm text-fg-t6">
+        {t("admin.dashboard.activity_empty") === "admin.dashboard.activity_empty"
+          ? "No activity yet."
+          : t("admin.dashboard.activity_empty")}
+      </p>
+    );
+  }
+
   return (
     <ul className="space-y-4">
-      {[1, 2, 3, 4].map((i) => (
-        <li key={i} className="flex items-start gap-3 border-b border-default pb-3 last:border-b-0 last:pb-0">
-          <span className="mt-1 size-2 shrink-0 rounded-full bg-fg-t6" aria-hidden />
+      {rows!.map((row) => (
+        <li
+          key={row.id}
+          className="flex items-start gap-3 border-b border-default pb-3 last:border-b-0 last:pb-0"
+        >
+          <span
+            className="mt-1.5 size-2 shrink-0 rounded-full"
+            style={{ backgroundColor: categoryColor(row.category) }}
+            aria-hidden
+          />
           <div className="min-w-0 flex-1">
-            <p className="text-xs uppercase tracking-wide text-fg-t6">— ago</p>
-            <p className="mt-0.5 text-sm font-medium text-fg-t11">Activity feed pending</p>
-            <p className="mt-0.5 text-xs text-fg-t6">
-              Wire to <code className="font-mono">/api/platform-admin/audit-logs</code>
+            <p className="text-xs uppercase tracking-wide text-fg-t6">{timeAgo(row.created_at)}</p>
+            <p className="mt-0.5 truncate text-sm font-medium text-fg-t11">
+              {humanHeadline(row)}
             </p>
+            <p className="mt-0.5 text-xs text-fg-t6 capitalize">{row.category.replace(/_/g, " ")}</p>
           </div>
         </li>
       ))}
@@ -362,14 +487,15 @@ function RecentActivity() {
 }
 
 function TopOperatorsByRevenue() {
+  const { t } = useLanguage();
   // Placeholder — needs aggregate revenue-per-company endpoint.
   return (
     <div className="flex h-48 items-center justify-center rounded-xl border border-dashed border-default bg-figma-bg-1">
       <div className="text-center">
         <PieChart className="mx-auto size-8 text-fg-t6" aria-hidden />
-        <p className="mt-2 text-sm font-medium text-fg-t11">Revenue chart pending</p>
+        <p className="mt-2 text-sm font-medium text-fg-t11">{t("admin.dashboard.revenue_chart_pending")}</p>
         <p className="mt-1 text-xs text-fg-t6 max-w-xs px-4">
-          Top operators by revenue line chart — needs aggregate endpoint
+          {t("admin.dashboard.top_operators_chart_hint")}
         </p>
       </div>
     </div>
@@ -377,6 +503,7 @@ function TopOperatorsByRevenue() {
 }
 
 function ActiveOffers({ stats }: { stats: PlatformStats }) {
+  const { t } = useLanguage();
   const published = stats.offers_published ?? 0;
   const total = stats.offers_total ?? 0;
   const draft = Math.max(0, total - published);
@@ -384,17 +511,17 @@ function ActiveOffers({ stats }: { stats: PlatformStats }) {
     <>
       <div className="mb-5 flex flex-col items-center">
         <span className="text-3xl font-semibold tabular-nums text-fg-t11">{formatValue(total)}</span>
-        <span className="text-xs text-fg-t6">Total offers</span>
+        <span className="text-xs text-fg-t6">{t("admin.dashboard.total_offers")}</span>
       </div>
       <div className="space-y-3.5">
         <ProgressRow
-          label="Published"
+          label={t("admin.dashboard.published")}
           value={formatValue(published)}
           pct={total === 0 ? 0 : (published / total) * 100}
           color="#10B981"
         />
         <ProgressRow
-          label="Draft / archived"
+          label={t("admin.dashboard.draft_archived")}
           value={formatValue(draft)}
           pct={total === 0 ? 0 : (draft / total) * 100}
           color="#94A3B8"
@@ -507,63 +634,66 @@ export default function DashboardPage() {
       {/* Row 1 — three hero stat cards */}
       <div className="grid gap-5 lg:grid-cols-3">
         <HeroStatCard
-          label="Total bookings"
+          label={t("admin.dashboard.total_bookings")}
           value={formatValue((stats.bookings_total ?? 0) + (stats.package_orders_total ?? 0))}
           icon={Briefcase}
           subRow={{
-            left: { label: "Bookings (legacy)", value: formatValue(stats.bookings_total) },
-            right: { label: "Package orders", value: formatValue(stats.package_orders_total) },
+            left: { label: t("admin.dashboard.bookings_legacy"), value: formatValue(stats.bookings_total) },
+            right: { label: t("admin.dashboard.package_orders"), value: formatValue(stats.package_orders_total) },
           }}
         />
         <HeroStatCard
-          label="Total operators"
+          label={t("admin.dashboard.total_operators")}
           value={formatValue(stats.companies_total)}
           icon={Building2}
           subRow={{
-            left: { label: "Active", value: formatValue(stats.companies_active) },
-            right: { label: "Sellers", value: formatValue(stats.companies_sellers) },
+            left: { label: t("admin.dashboard.active"), value: formatValue(stats.companies_active) },
+            right: { label: t("admin.dashboard.sellers"), value: formatValue(stats.companies_sellers) },
           }}
         />
         <HeroStatCard
-          label="Daily revenue"
+          label={t("admin.dashboard.daily_revenue")}
           value="$0"
           icon={DollarSign}
           subRow={{
-            left: { label: "vs Yesterday", value: "—" },
-            right: { label: "Monthly avg", value: "—" },
+            left: { label: t("admin.dashboard.vs_yesterday"), value: "—" },
+            right: { label: t("admin.dashboard.monthly_avg"), value: "—" },
           }}
         />
       </div>
 
       {/* Row 2 — three widgets */}
       <div className="grid gap-5 lg:grid-cols-3">
-        <WidgetCard title="Booking overview" icon={Layers}>
+        <WidgetCard title={t("admin.dashboard.booking_overview")} icon={Layers}>
           <BookingOverview stats={stats} />
         </WidgetCard>
-        <WidgetCard title="Monthly earnings" icon={DollarSign}>
+        <WidgetCard title={t("admin.dashboard.monthly_earnings")} icon={DollarSign}>
           <MonthlyEarnings />
         </WidgetCard>
-        <WidgetCard title="Companies on platform" icon={CheckCircle2}>
+        <WidgetCard title={t("admin.dashboard.companies_on_platform")} icon={CheckCircle2}>
           <ApprovalsProgress stats={stats} />
         </WidgetCard>
       </div>
 
       {/* Row 3 — order summary + recent activity */}
       <div className="grid gap-5 lg:grid-cols-3">
-        <WidgetCard title="Order summary" icon={PieChart}>
+        <WidgetCard title={t("admin.dashboard.order_summary")} icon={PieChart}>
           <OrderSummaryDonut stats={stats} />
         </WidgetCard>
         <div className="lg:col-span-2">
           <WidgetCard
-            title="Recent activity"
+            title={t("admin.dashboard.recent_activity")}
             icon={Activity}
             action={
-              <button type="button" className="text-xs font-medium text-primary-500 hover:text-primary-700">
-                View all
-              </button>
+              <Link
+                href="/platform/audit-logs"
+                className="text-xs font-medium text-primary-500 hover:text-primary-700"
+              >
+                {t("admin.dashboard.view_all")}
+              </Link>
             }
           >
-            <RecentActivity />
+            <RecentActivity token={token} allowed={allowed} />
           </WidgetCard>
         </div>
       </div>
@@ -572,14 +702,14 @@ export default function DashboardPage() {
       <div className="grid gap-5 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <WidgetCard
-            title="Top operators by revenue"
+            title={t("admin.dashboard.top_operators_by_revenue")}
             icon={ArrowUpRight}
-            action={<span className="text-xs text-fg-t6">Total revenue —</span>}
+            action={<span className="text-xs text-fg-t6">{t("admin.dashboard.total_revenue_placeholder")}</span>}
           >
             <TopOperatorsByRevenue />
           </WidgetCard>
         </div>
-        <WidgetCard title="Active offers" icon={Layers}>
+        <WidgetCard title={t("admin.dashboard.active_offers")} icon={Layers}>
           <ActiveOffers stats={stats} />
         </WidgetCard>
       </div>
