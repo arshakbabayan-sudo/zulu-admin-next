@@ -111,11 +111,13 @@ export function canAccessNotificationsNav(user: AdminUser | null): boolean {
  * Default landing page for a user after admin login.
  * Platform admins (super, platform) → /dashboard (platform KPIs).
  * Operator/agency admins → /operator/offers (their inventory home).
+ * Travel agents (sell on zulu.am, no admin CRUD) → /agent/welcome.
  * Anyone else with no operator tools → /dashboard (will show ForbiddenNotice).
  */
 export function defaultLandingPath(user: AdminUser | null): string {
   if (canAccessPlatformAdminNav(user)) return "/dashboard";
   if (canAccessOperatorToolsNav(user)) return "/operator/offers";
+  if (user?.roles?.includes("agent")) return "/agent/welcome";
   return "/dashboard";
 }
 
