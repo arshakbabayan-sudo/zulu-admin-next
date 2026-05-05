@@ -28,6 +28,7 @@ export const ADMIN_PLATFORM_LINKS: AdminPlatformNavLink[] = [
   { href: "/platform/finance-summary", labelKey: "admin.nav.finance_summary" },
   { href: "/platform/packages", labelKey: "admin.nav.packages" },
   { href: "/platform/reviews", labelKey: "admin.nav.reviews" },
+  { href: "/platform/connections", labelKey: "admin.nav.platform_connections" },
   { href: "/platform/banners", labelKey: "admin.nav.banners", superAdminOnly: true },
   { href: "/platform/settings", labelKey: "admin.nav.settings" },
   { href: "/platform/locations", labelKey: "admin.nav.locations", superAdminOnly: true },

@@ -6,6 +6,7 @@ import { ImportExportButtons } from "@/components/ImportExportButtons";
 import { PaginationBar } from "@/components/PaginationBar";
 import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { canAccessOperatorToolsNav, userHasSellerServiceType } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import {
@@ -308,8 +309,9 @@ function bodyFromForm(form: VisaPayload, mode: "create" | "update"): VisaPayload
 }
 
 export default function OperatorVisasPage() {
-  const { token } = useAdminAuth();
+  const { token, user } = useAdminAuth();
   const { t } = useLanguage();
+  const allowed = canAccessOperatorToolsNav(user) && userHasSellerServiceType(user, "visa");
   const [rows, setRows] = useState<VisaRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
   const [page, setPage] = useState(1);
@@ -335,7 +337,7 @@ export default function OperatorVisasPage() {
   const sectionTitleClass = "mb-3 text-xs font-semibold uppercase tracking-wide text-fg-t6";
 
   const load = useCallback(async () => {
-    if (!token) return;
+    if (!token || !allowed) return;
     setErr(null);
     setForbidden(false);
     try {
@@ -346,7 +348,7 @@ export default function OperatorVisasPage() {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
       else setErr(e instanceof ApiRequestError ? e.message : "Failed");
     }
-  }, [token, page]);
+  }, [token, allowed, page]);
 
   useEffect(() => {
     void load();
@@ -438,7 +440,7 @@ export default function OperatorVisasPage() {
     }
   }
 
-  if (forbidden)
+  if (!allowed || forbidden)
     return (
       <div>
         <h1 className="admin-page-title">{t("admin.crud.visas.title")}</h1>
