@@ -2,12 +2,16 @@ import type { AdminUser } from "./auth-types";
 import { apiFetchJson } from "./api-client";
 import type { ApiSuccessEnvelope } from "./api-envelope";
 
-export type LoginSuccess = ApiSuccessEnvelope<{ token: string; user: AdminUser }>;
+export type LoginSuccess = ApiSuccessEnvelope<{ token: string; expires_at?: string; user: AdminUser }>;
 
-export async function apiLogin(email: string, password: string): Promise<LoginSuccess> {
+export async function apiLogin(
+  email: string,
+  password: string,
+  rememberMe: boolean = false
+): Promise<LoginSuccess> {
   return apiFetchJson<LoginSuccess>("/login", {
     method: "POST",
-    body: { email, password },
+    body: { email, password, remember_me: rememberMe },
   });
 }
 

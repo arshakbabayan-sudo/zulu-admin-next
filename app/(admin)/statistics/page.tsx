@@ -1,5 +1,25 @@
 "use client";
 
+/**
+ * Operator statistics page.
+ *
+ * Visibility — who can see this page?
+ *   The sidebar entry only shows when `user.context.operator_statistics_platform_scope === true`.
+ *   That flag is set on the backend by `AdminAccessService::isAdminStatisticsSuperScope($user)`,
+ *   which currently returns true only for super_admin users (PART 18 §4.2).
+ *
+ *   In Armenian, plain language: «Operator statistics» էջը բացվում է միայն
+ *   super admin-ի համար (ZULU-ի գլխավոր ադմինի դերը)։ Operator-ները, agent-ները
+ *   կամ սովորական ադմինները չպետք է տեսնեն այս բաժինը sidebar-ում։ Որպես
+ *   alternative՝ super_admin-ը այստեղից կարող է որոշակի company-ի վիճակագրությունը
+ *   նայել՝ ընտրելով company_id-ով։
+ *
+ * If you change permission semantics here, update:
+ *   - `backend/app/Services/Admin/AdminAccessService::isAdminStatisticsSuperScope()`
+ *   - `backend/app/Http/Resources/Api/UserResource::operator_statistics_platform_scope`
+ *   - `zulu-admin-next/lib/access::canAccessOperatorStatisticsNav()`
+ */
+
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessOperatorStatisticsNav } from "@/lib/access";

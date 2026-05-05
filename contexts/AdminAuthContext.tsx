@@ -28,7 +28,7 @@ type AdminAuthState = {
   loading: boolean;
   bootstrapped: boolean;
   error: string | null;
-  login: (email: string, password: string) => Promise<AdminUser>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<AdminUser>;
   logout: () => Promise<void>;
   refreshMe: () => Promise<void>;
 };
@@ -177,11 +177,11 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     };
   }, [refreshMeIfStale]);
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string, rememberMe: boolean = false) => {
     setError(null);
     setLoading(true);
     try {
-      const res = await apiLogin(email, password);
+      const res = await apiLogin(email, password, rememberMe);
       window.localStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, res.data.token);
       setToken(res.data.token);
       setUser(res.data.user);

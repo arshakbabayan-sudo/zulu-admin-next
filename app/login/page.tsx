@@ -43,7 +43,7 @@ export default function LoginPage() {
     e.preventDefault();
     setLocalError(null);
     try {
-      const loggedInUser = await login(email, password);
+      const loggedInUser = await login(email, password, rememberMe);
       router.replace(defaultLandingPath(loggedInUser));
     } catch (err) {
       setLocalError(err instanceof ApiRequestError ? err.message : t("admin.login.failed"));
