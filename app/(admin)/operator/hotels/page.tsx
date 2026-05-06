@@ -1,7 +1,7 @@
 "use client";
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
-import { CsvImportModal } from "@/components/CsvImportModal";
+import { HotelsXlsxImportModal } from "@/components/HotelsXlsxImportModal";
 import { ImportExportButtons } from "@/components/ImportExportButtons";
 import { PaginationBar } from "@/components/PaginationBar";
 import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
@@ -22,7 +22,8 @@ import {
   type HotelRow,
   type HotelFormPayload,
 } from "@/lib/inventory-crud-api";
-import { csvExportFilename, downloadCsvFile, exportHotelsCsv, hotelTemplateCsv, runHotelCsvImport } from "@/lib/csv-import-export";
+import { csvExportFilename, downloadCsvFile, exportHotelsCsv } from "@/lib/csv-import-export";
+import { buildHotelsTemplateBlob, downloadBlob } from "@/lib/hotels-xlsx";
 import {
   HOTEL_API_STAR_RATING_KEY,
   HOTEL_AVAILABILITY_STATUSES,
@@ -223,7 +224,14 @@ export default function OperatorHotelsPage() {
           <ImportExportButtons
             busy={busy || exportBusy}
             exportDisabled={!token}
-            onTemplate={() => downloadCsvFile("hotels-template.csv", hotelTemplateCsv())}
+            onTemplate={async () => {
+              try {
+                const blob = await buildHotelsTemplateBlob();
+                downloadBlob("hotels-template.xlsx", blob);
+              } catch (e) {
+                alert(e instanceof Error ? e.message : "Template download failed");
+              }
+            }}
             onExport={async () => {
               if (!token) return;
               setExportBusy(true);
@@ -247,22 +255,11 @@ export default function OperatorHotelsPage() {
           </button>
         </div>
       </div>
-      <CsvImportModal
+      <HotelsXlsxImportModal
         open={importOpen}
-        title={t("admin.crud.hotels.import_title")}
+        token={token}
         onClose={() => setImportOpen(false)}
-        onRun={async (rows, rowLineNumbers) => {
-          if (!token) {
-            return {
-              success: 0,
-              failed: rows.length,
-              errors: [{ rowNumber: rowLineNumbers[0] ?? 2, message: "Not signed in." }],
-            };
-          }
-          const res = await runHotelCsvImport(token, rows, rowLineNumbers);
-          if (res.success > 0) await load();
-          return res;
-        }}
+        onSuccess={() => void load()}
       />
       {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
       {formLoading && editId != null && !form && (

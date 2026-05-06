@@ -241,12 +241,25 @@ export function validateHotelRoomsAndPricings(form: HotelFormPayload): string[] 
     const prefix = `Room ${ri + 1}`;
     if (!room.room_type.trim()) errors.push(`${prefix}: ${L.room_type} is required.`);
     if (!room.room_name.trim()) errors.push(`${prefix}: ${L.room_name} is required.`);
-    if (room.capacity === "" || room.capacity == null) {
-      errors.push(`${prefix}: ${L.capacity} is required.`);
+    const adultsRaw = room.max_adults;
+    if (adultsRaw === "" || adultsRaw == null) {
+      errors.push(`${prefix}: Max adults is required.`);
     } else {
-      const c = Number(room.capacity);
-      if (!Number.isFinite(c) || c < 1) {
-        errors.push(`${prefix}: ${L.capacity} must be at least 1.`);
+      const a = Number(adultsRaw);
+      if (!Number.isFinite(a) || a < 1) {
+        errors.push(`${prefix}: Max adults must be at least 1.`);
+      }
+    }
+    const totalRaw = room.max_total_guests;
+    if (totalRaw === "" || totalRaw == null) {
+      errors.push(`${prefix}: Max total guests is required.`);
+    } else {
+      const t = Number(totalRaw);
+      const a = Number(adultsRaw);
+      if (!Number.isFinite(t) || t < 1) {
+        errors.push(`${prefix}: Max total guests must be at least 1.`);
+      } else if (Number.isFinite(a) && t < a) {
+        errors.push(`${prefix}: Max total guests must be ≥ max adults.`);
       }
     }
     if (!room.pricings || room.pricings.length === 0) {
