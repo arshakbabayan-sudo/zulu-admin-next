@@ -410,6 +410,28 @@ export type HotelRoomDetail = {
   max_adults?: number | null;
   max_children?: number | null;
   max_total_guests?: number | null;
+  bed_type?: string | null;
+  bed_count?: number | null;
+  room_size?: string | null;
+  room_view?: string | null;
+  view_type?: string | null;
+  room_inventory_count?: number | null;
+  room_images?: string[] | string | null;
+  status?: string | null;
+  private_bathroom?: boolean;
+  smoking_allowed?: boolean;
+  air_conditioning?: boolean;
+  wifi?: boolean;
+  tv?: boolean;
+  mini_fridge?: boolean;
+  tea_coffee_maker?: boolean;
+  kettle?: boolean;
+  washing_machine?: boolean;
+  soundproofing?: boolean;
+  terrace_or_balcony?: boolean;
+  patio?: boolean;
+  bath?: boolean;
+  shower?: boolean;
   pricings?: HotelRoomPricingDetail[] | null;
 };
 
@@ -484,15 +506,49 @@ export type HotelPricingFormRow = {
   status: string;
 };
 
-/** One room block: aligns with HotelService room payload; capacity → max_* . */
+/**
+ * One room block: aligns with HotelService room payload + HotelRoom $fillable.
+ * Mirrors HotelDetailResource.rooms[*] shape so form ↔ API ↔ DB are 1:1.
+ */
 export type HotelRoomFormRow = {
   clientKey: string;
   /** Persisted `hotel_rooms.id` from API; omitted for new rows (POST / PATCH create). */
   id?: number;
   room_type: string;
   room_name: string;
-  /** Maps to max_adults / max_total_guests (max_children = 0). */
-  capacity: number | "";
+  // Capacity (3 separate guest counts).
+  max_adults: number | "";
+  max_children: number | "";
+  max_total_guests: number | "";
+  // Bed configuration.
+  bed_type: string;
+  bed_count: number | "";
+  // Size / view.
+  room_size: string;
+  room_view: string;
+  view_type: string;
+  // Inventory + lifecycle.
+  room_inventory_count: number | "";
+  status: string;
+  // Bathroom.
+  private_bathroom: boolean;
+  bath: boolean;
+  shower: boolean;
+  // In-room amenities.
+  air_conditioning: boolean;
+  wifi: boolean;
+  tv: boolean;
+  mini_fridge: boolean;
+  tea_coffee_maker: boolean;
+  kettle: boolean;
+  washing_machine: boolean;
+  soundproofing: boolean;
+  terrace_or_balcony: boolean;
+  patio: boolean;
+  // Policy.
+  smoking_allowed: boolean;
+  // Images (one URL per line in the input → string[]).
+  room_images: string;
   pricings: HotelPricingFormRow[];
 };
 
@@ -597,7 +653,31 @@ export function newHotelRoomFormRow(): HotelRoomFormRow {
     clientKey: newClientKey("room"),
     room_type: "",
     room_name: "",
-    capacity: "",
+    max_adults: "",
+    max_children: 0,
+    max_total_guests: "",
+    bed_type: "",
+    bed_count: 1,
+    room_size: "",
+    room_view: "",
+    view_type: "",
+    room_inventory_count: "",
+    status: "active",
+    private_bathroom: false,
+    bath: false,
+    shower: false,
+    air_conditioning: false,
+    wifi: false,
+    tv: false,
+    mini_fridge: false,
+    tea_coffee_maker: false,
+    kettle: false,
+    washing_machine: false,
+    soundproofing: false,
+    terrace_or_balcony: false,
+    patio: false,
+    smoking_allowed: false,
+    room_images: "",
     pricings: [newHotelPricingFormRow()],
   };
 }
@@ -606,31 +686,60 @@ function mapDetailRoomsToForm(rooms: HotelRoomDetail[] | null | undefined): Hote
   if (!Array.isArray(rooms) || rooms.length === 0) {
     return [newHotelRoomFormRow()];
   }
-  return rooms.map((r) => ({
-    clientKey: newClientKey(`room-${r.id}`),
-    ...(typeof r.id === "number" && Number.isFinite(r.id) ? { id: r.id } : {}),
-    room_type: r.room_type ?? "",
-    room_name: r.room_name ?? "",
-    capacity:
-      r.max_total_guests != null && Number.isFinite(Number(r.max_total_guests))
-        ? Number(r.max_total_guests)
-        : r.max_adults != null && Number.isFinite(Number(r.max_adults))
-          ? Number(r.max_adults)
-          : "",
-    pricings:
-      Array.isArray(r.pricings) && r.pricings.length > 0
-        ? r.pricings.map((p) => ({
-            ...(typeof p.id === "number" && Number.isFinite(p.id) ? { id: p.id } : {}),
-            price: String(p.price),
-            currency: (p.currency ?? "USD").toUpperCase().slice(0, 3),
-            pricing_mode: p.pricing_mode ?? "per_night",
-            valid_from: p.valid_from ?? "",
-            valid_to: p.valid_to ?? "",
-            min_nights: p.min_nights != null ? p.min_nights : "",
-            status: p.status ?? "active",
-          }))
-        : [newHotelPricingFormRow()],
-  }));
+  return rooms.map((r) => {
+    const numOrEmpty = (v: number | null | undefined): number | "" =>
+      v != null && Number.isFinite(Number(v)) ? Number(v) : "";
+    const imagesRaw = r.room_images;
+    const imagesText = Array.isArray(imagesRaw)
+      ? imagesRaw.filter((x) => typeof x === "string").join("\n")
+      : typeof imagesRaw === "string"
+        ? imagesRaw
+        : "";
+    return {
+      clientKey: newClientKey(`room-${r.id}`),
+      ...(typeof r.id === "number" && Number.isFinite(r.id) ? { id: r.id } : {}),
+      room_type: r.room_type ?? "",
+      room_name: r.room_name ?? "",
+      max_adults: numOrEmpty(r.max_adults),
+      max_children: numOrEmpty(r.max_children),
+      max_total_guests: numOrEmpty(r.max_total_guests),
+      bed_type: r.bed_type ?? "",
+      bed_count: numOrEmpty(r.bed_count),
+      room_size: r.room_size ?? "",
+      room_view: r.room_view ?? "",
+      view_type: r.view_type ?? "",
+      room_inventory_count: numOrEmpty(r.room_inventory_count),
+      status: r.status ?? "active",
+      private_bathroom: Boolean(r.private_bathroom),
+      bath: Boolean(r.bath),
+      shower: Boolean(r.shower),
+      air_conditioning: Boolean(r.air_conditioning),
+      wifi: Boolean(r.wifi),
+      tv: Boolean(r.tv),
+      mini_fridge: Boolean(r.mini_fridge),
+      tea_coffee_maker: Boolean(r.tea_coffee_maker),
+      kettle: Boolean(r.kettle),
+      washing_machine: Boolean(r.washing_machine),
+      soundproofing: Boolean(r.soundproofing),
+      terrace_or_balcony: Boolean(r.terrace_or_balcony),
+      patio: Boolean(r.patio),
+      smoking_allowed: Boolean(r.smoking_allowed),
+      room_images: imagesText,
+      pricings:
+        Array.isArray(r.pricings) && r.pricings.length > 0
+          ? r.pricings.map((p) => ({
+              ...(typeof p.id === "number" && Number.isFinite(p.id) ? { id: p.id } : {}),
+              price: String(p.price),
+              currency: (p.currency ?? "USD").toUpperCase().slice(0, 3),
+              pricing_mode: p.pricing_mode ?? "per_night",
+              valid_from: p.valid_from ?? "",
+              valid_to: p.valid_to ?? "",
+              min_nights: p.min_nights != null ? p.min_nights : "",
+              status: p.status ?? "active",
+            }))
+          : [newHotelPricingFormRow()],
+    };
+  });
 }
 
 /** Map GET /hotels/:id (HotelDetailResource) into operator form state. */
@@ -711,6 +820,28 @@ export type HotelRoomApiBody = {
   max_adults: number;
   max_children: number;
   max_total_guests: number;
+  bed_type: string | null;
+  bed_count: number;
+  room_size: string | null;
+  room_view: string | null;
+  view_type: string | null;
+  room_inventory_count: number | null;
+  status: string;
+  private_bathroom: boolean;
+  bath: boolean;
+  shower: boolean;
+  air_conditioning: boolean;
+  wifi: boolean;
+  tv: boolean;
+  mini_fridge: boolean;
+  tea_coffee_maker: boolean;
+  kettle: boolean;
+  washing_machine: boolean;
+  soundproofing: boolean;
+  terrace_or_balcony: boolean;
+  patio: boolean;
+  smoking_allowed: boolean;
+  room_images: string[] | null;
   pricings: HotelRoomPricingApiRow[];
 };
 
@@ -719,23 +850,55 @@ function emptyDateToNull(s: string): string | null {
   return t === "" ? null : t;
 }
 
-/** Build `rooms` array for API from operator form (capacity → max_*). */
+/** Build `rooms` array for API from operator form (full HotelRoom $fillable shape). */
 export function roomsPayloadFromForm(
   rooms: HotelRoomFormRow[],
   opts?: { includePersistedIds?: boolean }
 ): HotelRoomApiBody[] {
   const includeIds = opts?.includePersistedIds === true;
   return rooms.map((r) => {
-    const cap = Number(r.capacity);
+    const adults = r.max_adults === "" ? 0 : Number(r.max_adults);
+    const children = r.max_children === "" ? 0 : Number(r.max_children);
+    const total =
+      r.max_total_guests === "" ? Math.max(adults + children, adults) : Number(r.max_total_guests);
+    const bedCount = r.bed_count === "" ? 1 : Number(r.bed_count);
+    const inventory =
+      r.room_inventory_count === "" ? null : Number(r.room_inventory_count);
+    const images = r.room_images
+      .split(/\r?\n/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
     const roomId =
       includeIds && typeof r.id === "number" && Number.isFinite(r.id) ? r.id : undefined;
     return {
       ...(roomId !== undefined ? { id: roomId } : {}),
       room_type: r.room_type.trim(),
       room_name: r.room_name.trim(),
-      max_adults: cap,
-      max_children: 0,
-      max_total_guests: cap,
+      max_adults: adults,
+      max_children: children,
+      max_total_guests: total,
+      bed_type: trimOrNull(r.bed_type),
+      bed_count: bedCount,
+      room_size: trimOrNull(r.room_size),
+      room_view: trimOrNull(r.room_view),
+      view_type: trimOrNull(r.view_type),
+      room_inventory_count: inventory,
+      status: (r.status.trim() || "active").slice(0, 32),
+      private_bathroom: r.private_bathroom,
+      bath: r.bath,
+      shower: r.shower,
+      air_conditioning: r.air_conditioning,
+      wifi: r.wifi,
+      tv: r.tv,
+      mini_fridge: r.mini_fridge,
+      tea_coffee_maker: r.tea_coffee_maker,
+      kettle: r.kettle,
+      washing_machine: r.washing_machine,
+      soundproofing: r.soundproofing,
+      terrace_or_balcony: r.terrace_or_balcony,
+      patio: r.patio,
+      smoking_allowed: r.smoking_allowed,
+      room_images: images.length > 0 ? images : null,
       pricings: r.pricings.map((p) => {
         const pricingId =
           includeIds && typeof p.id === "number" && Number.isFinite(p.id) ? p.id : undefined;
@@ -799,7 +962,7 @@ export type HotelCreateApiBody = {
   rooms: HotelRoomApiBody[];
 };
 
-function hotelSharedBodyFromForm(form: HotelFormPayload): Omit<HotelCreateApiBody, "offer_id"> {
+function hotelSharedBodyFromForm(form: HotelFormPayload): Omit<HotelCreateApiBody, "offer_id" | "rooms"> {
   const star =
     form.star_rating === "" || form.star_rating == null ? null : Number(form.star_rating);
   const lat = parseCoord(form.latitude);

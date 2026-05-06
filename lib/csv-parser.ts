@@ -420,10 +420,15 @@ export function hotelRowToFormPayload(row: Record<string, string>): HotelFormPay
     return parseBool(t);
   };
 
+  // Legacy CSV path: hotels CSV carries no per-room columns, so we fabricate
+  // a single placeholder room. Real per-room data flows through the xlsx
+  // import pipeline (see lib/xlsx-*).
   const room = newHotelRoomFormRow();
   room.room_type = "standard";
   room.room_name = "Standard Room";
-  room.capacity = 2;
+  room.max_adults = 2;
+  room.max_children = 0;
+  room.max_total_guests = 2;
   room.pricings = [newHotelPricingFormRow()];
   room.pricings[0].price = "100";
   room.pricings[0].currency = "USD";
@@ -432,6 +437,7 @@ export function hotelRowToFormPayload(row: Record<string, string>): HotelFormPay
 
   return {
     offer_id: num("offer_id"),
+    location_id: "",
     hotel_name: get("hotel_name"),
     property_type: get("property_type") || "hotel",
     hotel_type: get("hotel_type") || "resort",

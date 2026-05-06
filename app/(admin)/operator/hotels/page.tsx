@@ -650,59 +650,195 @@ export default function OperatorHotelsPage() {
                     </button>
                   )}
                 </div>
-                <div className="grid gap-2 sm:grid-cols-3">
-                  <label className="flex flex-col gap-1 text-sm">
-                    <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.room_type")}</span>
-                    <input
-                      value={room.room_type}
-                      onChange={(e) =>
-                        setForm((p) => {
-                          if (!p) return p;
-                          const rooms = [...p.rooms];
-                          rooms[ri] = { ...rooms[ri], room_type: e.target.value };
-                          return { ...p, rooms };
-                        })
-                      }
-                      className="rounded border border-default px-2 py-1.5 text-sm"
-                    />
-                  </label>
-                  <label className="flex flex-col gap-1 text-sm">
-                    <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.room_name")}</span>
-                    <input
-                      value={room.room_name}
-                      onChange={(e) =>
-                        setForm((p) => {
-                          if (!p) return p;
-                          const rooms = [...p.rooms];
-                          rooms[ri] = { ...rooms[ri], room_name: e.target.value };
-                          return { ...p, rooms };
-                        })
-                      }
-                      className="rounded border border-default px-2 py-1.5 text-sm"
-                    />
-                  </label>
-                  <label className="flex flex-col gap-1 text-sm">
-                    <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.capacity")}</span>
+                {(() => {
+                  const updateRoom = (patch: Partial<typeof room>) =>
+                    setForm((p) => {
+                      if (!p) return p;
+                      const rooms = [...p.rooms];
+                      rooms[ri] = { ...rooms[ri], ...patch };
+                      return { ...p, rooms };
+                    });
+                  const numField = (key: "max_adults" | "max_children" | "max_total_guests" | "bed_count" | "room_inventory_count", min = 0) => (
                     <input
                       type="number"
-                      min={1}
-                      value={room.capacity === "" ? "" : room.capacity}
-                      onChange={(e) =>
-                        setForm((p) => {
-                          if (!p) return p;
-                          const rooms = [...p.rooms];
-                          const v = e.target.value;
-                          rooms[ri] = {
-                            ...rooms[ri],
-                            capacity: v === "" ? "" : Number(v),
-                          };
-                          return { ...p, rooms };
-                        })
-                      }
+                      min={min}
+                      value={room[key] === "" ? "" : (room[key] as number)}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        updateRoom({ [key]: v === "" ? "" : Number(v) } as Partial<typeof room>);
+                      }}
                       className="rounded border border-default px-2 py-1.5 text-sm"
                     />
-                  </label>
-                </div>
+                  );
+                  const txtField = (key: "bed_type" | "room_size" | "room_view" | "view_type" | "status") => (
+                    <input
+                      value={room[key]}
+                      onChange={(e) => updateRoom({ [key]: e.target.value } as Partial<typeof room>)}
+                      className="rounded border border-default px-2 py-1.5 text-sm"
+                    />
+                  );
+                  const boolField = (
+                    key:
+                      | "private_bathroom" | "bath" | "shower"
+                      | "air_conditioning" | "wifi" | "tv" | "mini_fridge"
+                      | "tea_coffee_maker" | "kettle" | "washing_machine"
+                      | "soundproofing" | "terrace_or_balcony" | "patio"
+                      | "smoking_allowed",
+                    label: string
+                  ) => (
+                    <label key={key} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={room[key]}
+                        onChange={(e) => updateRoom({ [key]: e.target.checked } as Partial<typeof room>)}
+                        className="rounded border border-default"
+                      />
+                      <span>{label}</span>
+                    </label>
+                  );
+                  return (
+                    <>
+                      {/* Identity */}
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <label className="flex flex-col gap-1 text-sm">
+                          <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.room_type")}</span>
+                          <input
+                            value={room.room_type}
+                            onChange={(e) => updateRoom({ room_type: e.target.value })}
+                            className="rounded border border-default px-2 py-1.5 text-sm"
+                            placeholder="standard / deluxe / suite"
+                          />
+                        </label>
+                        <label className="flex flex-col gap-1 text-sm">
+                          <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.room_name")}</span>
+                          <input
+                            value={room.room_name}
+                            onChange={(e) => updateRoom({ room_name: e.target.value })}
+                            className="rounded border border-default px-2 py-1.5 text-sm"
+                          />
+                        </label>
+                      </div>
+
+                      {/* Capacity */}
+                      <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                        <label className="flex flex-col gap-1 text-sm">
+                          <span className="font-medium text-fg-t6">Max adults *</span>
+                          {numField("max_adults", 1)}
+                        </label>
+                        <label className="flex flex-col gap-1 text-sm">
+                          <span className="font-medium text-fg-t6">Max children</span>
+                          {numField("max_children", 0)}
+                        </label>
+                        <label className="flex flex-col gap-1 text-sm">
+                          <span className="font-medium text-fg-t6">Max total guests *</span>
+                          {numField("max_total_guests", 1)}
+                        </label>
+                      </div>
+
+                      {/* Bed + Size */}
+                      <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                        <label className="flex flex-col gap-1 text-sm">
+                          <span className="font-medium text-fg-t6">Bed type</span>
+                          <input
+                            value={room.bed_type}
+                            onChange={(e) => updateRoom({ bed_type: e.target.value })}
+                            className="rounded border border-default px-2 py-1.5 text-sm"
+                            placeholder="double / twin / king"
+                          />
+                        </label>
+                        <label className="flex flex-col gap-1 text-sm">
+                          <span className="font-medium text-fg-t6">Bed count</span>
+                          {numField("bed_count", 1)}
+                        </label>
+                        <label className="flex flex-col gap-1 text-sm">
+                          <span className="font-medium text-fg-t6">Room size (m²)</span>
+                          {txtField("room_size")}
+                        </label>
+                      </div>
+
+                      {/* View + Inventory + Status */}
+                      <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                        <label className="flex flex-col gap-1 text-sm">
+                          <span className="font-medium text-fg-t6">Room view</span>
+                          {txtField("room_view")}
+                        </label>
+                        <label className="flex flex-col gap-1 text-sm">
+                          <span className="font-medium text-fg-t6">View type</span>
+                          <input
+                            value={room.view_type}
+                            onChange={(e) => updateRoom({ view_type: e.target.value })}
+                            className="rounded border border-default px-2 py-1.5 text-sm"
+                            placeholder="sea / mountain / city / garden"
+                          />
+                        </label>
+                        <label className="flex flex-col gap-1 text-sm">
+                          <span className="font-medium text-fg-t6">Inventory count</span>
+                          {numField("room_inventory_count", 0)}
+                        </label>
+                      </div>
+
+                      <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                        <label className="flex flex-col gap-1 text-sm">
+                          <span className="font-medium text-fg-t6">Status</span>
+                          <input
+                            value={room.status}
+                            onChange={(e) => updateRoom({ status: e.target.value })}
+                            className="rounded border border-default px-2 py-1.5 text-sm"
+                            placeholder="active / inactive"
+                          />
+                        </label>
+                      </div>
+
+                      {/* Bathroom */}
+                      <div className="mt-4 border-t border-default pt-3">
+                        <span className="text-xs font-semibold uppercase text-fg-t6">Bathroom</span>
+                        <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                          {boolField("private_bathroom", "Private bathroom")}
+                          {boolField("bath", "Bathtub")}
+                          {boolField("shower", "Shower")}
+                        </div>
+                      </div>
+
+                      {/* Amenities */}
+                      <div className="mt-4 border-t border-default pt-3">
+                        <span className="text-xs font-semibold uppercase text-fg-t6">In-room amenities</span>
+                        <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                          {boolField("air_conditioning", "Air conditioning")}
+                          {boolField("wifi", "Wi-Fi")}
+                          {boolField("tv", "TV")}
+                          {boolField("mini_fridge", "Mini-fridge")}
+                          {boolField("tea_coffee_maker", "Tea/coffee maker")}
+                          {boolField("kettle", "Kettle")}
+                          {boolField("washing_machine", "Washing machine")}
+                          {boolField("soundproofing", "Soundproofing")}
+                          {boolField("terrace_or_balcony", "Terrace / balcony")}
+                          {boolField("patio", "Patio")}
+                        </div>
+                      </div>
+
+                      {/* Policy */}
+                      <div className="mt-4 border-t border-default pt-3">
+                        <span className="text-xs font-semibold uppercase text-fg-t6">Policy</span>
+                        <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                          {boolField("smoking_allowed", "Smoking allowed")}
+                        </div>
+                      </div>
+
+                      {/* Images */}
+                      <div className="mt-4 border-t border-default pt-3">
+                        <label className="flex flex-col gap-1 text-sm">
+                          <span className="font-medium text-fg-t6">Room images (one URL per line)</span>
+                          <textarea
+                            value={room.room_images}
+                            onChange={(e) => updateRoom({ room_images: e.target.value })}
+                            className="min-h-[60px] rounded border border-default px-2 py-1.5 text-sm font-mono"
+                            placeholder="https://example.com/room1.jpg&#10;https://example.com/room2.jpg"
+                          />
+                        </label>
+                      </div>
+                    </>
+                  );
+                })()}
                 <div className="mt-3 overflow-x-auto">
                   <table className="w-full min-w-[720px] border-collapse text-xs">
                     <thead>
