@@ -697,7 +697,6 @@ function SwitchField({
   onChange: (next: boolean) => void;
   label: string;
 }) {
-  const { t } = useLanguage();
   return (
     <label className="flex items-center justify-between gap-3 rounded border border-default bg-white px-3 py-2 text-sm text-fg-t7">
       <span>{label}</span>
