@@ -136,12 +136,10 @@ const STEP_FIELDS: Record<TransferWizardStepNonReview, (keyof TransferFormValues
     "estimated_duration_minutes",
   ],
   route: [
-    "pickup_country",
-    "pickup_city",
+    // pickup_country/pickup_city auto-filled from the Origin location cascade above.
     "pickup_point_type",
     "pickup_point_name",
-    "dropoff_country",
-    "dropoff_city",
+    // dropoff_country/dropoff_city auto-filled from the Destination location cascade above.
     "dropoff_point_type",
     "dropoff_point_name",
     "route_label",
