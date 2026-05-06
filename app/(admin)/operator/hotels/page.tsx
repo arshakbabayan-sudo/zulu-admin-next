@@ -293,7 +293,7 @@ export default function OperatorHotelsPage() {
                 />
               </label>
             )}
-            {(["hotel_name", "property_type", "hotel_type", "country", "region_or_state", "city", "district_or_area"] as const).map(
+            {(["hotel_name", "property_type", "hotel_type", "district_or_area"] as const).map(
               (f) => (
                 <label key={f} className="flex flex-col gap-1 text-sm">
                   <span className="font-medium text-fg-t6">{t(`admin.crud.hotels.field.${f}`)}</span>
