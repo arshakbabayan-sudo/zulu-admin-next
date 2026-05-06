@@ -5,6 +5,7 @@ import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 /**
  * Platform-admin webhook deliveries viewer (Sprint 52, PART 30).
@@ -49,6 +50,7 @@ type Delivery = {
 
 export default function PlatformWebhooksPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [stats, setStats] = useState<WebhookStats | null>(null);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -91,7 +93,7 @@ export default function PlatformWebhooksPage() {
         if (e instanceof ApiRequestError && e.status === 403) {
           setForbidden(true);
         } else {
-          setError(e instanceof Error ? e.message : "Failed to load");
+          setError(e instanceof Error ? e.message : t("admin.platform_webhooks.err_load"));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -101,12 +103,12 @@ export default function PlatformWebhooksPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, allowed, statusFilter]);
+  }, [token, allowed, statusFilter, t]);
 
   if (!allowed || forbidden) {
     return (
       <div>
-        <h1 className="admin-page-title">Webhooks</h1>
+        <h1 className="admin-page-title">{t("admin.platform_webhooks.title")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -116,28 +118,28 @@ export default function PlatformWebhooksPage() {
 
   return (
     <div>
-      <h1 className="admin-page-title">Webhooks</h1>
-      <p className="admin-page-subtitle">Platform-wide webhook subscriptions and delivery log.</p>
+      <h1 className="admin-page-title">{t("admin.platform_webhooks.title")}</h1>
+      <p className="admin-page-subtitle">{t("admin.platform_webhooks.subtitle")}</p>
 
       {error && <p className="mt-2 text-sm text-error-600">{error}</p>}
 
       {/* Stats grid */}
       {stats && (
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Subscriptions" value={`${stats.active_subscriptions} / ${stats.total_subscriptions}`} hint="active / total" />
-          <StatCard label="Total deliveries" value={stats.deliveries_total.toLocaleString()} />
-          <StatCard label="Success rate" value={stats.success_rate !== null ? `${stats.success_rate}%` : "—"} tone={stats.success_rate !== null && stats.success_rate >= 95 ? "good" : "warn"} />
-          <StatCard label="Failed (lifetime)" value={stats.deliveries_failed.toLocaleString()} tone={stats.deliveries_failed > 0 ? "warn" : "neutral"} />
+          <StatCard label={t("admin.platform_webhooks.subscriptions")} value={`${stats.active_subscriptions} / ${stats.total_subscriptions}`} hint={t("admin.platform_webhooks.active_total")} />
+          <StatCard label={t("admin.platform_webhooks.total_deliveries")} value={stats.deliveries_total.toLocaleString()} />
+          <StatCard label={t("admin.platform_webhooks.success_rate")} value={stats.success_rate !== null ? `${stats.success_rate}%` : "—"} tone={stats.success_rate !== null && stats.success_rate >= 95 ? "good" : "warn"} />
+          <StatCard label={t("admin.platform_webhooks.failed_lifetime")} value={stats.deliveries_failed.toLocaleString()} tone={stats.deliveries_failed > 0 ? "warn" : "neutral"} />
         </div>
       )}
 
       {/* Tabs */}
       <div className="mt-6 flex gap-2 border-b border-default">
         <TabButton active={tab === "deliveries"} onClick={() => setTab("deliveries")}>
-          Deliveries
+          {t("admin.platform_webhooks.deliveries")}
         </TabButton>
         <TabButton active={tab === "subscriptions"} onClick={() => setTab("subscriptions")}>
-          Subscriptions
+          {t("admin.platform_webhooks.subscriptions")}
         </TabButton>
       </div>
 
@@ -145,16 +147,16 @@ export default function PlatformWebhooksPage() {
         <div className="mt-4">
           <div className="flex items-center gap-3 mb-3">
             <label className="text-sm text-fg-t6">
-              Status:
+              {t("admin.platform_webhooks.status")}:
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="ml-2 rounded border border-default px-2 py-1 text-sm"
               >
-                <option value="">All</option>
-                <option value="pending">Pending</option>
-                <option value="success">Success</option>
-                <option value="failed">Failed</option>
+                <option value="">{t("common.all")}</option>
+                <option value="pending">{t("admin.platform_webhooks.status_pending")}</option>
+                <option value="success">{t("admin.platform_webhooks.status_success")}</option>
+                <option value="failed">{t("admin.platform_webhooks.status_failed")}</option>
               </select>
             </label>
           </div>
@@ -163,14 +165,14 @@ export default function PlatformWebhooksPage() {
             <table className="w-full min-w-[900px] text-left text-sm">
               <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
                 <tr>
-                  <th className="px-3 py-2">ID</th>
-                  <th className="px-3 py-2">Event</th>
-                  <th className="px-3 py-2">Status</th>
-                  <th className="px-3 py-2">URL</th>
-                  <th className="px-3 py-2">Attempts</th>
-                  <th className="px-3 py-2">HTTP</th>
-                  <th className="px-3 py-2">Last attempt</th>
-                  <th className="px-3 py-2">Created</th>
+                  <th className="px-3 py-2">{t("admin.crud.common.id")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_webhooks.event")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_webhooks.status")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_webhooks.url")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_webhooks.attempts")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_webhooks.http")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_webhooks.last_attempt")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_webhooks.created")}</th>
                   <th className="px-3 py-2"></th>
                 </tr>
               </thead>
@@ -178,14 +180,14 @@ export default function PlatformWebhooksPage() {
                 {loading && (
                   <tr>
                     <td colSpan={9} className="px-3 py-6 text-center text-fg-t6">
-                      Loading…
+                      {t("admin.platform_webhooks.loading")}
                     </td>
                   </tr>
                 )}
                 {!loading && deliveries.length === 0 && (
                   <tr>
                     <td colSpan={9} className="px-3 py-6 text-center text-fg-t6">
-                      No deliveries found.
+                      {t("admin.platform_webhooks.empty_deliveries")}
                     </td>
                   </tr>
                 )}
@@ -196,7 +198,7 @@ export default function PlatformWebhooksPage() {
                     <td className="px-3 py-2">
                       <DeliveryStatusBadge status={d.status} />
                     </td>
-                    <td className="px-3 py-2 truncate max-w-xs">{d.subscription?.url ?? "—"}</td>
+                  <td className="px-3 py-2 truncate max-w-xs">{d.subscription?.url ?? "—"}</td>
                     <td className="px-3 py-2 tabular-nums">{d.attempt_count}</td>
                     <td className="px-3 py-2 tabular-nums text-xs">{d.last_response_status ?? "—"}</td>
                     <td className="px-3 py-2 text-xs text-fg-t7">
@@ -227,26 +229,26 @@ export default function PlatformWebhooksPage() {
           <table className="w-full min-w-[700px] text-left text-sm">
             <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
               <tr>
-                <th className="px-3 py-2">ID</th>
-                <th className="px-3 py-2">Company</th>
-                <th className="px-3 py-2">URL</th>
-                <th className="px-3 py-2">Events</th>
-                <th className="px-3 py-2">Status</th>
-                <th className="px-3 py-2">Created</th>
+                  <th className="px-3 py-2">{t("admin.crud.common.id")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_webhooks.company")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_webhooks.url")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_webhooks.events")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_webhooks.status")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_webhooks.created")}</th>
               </tr>
             </thead>
             <tbody>
               {loading && (
                 <tr>
                   <td colSpan={6} className="px-3 py-6 text-center text-fg-t6">
-                    Loading…
+                    {t("admin.platform_webhooks.loading")}
                   </td>
                 </tr>
               )}
               {!loading && subscriptions.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-3 py-6 text-center text-fg-t6">
-                    No subscriptions yet.
+                    {t("admin.platform_webhooks.empty_subscriptions")}
                   </td>
                 </tr>
               )}
@@ -306,11 +308,12 @@ function ReplayButton({
   token: string;
   onReplayed: () => void;
 }) {
+  const { t } = useLanguage();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const replay = async () => {
-    if (!confirm("Replay this failed delivery? It will be retried with the same payload.")) return;
+    if (!confirm(t("admin.platform_webhooks.confirm_replay"))) return;
     setBusy(true);
     setError(null);
     try {
@@ -326,10 +329,10 @@ function ReplayButton({
       if (json?.success) {
         onReplayed();
       } else {
-        setError(json?.message ?? "Replay failed");
+        setError(json?.message ?? t("admin.platform_webhooks.err_replay"));
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Replay failed");
+      setError(e instanceof Error ? e.message : t("admin.platform_webhooks.err_replay"));
     } finally {
       setBusy(false);
     }
@@ -340,25 +343,27 @@ function ReplayButton({
       type="button"
       onClick={replay}
       disabled={busy}
-      title={error ?? "Reset to pending so the dispatcher can retry"}
+      title={error ?? t("admin.platform_webhooks.replay_hint")}
       className="text-xs text-primary-500 hover:underline disabled:opacity-40"
     >
-      {busy ? "…" : "Replay"}
+      {busy ? "…" : t("admin.platform_webhooks.replay")}
     </button>
   );
 }
 
 function DeliveryStatusBadge({ status }: { status: Delivery["status"] }) {
+  const { t } = useLanguage();
   const cls =
     status === "success"
       ? "bg-success-50 text-success-700"
       : status === "failed"
         ? "bg-error-50 text-error-700"
         : "bg-warning-50 text-warning-700";
-  return <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${cls}`}>{status}</span>;
+  return <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${cls}`}>{t(`admin.platform_webhooks.status_${status}`)}</span>;
 }
 
 function SubscriptionStatusBadge({ status }: { status: string }) {
+  const { t } = useLanguage();
   const cls = status === "active" ? "bg-success-50 text-success-700" : "bg-figma-bg-1 text-fg-t6";
-  return <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${cls}`}>{status}</span>;
+  return <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${cls}`}>{t(`admin.platform_webhooks.subscription_status_${status}`)}</span>;
 }

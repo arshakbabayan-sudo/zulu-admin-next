@@ -1,6 +1,7 @@
 "use client";
 
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { ApiRequestError } from "@/lib/api-client";
 import {
   apiUploadAdminPageImage,
@@ -296,7 +297,9 @@ function extractFileName(path: string): string {
 
 async function uploadWidgetImage(token: string | null, file: File): Promise<string> {
   if (!token) {
-    throw new Error("Missing auth token.");
+    // Helper function (not a React component) — keep an English fallback.
+    // Callers display localized messages via their own useLanguage scope.
+    throw new Error("Missing auth token");
   }
   const res = await apiUploadAdminPageImage(token, file);
   return extractFileName(res.data.path ?? "");
@@ -315,7 +318,8 @@ function uploadErrorMessage(error: unknown): string {
     return error.message;
   }
   if (error instanceof Error) return error.message;
-  return "Image upload failed.";
+  // Helper function (not a React component) — English fallback.
+  return "Image upload failed";
 }
 
 function normalizeSlides(v: unknown): SlideItem[] {
@@ -517,6 +521,7 @@ function SliderWidgetForm({
   onSave: () => Promise<void>;
 }) {
   const { token } = useAdminAuth();
+  const { t } = useLanguage();
   const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
   const [uploadErr, setUploadErr] = useState<string | null>(null);
 
@@ -536,7 +541,7 @@ function SliderWidgetForm({
 
   async function uploadImage(index: number, file: File) {
     if (!token) {
-      setUploadErr("Missing auth token.");
+      setUploadErr(t("admin.widget_form.missing_auth_token"));
       return;
     }
     setUploadErr(null);
@@ -555,13 +560,13 @@ function SliderWidgetForm({
   return (
     <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-fg-t7">Hero slides</p>
+        <p className="text-xs font-medium text-fg-t7">{t("admin.widget_form.hero_slides")}</p>
         <button
           type="button"
           onClick={addSlide}
           className="rounded border border-default bg-white px-2.5 py-1 text-xs"
         >
-          Add New Slide
+          {t("admin.widget_form.add_new_slide")}
         </button>
       </div>
 
@@ -570,25 +575,25 @@ function SliderWidgetForm({
       <div className="mt-3 space-y-3">
         {slides.length === 0 ? (
           <p className="rounded border border-dashed border-default px-3 py-4 text-center text-xs text-fg-t6">
-            No slides yet. Click &quot;Add New Slide&quot;.
+            {t("admin.widget_form.no_slides")}
           </p>
         ) : (
           slides.map((slide, index) => (
             <div key={`slide-${index}`} className="rounded border border-default bg-white p-3">
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-xs font-semibold text-fg-t11">Slide #{index + 1}</p>
+                <p className="text-xs font-semibold text-fg-t11">{`${t("admin.widget_form.slide")} #${index + 1}`}</p>
                 <button
                   type="button"
                   onClick={() => removeSlide(index)}
                   className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-error-700"
                 >
-                  Remove Slide
+                  {t("admin.widget_form.remove_slide")}
                 </button>
               </div>
 
               <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                 <label className="text-xs text-fg-t7">
-                  Title
+                  {t("admin.widget_form.title")}
                   <input
                     value={slide.title}
                     onChange={(e) => updateSlide(index, { title: e.target.value })}
@@ -596,16 +601,16 @@ function SliderWidgetForm({
                   />
                 </label>
                 <label className="text-xs text-fg-t7">
-                  Location
+                  {t("admin.widget_form.location")}
                   <input
                     value={slide.location}
                     onChange={(e) => updateSlide(index, { location: e.target.value })}
-                    placeholder="Maldives"
+                    placeholder={t("admin.widget_form.location_placeholder")}
                     className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm"
                   />
                 </label>
                 <label className="text-xs text-fg-t7">
-                  Button Text
+                  {t("admin.widget_form.button_text")}
                   <input
                     value={slide.button_text}
                     onChange={(e) => updateSlide(index, { button_text: e.target.value })}
@@ -613,7 +618,7 @@ function SliderWidgetForm({
                   />
                 </label>
                 <label className="text-xs text-fg-t7">
-                  Button URL
+                  {t("admin.widget_form.button_url")}
                   <input
                     value={slide.button_url}
                     onChange={(e) => updateSlide(index, { button_url: e.target.value })}
@@ -621,7 +626,7 @@ function SliderWidgetForm({
                   />
                 </label>
                 <label className="text-xs text-fg-t7">
-                  Rating (1-5)
+                  {t("admin.widget_form.rating")}
                   <input
                     type="number"
                     min={1}
@@ -634,7 +639,7 @@ function SliderWidgetForm({
                   />
                 </label>
                 <label className="text-xs text-fg-t7">
-                  Background Image
+                  {t("admin.widget_form.background_image")}
                   <input
                     type="file"
                     accept="image/jpeg,image/png,image/jpg,image/webp,image/gif,image/svg+xml"
@@ -647,16 +652,16 @@ function SliderWidgetForm({
                     className="mt-1 block w-full text-xs"
                   />
                   {uploadingIndex === index ? (
-                    <span className="mt-1 block text-xs text-fg-t6">Uploading...</span>
+                    <span className="mt-1 block text-xs text-fg-t6">{t("admin.widget_form.uploading")}</span>
                   ) : null}
                   {slide.img ? (
-                    <span className="mt-1 block text-[11px] text-fg-t6">Saved file: {slide.img}</span>
+                    <span className="mt-1 block text-[11px] text-fg-t6">{t("admin.widget_form.saved_file")}: {slide.img}</span>
                   ) : null}
                 </label>
               </div>
 
               <label className="mt-2 block text-xs text-fg-t7">
-                Description
+                {t("admin.widget_form.description")}
                 <textarea
                   value={slide.description}
                   onChange={(e) => updateSlide(index, { description: e.target.value })}
@@ -676,7 +681,7 @@ function SliderWidgetForm({
           onClick={() => void onSave()}
           className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
         >
-          {saving ? "Saving..." : "Save Widget"}
+          {saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}
         </button>
       </div>
     </div>
@@ -692,6 +697,7 @@ function SwitchField({
   onChange: (next: boolean) => void;
   label: string;
 }) {
+  const { t } = useLanguage();
   return (
     <label className="flex items-center justify-between gap-3 rounded border border-default bg-white px-3 py-2 text-sm text-fg-t7">
       <span>{label}</span>
@@ -725,43 +731,45 @@ function SearchWidgetForm({
   onSearchOptionsChange: (options: SearchOptions) => void;
   onSave: () => Promise<void>;
 }) {
+  const { t } = useLanguage();
+
   function setOption(key: keyof SearchOptions, value: boolean) {
     onSearchOptionsChange({ ...searchOptions, [key]: value });
   }
 
   return (
     <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
-      <p className="text-xs font-medium text-fg-t7">Search modules</p>
+      <p className="text-xs font-medium text-fg-t7">{t("admin.widget_form.search_modules")}</p>
       <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
         <SwitchField
           checked={searchOptions.flights}
           onChange={(v) => setOption("flights", v)}
-          label="Enable Flight Search"
+          label={t("admin.widget_form.enable_flight_search")}
         />
         <SwitchField
           checked={searchOptions.hotels}
           onChange={(v) => setOption("hotels", v)}
-          label="Enable Hotel Search"
+          label={t("admin.widget_form.enable_hotel_search")}
         />
         <SwitchField
           checked={searchOptions.cars}
           onChange={(v) => setOption("cars", v)}
-          label="Enable Car Search"
+          label={t("admin.widget_form.enable_car_search")}
         />
         <SwitchField
           checked={searchOptions.excursions}
           onChange={(v) => setOption("excursions", v)}
-          label="Enable Excursion Search"
+          label={t("admin.widget_form.enable_excursion_search")}
         />
         <SwitchField
           checked={searchOptions.transfers}
           onChange={(v) => setOption("transfers", v)}
-          label="Enable Transfer Search"
+          label={t("admin.widget_form.enable_transfer_search")}
         />
         <SwitchField
           checked={searchOptions.packages}
           onChange={(v) => setOption("packages", v)}
-          label="Enable Package Search"
+          label={t("admin.widget_form.enable_package_search")}
         />
       </div>
       <div className="mt-3 flex justify-end">
@@ -771,7 +779,7 @@ function SearchWidgetForm({
           onClick={() => void onSave()}
           className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
         >
-          {saving ? "Saving..." : "Save Widget"}
+          {saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}
         </button>
       </div>
     </div>
@@ -790,6 +798,7 @@ function AboutUsWidgetForm({
   onSave: () => Promise<void>;
 }) {
   const { token } = useAdminAuth();
+  const { t } = useLanguage();
   const [uploading, setUploading] = useState(false);
   const [uploadErr, setUploadErr] = useState<string | null>(null);
 
@@ -814,7 +823,7 @@ function AboutUsWidgetForm({
 
   async function uploadAboutImage(file: File) {
     if (!token) {
-      setUploadErr("Missing auth token.");
+      setUploadErr(t("admin.widget_form.missing_auth_token"));
       return;
     }
     setUploading(true);
@@ -834,7 +843,7 @@ function AboutUsWidgetForm({
     <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
         <label className="text-xs text-fg-t7">
-          Widget Title
+          {t("admin.widget_form.widget_title")}
           <input
             value={value.widget_title}
             onChange={(e) => patch({ widget_title: e.target.value })}
@@ -842,7 +851,7 @@ function AboutUsWidgetForm({
           />
         </label>
         <label className="text-xs text-fg-t7">
-          Main Title
+          {t("admin.widget_form.main_title")}
           <input
             value={value.main_title}
             onChange={(e) => patch({ main_title: e.target.value })}
@@ -850,7 +859,7 @@ function AboutUsWidgetForm({
           />
         </label>
         <label className="text-xs text-fg-t7">
-          Customer Count
+          {t("admin.widget_form.customer_count")}
           <input
             type="number"
             min={0}
@@ -860,7 +869,7 @@ function AboutUsWidgetForm({
           />
         </label>
         <label className="text-xs text-fg-t7">
-          About Image
+          {t("admin.widget_form.about_image")}
           <input
             type="file"
             accept="image/jpeg,image/png,image/jpg,image/webp,image/gif,image/svg+xml"
@@ -872,14 +881,14 @@ function AboutUsWidgetForm({
             }}
             className="mt-1 block w-full text-xs"
           />
-          {uploading ? <span className="mt-1 block text-xs text-fg-t6">Uploading...</span> : null}
+          {uploading ? <span className="mt-1 block text-xs text-fg-t6">{t("admin.widget_form.uploading")}</span> : null}
           {value.about_image ? (
-            <span className="mt-1 block text-[11px] text-fg-t6">Saved file: {value.about_image}</span>
+            <span className="mt-1 block text-[11px] text-fg-t6">{t("admin.widget_form.saved_file")}: {value.about_image}</span>
           ) : null}
           {uploadErr ? <span className="mt-1 block text-xs text-error-600">{uploadErr}</span> : null}
         </label>
         <label className="text-xs text-fg-t7">
-          Button Text
+          {t("admin.widget_form.button_text")}
           <input
             value={value.button_text}
             onChange={(e) => patch({ button_text: e.target.value })}
@@ -887,7 +896,7 @@ function AboutUsWidgetForm({
           />
         </label>
         <label className="text-xs text-fg-t7">
-          Button URL
+          {t("admin.widget_form.button_url")}
           <input
             value={value.button_url}
             onChange={(e) => patch({ button_url: e.target.value })}
@@ -897,7 +906,7 @@ function AboutUsWidgetForm({
       </div>
 
       <label className="mt-2 block text-xs text-fg-t7">
-        Description
+        {t("admin.widget_form.description")}
         <textarea
           value={value.description}
           onChange={(e) => patch({ description: e.target.value })}
@@ -908,7 +917,7 @@ function AboutUsWidgetForm({
 
       <div className="mt-3 rounded border border-default bg-white p-3">
         <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold text-fg-t11">Tabs</p>
+          <p className="text-xs font-semibold text-fg-t11">{t("admin.widget_form.tabs")}</p>
           <button
             type="button"
             onClick={addTab}
@@ -920,12 +929,12 @@ function AboutUsWidgetForm({
 
         <div className="mt-2 space-y-2">
           {value.tabs.length === 0 ? (
-            <p className="text-xs text-fg-t6">No tabs yet.</p>
+            <p className="text-xs text-fg-t6">{t("admin.widget_form.no_tabs")}</p>
           ) : (
             value.tabs.map((tab, index) => (
               <div key={`about-tab-${index}`} className="rounded border border-default p-2">
                 <div className="mb-2 flex items-center justify-between">
-                  <p className="text-xs font-medium text-fg-t7">Tab #{index + 1}</p>
+                  <p className="text-xs font-medium text-fg-t7">{`${t("admin.widget_form.tab")} #${index + 1}`}</p>
                   <button
                     type="button"
                     onClick={() => removeTab(index)}
@@ -936,7 +945,7 @@ function AboutUsWidgetForm({
                 </div>
                 <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                   <label className="text-xs text-fg-t7">
-                    Tab Name
+                    {t("admin.widget_form.tab_name")}
                     <input
                       value={tab.tab_name}
                       onChange={(e) => updateTab(index, { tab_name: e.target.value })}
@@ -944,7 +953,7 @@ function AboutUsWidgetForm({
                     />
                   </label>
                   <label className="text-xs text-fg-t7">
-                    Tab Icon
+                    {t("admin.widget_form.tab_icon")}
                     <input
                       value={tab.tab_icon}
                       onChange={(e) => updateTab(index, { tab_icon: e.target.value })}
@@ -953,7 +962,7 @@ function AboutUsWidgetForm({
                   </label>
                 </div>
                 <label className="mt-2 block text-xs text-fg-t7">
-                  Tab Description
+                  {t("admin.widget_form.tab_description")}
                   <textarea
                     value={tab.tab_description}
                     onChange={(e) =>
@@ -976,7 +985,7 @@ function AboutUsWidgetForm({
           onClick={() => void onSave()}
           className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
         >
-          {saving ? "Saving..." : "Save Widget"}
+          {saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}
         </button>
       </div>
     </div>
@@ -996,6 +1005,7 @@ function FeaturesWidgetForm({
   onItemsChange: (items: FeatureItem[]) => void;
   onSave: () => Promise<void>;
 }) {
+  const { t } = useLanguage();
   function updateItem(index: number, patch: Partial<FeatureItem>) {
     onItemsChange(items.map((item, i) => (i === index ? { ...item, ...patch } : item)));
   }
@@ -1011,24 +1021,24 @@ function FeaturesWidgetForm({
         {items.map((item, index) => (
           <div key={`feature-${index}`} className="rounded border border-default bg-white p-2">
             <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-              <label className="text-xs text-fg-t7">Icon
+              <label className="text-xs text-fg-t7">{t("admin.widget_form.icon")}
                 <input value={item.icon} onChange={(e) => updateItem(index, { icon: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
               </label>
-              <label className="text-xs text-fg-t7">Title
+              <label className="text-xs text-fg-t7">{t("admin.widget_form.title")}
                 <input value={item.title} onChange={(e) => updateItem(index, { title: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
               </label>
             </div>
-            <label className="mt-2 block text-xs text-fg-t7">Description
+            <label className="mt-2 block text-xs text-fg-t7">{t("admin.widget_form.description")}
               <textarea value={item.description} onChange={(e) => updateItem(index, { description: e.target.value })} rows={3} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
             </label>
             <div className="mt-2 flex justify-end">
-              <button type="button" onClick={() => onItemsChange(items.filter((_, i) => i !== index))} className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-error-700">Remove</button>
+              <button type="button" onClick={() => onItemsChange(items.filter((_, i) => i !== index))} className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-error-700">{t("admin.widget_form.remove")}</button>
             </div>
           </div>
         ))}
       </div>
       <div className="mt-3 flex justify-end">
-        <button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? "Saving..." : "Save Widget"}</button>
+        <button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button>
       </div>
     </div>
   );
@@ -1045,36 +1055,37 @@ function FunFactsWidgetForm({
   onItemsChange: (items: FunFactItem[]) => void;
   onSave: () => Promise<void>;
 }) {
+  const { t } = useLanguage();
   function updateItem(index: number, patch: Partial<FunFactItem>) {
     onItemsChange(items.map((item, i) => (i === index ? { ...item, ...patch } : item)));
   }
   return (
     <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-fg-t7">Fun Facts</p>
-        <button type="button" onClick={() => onItemsChange([...items, { ...DEFAULT_FUN_FACT_ITEM }])} className="rounded border border-default bg-white px-2.5 py-1 text-xs">Add</button>
+        <p className="text-xs font-medium text-fg-t7">{t("admin.widget_form.fun_facts")}</p>
+        <button type="button" onClick={() => onItemsChange([...items, { ...DEFAULT_FUN_FACT_ITEM }])} className="rounded border border-default bg-white px-2.5 py-1 text-xs">{t("common.add")}</button>
       </div>
       <div className="mt-2 space-y-2">
         {items.map((item, index) => (
           <div key={`fun-${index}`} className="rounded border border-default bg-white p-2">
             <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-              <label className="text-xs text-fg-t7">Icon
+              <label className="text-xs text-fg-t7">{t("admin.widget_form.icon")}
                 <input value={item.icon} onChange={(e) => updateItem(index, { icon: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
               </label>
-              <label className="text-xs text-fg-t7">Number
+              <label className="text-xs text-fg-t7">{t("admin.widget_form.number")}
                 <input value={item.number} onChange={(e) => updateItem(index, { number: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
               </label>
-              <label className="text-xs text-fg-t7">Label
+              <label className="text-xs text-fg-t7">{t("admin.widget_form.label")}
                 <input value={item.label} onChange={(e) => updateItem(index, { label: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
               </label>
             </div>
             <div className="mt-2 flex justify-end">
-              <button type="button" onClick={() => onItemsChange(items.filter((_, i) => i !== index))} className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-error-700">Remove</button>
+              <button type="button" onClick={() => onItemsChange(items.filter((_, i) => i !== index))} className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-error-700">{t("admin.widget_form.remove")}</button>
             </div>
           </div>
         ))}
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? "Saving..." : "Save Widget"}</button></div>
+      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1090,29 +1101,30 @@ function FaqWidgetForm({
   onItemsChange: (items: FaqItem[]) => void;
   onSave: () => Promise<void>;
 }) {
+  const { t } = useLanguage();
   function updateItem(index: number, patch: Partial<FaqItem>) {
     onItemsChange(items.map((item, i) => (i === index ? { ...item, ...patch } : item)));
   }
   return (
     <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-fg-t7">FAQ</p>
-        <button type="button" onClick={() => onItemsChange([...items, { ...DEFAULT_FAQ_ITEM }])} className="rounded border border-default bg-white px-2.5 py-1 text-xs">Add</button>
+        <p className="text-xs font-medium text-fg-t7">{t("admin.widget_form.faq")}</p>
+        <button type="button" onClick={() => onItemsChange([...items, { ...DEFAULT_FAQ_ITEM }])} className="rounded border border-default bg-white px-2.5 py-1 text-xs">{t("common.add")}</button>
       </div>
       <div className="mt-2 space-y-2">
         {items.map((item, index) => (
           <div key={`faq-${index}`} className="rounded border border-default bg-white p-2">
-            <label className="block text-xs text-fg-t7">Question
+            <label className="block text-xs text-fg-t7">{t("admin.widget_form.question")}
               <input value={item.question} onChange={(e) => updateItem(index, { question: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
             </label>
-            <label className="mt-2 block text-xs text-fg-t7">Answer
+            <label className="mt-2 block text-xs text-fg-t7">{t("admin.widget_form.answer")}
               <textarea value={item.answer} onChange={(e) => updateItem(index, { answer: e.target.value })} rows={3} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
             </label>
-            <div className="mt-2 flex justify-end"><button type="button" onClick={() => onItemsChange(items.filter((_, i) => i !== index))} className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-error-700">Remove</button></div>
+            <div className="mt-2 flex justify-end"><button type="button" onClick={() => onItemsChange(items.filter((_, i) => i !== index))} className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-error-700">{t("admin.widget_form.remove")}</button></div>
           </div>
         ))}
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? "Saving..." : "Save Widget"}</button></div>
+      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1129,6 +1141,7 @@ function TestimonialsWidgetForm({
   onSave: () => Promise<void>;
 }) {
   const { token } = useAdminAuth();
+  const { t } = useLanguage();
   const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
 
   function updateItem(index: number, patch: Partial<TestimonialItem>) {
@@ -1149,36 +1162,36 @@ function TestimonialsWidgetForm({
   return (
     <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-fg-t7">Testimonials</p>
-        <button type="button" onClick={() => onItemsChange([...items, { ...DEFAULT_TESTIMONIAL_ITEM }])} className="rounded border border-default bg-white px-2.5 py-1 text-xs">Add</button>
+        <p className="text-xs font-medium text-fg-t7">{t("admin.widget_form.testimonials")}</p>
+        <button type="button" onClick={() => onItemsChange([...items, { ...DEFAULT_TESTIMONIAL_ITEM }])} className="rounded border border-default bg-white px-2.5 py-1 text-xs">{t("common.add")}</button>
       </div>
       <div className="mt-2 space-y-2">
         {items.map((item, index) => (
           <div key={`testimonial-${index}`} className="rounded border border-default bg-white p-2">
             <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-              <label className="text-xs text-fg-t7">Author Name
+              <label className="text-xs text-fg-t7">{t("admin.widget_form.author_name")}
                 <input value={item.author_name} onChange={(e) => updateItem(index, { author_name: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
               </label>
-              <label className="text-xs text-fg-t7">Date
-                <input value={item.date} onChange={(e) => updateItem(index, { date: e.target.value })} placeholder="2026-04-15" className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+              <label className="text-xs text-fg-t7">{t("admin.widget_form.date")}
+                <input value={item.date} onChange={(e) => updateItem(index, { date: e.target.value })} placeholder={t("admin.widget_form.date_placeholder")} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
               </label>
-              <label className="text-xs text-fg-t7">Rating (1-5)
+              <label className="text-xs text-fg-t7">{t("admin.widget_form.rating")}
                 <input type="number" min={1} max={5} value={item.rating} onChange={(e) => updateItem(index, { rating: normalizeRating(e.target.value) })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
               </label>
-              <label className="text-xs text-fg-t7">Profile Image
+              <label className="text-xs text-fg-t7">{t("admin.widget_form.profile_image")}
                 <input type="file" accept="image/jpeg,image/png,image/jpg,image/webp,image/gif,image/svg+xml" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; void uploadProfileImage(index, file); e.currentTarget.value = ""; }} className="mt-1 block w-full text-xs" />
-                {uploadingIndex === index ? <span className="mt-1 block text-xs text-fg-t6">Uploading...</span> : null}
-                {item.profile_image ? <span className="mt-1 block text-[11px] text-fg-t6">Saved file: {item.profile_image}</span> : null}
+                {uploadingIndex === index ? <span className="mt-1 block text-xs text-fg-t6">{t("admin.widget_form.uploading")}</span> : null}
+                {item.profile_image ? <span className="mt-1 block text-[11px] text-fg-t6">{t("admin.widget_form.saved_file")}: {item.profile_image}</span> : null}
               </label>
             </div>
-            <label className="mt-2 block text-xs text-fg-t7">Review Text
+            <label className="mt-2 block text-xs text-fg-t7">{t("admin.widget_form.review_text")}
               <textarea value={item.review_text} onChange={(e) => updateItem(index, { review_text: e.target.value })} rows={3} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
             </label>
-            <div className="mt-2 flex justify-end"><button type="button" onClick={() => onItemsChange(items.filter((_, i) => i !== index))} className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-error-700">Remove</button></div>
+            <div className="mt-2 flex justify-end"><button type="button" onClick={() => onItemsChange(items.filter((_, i) => i !== index))} className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-error-700">{t("admin.widget_form.remove")}</button></div>
           </div>
         ))}
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? "Saving..." : "Save Widget"}</button></div>
+      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1194,20 +1207,21 @@ function LatestOffersWidgetForm({
   onChange: (next: LatestContent) => void;
   onSave: () => Promise<void>;
 }) {
+  const { t } = useLanguage();
   return (
     <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
       <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-        <label className="text-xs text-fg-t7">Widget Title
+        <label className="text-xs text-fg-t7">{t("admin.widget_form.widget_title")}
           <input value={value.widget_title} onChange={(e) => onChange({ ...value, widget_title: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
         </label>
-        <label className="text-xs text-fg-t7">Show Count
+        <label className="text-xs text-fg-t7">{t("admin.widget_form.show_count")}
           <input type="number" min={1} value={value.show_count} onChange={(e) => onChange({ ...value, show_count: Math.max(1, normalizeCount(e.target.value)) })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
         </label>
-        <label className="text-xs text-fg-t7">Filter by Category
+        <label className="text-xs text-fg-t7">{t("admin.widget_form.filter_by_category")}
           <input value={value.category_filter} onChange={(e) => onChange({ ...value, category_filter: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
         </label>
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? "Saving..." : "Save Widget"}</button></div>
+      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1223,47 +1237,48 @@ function ContactUsWidgetForm({
   onChange: (next: ContactUsContent) => void;
   onSave: () => Promise<void>;
 }) {
+  const { t } = useLanguage();
   function patch(p: Partial<ContactUsContent>) {
     onChange({ ...value, ...p });
   }
   return (
     <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-        <label className="text-xs text-fg-t7">Widget Title
+        <label className="text-xs text-fg-t7">{t("admin.widget_form.widget_title")}
           <input value={value.widget_title} onChange={(e) => patch({ widget_title: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
         </label>
-        <label className="text-xs text-fg-t7">Map Embed URL
+        <label className="text-xs text-fg-t7">{t("admin.widget_form.map_embed_url")}
           <input value={value.map_embed_url} onChange={(e) => patch({ map_embed_url: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
         </label>
       </div>
-      <label className="mt-2 block text-xs text-fg-t7">Address
+      <label className="mt-2 block text-xs text-fg-t7">{t("admin.widget_form.address")}
         <textarea value={value.address} onChange={(e) => patch({ address: e.target.value })} rows={2} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
       </label>
       <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
         <div className="rounded border border-default bg-white p-2">
-          <div className="flex items-center justify-between"><p className="text-xs font-semibold">Phones</p><button type="button" onClick={() => patch({ phones: [...value.phones, ""] })} className="rounded border border-default bg-white px-2 py-1 text-xs">Add</button></div>
+          <div className="flex items-center justify-between"><p className="text-xs font-semibold">{t("admin.widget_form.phones")}</p><button type="button" onClick={() => patch({ phones: [...value.phones, ""] })} className="rounded border border-default bg-white px-2 py-1 text-xs">{t("common.add")}</button></div>
           <div className="mt-2 space-y-2">
             {value.phones.map((phone, idx) => (
               <div key={`phone-${idx}`} className="flex items-center gap-2">
                 <input value={phone} onChange={(e) => patch({ phones: value.phones.map((p, i) => i === idx ? e.target.value : p) })} className="w-full rounded border border-default px-2 py-1.5 text-sm" />
-                <button type="button" onClick={() => patch({ phones: value.phones.filter((_, i) => i !== idx) })} className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-error-700">Remove</button>
+                <button type="button" onClick={() => patch({ phones: value.phones.filter((_, i) => i !== idx) })} className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-error-700">{t("admin.widget_form.remove")}</button>
               </div>
             ))}
           </div>
         </div>
         <div className="rounded border border-default bg-white p-2">
-          <div className="flex items-center justify-between"><p className="text-xs font-semibold">Emails</p><button type="button" onClick={() => patch({ emails: [...value.emails, ""] })} className="rounded border border-default bg-white px-2 py-1 text-xs">Add</button></div>
+          <div className="flex items-center justify-between"><p className="text-xs font-semibold">{t("admin.widget_form.emails")}</p><button type="button" onClick={() => patch({ emails: [...value.emails, ""] })} className="rounded border border-default bg-white px-2 py-1 text-xs">{t("common.add")}</button></div>
           <div className="mt-2 space-y-2">
             {value.emails.map((email, idx) => (
               <div key={`email-${idx}`} className="flex items-center gap-2">
                 <input value={email} onChange={(e) => patch({ emails: value.emails.map((m, i) => i === idx ? e.target.value : m) })} className="w-full rounded border border-default px-2 py-1.5 text-sm" />
-                <button type="button" onClick={() => patch({ emails: value.emails.filter((_, i) => i !== idx) })} className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-error-700">Remove</button>
+                <button type="button" onClick={() => patch({ emails: value.emails.filter((_, i) => i !== idx) })} className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-error-700">{t("admin.widget_form.remove")}</button>
               </div>
             ))}
           </div>
         </div>
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? "Saving..." : "Save Widget"}</button></div>
+      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1280,6 +1295,7 @@ function CtaWidgetForm({
   onSave: () => Promise<void>;
 }) {
   const { token } = useAdminAuth();
+  const { t } = useLanguage();
   const [uploading, setUploading] = useState(false);
   async function uploadBackground(file: File) {
     if (!token) return;
@@ -1294,25 +1310,25 @@ function CtaWidgetForm({
   return (
     <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-        <label className="text-xs text-fg-t7">Title
+        <label className="text-xs text-fg-t7">{t("admin.widget_form.title")}
           <input value={value.title} onChange={(e) => onChange({ ...value, title: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
         </label>
-        <label className="text-xs text-fg-t7">Subtitle
+        <label className="text-xs text-fg-t7">{t("admin.widget_form.subtitle")}
           <input value={value.subtitle} onChange={(e) => onChange({ ...value, subtitle: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
         </label>
-        <label className="text-xs text-fg-t7">Button Text
+        <label className="text-xs text-fg-t7">{t("admin.widget_form.button_text")}
           <input value={value.button_text} onChange={(e) => onChange({ ...value, button_text: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
         </label>
-        <label className="text-xs text-fg-t7">Button URL
+        <label className="text-xs text-fg-t7">{t("admin.widget_form.button_url")}
           <input value={value.button_url} onChange={(e) => onChange({ ...value, button_url: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
         </label>
-        <label className="text-xs text-fg-t7">Background Image
+        <label className="text-xs text-fg-t7">{t("admin.widget_form.background_image")}
           <input type="file" accept="image/jpeg,image/png,image/jpg,image/webp,image/gif,image/svg+xml" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; void uploadBackground(file); e.currentTarget.value = ""; }} className="mt-1 block w-full text-xs" />
-          {uploading ? <span className="mt-1 block text-xs text-fg-t6">Uploading...</span> : null}
-          {value.background_image ? <span className="mt-1 block text-[11px] text-fg-t6">Saved file: {value.background_image}</span> : null}
+          {uploading ? <span className="mt-1 block text-xs text-fg-t6">{t("admin.widget_form.uploading")}</span> : null}
+          {value.background_image ? <span className="mt-1 block text-[11px] text-fg-t6">{t("admin.widget_form.saved_file")}: {value.background_image}</span> : null}
         </label>
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? "Saving..." : "Save Widget"}</button></div>
+      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1329,6 +1345,7 @@ function HomeHeroWidgetForm({
   onSave: () => Promise<void>;
 }) {
   const { token } = useAdminAuth();
+  const { t } = useLanguage();
   const [uploading, setUploading] = useState(false);
   const [uploadErr, setUploadErr] = useState<string | null>(null);
 
@@ -1348,26 +1365,26 @@ function HomeHeroWidgetForm({
   return (
     <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-        <label className="text-xs text-fg-t7">Headline
+        <label className="text-xs text-fg-t7">{t("admin.widget_form.headline")}
           <input value={value.headline} onChange={(e) => onChange({ ...value, headline: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
         </label>
-        <label className="text-xs text-fg-t7">Subheadline
+        <label className="text-xs text-fg-t7">{t("admin.widget_form.subheadline")}
           <input value={value.subheadline} onChange={(e) => onChange({ ...value, subheadline: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
         </label>
-        <label className="text-xs text-fg-t7">Button Text
+        <label className="text-xs text-fg-t7">{t("admin.widget_form.button_text")}
           <input value={value.button_text} onChange={(e) => onChange({ ...value, button_text: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
         </label>
-        <label className="text-xs text-fg-t7">Button URL
+        <label className="text-xs text-fg-t7">{t("admin.widget_form.button_url")}
           <input value={value.button_url} onChange={(e) => onChange({ ...value, button_url: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
         </label>
-        <label className="text-xs text-fg-t7">Background Image
+        <label className="text-xs text-fg-t7">{t("admin.widget_form.background_image")}
           <input type="file" accept="image/jpeg,image/png,image/jpg,image/webp,image/gif,image/svg+xml" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; void uploadBackground(file); e.currentTarget.value = ""; }} className="mt-1 block w-full text-xs" />
-          {uploading ? <span className="mt-1 block text-xs text-fg-t6">Uploading...</span> : null}
-          {value.background_image ? <span className="mt-1 block text-[11px] text-fg-t6">Saved file: {value.background_image}</span> : null}
+          {uploading ? <span className="mt-1 block text-xs text-fg-t6">{t("admin.widget_form.uploading")}</span> : null}
+          {value.background_image ? <span className="mt-1 block text-[11px] text-fg-t6">{t("admin.widget_form.saved_file")}: {value.background_image}</span> : null}
           {uploadErr ? <span className="mt-1 block text-xs text-error-600">{uploadErr}</span> : null}
         </label>
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? "Saving..." : "Save Widget"}</button></div>
+      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1384,6 +1401,7 @@ function HomeSpecialOffersWidgetForm({
   onSave: () => Promise<void>;
 }) {
   const { token } = useAdminAuth();
+  const { t } = useLanguage();
   const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
   const [uploadErr, setUploadErr] = useState<string | null>(null);
   function updateItem(index: number, patch: Partial<HomeSpecialOfferItem>) {
@@ -1406,42 +1424,42 @@ function HomeSpecialOffersWidgetForm({
   return (
     <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-        <label className="text-xs text-fg-t7">Section Title
+        <label className="text-xs text-fg-t7">{t("admin.widget_form.section_title")}
           <input value={value.section_title} onChange={(e) => onChange({ ...value, section_title: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
         </label>
-        <label className="text-xs text-fg-t7">Section Subtitle
+        <label className="text-xs text-fg-t7">{t("admin.widget_form.section_subtitle")}
           <input value={value.section_subtitle} onChange={(e) => onChange({ ...value, section_subtitle: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
         </label>
       </div>
       <div className="mt-3 flex items-center justify-between">
-        <p className="text-xs font-medium text-fg-t7">Offers</p>
-        <button type="button" onClick={() => onChange({ ...value, items: [...value.items, { ...DEFAULT_HOME_SPECIAL_OFFER_ITEM }] })} className="rounded border border-default bg-white px-2.5 py-1 text-xs">Add</button>
+        <p className="text-xs font-medium text-fg-t7">{t("admin.widget_form.offers")}</p>
+        <button type="button" onClick={() => onChange({ ...value, items: [...value.items, { ...DEFAULT_HOME_SPECIAL_OFFER_ITEM }] })} className="rounded border border-default bg-white px-2.5 py-1 text-xs">{t("common.add")}</button>
       </div>
       <div className="mt-2 space-y-2">
         {uploadErr ? <p className="text-xs text-error-600">{uploadErr}</p> : null}
         {value.items.map((item, index) => (
           <div key={`home-special-${index}`} className="rounded border border-default bg-white p-2">
             <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-              <label className="text-xs text-fg-t7">Title
+              <label className="text-xs text-fg-t7">{t("admin.widget_form.title")}
                 <input value={item.title} onChange={(e) => updateItem(index, { title: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
               </label>
-              <label className="text-xs text-fg-t7">Price
+              <label className="text-xs text-fg-t7">{t("admin.widget_form.price")}
                 <input value={item.price} onChange={(e) => updateItem(index, { price: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
               </label>
-              <label className="text-xs text-fg-t7">Link
+              <label className="text-xs text-fg-t7">{t("admin.widget_form.link")}
                 <input value={item.link} onChange={(e) => updateItem(index, { link: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
               </label>
-              <label className="text-xs text-fg-t7">Image
+              <label className="text-xs text-fg-t7">{t("admin.widget_form.image")}
                 <input type="file" accept="image/jpeg,image/png,image/jpg,image/webp,image/gif,image/svg+xml" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; void uploadItemImage(index, file); e.currentTarget.value = ""; }} className="mt-1 block w-full text-xs" />
-                {uploadingIndex === index ? <span className="mt-1 block text-xs text-fg-t6">Uploading...</span> : null}
-                {item.image ? <span className="mt-1 block text-[11px] text-fg-t6">Saved file: {item.image}</span> : null}
+                {uploadingIndex === index ? <span className="mt-1 block text-xs text-fg-t6">{t("admin.widget_form.uploading")}</span> : null}
+                {item.image ? <span className="mt-1 block text-[11px] text-fg-t6">{t("admin.widget_form.saved_file")}: {item.image}</span> : null}
               </label>
             </div>
-            <div className="mt-2 flex justify-end"><button type="button" onClick={() => onChange({ ...value, items: value.items.filter((_, i) => i !== index) })} className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-error-700">Remove</button></div>
+            <div className="mt-2 flex justify-end"><button type="button" onClick={() => onChange({ ...value, items: value.items.filter((_, i) => i !== index) })} className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-error-700">{t("admin.widget_form.remove")}</button></div>
           </div>
         ))}
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? "Saving..." : "Save Widget"}</button></div>
+      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1458,6 +1476,7 @@ function HomePopularDestinationsWidgetForm({
   onSave: () => Promise<void>;
 }) {
   const { token } = useAdminAuth();
+  const { t } = useLanguage();
   const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
   const [uploadErr, setUploadErr] = useState<string | null>(null);
   function updateItem(index: number, patch: Partial<HomePopularDestinationItem>) {
@@ -1479,38 +1498,38 @@ function HomePopularDestinationsWidgetForm({
 
   return (
     <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
-      <label className="text-xs text-fg-t7">Section Title
+      <label className="text-xs text-fg-t7">{t("admin.widget_form.section_title")}
         <input value={value.section_title} onChange={(e) => onChange({ ...value, section_title: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
       </label>
       <div className="mt-3 flex items-center justify-between">
-        <p className="text-xs font-medium text-fg-t7">Destinations</p>
-        <button type="button" onClick={() => onChange({ ...value, items: [...value.items, { ...DEFAULT_HOME_POPULAR_DESTINATION_ITEM }] })} className="rounded border border-default bg-white px-2.5 py-1 text-xs">Add</button>
+        <p className="text-xs font-medium text-fg-t7">{t("admin.widget_form.destinations")}</p>
+        <button type="button" onClick={() => onChange({ ...value, items: [...value.items, { ...DEFAULT_HOME_POPULAR_DESTINATION_ITEM }] })} className="rounded border border-default bg-white px-2.5 py-1 text-xs">{t("common.add")}</button>
       </div>
       <div className="mt-2 space-y-2">
         {uploadErr ? <p className="text-xs text-error-600">{uploadErr}</p> : null}
         {value.items.map((item, index) => (
           <div key={`home-destination-${index}`} className="rounded border border-default bg-white p-2">
             <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-              <label className="text-xs text-fg-t7">Title
+              <label className="text-xs text-fg-t7">{t("admin.widget_form.title")}
                 <input value={item.title} onChange={(e) => updateItem(index, { title: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
               </label>
-              <label className="text-xs text-fg-t7">Label
+              <label className="text-xs text-fg-t7">{t("admin.widget_form.label")}
                 <input value={item.label} onChange={(e) => updateItem(index, { label: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
               </label>
-              <label className="text-xs text-fg-t7">Link
+              <label className="text-xs text-fg-t7">{t("admin.widget_form.link")}
                 <input value={item.link} onChange={(e) => updateItem(index, { link: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
               </label>
-              <label className="text-xs text-fg-t7">Image
+              <label className="text-xs text-fg-t7">{t("admin.widget_form.image")}
                 <input type="file" accept="image/jpeg,image/png,image/jpg,image/webp,image/gif,image/svg+xml" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; void uploadItemImage(index, file); e.currentTarget.value = ""; }} className="mt-1 block w-full text-xs" />
-                {uploadingIndex === index ? <span className="mt-1 block text-xs text-fg-t6">Uploading...</span> : null}
-                {item.image ? <span className="mt-1 block text-[11px] text-fg-t6">Saved file: {item.image}</span> : null}
+                {uploadingIndex === index ? <span className="mt-1 block text-xs text-fg-t6">{t("admin.widget_form.uploading")}</span> : null}
+                {item.image ? <span className="mt-1 block text-[11px] text-fg-t6">{t("admin.widget_form.saved_file")}: {item.image}</span> : null}
               </label>
             </div>
-            <div className="mt-2 flex justify-end"><button type="button" onClick={() => onChange({ ...value, items: value.items.filter((_, i) => i !== index) })} className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-error-700">Remove</button></div>
+            <div className="mt-2 flex justify-end"><button type="button" onClick={() => onChange({ ...value, items: value.items.filter((_, i) => i !== index) })} className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-error-700">{t("admin.widget_form.remove")}</button></div>
           </div>
         ))}
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? "Saving..." : "Save Widget"}</button></div>
+      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1527,6 +1546,7 @@ function HomePartnersWidgetForm({
   onSave: () => Promise<void>;
 }) {
   const { token } = useAdminAuth();
+  const { t } = useLanguage();
   const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
   const [uploadErr, setUploadErr] = useState<string | null>(null);
   function updateItem(index: number, patch: Partial<HomePartnerItem>) {
@@ -1549,31 +1569,31 @@ function HomePartnersWidgetForm({
   return (
     <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-fg-t7">Partners</p>
-        <button type="button" onClick={() => onChange({ ...value, items: [...value.items, { ...DEFAULT_HOME_PARTNER_ITEM }] })} className="rounded border border-default bg-white px-2.5 py-1 text-xs">Add</button>
+        <p className="text-xs font-medium text-fg-t7">{t("admin.widget_form.partners")}</p>
+        <button type="button" onClick={() => onChange({ ...value, items: [...value.items, { ...DEFAULT_HOME_PARTNER_ITEM }] })} className="rounded border border-default bg-white px-2.5 py-1 text-xs">{t("common.add")}</button>
       </div>
       <div className="mt-2 space-y-2">
         {uploadErr ? <p className="text-xs text-error-600">{uploadErr}</p> : null}
         {value.items.map((item, index) => (
           <div key={`home-partner-${index}`} className="rounded border border-default bg-white p-2">
             <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-              <label className="text-xs text-fg-t7">Partner Name
+              <label className="text-xs text-fg-t7">{t("admin.widget_form.partner_name")}
                 <input value={item.partner_name} onChange={(e) => updateItem(index, { partner_name: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
               </label>
-              <label className="text-xs text-fg-t7">Link
+              <label className="text-xs text-fg-t7">{t("admin.widget_form.link")}
                 <input value={item.link} onChange={(e) => updateItem(index, { link: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
               </label>
-              <label className="text-xs text-fg-t7 md:col-span-2">Logo Image
+              <label className="text-xs text-fg-t7 md:col-span-2">{t("admin.widget_form.logo_image")}
                 <input type="file" accept="image/jpeg,image/png,image/jpg,image/webp,image/gif,image/svg+xml" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; void uploadLogo(index, file); e.currentTarget.value = ""; }} className="mt-1 block w-full text-xs" />
-                {uploadingIndex === index ? <span className="mt-1 block text-xs text-fg-t6">Uploading...</span> : null}
-                {item.logo_image ? <span className="mt-1 block text-[11px] text-fg-t6">Saved file: {item.logo_image}</span> : null}
+                {uploadingIndex === index ? <span className="mt-1 block text-xs text-fg-t6">{t("admin.widget_form.uploading")}</span> : null}
+                {item.logo_image ? <span className="mt-1 block text-[11px] text-fg-t6">{t("admin.widget_form.saved_file")}: {item.logo_image}</span> : null}
               </label>
             </div>
-            <div className="mt-2 flex justify-end"><button type="button" onClick={() => onChange({ ...value, items: value.items.filter((_, i) => i !== index) })} className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-error-700">Remove</button></div>
+            <div className="mt-2 flex justify-end"><button type="button" onClick={() => onChange({ ...value, items: value.items.filter((_, i) => i !== index) })} className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-error-700">{t("admin.widget_form.remove")}</button></div>
           </div>
         ))}
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? "Saving..." : "Save Widget"}</button></div>
+      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1590,6 +1610,7 @@ function HomeNewsletterWidgetForm({
   onSave: () => Promise<void>;
 }) {
   const { token } = useAdminAuth();
+  const { t } = useLanguage();
   const [uploading, setUploading] = useState(false);
   const [uploadErr, setUploadErr] = useState<string | null>(null);
 
@@ -1609,29 +1630,30 @@ function HomeNewsletterWidgetForm({
   return (
     <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-        <label className="text-xs text-fg-t7">Title
+        <label className="text-xs text-fg-t7">{t("admin.widget_form.title")}
           <input value={value.title} onChange={(e) => onChange({ ...value, title: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
         </label>
-        <label className="text-xs text-fg-t7">Subtitle
+        <label className="text-xs text-fg-t7">{t("admin.widget_form.subtitle")}
           <input value={value.subtitle} onChange={(e) => onChange({ ...value, subtitle: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
         </label>
-        <label className="text-xs text-fg-t7">Button Text
+        <label className="text-xs text-fg-t7">{t("admin.widget_form.button_text")}
           <input value={value.button_text} onChange={(e) => onChange({ ...value, button_text: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
         </label>
-        <label className="text-xs text-fg-t7">Background Image
+        <label className="text-xs text-fg-t7">{t("admin.widget_form.background_image")}
           <input type="file" accept="image/jpeg,image/png,image/jpg,image/webp,image/gif,image/svg+xml" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; void uploadBackground(file); e.currentTarget.value = ""; }} className="mt-1 block w-full text-xs" />
-          {uploading ? <span className="mt-1 block text-xs text-fg-t6">Uploading...</span> : null}
-          {value.bg_image ? <span className="mt-1 block text-[11px] text-fg-t6">Saved file: {value.bg_image}</span> : null}
+          {uploading ? <span className="mt-1 block text-xs text-fg-t6">{t("admin.widget_form.uploading")}</span> : null}
+          {value.bg_image ? <span className="mt-1 block text-[11px] text-fg-t6">{t("admin.widget_form.saved_file")}: {value.bg_image}</span> : null}
           {uploadErr ? <span className="mt-1 block text-xs text-error-600">{uploadErr}</span> : null}
         </label>
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? "Saving..." : "Save Widget"}</button></div>
+      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
 
 export function WidgetForm({ widget, activeLanguage, saving = false, onSave }: Props) {
   void activeLanguage;
+  const { t } = useLanguage();
   const [textValue, setTextValue] = useState("");
   const [codeValue, setCodeValue] = useState("");
   const [sliderSlides, setSliderSlides] = useState<SlideItem[]>([]);
@@ -1801,13 +1823,13 @@ export function WidgetForm({ widget, activeLanguage, saving = false, onSave }: P
     try {
       const parsed = JSON.parse(rawJson);
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-        setErr("Widget content must be a JSON object.");
+        setErr(t("admin.widget_form.json_object_required"));
         return;
       }
       setErr(null);
       await onSave(parsed as Record<string, unknown>);
     } catch {
-      setErr("Invalid JSON format.");
+      setErr(t("admin.widget_form.invalid_json"));
     }
   }
 
@@ -1825,13 +1847,13 @@ export function WidgetForm({ widget, activeLanguage, saving = false, onSave }: P
   if (widget.widget_slug === "text-editor") {
     return (
       <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
-        <label className="block text-xs font-medium text-fg-t7">Text content</label>
+        <label className="block text-xs font-medium text-fg-t7">{t("admin.widget_form.text_content")}</label>
         <textarea
           value={textValue}
           onChange={(e) => setTextValue(e.target.value)}
           rows={7}
           className="mt-1 w-full rounded border border-default px-2 py-2 text-sm"
-          placeholder="Enter text content..."
+          placeholder={t("admin.widget_form.enter_text_content")}
         />
         <div className="mt-2 flex justify-end">
           <button
@@ -1840,7 +1862,7 @@ export function WidgetForm({ widget, activeLanguage, saving = false, onSave }: P
             onClick={() => void handleSaveTextEditor()}
             className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
           >
-            {saving ? "Saving..." : "Save Widget"}
+            {saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}
           </button>
         </div>
       </div>
@@ -1861,7 +1883,7 @@ export function WidgetForm({ widget, activeLanguage, saving = false, onSave }: P
   if (widget.widget_slug === "features" || widget.widget_slug === "why-choose-us") {
     return (
       <FeaturesWidgetForm
-        title={widget.widget_slug === "why-choose-us" ? "Why Choose Us" : "Features"}
+        title={widget.widget_slug === "why-choose-us" ? t("admin.widget_form.why_choose_us") : t("admin.widget_form.features")}
         items={featuresItems}
         saving={saving}
         onItemsChange={setFeaturesItems}
@@ -1998,7 +2020,7 @@ export function WidgetForm({ widget, activeLanguage, saving = false, onSave }: P
   if (widget.widget_slug === "code-editor") {
     return (
       <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
-        <label className="block text-xs font-medium text-fg-t7">HTML code</label>
+        <label className="block text-xs font-medium text-fg-t7">{t("admin.widget_form.html_code")}</label>
         <textarea
           value={codeValue}
           onChange={(e) => setCodeValue(e.target.value)}
@@ -2013,7 +2035,7 @@ export function WidgetForm({ widget, activeLanguage, saving = false, onSave }: P
             onClick={() => void handleSaveCodeEditor()}
             className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
           >
-            {saving ? "Saving..." : "Save Widget"}
+            {saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}
           </button>
         </div>
       </div>
@@ -2034,8 +2056,8 @@ export function WidgetForm({ widget, activeLanguage, saving = false, onSave }: P
   return (
     <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
       <p className="text-xs text-fg-t6">
-        No dedicated form yet for <span className="font-mono">{widget.widget_slug}</span>. Use raw
-        JSON editor.
+        {t("admin.widget_form.no_dedicated_form")} <span className="font-mono">{widget.widget_slug}</span>.{" "}
+        {t("admin.widget_form.use_raw_json_editor")}.
       </p>
       {err ? <p className="mt-2 text-xs text-error-600">{err}</p> : null}
       <textarea
@@ -2051,7 +2073,7 @@ export function WidgetForm({ widget, activeLanguage, saving = false, onSave }: P
           onClick={() => void handleSaveFallbackJson()}
           className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
         >
-          {saving ? "Saving..." : "Save Widget"}
+          {saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}
         </button>
       </div>
     </div>

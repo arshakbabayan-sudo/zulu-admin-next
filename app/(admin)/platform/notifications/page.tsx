@@ -5,6 +5,7 @@ import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 /**
  * Platform-admin notification oversight (Sprint 59, PART 23).
@@ -69,6 +70,7 @@ type Stats = {
 
 export default function PlatformNotificationsPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
 
   const [rows, setRows] = useState<NotificationRow[]>([]);
@@ -135,7 +137,7 @@ export default function PlatformNotificationsPage() {
           setRows(listJson.data ?? []);
           setMeta(listJson.meta ?? null);
         } else {
-          setError(listJson?.message ?? "Failed to load");
+          setError(listJson?.message ?? t("admin.platform_notifications.err_load"));
         }
         if (statsJson?.success) {
           setStats(statsJson.data);
@@ -145,7 +147,7 @@ export default function PlatformNotificationsPage() {
         if (e instanceof ApiRequestError && e.status === 403) {
           setForbidden(true);
         } else {
-          setError(e instanceof Error ? e.message : "Failed to load");
+          setError(e instanceof Error ? e.message : t("admin.platform_notifications.err_load"));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -155,7 +157,7 @@ export default function PlatformNotificationsPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, allowed, baseURL, page, appliedFilters]);
+  }, [token, allowed, baseURL, page, appliedFilters, t]);
 
   const applyFilters = () => {
     setPage(1);
@@ -177,7 +179,7 @@ export default function PlatformNotificationsPage() {
   if (!allowed || forbidden) {
     return (
       <div>
-        <h1 className="admin-page-title">Notifications</h1>
+        <h1 className="admin-page-title">{t("admin.platform_notifications.title")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -187,23 +189,23 @@ export default function PlatformNotificationsPage() {
 
   return (
     <div>
-      <h1 className="admin-page-title">Notifications</h1>
-      <p className="admin-page-subtitle">In-app notifications across all users.</p>
+      <h1 className="admin-page-title">{t("admin.platform_notifications.title")}</h1>
+      <p className="admin-page-subtitle">{t("admin.platform_notifications.subtitle")}</p>
 
       {error && <p className="mt-2 text-sm text-error-600">{error}</p>}
 
       {/* Stats */}
       {stats && (
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Total" value={stats.total.toLocaleString()} />
+          <StatCard label={t("admin.platform_notifications.total")} value={stats.total.toLocaleString()} />
           <StatCard
-            label="Unread"
+            label={t("admin.platform_notifications.unread")}
             value={stats.unread.toLocaleString()}
             tone={stats.unread > 0 ? "warn" : "neutral"}
           />
-          <StatCard label="Read" value={stats.read.toLocaleString()} tone="good" />
+          <StatCard label={t("admin.platform_notifications.read")} value={stats.read.toLocaleString()} tone="good" />
           <StatCard
-            label="Critical (lifetime)"
+            label={t("admin.platform_notifications.critical_lifetime")}
             value={String(stats.by_priority?.critical ?? 0)}
             tone={(stats.by_priority?.critical ?? 0) > 0 ? "warn" : "neutral"}
           />
@@ -214,7 +216,7 @@ export default function PlatformNotificationsPage() {
       {stats && Object.keys(stats.by_event_type ?? {}).length > 0 && (
         <div className="mt-4 rounded border border-default bg-white p-4">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-fg-t6">
-            Top events
+            {t("admin.platform_notifications.top_events")}
           </h3>
           <div className="mt-2 flex flex-wrap gap-2">
             {Object.entries(stats.by_event_type)
@@ -241,7 +243,7 @@ export default function PlatformNotificationsPage() {
       {/* Filters */}
       <div className="mt-6 grid gap-3 rounded border border-default bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
         <label className="text-xs text-fg-t6">
-          User ID
+          {t("admin.platform_notifications.user_id")}
           <input
             value={userId}
             onChange={(e) => setUserId(e.target.value)}
@@ -249,13 +251,13 @@ export default function PlatformNotificationsPage() {
           />
         </label>
         <label className="text-xs text-fg-t6">
-          Event type
+          {t("admin.platform_notifications.event_type")}
           <select
             value={eventType}
             onChange={(e) => setEventType(e.target.value)}
             className="mt-1 w-full rounded border border-default px-2 py-1 text-sm"
           >
-            <option value="">All</option>
+            <option value="">{t("common.all")}</option>
             {EVENT_TYPES.map((e) => (
               <option key={e} value={e}>
                 {e}
@@ -264,13 +266,13 @@ export default function PlatformNotificationsPage() {
           </select>
         </label>
         <label className="text-xs text-fg-t6">
-          Status
+          {t("admin.platform_notifications.status")}
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
             className="mt-1 w-full rounded border border-default px-2 py-1 text-sm"
           >
-            <option value="">All</option>
+            <option value="">{t("common.all")}</option>
             {STATUSES.map((s) => (
               <option key={s} value={s}>
                 {s}
@@ -279,13 +281,13 @@ export default function PlatformNotificationsPage() {
           </select>
         </label>
         <label className="text-xs text-fg-t6">
-          Priority
+          {t("admin.platform_notifications.priority")}
           <select
             value={priority}
             onChange={(e) => setPriority(e.target.value)}
             className="mt-1 w-full rounded border border-default px-2 py-1 text-sm"
           >
-            <option value="">All</option>
+            <option value="">{t("common.all")}</option>
             {PRIORITIES.map((p) => (
               <option key={p} value={p}>
                 {p}
@@ -294,7 +296,7 @@ export default function PlatformNotificationsPage() {
           </select>
         </label>
         <label className="text-xs text-fg-t6">
-          From
+          {t("admin.platform_notifications.from")}
           <input
             type="datetime-local"
             value={from}
@@ -303,7 +305,7 @@ export default function PlatformNotificationsPage() {
           />
         </label>
         <label className="text-xs text-fg-t6">
-          To
+          {t("admin.platform_notifications.to")}
           <input
             type="datetime-local"
             value={to}
@@ -312,11 +314,11 @@ export default function PlatformNotificationsPage() {
           />
         </label>
         <label className="text-xs text-fg-t6 sm:col-span-2">
-          Search
+          {t("common.search")}
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Title or message text"
+            placeholder={t("admin.platform_notifications.search_placeholder")}
             className="mt-1 w-full rounded border border-default px-2 py-1 text-sm"
           />
         </label>
@@ -326,14 +328,14 @@ export default function PlatformNotificationsPage() {
             onClick={resetFilters}
             className="rounded border border-default bg-white px-3 py-1.5 text-sm hover:bg-figma-bg-1"
           >
-            Reset
+            {t("common.reset")}
           </button>
           <button
             type="button"
             onClick={applyFilters}
             className="rounded bg-primary-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-600"
           >
-            Apply
+            {t("common.apply")}
           </button>
         </div>
       </div>
@@ -343,12 +345,12 @@ export default function PlatformNotificationsPage() {
         <table className="w-full min-w-[1000px] text-left text-sm">
           <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
-              <th className="px-3 py-2">When</th>
-              <th className="px-3 py-2">User</th>
-              <th className="px-3 py-2">Event</th>
-              <th className="px-3 py-2">Title</th>
-              <th className="px-3 py-2">Priority</th>
-              <th className="px-3 py-2">Status</th>
+              <th className="px-3 py-2">{t("admin.platform_notifications.when")}</th>
+              <th className="px-3 py-2">{t("admin.platform_notifications.user")}</th>
+              <th className="px-3 py-2">{t("admin.platform_notifications.event")}</th>
+              <th className="px-3 py-2">{t("admin.platform_notifications.col_title")}</th>
+              <th className="px-3 py-2">{t("admin.platform_notifications.priority")}</th>
+              <th className="px-3 py-2">{t("admin.platform_notifications.status")}</th>
               <th className="px-3 py-2"></th>
             </tr>
           </thead>
@@ -356,14 +358,14 @@ export default function PlatformNotificationsPage() {
             {loading && (
               <tr>
                 <td colSpan={7} className="px-3 py-6 text-center text-fg-t6">
-                  Loading…
+                  {t("admin.platform_notifications.loading")}
                 </td>
               </tr>
             )}
             {!loading && rows.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-3 py-6 text-center text-fg-t6">
-                  No notifications found.
+                  {t("admin.platform_notifications.empty")}
                 </td>
               </tr>
             )}
@@ -390,7 +392,7 @@ export default function PlatformNotificationsPage() {
                     onClick={() => setSelected(r)}
                     className="text-xs text-primary-500 hover:underline"
                   >
-                    View
+                    {t("admin.platform_notifications.view")}
                   </button>
                 </td>
               </tr>
@@ -403,7 +405,10 @@ export default function PlatformNotificationsPage() {
       {meta && meta.last_page > 1 && (
         <div className="mt-3 flex items-center justify-between text-sm">
           <span className="text-fg-t6">
-            Page {meta.current_page} of {meta.last_page} ({meta.total.toLocaleString()} entries)
+            {t("admin.platform_notifications.pagination")
+              .replace("{page}", String(meta.current_page))
+              .replace("{lastPage}", String(meta.last_page))
+              .replace("{total}", meta.total.toLocaleString())}
           </span>
           <div className="flex gap-2">
             <button
@@ -412,7 +417,7 @@ export default function PlatformNotificationsPage() {
               disabled={page <= 1}
               className="rounded border border-default bg-white px-3 py-1 disabled:opacity-50"
             >
-              Prev
+              {t("common.prev")}
             </button>
             <button
               type="button"
@@ -420,7 +425,7 @@ export default function PlatformNotificationsPage() {
               disabled={page >= meta.last_page}
               className="rounded border border-default bg-white px-3 py-1 disabled:opacity-50"
             >
-              Next
+              {t("common.next")}
             </button>
           </div>
         </div>
@@ -464,7 +469,7 @@ export default function PlatformNotificationsPage() {
 
             <dl className="mt-6 space-y-2 text-sm">
               <DetailRow
-                label="User"
+                label={t("admin.platform_notifications.user")}
                 value={
                   selected.user
                     ? `${selected.user.name} <${selected.user.email}>`
@@ -472,13 +477,13 @@ export default function PlatformNotificationsPage() {
                 }
               />
               <DetailRow
-                label="When"
+                label={t("admin.platform_notifications.when")}
                 value={new Date(selected.created_at).toLocaleString()}
               />
-              <DetailRow label="Type" value={selected.type} />
-              <DetailRow label="Event" value={selected.event_type ?? "—"} />
+              <DetailRow label={t("admin.platform_notifications.type")} value={selected.type} />
+              <DetailRow label={t("admin.platform_notifications.event")} value={selected.event_type ?? "—"} />
               <DetailRow
-                label="Subject"
+                label={t("admin.platform_notifications.subject")}
                 value={
                   selected.subject_type
                     ? `${selected.subject_type}${selected.subject_id ? " #" + selected.subject_id : ""}`
@@ -517,6 +522,7 @@ function StatCard({
 }
 
 function PriorityBadge({ priority }: { priority: string }) {
+  const { t } = useLanguage();
   const tone =
     priority === "critical"
       ? "bg-error-50 text-error-700"
@@ -527,19 +533,20 @@ function PriorityBadge({ priority }: { priority: string }) {
           : "bg-figma-bg-1 text-fg-t11";
   return (
     <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${tone}`}>
-      {priority}
+      {t(`admin.platform_notifications.priority_${priority}`)}
     </span>
   );
 }
 
 function StatusBadge({ status }: { status: string }) {
+  const { t } = useLanguage();
   const tone =
     status === "unread"
       ? "bg-warning-50 text-warning-700"
       : "bg-success-50 text-success-700";
   return (
     <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${tone}`}>
-      {status}
+      {t(`admin.platform_notifications.status_${status}`)}
     </span>
   );
 }

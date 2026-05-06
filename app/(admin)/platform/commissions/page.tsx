@@ -6,6 +6,7 @@ import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   apiCommissions, apiCommissionRecords, apiDeactivateCommission,
   type CommissionPolicyRow, type CommissionRecordRow,
@@ -16,6 +17,7 @@ type Tab = "policies" | "records";
 
 export default function CommissionsPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [tab, setTab] = useState<Tab>("policies");
 
@@ -39,9 +41,9 @@ export default function CommissionsPage() {
       setPolicies(res.data); setPoliciesMeta(res.meta);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else setErr(e instanceof ApiRequestError ? e.message : "Failed");
+      else setErr(e instanceof ApiRequestError ? e.message : t("admin.platform_commissions.err_failed"));
     }
-  }, [token, allowed, policiesPage]);
+  }, [token, allowed, policiesPage, t]);
 
   const loadRecords = useCallback(async () => {
     if (!token || !allowed) return;
@@ -51,23 +53,23 @@ export default function CommissionsPage() {
       setRecords(res.data); setRecordsMeta(res.meta);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else setErr(e instanceof ApiRequestError ? e.message : "Failed");
+      else setErr(e instanceof ApiRequestError ? e.message : t("admin.platform_commissions.err_failed"));
     }
-  }, [token, allowed, recordsPage]);
+  }, [token, allowed, recordsPage, t]);
 
   useEffect(() => { if (tab === "policies") loadPolicies(); }, [tab, loadPolicies]);
   useEffect(() => { if (tab === "records") loadRecords(); }, [tab, loadRecords]);
 
   async function handleDeactivate(id: number) {
-    if (!token || !window.confirm("Deactivate this commission policy?")) return;
+    if (!token || !window.confirm(t("admin.platform_commissions.confirm_deactivate"))) return;
     setBusyId(id);
     try { await apiDeactivateCommission(token, id); await loadPolicies(); }
-    catch (e) { alert(e instanceof ApiRequestError ? e.message : "Failed"); }
+    catch (e) { alert(e instanceof ApiRequestError ? e.message : t("admin.platform_commissions.err_failed")); }
     finally { setBusyId(null); }
   }
 
   if (!allowed || forbidden) return (
-    <div><h1 className="admin-page-title">Commissions</h1><div className="mt-4"><ForbiddenNotice /></div></div>
+    <div><h1 className="admin-page-title">{t("admin.platform_commissions.title")}</h1><div className="mt-4"><ForbiddenNotice /></div></div>
   );
 
   const tabCls = (t: Tab) =>
@@ -75,11 +77,11 @@ export default function CommissionsPage() {
 
   return (
     <div>
-      <h1 className="admin-page-title">Commissions</h1>
+      <h1 className="admin-page-title">{t("admin.platform_commissions.title")}</h1>
 
       <div className="mt-4 flex gap-0 border-b border-default">
-        <button type="button" className={tabCls("policies")} onClick={() => setTab("policies")}>Policies</button>
-        <button type="button" className={tabCls("records")} onClick={() => setTab("records")}>Records</button>
+        <button type="button" className={tabCls("policies")} onClick={() => setTab("policies")}>{t("admin.platform_commissions.policies")}</button>
+        <button type="button" className={tabCls("records")} onClick={() => setTab("records")}>{t("admin.platform_commissions.records")}</button>
       </div>
 
       {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
@@ -90,18 +92,18 @@ export default function CommissionsPage() {
             <table className="w-full min-w-[700px] text-left text-sm">
               <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
                 <tr>
-                  <th className="px-3 py-2">ID</th>
-                  <th className="px-3 py-2">Name</th>
-                  <th className="px-3 py-2">Type</th>
-                  <th className="px-3 py-2">Rate</th>
-                  <th className="px-3 py-2">Service</th>
-                  <th className="px-3 py-2">Status</th>
-                  <th className="px-3 py-2">Actions</th>
+                  <th className="px-3 py-2">{t("admin.crud.common.id")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_commissions.name")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_commissions.type")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_commissions.rate")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_commissions.service")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_commissions.status")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_commissions.actions")}</th>
                 </tr>
               </thead>
               <tbody>
                 {policies.length === 0 && (
-                  <tr><td colSpan={7} className="px-3 py-6 text-center text-fg-t6">No policies found</td></tr>
+                  <tr><td colSpan={7} className="px-3 py-6 text-center text-fg-t6">{t("admin.platform_commissions.no_policies")}</td></tr>
                 )}
                 {policies.map((r) => (
                   <tr key={r.id} className="border-b border-default hover:bg-figma-bg-1">
@@ -109,7 +111,7 @@ export default function CommissionsPage() {
                     <td className="px-3 py-2">{r.name ?? "-"}</td>
                     <td className="px-3 py-2">{r.type}</td>
                     <td className="px-3 py-2 tabular-nums">{r.rate}%</td>
-                    <td className="px-3 py-2">{r.service_type ?? "all"}</td>
+                    <td className="px-3 py-2">{r.service_type ?? t("common.all")}</td>
                     <td className="px-3 py-2">
                       <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${
                         r.status === "active" ? "bg-success-50 text-success-800" : "bg-figma-bg-1 text-fg-t6"
@@ -118,7 +120,7 @@ export default function CommissionsPage() {
                     <td className="px-3 py-2">
                       {r.status === "active" && (
                         <button type="button" disabled={busyId === r.id} onClick={() => void handleDeactivate(r.id)}
-                          className="text-xs text-error-600 underline disabled:opacity-40">Deactivate</button>
+                          className="text-xs text-error-600 underline disabled:opacity-40">{t("admin.platform_commissions.deactivate")}</button>
                       )}
                     </td>
                   </tr>
@@ -136,17 +138,17 @@ export default function CommissionsPage() {
             <table className="w-full min-w-[600px] text-left text-sm">
               <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
                 <tr>
-                  <th className="px-3 py-2">ID</th>
-                  <th className="px-3 py-2">Amount</th>
-                  <th className="px-3 py-2">Status</th>
-                  <th className="px-3 py-2">Company</th>
-                  <th className="px-3 py-2">Booking ID</th>
-                  <th className="px-3 py-2">Created</th>
+                  <th className="px-3 py-2">{t("admin.crud.common.id")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_commissions.amount")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_commissions.status")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_commissions.company")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_commissions.booking_id")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_commissions.created")}</th>
                 </tr>
               </thead>
               <tbody>
                 {records.length === 0 && (
-                  <tr><td colSpan={6} className="px-3 py-6 text-center text-fg-t6">No records found</td></tr>
+                  <tr><td colSpan={6} className="px-3 py-6 text-center text-fg-t6">{t("admin.platform_commissions.no_records")}</td></tr>
                 )}
                 {records.map((r) => (
                   <tr key={r.id} className="border-b border-default hover:bg-figma-bg-1">

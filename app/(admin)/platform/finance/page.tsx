@@ -6,6 +6,7 @@ import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   apiFinanceSummary, apiFinanceEntitlements, apiFinanceSettlements,
   apiMarkEntitlementsPayable, apiUpdateSettlementStatus,
@@ -17,6 +18,7 @@ type Tab = "summary" | "entitlements" | "settlements";
 
 export default function FinancePage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const companyOptions = user?.companies ?? [];
   const initialCompanyId = user?.context?.active_company_id ?? companyOptions[0]?.id ?? null;
@@ -49,8 +51,8 @@ export default function FinancePage() {
     try {
       const r = await apiFinanceEntitlements(token, { company_id: companyId, page: entPage, per_page: 20 });
       setEntitlements(r.data); setEntMeta(r.meta);
-    } catch (e) { setErr(e instanceof ApiRequestError ? e.message : "Failed"); }
-  }, [token, allowed, hasValidCompanyId, companyId, entPage]);
+    } catch (e) { setErr(e instanceof ApiRequestError ? e.message : t("admin.platform_finance.err_failed")); }
+  }, [token, allowed, hasValidCompanyId, companyId, entPage, t]);
 
   const loadSettlements = useCallback(async () => {
     if (!token || !allowed || !hasValidCompanyId) return;
@@ -58,8 +60,8 @@ export default function FinancePage() {
     try {
       const r = await apiFinanceSettlements(token, { company_id: companyId, page: setPage2, per_page: 20 });
       setSettlements(r.data); setSetMeta2(r.meta);
-    } catch (e) { setErr(e instanceof ApiRequestError ? e.message : "Failed"); }
-  }, [token, allowed, hasValidCompanyId, companyId, setPage2]);
+    } catch (e) { setErr(e instanceof ApiRequestError ? e.message : t("admin.platform_finance.err_failed")); }
+  }, [token, allowed, hasValidCompanyId, companyId, setPage2, t]);
 
   useEffect(() => {
     if (companyId != null) return;
@@ -78,7 +80,7 @@ export default function FinancePage() {
       setSelectedEnt(new Set());
       await loadEntitlements();
     }
-    catch (e) { alert(e instanceof ApiRequestError ? e.message : "Failed"); }
+    catch (e) { alert(e instanceof ApiRequestError ? e.message : t("admin.platform_finance.err_failed")); }
     finally { setBusy(false); }
   }
 
@@ -86,7 +88,7 @@ export default function FinancePage() {
     if (!token || !hasValidCompanyId) return;
     setBusy(true);
     try { await apiUpdateSettlementStatus(token, id, status); await loadSettlements(); }
-    catch (e) { alert(e instanceof ApiRequestError ? e.message : "Failed"); }
+    catch (e) { alert(e instanceof ApiRequestError ? e.message : t("admin.platform_finance.err_failed")); }
     finally { setBusy(false); }
   }
 
@@ -111,7 +113,7 @@ export default function FinancePage() {
   }
 
   if (!allowed || forbidden) return (
-    <div><h1 className="admin-page-title">Finance</h1><div className="mt-4"><ForbiddenNotice /></div></div>
+    <div><h1 className="admin-page-title">{t("admin.platform_finance.title")}</h1><div className="mt-4"><ForbiddenNotice /></div></div>
   );
 
   const tabCls = (t: Tab) =>
@@ -119,9 +121,9 @@ export default function FinancePage() {
 
   return (
     <div>
-      <h1 className="admin-page-title">Finance</h1>
+      <h1 className="admin-page-title">{t("admin.platform_finance.title")}</h1>
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <label className="text-sm text-fg-t7" htmlFor="finance-company-id">Company</label>
+        <label className="text-sm text-fg-t7" htmlFor="finance-company-id">{t("admin.platform_finance.company")}</label>
         {companyOptions.length > 0 ? (
           <select
             id="finance-company-id"
@@ -140,19 +142,19 @@ export default function FinancePage() {
             min={1}
             value={companyId ?? ""}
             onChange={(e) => setCompanyId(e.target.value ? Number(e.target.value) : null)}
-            placeholder="Enter company ID"
+            placeholder={t("admin.platform_finance.enter_company_id")}
             className="w-44 rounded border border-default bg-white px-2 py-1 text-sm"
           />
         )}
       </div>
       {!hasValidCompanyId && (
-        <p className="mt-2 text-sm text-warning-700">Finance endpoints require a valid company ID greater than 0.</p>
+        <p className="mt-2 text-sm text-warning-700">{t("admin.platform_finance.valid_company_id_required")}</p>
       )}
 
       <div className="mt-4 flex gap-0 border-b border-default">
-        <button type="button" className={tabCls("summary")} onClick={() => setTab("summary")}>Summary</button>
-        <button type="button" className={tabCls("entitlements")} onClick={() => setTab("entitlements")}>Entitlements</button>
-        <button type="button" className={tabCls("settlements")} onClick={() => setTab("settlements")}>Settlements</button>
+        <button type="button" className={tabCls("summary")} onClick={() => setTab("summary")}>{t("admin.platform_finance.summary")}</button>
+        <button type="button" className={tabCls("entitlements")} onClick={() => setTab("entitlements")}>{t("admin.platform_finance.entitlements")}</button>
+        <button type="button" className={tabCls("settlements")} onClick={() => setTab("settlements")}>{t("admin.platform_finance.settlements")}</button>
       </div>
 
       {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
@@ -175,7 +177,7 @@ export default function FinancePage() {
           <div className="mt-4 flex items-center gap-3">
             <button type="button" disabled={busy || selectedEnt.size === 0} onClick={() => void handleMarkPayable()}
               className="admin-btn-primary">
-              Mark {selectedEnt.size > 0 ? `(${selectedEnt.size}) ` : ""}payable
+              {t("admin.platform_finance.mark_payable")} {selectedEnt.size > 0 ? `(${selectedEnt.size}) ` : ""}
             </button>
           </div>
           <div className="mt-3 overflow-x-auto rounded border border-default bg-white">
@@ -190,17 +192,17 @@ export default function FinancePage() {
                       }}
                     />
                   </th>
-                  <th className="px-3 py-2">ID</th>
-                  <th className="px-3 py-2">Amount</th>
-                  <th className="px-3 py-2">Status</th>
-                  <th className="px-3 py-2">Company</th>
-                  <th className="px-3 py-2">Booking ID</th>
-                  <th className="px-3 py-2">Payable at</th>
+                  <th className="px-3 py-2">{t("admin.crud.common.id")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_finance.amount")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_finance.status")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_finance.company")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_finance.booking_id")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_finance.payable_at")}</th>
                 </tr>
               </thead>
               <tbody>
                 {entitlements.length === 0 && (
-                  <tr><td colSpan={7} className="px-3 py-6 text-center text-fg-t6">No entitlements</td></tr>
+                  <tr><td colSpan={7} className="px-3 py-6 text-center text-fg-t6">{t("admin.platform_finance.no_entitlements")}</td></tr>
                 )}
                 {entitlements.map((r) => (
                   <tr key={r.id} className="border-b border-default hover:bg-figma-bg-1">
@@ -240,17 +242,17 @@ export default function FinancePage() {
             <table className="w-full min-w-[700px] text-left text-sm">
               <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
                 <tr>
-                  <th className="px-3 py-2">ID</th>
-                  <th className="px-3 py-2">Amount</th>
-                  <th className="px-3 py-2">Status</th>
-                  <th className="px-3 py-2">Company</th>
-                  <th className="px-3 py-2">Settled at</th>
-                  <th className="px-3 py-2">Actions</th>
+                  <th className="px-3 py-2">{t("admin.crud.common.id")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_finance.amount")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_finance.status")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_finance.company")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_finance.settled_at")}</th>
+                  <th className="px-3 py-2">{t("admin.platform_finance.actions")}</th>
                 </tr>
               </thead>
               <tbody>
                 {settlements.length === 0 && (
-                  <tr><td colSpan={6} className="px-3 py-6 text-center text-fg-t6">No settlements</td></tr>
+                  <tr><td colSpan={6} className="px-3 py-6 text-center text-fg-t6">{t("admin.platform_finance.no_settlements")}</td></tr>
                 )}
                 {settlements.map((r) => (
                   <tr key={r.id} className="border-b border-default hover:bg-figma-bg-1">
@@ -270,7 +272,7 @@ export default function FinancePage() {
                     <td className="px-3 py-2">
                       {r.status === "pending" && (
                         <button type="button" disabled={busy} onClick={() => void handleSettlementStatus(r.id, "completed")}
-                          className="text-xs text-info-700 underline disabled:opacity-40">Mark completed</button>
+                          className="text-xs text-info-700 underline disabled:opacity-40">{t("admin.platform_finance.mark_completed")}</button>
                       )}
                     </td>
                   </tr>

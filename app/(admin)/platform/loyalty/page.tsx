@@ -5,6 +5,7 @@ import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 /**
  * Platform-admin loyalty oversight (Sprint 58, PART 27).
@@ -48,6 +49,7 @@ type Stats = {
 
 export default function PlatformLoyaltyPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
 
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -107,7 +109,7 @@ export default function PlatformLoyaltyPage() {
           setLastPage(listJson.last_page ?? 1);
           setTotal(listJson.total ?? 0);
         } else {
-          setError(listJson?.message ?? "Failed to load");
+          setError(listJson?.message ?? t("admin.platform_loyalty.err_load"));
         }
         if (statsJson?.success) {
           setStats(statsJson.data);
@@ -117,7 +119,7 @@ export default function PlatformLoyaltyPage() {
         if (e instanceof ApiRequestError && e.status === 403) {
           setForbidden(true);
         } else {
-          setError(e instanceof Error ? e.message : "Failed to load");
+          setError(e instanceof Error ? e.message : t("admin.platform_loyalty.err_load"));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -127,7 +129,7 @@ export default function PlatformLoyaltyPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, allowed, baseURL, page, appliedFilters]);
+  }, [token, allowed, baseURL, page, appliedFilters, t]);
 
   const openDetail = async (acct: Account) => {
     setSelected({ ...acct });
@@ -143,7 +145,7 @@ export default function PlatformLoyaltyPage() {
         setSelected({ ...json.data, user: acct.user });
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load detail");
+      setError(e instanceof Error ? e.message : t("admin.platform_loyalty.err_load_detail"));
     }
   };
 
@@ -151,16 +153,18 @@ export default function PlatformLoyaltyPage() {
     if (!selected) return;
     const points = parseInt(adjustPoints, 10);
     if (isNaN(points) || points === 0) {
-      setError("Points must be a non-zero integer");
+      setError(t("admin.platform_loyalty.err_points_non_zero"));
       return;
     }
     if (!adjustReason.trim()) {
-      setError("Reason is required");
+      setError(t("admin.platform_loyalty.err_reason_required"));
       return;
     }
     if (
       !confirm(
-        `Apply ${points > 0 ? "+" : ""}${points} points to ${selected.user?.name ?? "user #" + selected.user_id}?`
+        t("admin.platform_loyalty.confirm_adjust")
+          .replace("{points}", `${points > 0 ? "+" : ""}${points}`)
+          .replace("{user}", selected.user?.name ?? `user #${selected.user_id}`)
       )
     )
       return;
@@ -185,10 +189,10 @@ export default function PlatformLoyaltyPage() {
         await openDetail(selected);
         setAppliedFilters((n) => n + 1);
       } else {
-        setError(json?.message ?? "Adjust failed");
+        setError(json?.message ?? t("admin.platform_loyalty.err_adjust"));
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Adjust failed");
+      setError(e instanceof Error ? e.message : t("admin.platform_loyalty.err_adjust"));
     } finally {
       setActionLoading(false);
     }
@@ -197,7 +201,7 @@ export default function PlatformLoyaltyPage() {
   if (!allowed || forbidden) {
     return (
       <div>
-        <h1 className="admin-page-title">Loyalty</h1>
+        <h1 className="admin-page-title">{t("admin.platform_loyalty.title")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -207,25 +211,25 @@ export default function PlatformLoyaltyPage() {
 
   return (
     <div>
-      <h1 className="admin-page-title">Loyalty</h1>
-      <p className="admin-page-subtitle">Customer loyalty accounts and tier distribution.</p>
+      <h1 className="admin-page-title">{t("admin.platform_loyalty.title")}</h1>
+      <p className="admin-page-subtitle">{t("admin.platform_loyalty.subtitle")}</p>
 
       {error && <p className="mt-2 text-sm text-error-600">{error}</p>}
 
       {/* Stats */}
       {stats && (
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Accounts" value={stats.total_accounts.toLocaleString()} />
+          <StatCard label={t("admin.platform_loyalty.accounts")} value={stats.total_accounts.toLocaleString()} />
           <StatCard
-            label="Points outstanding"
+            label={t("admin.platform_loyalty.points_outstanding")}
             value={stats.total_points_outstanding.toLocaleString()}
           />
           <StatCard
-            label="Lifetime points"
+            label={t("admin.platform_loyalty.lifetime_points")}
             value={stats.total_lifetime_points.toLocaleString()}
           />
           <StatCard
-            label="Gold + Platinum"
+            label={t("admin.platform_loyalty.gold_plus_platinum")}
             value={String(
               (stats.by_tier?.gold ?? 0) + (stats.by_tier?.platinum ?? 0)
             )}
@@ -253,13 +257,13 @@ export default function PlatformLoyaltyPage() {
       {/* Filters */}
       <div className="mt-6 flex flex-wrap items-end gap-3 rounded border border-default bg-white p-4">
         <label className="text-xs text-fg-t6">
-          Tier
+          {t("admin.platform_loyalty.tier")}
           <select
             value={tier}
             onChange={(e) => setTier(e.target.value)}
             className="mt-1 block rounded border border-default px-2 py-1 text-sm"
           >
-            <option value="">All</option>
+            <option value="">{t("common.all")}</option>
             {TIERS.map((t) => (
               <option key={t} value={t}>
                 {t}
@@ -275,7 +279,7 @@ export default function PlatformLoyaltyPage() {
           }}
           className="rounded bg-primary-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-600"
         >
-          Apply
+          {t("common.apply")}
         </button>
         {tier && (
           <button
@@ -287,7 +291,7 @@ export default function PlatformLoyaltyPage() {
             }}
             className="rounded border border-default bg-white px-3 py-1.5 text-sm hover:bg-figma-bg-1"
           >
-            Reset
+            {t("common.reset")}
           </button>
         )}
       </div>
@@ -297,10 +301,10 @@ export default function PlatformLoyaltyPage() {
         <table className="w-full min-w-[900px] text-left text-sm">
           <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
-              <th className="px-3 py-2">User</th>
-              <th className="px-3 py-2">Tier</th>
-              <th className="px-3 py-2 text-right">Points balance</th>
-              <th className="px-3 py-2 text-right">Lifetime points</th>
+              <th className="px-3 py-2">{t("admin.platform_loyalty.user")}</th>
+              <th className="px-3 py-2">{t("admin.platform_loyalty.tier")}</th>
+              <th className="px-3 py-2 text-right">{t("admin.platform_loyalty.points_balance")}</th>
+              <th className="px-3 py-2 text-right">{t("admin.platform_loyalty.lifetime_points")}</th>
               <th className="px-3 py-2"></th>
             </tr>
           </thead>
@@ -308,14 +312,14 @@ export default function PlatformLoyaltyPage() {
             {loading && (
               <tr>
                 <td colSpan={5} className="px-3 py-6 text-center text-fg-t6">
-                  Loading…
+                  {t("admin.platform_loyalty.loading")}
                 </td>
               </tr>
             )}
             {!loading && accounts.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-3 py-6 text-center text-fg-t6">
-                  No accounts found.
+                  {t("admin.platform_loyalty.empty")}
                 </td>
               </tr>
             )}
@@ -342,7 +346,7 @@ export default function PlatformLoyaltyPage() {
                     onClick={() => openDetail(a)}
                     className="text-xs text-primary-500 hover:underline"
                   >
-                    Manage
+                    {t("admin.platform_loyalty.manage")}
                   </button>
                 </td>
               </tr>
@@ -355,7 +359,10 @@ export default function PlatformLoyaltyPage() {
       {lastPage > 1 && (
         <div className="mt-3 flex items-center justify-between text-sm">
           <span className="text-fg-t6">
-            Page {page} of {lastPage} ({total.toLocaleString()} entries)
+            {t("admin.platform_loyalty.pagination")
+              .replace("{page}", String(page))
+              .replace("{lastPage}", String(lastPage))
+              .replace("{total}", total.toLocaleString())}
           </span>
           <div className="flex gap-2">
             <button
@@ -364,7 +371,7 @@ export default function PlatformLoyaltyPage() {
               disabled={page <= 1}
               className="rounded border border-default bg-white px-3 py-1 disabled:opacity-50"
             >
-              Prev
+              {t("common.prev")}
             </button>
             <button
               type="button"
@@ -372,7 +379,7 @@ export default function PlatformLoyaltyPage() {
               disabled={page >= lastPage}
               className="rounded border border-default bg-white px-3 py-1 disabled:opacity-50"
             >
-              Next
+              {t("common.next")}
             </button>
           </div>
         </div>
@@ -401,7 +408,7 @@ export default function PlatformLoyaltyPage() {
                 type="button"
                 onClick={() => setSelected(null)}
                 className="rounded p-1 text-fg-t6 hover:bg-figma-bg-1"
-                aria-label="Close"
+                aria-label={t("common.close")}
               >
                 ✕
               </button>
@@ -409,19 +416,19 @@ export default function PlatformLoyaltyPage() {
 
             <div className="mt-4 grid grid-cols-3 gap-3">
               <div className="rounded border border-default p-3">
-                <div className="text-xs text-fg-t6">Tier</div>
+                <div className="text-xs text-fg-t6">{t("admin.platform_loyalty.tier")}</div>
                 <div className="mt-1">
                   <TierBadge tier={selected.tier} />
                 </div>
               </div>
               <div className="rounded border border-default p-3">
-                <div className="text-xs text-fg-t6">Balance</div>
+                <div className="text-xs text-fg-t6">{t("admin.platform_loyalty.balance")}</div>
                 <div className="mt-1 text-lg font-bold tabular-nums">
                   {selected.points_balance.toLocaleString()}
                 </div>
               </div>
               <div className="rounded border border-default p-3">
-                <div className="text-xs text-fg-t6">Lifetime</div>
+                <div className="text-xs text-fg-t6">{t("admin.platform_loyalty.lifetime")}</div>
                 <div className="mt-1 text-lg font-bold tabular-nums">
                   {selected.lifetime_points.toLocaleString()}
                 </div>
@@ -430,23 +437,22 @@ export default function PlatformLoyaltyPage() {
 
             {/* Manual adjust */}
             <div className="mt-6 rounded border border-default bg-figma-bg-1 p-4">
-              <h3 className="text-sm font-semibold">Manual adjust</h3>
+              <h3 className="text-sm font-semibold">{t("admin.platform_loyalty.manual_adjust")}</h3>
               <p className="mt-1 text-xs text-fg-t6">
-                Use positive to credit, negative to deduct. Reason is required and stored on the
-                transaction.
+                {t("admin.platform_loyalty.manual_adjust_help")}
               </p>
               <div className="mt-3 grid grid-cols-3 gap-2">
                 <input
                   type="number"
                   value={adjustPoints}
                   onChange={(e) => setAdjustPoints(e.target.value)}
-                  placeholder="±points"
+                  placeholder={t("admin.platform_loyalty.points_placeholder")}
                   className="rounded border border-default px-2 py-1 text-sm"
                 />
                 <input
                   value={adjustReason}
                   onChange={(e) => setAdjustReason(e.target.value)}
-                  placeholder="Reason"
+                  placeholder={t("admin.platform_loyalty.reason")}
                   className="col-span-2 rounded border border-default px-2 py-1 text-sm"
                 />
               </div>
@@ -456,27 +462,27 @@ export default function PlatformLoyaltyPage() {
                 disabled={actionLoading || !adjustPoints || !adjustReason.trim()}
                 className="mt-3 rounded bg-primary-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-600 disabled:opacity-50"
               >
-                {actionLoading ? "Applying…" : "Apply adjustment"}
+                {actionLoading ? t("admin.platform_loyalty.applying") : t("admin.platform_loyalty.apply_adjustment")}
               </button>
             </div>
 
             {/* Transactions */}
             <div className="mt-6">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-fg-t6">
-                Transactions {selected.transactions && `(${selected.transactions.length})`}
+                {t("admin.platform_loyalty.transactions")} {selected.transactions && `(${selected.transactions.length})`}
               </h3>
               {(!selected.transactions || selected.transactions.length === 0) && (
-                <p className="mt-2 text-xs text-fg-t6">No transactions yet.</p>
+                <p className="mt-2 text-xs text-fg-t6">{t("admin.platform_loyalty.no_transactions")}</p>
               )}
               {selected.transactions && selected.transactions.length > 0 && (
                 <div className="mt-2 max-h-96 overflow-y-auto rounded border border-default">
                   <table className="w-full text-left text-xs">
                     <thead className="bg-figma-bg-1 text-fg-t7">
                       <tr>
-                        <th className="px-2 py-1">When</th>
-                        <th className="px-2 py-1">Type</th>
-                        <th className="px-2 py-1 text-right">Points</th>
-                        <th className="px-2 py-1">Reason</th>
+                        <th className="px-2 py-1">{t("admin.platform_loyalty.when")}</th>
+                        <th className="px-2 py-1">{t("admin.platform_loyalty.type")}</th>
+                        <th className="px-2 py-1 text-right">{t("admin.platform_loyalty.points")}</th>
+                        <th className="px-2 py-1">{t("admin.platform_loyalty.reason")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -533,6 +539,7 @@ function StatCard({
 }
 
 function TierBadge({ tier }: { tier: string }) {
+  const { t } = useLanguage();
   const tone =
     tier === "platinum"
       ? "bg-primary-50 text-primary-600"
@@ -543,7 +550,7 @@ function TierBadge({ tier }: { tier: string }) {
           : "bg-figma-bg-1 text-fg-t7";
   return (
     <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium uppercase ${tone}`}>
-      {tier}
+      {t(`admin.platform_loyalty.tier_${tier}`)}
     </span>
   );
 }

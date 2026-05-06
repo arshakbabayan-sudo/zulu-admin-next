@@ -5,6 +5,7 @@ import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 /**
  * Platform-admin voucher viewer (Sprint 56, PART 09).
@@ -64,6 +65,7 @@ type Meta = {
 
 export default function PlatformVouchersPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
 
   const [rows, setRows] = useState<VoucherRow[]>([]);
@@ -122,14 +124,14 @@ export default function PlatformVouchersPage() {
           setRows([]);
           setMeta(null);
         } else {
-          setError(json?.message ?? "Failed to load vouchers");
+          setError(json?.message ?? t("admin.platform_vouchers.err_load"));
         }
       } catch (e) {
         if (cancelled) return;
         if (e instanceof ApiRequestError && e.status === 403) {
           setForbidden(true);
         } else {
-          setError(e instanceof Error ? e.message : "Failed to load");
+          setError(e instanceof Error ? e.message : t("admin.platform_vouchers.err_load"));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -139,7 +141,7 @@ export default function PlatformVouchersPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, allowed, baseURL, page, appliedFilters]);
+  }, [token, allowed, baseURL, page, appliedFilters, t]);
 
   const applyFilters = () => {
     setPage(1);
@@ -168,14 +170,14 @@ export default function PlatformVouchersPage() {
         setLogs(json.data.verification_logs ?? []);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load detail");
+      setError(e instanceof Error ? e.message : t("admin.platform_vouchers.err_load_detail"));
     } finally {
       setDetailLoading(false);
     }
   };
 
   const voidVoucher = async (id: number) => {
-    if (!confirm("Void this voucher? This action cannot be undone.")) return;
+    if (!confirm(t("admin.platform_vouchers.confirm_void"))) return;
     setActionLoading("void");
     try {
       const res = await fetch(`${baseURL}/api/platform-admin/vouchers/${id}/void`, {
@@ -187,17 +189,17 @@ export default function PlatformVouchersPage() {
         setSelected(json.data);
         setAppliedFilters((n) => n + 1);
       } else {
-        setError(json?.message ?? "Void failed");
+        setError(json?.message ?? t("admin.platform_vouchers.err_void"));
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Void failed");
+      setError(e instanceof Error ? e.message : t("admin.platform_vouchers.err_void"));
     } finally {
       setActionLoading(null);
     }
   };
 
   const reissueVoucher = async (id: number) => {
-    if (!confirm("Reissue this voucher? Original will be marked 'reissued'.")) return;
+    if (!confirm(t("admin.platform_vouchers.confirm_reissue"))) return;
     setActionLoading("reissue");
     try {
       const res = await fetch(`${baseURL}/api/platform-admin/vouchers/${id}/reissue`, {
@@ -214,10 +216,10 @@ export default function PlatformVouchersPage() {
         setSelected(json.data);
         setAppliedFilters((n) => n + 1);
       } else {
-        setError(json?.message ?? "Reissue failed");
+        setError(json?.message ?? t("admin.platform_vouchers.err_reissue"));
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Reissue failed");
+      setError(e instanceof Error ? e.message : t("admin.platform_vouchers.err_reissue"));
     } finally {
       setActionLoading(null);
     }
@@ -226,7 +228,7 @@ export default function PlatformVouchersPage() {
   if (!allowed || forbidden) {
     return (
       <div>
-        <h1 className="admin-page-title">Vouchers</h1>
+        <h1 className="admin-page-title">{t("admin.platform_vouchers.title")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -236,21 +238,21 @@ export default function PlatformVouchersPage() {
 
   return (
     <div>
-      <h1 className="admin-page-title">Vouchers</h1>
-      <p className="admin-page-subtitle">Issued vouchers across the platform with QR + audit trail.</p>
+      <h1 className="admin-page-title">{t("admin.platform_vouchers.title")}</h1>
+      <p className="admin-page-subtitle">{t("admin.platform_vouchers.subtitle")}</p>
 
       {error && <p className="mt-2 text-sm text-error-600">{error}</p>}
 
       {/* Filters */}
       <div className="mt-6 grid gap-3 rounded border border-default bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
         <label className="text-xs text-fg-t6">
-          Status
+          {t("admin.platform_vouchers.status")}
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
             className="mt-1 w-full rounded border border-default px-2 py-1 text-sm"
           >
-            <option value="">All</option>
+            <option value="">{t("common.all")}</option>
             {STATUSES.map((s) => (
               <option key={s} value={s}>
                 {s}
@@ -259,13 +261,13 @@ export default function PlatformVouchersPage() {
           </select>
         </label>
         <label className="text-xs text-fg-t6">
-          Service type
+          {t("admin.platform_vouchers.service_type")}
           <select
             value={serviceType}
             onChange={(e) => setServiceType(e.target.value)}
             className="mt-1 w-full rounded border border-default px-2 py-1 text-sm"
           >
-            <option value="">All</option>
+            <option value="">{t("common.all")}</option>
             {SERVICE_TYPES.map((s) => (
               <option key={s} value={s}>
                 {s}
@@ -274,11 +276,11 @@ export default function PlatformVouchersPage() {
           </select>
         </label>
         <label className="text-xs text-fg-t6 sm:col-span-2">
-          Search
+          {t("common.search")}
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Voucher number or holder name"
+            placeholder={t("admin.platform_vouchers.search_placeholder")}
             className="mt-1 w-full rounded border border-default px-2 py-1 text-sm"
           />
         </label>
@@ -288,14 +290,14 @@ export default function PlatformVouchersPage() {
             onClick={resetFilters}
             className="rounded border border-default bg-white px-3 py-1.5 text-sm hover:bg-figma-bg-1"
           >
-            Reset
+            {t("common.reset")}
           </button>
           <button
             type="button"
             onClick={applyFilters}
             className="rounded bg-primary-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-600"
           >
-            Apply
+            {t("common.apply")}
           </button>
         </div>
       </div>
@@ -305,13 +307,13 @@ export default function PlatformVouchersPage() {
         <table className="w-full min-w-[1000px] text-left text-sm">
           <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
-              <th className="px-3 py-2">Number</th>
-              <th className="px-3 py-2">Service</th>
-              <th className="px-3 py-2">Holder</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Valid</th>
-              <th className="px-3 py-2">Scans</th>
-              <th className="px-3 py-2">Created</th>
+              <th className="px-3 py-2">{t("admin.platform_vouchers.number")}</th>
+              <th className="px-3 py-2">{t("admin.platform_vouchers.service")}</th>
+              <th className="px-3 py-2">{t("admin.platform_vouchers.holder")}</th>
+              <th className="px-3 py-2">{t("admin.platform_vouchers.status")}</th>
+              <th className="px-3 py-2">{t("admin.platform_vouchers.valid")}</th>
+              <th className="px-3 py-2">{t("admin.platform_vouchers.scans")}</th>
+              <th className="px-3 py-2">{t("admin.platform_vouchers.created")}</th>
               <th className="px-3 py-2"></th>
             </tr>
           </thead>
@@ -319,14 +321,14 @@ export default function PlatformVouchersPage() {
             {loading && (
               <tr>
                 <td colSpan={8} className="px-3 py-6 text-center text-fg-t6">
-                  Loading…
+                  {t("admin.platform_vouchers.loading")}
                 </td>
               </tr>
             )}
             {!loading && rows.length === 0 && (
               <tr>
                 <td colSpan={8} className="px-3 py-6 text-center text-fg-t6">
-                  No vouchers found.
+                  {t("admin.platform_vouchers.empty")}
                 </td>
               </tr>
             )}
@@ -352,7 +354,7 @@ export default function PlatformVouchersPage() {
                     onClick={() => openDetail(r)}
                     className="text-xs text-primary-500 hover:underline"
                   >
-                    Details
+                    {t("admin.platform_vouchers.details")}
                   </button>
                 </td>
               </tr>
@@ -365,7 +367,10 @@ export default function PlatformVouchersPage() {
       {meta && meta.last_page > 1 && (
         <div className="mt-3 flex items-center justify-between text-sm">
           <span className="text-fg-t6">
-            Page {meta.current_page} of {meta.last_page} ({meta.total.toLocaleString()} entries)
+            {t("admin.platform_vouchers.pagination")
+              .replace("{page}", String(meta.current_page))
+              .replace("{lastPage}", String(meta.last_page))
+              .replace("{total}", meta.total.toLocaleString())}
           </span>
           <div className="flex gap-2">
             <button
@@ -374,7 +379,7 @@ export default function PlatformVouchersPage() {
               disabled={page <= 1}
               className="rounded border border-default bg-white px-3 py-1 disabled:opacity-50"
             >
-              Prev
+              {t("common.prev")}
             </button>
             <button
               type="button"
@@ -382,7 +387,7 @@ export default function PlatformVouchersPage() {
               disabled={page >= meta.last_page}
               className="rounded border border-default bg-white px-3 py-1 disabled:opacity-50"
             >
-              Next
+              {t("common.next")}
             </button>
           </div>
         </div>
@@ -400,7 +405,7 @@ export default function PlatformVouchersPage() {
           >
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-lg font-semibold">Voucher {selected.voucher_number}</h2>
+                <h2 className="text-lg font-semibold">{t("admin.platform_vouchers.voucher")} {selected.voucher_number}</h2>
                 <p className="mt-1 text-xs text-fg-t6">
                   {selected.service_type} · {selected.language.toUpperCase()}
                 </p>
@@ -409,7 +414,7 @@ export default function PlatformVouchersPage() {
                 type="button"
                 onClick={() => setSelected(null)}
                 className="rounded p-1 text-fg-t6 hover:bg-figma-bg-1"
-                aria-label="Close"
+                aria-label={t("common.close")}
               >
                 ✕
               </button>
@@ -423,7 +428,7 @@ export default function PlatformVouchersPage() {
                   rel="noopener noreferrer"
                   className="rounded border border-default bg-white px-3 py-1.5 text-xs hover:bg-figma-bg-1"
                 >
-                  Open PDF
+                  {t("admin.platform_vouchers.open_pdf")}
                 </a>
               )}
               {selected.status === "issued" && (
@@ -434,7 +439,7 @@ export default function PlatformVouchersPage() {
                     disabled={actionLoading !== null}
                     className="rounded border border-default bg-white px-3 py-1.5 text-xs hover:bg-figma-bg-1 disabled:opacity-50"
                   >
-                    {actionLoading === "reissue" ? "Reissuing…" : "Reissue"}
+                    {actionLoading === "reissue" ? t("admin.platform_vouchers.reissuing") : t("admin.platform_vouchers.reissue")}
                   </button>
                   <button
                     type="button"
@@ -442,25 +447,25 @@ export default function PlatformVouchersPage() {
                     disabled={actionLoading !== null}
                     className="rounded border border-error-300 bg-error-50 px-3 py-1.5 text-xs text-error-700 hover:bg-error-100 disabled:opacity-50"
                   >
-                    {actionLoading === "void" ? "Voiding…" : "Void"}
+                    {actionLoading === "void" ? t("admin.platform_vouchers.voiding") : t("admin.platform_vouchers.void")}
                   </button>
                 </>
               )}
             </div>
 
             <dl className="mt-6 space-y-2 text-sm">
-              <DetailRow label="Status" value={selected.status} />
-              <DetailRow label="Holder" value={selected.holder_name} />
+              <DetailRow label={t("admin.platform_vouchers.status")} value={selected.status} />
+              <DetailRow label={t("admin.platform_vouchers.holder")} value={selected.holder_name} />
               <DetailRow
-                label="Order"
+                label={t("admin.platform_vouchers.order")}
                 value={selected.order?.order_number ?? `#${selected.order_id}`}
               />
               <DetailRow
-                label="Issuer"
+                label={t("admin.platform_vouchers.issuer")}
                 value={selected.issuer_company?.name ?? "—"}
               />
               <DetailRow
-                label="Valid"
+                label={t("admin.platform_vouchers.valid")}
                 value={
                   selected.valid_from
                     ? `${new Date(selected.valid_from).toLocaleDateString()}${
@@ -472,13 +477,13 @@ export default function PlatformVouchersPage() {
                 }
               />
               <DetailRow
-                label="Used at"
+                label={t("admin.platform_vouchers.used_at")}
                 value={selected.used_at ? new Date(selected.used_at).toLocaleString() : "—"}
               />
-              <DetailRow label="Scan count" value={String(selected.verification_count)} />
+              <DetailRow label={t("admin.platform_vouchers.scan_count")} value={String(selected.verification_count)} />
               {selected.reissued_from_id && (
                 <DetailRow
-                  label="Reissued from"
+                  label={t("admin.platform_vouchers.reissued_from")}
                   value={`#${selected.reissued_from_id}`}
                 />
               )}
@@ -486,20 +491,20 @@ export default function PlatformVouchersPage() {
 
             <div className="mt-6">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-fg-t6">
-                Verification log {logs.length > 0 && `(${logs.length})`}
+                {t("admin.platform_vouchers.verification_log")} {logs.length > 0 && `(${logs.length})`}
               </h3>
-              {detailLoading && <p className="mt-2 text-xs text-fg-t6">Loading…</p>}
+              {detailLoading && <p className="mt-2 text-xs text-fg-t6">{t("admin.platform_vouchers.loading")}</p>}
               {!detailLoading && logs.length === 0 && (
-                <p className="mt-2 text-xs text-fg-t6">No scans yet.</p>
+                <p className="mt-2 text-xs text-fg-t6">{t("admin.platform_vouchers.no_scans")}</p>
               )}
               {logs.length > 0 && (
                 <div className="mt-2 max-h-80 overflow-y-auto rounded border border-default">
                   <table className="w-full text-left text-xs">
                     <thead className="bg-figma-bg-1 text-fg-t7">
                       <tr>
-                        <th className="px-2 py-1">When</th>
-                        <th className="px-2 py-1">IP</th>
-                        <th className="px-2 py-1">Result</th>
+                        <th className="px-2 py-1">{t("admin.platform_vouchers.when")}</th>
+                        <th className="px-2 py-1">{t("admin.platform_vouchers.ip")}</th>
+                        <th className="px-2 py-1">{t("admin.platform_vouchers.result")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -523,6 +528,7 @@ export default function PlatformVouchersPage() {
 }
 
 function VoucherStatusBadge({ status }: { status: string }) {
+  const { t } = useLanguage();
   const tone =
     status === "issued"
       ? "bg-success-50 text-success-700"
@@ -535,7 +541,7 @@ function VoucherStatusBadge({ status }: { status: string }) {
             : "bg-figma-bg-1 text-fg-t6";
   return (
     <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${tone}`}>
-      {status}
+      {t(`admin.platform_vouchers.status_${status}`)}
     </span>
   );
 }

@@ -13,10 +13,12 @@ import {
   apiNotificationsUnreadCount,
   type NotificationRow,
 } from "@/lib/notifications-api";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useCallback, useEffect, useState } from "react";
 
 export default function NotificationsPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessNotificationsNav(user);
   const [rows, setRows] = useState<NotificationRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -42,7 +44,7 @@ export default function NotificationsPage() {
       if (countRes) setUnreadCount(countRes.data.unread_count);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else setErr(e instanceof ApiRequestError ? e.message : "Failed to load notifications");
+      else setErr(e instanceof ApiRequestError ? e.message : t("admin.notifications.err_load"));
     }
   }, [token, allowed, page]);
 
@@ -69,7 +71,7 @@ export default function NotificationsPage() {
       setRows((prev) => prev.map((r) => (r.id === id ? res.data : r)));
       await refreshUnread();
     } catch (e) {
-      setErr(e instanceof ApiRequestError ? e.message : "Failed to mark as read");
+      setErr(e instanceof ApiRequestError ? e.message : t("admin.notifications.err_mark_read"));
     } finally {
       setBusyId(null);
     }
@@ -83,7 +85,7 @@ export default function NotificationsPage() {
       await apiNotificationsMarkAllRead(token);
       await load();
     } catch (e) {
-      setErr(e instanceof ApiRequestError ? e.message : "Failed to mark all as read");
+      setErr(e instanceof ApiRequestError ? e.message : t("admin.notifications.err_mark_all_read"));
     } finally {
       setBusyAll(false);
     }
@@ -92,7 +94,7 @@ export default function NotificationsPage() {
   if (!allowed) {
     return (
       <div>
-        <h1 className="admin-page-title">Notifications</h1>
+        <h1 className="admin-page-title">{t("admin.notifications.title")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -103,7 +105,7 @@ export default function NotificationsPage() {
   if (forbidden) {
     return (
       <div>
-        <h1 className="admin-page-title">Notifications</h1>
+        <h1 className="admin-page-title">{t("admin.notifications.title")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -113,11 +115,11 @@ export default function NotificationsPage() {
 
   return (
     <div>
-      <h1 className="admin-page-title">Notifications</h1>
+      <h1 className="admin-page-title">{t("admin.notifications.title")}</h1>
       <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
         {unreadCount !== null && (
           <span className="rounded border border-default bg-white px-2 py-1 tabular-nums text-fg-t7">
-            Unread: {unreadCount}
+            {t("admin.notifications.unread")}: {unreadCount}
           </span>
         )}
         <button
@@ -126,7 +128,7 @@ export default function NotificationsPage() {
           onClick={() => onMarkAllRead()}
           className="rounded border border-default bg-white px-3 py-1 disabled:opacity-40"
         >
-          {busyAll ? "Marking..." : "Mark all as read"}
+          {busyAll ? t("admin.notifications.marking") : t("admin.notifications.mark_all_read")}
         </button>
       </div>
       {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
@@ -134,14 +136,14 @@ export default function NotificationsPage() {
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
-              <th className="px-3 py-2">ID</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Priority</th>
-              <th className="px-3 py-2">Event</th>
-              <th className="px-3 py-2">Title</th>
-              <th className="px-3 py-2">Message</th>
-              <th className="px-3 py-2">Company</th>
-              <th className="px-3 py-2">Created</th>
+              <th className="px-3 py-2">{t("admin.crud.common.id")}</th>
+              <th className="px-3 py-2">{t("admin.notifications.status")}</th>
+              <th className="px-3 py-2">{t("admin.notifications.priority")}</th>
+              <th className="px-3 py-2">{t("admin.notifications.event")}</th>
+              <th className="px-3 py-2">{t("admin.notifications.col_title")}</th>
+              <th className="px-3 py-2">{t("admin.notifications.message")}</th>
+              <th className="px-3 py-2">{t("admin.notifications.company")}</th>
+              <th className="px-3 py-2">{t("admin.notifications.created")}</th>
               <th className="px-3 py-2" />
             </tr>
           </thead>
@@ -166,7 +168,7 @@ export default function NotificationsPage() {
                       onClick={() => onMarkRead(r.id)}
                       className="text-fg-t7 underline disabled:opacity-40"
                     >
-                      {busyId === r.id ? "..." : "Mark read"}
+                      {busyId === r.id ? "..." : t("admin.notifications.mark_read")}
                     </button>
                   ) : (
                     <span className="text-fg-t6">-</span>
@@ -179,8 +181,7 @@ export default function NotificationsPage() {
       </div>
       {meta && <PaginationBar meta={meta} onPage={setPage} />}
       <p className="mt-3 text-xs text-fg-t7">
-        List pagination uses server ordering (newest first). Query filters are not exposed on this API;
-        use mark-as-read to clear unread items.
+        {t("admin.notifications.footer_help")}
       </p>
     </div>
   );

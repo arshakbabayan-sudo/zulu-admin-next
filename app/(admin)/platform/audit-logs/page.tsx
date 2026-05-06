@@ -5,6 +5,7 @@ import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 /**
  * Platform-admin audit log viewer (Sprint 53, PART 26).
@@ -62,6 +63,7 @@ type IntegrityResult = {
 
 export default function PlatformAuditLogsPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
 
   const [rows, setRows] = useState<AuditLogRow[]>([]);
@@ -131,14 +133,14 @@ export default function PlatformAuditLogsPage() {
           setRows([]);
           setMeta(null);
         } else {
-          setError(json?.message ?? "Failed to load audit logs");
+          setError(json?.message ?? t("admin.platform_audit_logs.err_load"));
         }
       } catch (e) {
         if (cancelled) return;
         if (e instanceof ApiRequestError && e.status === 403) {
           setForbidden(true);
         } else {
-          setError(e instanceof Error ? e.message : "Failed to load");
+          setError(e instanceof Error ? e.message : t("admin.platform_audit_logs.err_load"));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -148,7 +150,7 @@ export default function PlatformAuditLogsPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, allowed, baseURL, page, perPage, appliedFilters]);
+  }, [token, allowed, baseURL, page, perPage, appliedFilters, t]);
 
   const applyFilters = () => {
     setPage(1);
@@ -184,10 +186,10 @@ export default function PlatformAuditLogsPage() {
       if (json?.success) {
         setIntegrity(json.data);
       } else {
-        setError(json?.message ?? "Integrity check failed");
+        setError(json?.message ?? t("admin.platform_audit_logs.err_integrity_check"));
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Integrity check failed");
+      setError(e instanceof Error ? e.message : t("admin.platform_audit_logs.err_integrity_check"));
     } finally {
       setVerifying(false);
     }
@@ -242,7 +244,7 @@ export default function PlatformAuditLogsPage() {
   if (!allowed || forbidden) {
     return (
       <div>
-        <h1 className="admin-page-title">Audit logs</h1>
+        <h1 className="admin-page-title">{t("admin.platform_audit_logs.title")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -254,9 +256,9 @@ export default function PlatformAuditLogsPage() {
     <div>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="admin-page-title">Audit logs</h1>
+          <h1 className="admin-page-title">{t("admin.platform_audit_logs.title")}</h1>
           <p className="admin-page-subtitle">
-            Tamper-evident log of all platform actions. Hash-chained for integrity.
+            {t("admin.platform_audit_logs.subtitle")}
           </p>
         </div>
         <div className="flex gap-2">
@@ -266,7 +268,7 @@ export default function PlatformAuditLogsPage() {
             disabled={verifying}
             className="rounded border border-default bg-white px-3 py-1.5 text-sm hover:bg-figma-bg-1 disabled:opacity-50"
           >
-            {verifying ? "Verifying…" : "Verify integrity"}
+            {verifying ? t("admin.platform_audit_logs.verifying") : t("admin.platform_audit_logs.verify_integrity")}
           </button>
           <button
             type="button"
@@ -274,7 +276,7 @@ export default function PlatformAuditLogsPage() {
             disabled={rows.length === 0}
             className="rounded border border-default bg-white px-3 py-1.5 text-sm hover:bg-figma-bg-1 disabled:opacity-50"
           >
-            Export CSV (page)
+            {t("admin.platform_audit_logs.export_csv_page")}
           </button>
         </div>
       </div>
@@ -290,11 +292,12 @@ export default function PlatformAuditLogsPage() {
           }`}
         >
           {integrity.is_intact ? (
-            <>✓ Hash chain intact across last {integrity.limit_checked} entries.</>
+            <>{t("admin.platform_audit_logs.hash_chain_intact").replace("{limit}", String(integrity.limit_checked))}</>
           ) : (
             <>
-              ✗ Tampered entries detected: {integrity.corrupted_log_ids.length} (checked{" "}
-              {integrity.limit_checked}).
+              {t("admin.platform_audit_logs.tampered_detected")
+                .replace("{count}", String(integrity.corrupted_log_ids.length))
+                .replace("{limit}", String(integrity.limit_checked))}
             </>
           )}
         </div>
@@ -303,13 +306,13 @@ export default function PlatformAuditLogsPage() {
       {/* Filters */}
       <div className="mt-6 grid gap-3 rounded border border-default bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
         <label className="text-xs text-fg-t6">
-          Category
+          {t("admin.platform_audit_logs.category")}
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             className="mt-1 w-full rounded border border-default px-2 py-1 text-sm"
           >
-            <option value="">All</option>
+            <option value="">{t("common.all")}</option>
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>
                 {c}
@@ -318,7 +321,7 @@ export default function PlatformAuditLogsPage() {
           </select>
         </label>
         <label className="text-xs text-fg-t6">
-          Action
+          {t("admin.platform_audit_logs.action")}
           <input
             value={action}
             onChange={(e) => setAction(e.target.value)}
@@ -327,7 +330,7 @@ export default function PlatformAuditLogsPage() {
           />
         </label>
         <label className="text-xs text-fg-t6">
-          Subject type
+          {t("admin.platform_audit_logs.subject_type")}
           <input
             value={subjectType}
             onChange={(e) => setSubjectType(e.target.value)}
@@ -336,7 +339,7 @@ export default function PlatformAuditLogsPage() {
           />
         </label>
         <label className="text-xs text-fg-t6">
-          Subject ID
+          {t("admin.platform_audit_logs.subject_id")}
           <input
             value={subjectId}
             onChange={(e) => setSubjectId(e.target.value)}
@@ -344,7 +347,7 @@ export default function PlatformAuditLogsPage() {
           />
         </label>
         <label className="text-xs text-fg-t6">
-          Actor ID
+          {t("admin.platform_audit_logs.actor_id")}
           <input
             value={actorId}
             onChange={(e) => setActorId(e.target.value)}
@@ -352,7 +355,7 @@ export default function PlatformAuditLogsPage() {
           />
         </label>
         <label className="text-xs text-fg-t6">
-          From
+          {t("admin.platform_audit_logs.from")}
           <input
             type="datetime-local"
             value={from}
@@ -361,7 +364,7 @@ export default function PlatformAuditLogsPage() {
           />
         </label>
         <label className="text-xs text-fg-t6">
-          To
+          {t("admin.platform_audit_logs.to")}
           <input
             type="datetime-local"
             value={to}
@@ -370,7 +373,7 @@ export default function PlatformAuditLogsPage() {
           />
         </label>
         <label className="text-xs text-fg-t6">
-          Search
+          {t("common.search")}
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -384,14 +387,14 @@ export default function PlatformAuditLogsPage() {
             onClick={resetFilters}
             className="rounded border border-default bg-white px-3 py-1.5 text-sm hover:bg-figma-bg-1"
           >
-            Reset
+            {t("common.reset")}
           </button>
           <button
             type="button"
             onClick={applyFilters}
             className="rounded bg-primary-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-600"
           >
-            Apply
+            {t("common.apply")}
           </button>
         </div>
       </div>
@@ -401,12 +404,12 @@ export default function PlatformAuditLogsPage() {
         <table className="w-full min-w-[1100px] text-left text-sm">
           <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
-              <th className="px-3 py-2">Time</th>
-              <th className="px-3 py-2">Category</th>
-              <th className="px-3 py-2">Action</th>
-              <th className="px-3 py-2">Actor</th>
-              <th className="px-3 py-2">Subject</th>
-              <th className="px-3 py-2">IP</th>
+              <th className="px-3 py-2">{t("admin.platform_audit_logs.time")}</th>
+              <th className="px-3 py-2">{t("admin.platform_audit_logs.category")}</th>
+              <th className="px-3 py-2">{t("admin.platform_audit_logs.action")}</th>
+              <th className="px-3 py-2">{t("admin.platform_audit_logs.actor")}</th>
+              <th className="px-3 py-2">{t("admin.platform_audit_logs.subject")}</th>
+              <th className="px-3 py-2">{t("admin.platform_audit_logs.ip")}</th>
               <th className="px-3 py-2"></th>
             </tr>
           </thead>
@@ -414,14 +417,14 @@ export default function PlatformAuditLogsPage() {
             {loading && (
               <tr>
                 <td colSpan={7} className="px-3 py-6 text-center text-fg-t6">
-                  Loading…
+                  {t("admin.platform_audit_logs.loading")}
                 </td>
               </tr>
             )}
             {!loading && rows.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-3 py-6 text-center text-fg-t6">
-                  No audit logs found.
+                  {t("admin.platform_audit_logs.empty")}
                 </td>
               </tr>
             )}
@@ -455,7 +458,7 @@ export default function PlatformAuditLogsPage() {
                     onClick={() => setSelected(r)}
                     className="text-xs text-primary-500 hover:underline"
                   >
-                    Details
+                    {t("admin.platform_audit_logs.details")}
                   </button>
                 </td>
               </tr>
@@ -468,7 +471,10 @@ export default function PlatformAuditLogsPage() {
       {meta && meta.last_page > 1 && (
         <div className="mt-3 flex items-center justify-between text-sm">
           <span className="text-fg-t6">
-            Page {meta.current_page} of {meta.last_page} ({meta.total.toLocaleString()} entries)
+            {t("admin.platform_audit_logs.pagination")
+              .replace("{page}", String(meta.current_page))
+              .replace("{lastPage}", String(meta.last_page))
+              .replace("{total}", meta.total.toLocaleString())}
           </span>
           <div className="flex gap-2">
             <button
@@ -477,7 +483,7 @@ export default function PlatformAuditLogsPage() {
               disabled={page <= 1}
               className="rounded border border-default bg-white px-3 py-1 disabled:opacity-50"
             >
-              Prev
+              {t("common.prev")}
             </button>
             <button
               type="button"
@@ -485,7 +491,7 @@ export default function PlatformAuditLogsPage() {
               disabled={page >= meta.last_page}
               className="rounded border border-default bg-white px-3 py-1 disabled:opacity-50"
             >
-              Next
+              {t("common.next")}
             </button>
           </div>
         </div>
@@ -503,24 +509,24 @@ export default function PlatformAuditLogsPage() {
           >
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-lg font-semibold">Audit log entry</h2>
+                <h2 className="text-lg font-semibold">{t("admin.platform_audit_logs.entry")}</h2>
                 <p className="mt-1 font-mono text-xs text-fg-t6 break-all">{selected.id}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setSelected(null)}
                 className="rounded p-1 text-fg-t6 hover:bg-figma-bg-1"
-                aria-label="Close"
+                aria-label={t("common.close")}
               >
                 ✕
               </button>
             </div>
             <dl className="mt-4 space-y-2 text-sm">
-              <DetailRow label="Time" value={new Date(selected.created_at).toLocaleString()} />
-              <DetailRow label="Category" value={selected.category} />
-              <DetailRow label="Action" value={selected.action} />
+              <DetailRow label={t("admin.platform_audit_logs.time")} value={new Date(selected.created_at).toLocaleString()} />
+              <DetailRow label={t("admin.platform_audit_logs.category")} value={selected.category} />
+              <DetailRow label={t("admin.platform_audit_logs.action")} value={selected.action} />
               <DetailRow
-                label="Actor"
+                label={t("admin.platform_audit_logs.actor")}
                 value={
                   selected.actor_name_snapshot
                     ? `${selected.actor_name_snapshot} (${selected.actor_type}${
@@ -530,23 +536,23 @@ export default function PlatformAuditLogsPage() {
                 }
               />
               <DetailRow
-                label="Subject"
+                label={t("admin.platform_audit_logs.subject")}
                 value={
                   selected.subject_type
                     ? `${selected.subject_type}${selected.subject_id ? " #" + selected.subject_id : ""}`
                     : "—"
                 }
               />
-              <DetailRow label="IP" value={selected.ip_address ?? "—"} />
-              <DetailRow label="Request ID" value={selected.request_id ?? "—"} />
+              <DetailRow label={t("admin.platform_audit_logs.ip")} value={selected.ip_address ?? "—"} />
+              <DetailRow label={t("admin.platform_audit_logs.request_id")} value={selected.request_id ?? "—"} />
               <DetailRow
-                label="User agent"
+                label={t("admin.platform_audit_logs.user_agent")}
                 value={selected.user_agent ?? "—"}
                 mono
               />
-              <DetailRow label="Hash" value={selected.hash} mono small />
+              <DetailRow label={t("admin.platform_audit_logs.hash")} value={selected.hash} mono small />
               <DetailRow
-                label="Previous hash"
+                label={t("admin.platform_audit_logs.previous_hash")}
                 value={selected.previous_log_hash ?? "—"}
                 mono
                 small
@@ -555,7 +561,7 @@ export default function PlatformAuditLogsPage() {
             {selected.changes !== null && (
               <div className="mt-4">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-fg-t6">
-                  Changes
+                  {t("admin.platform_audit_logs.changes")}
                 </h3>
                 <pre className="mt-1 overflow-x-auto rounded bg-figma-bg-1 p-3 font-mono text-xs">
                   {JSON.stringify(selected.changes, null, 2)}
@@ -565,7 +571,7 @@ export default function PlatformAuditLogsPage() {
             {selected.context !== null && (
               <div className="mt-4">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-fg-t6">
-                  Context
+                  {t("admin.platform_audit_logs.context")}
                 </h3>
                 <pre className="mt-1 overflow-x-auto rounded bg-figma-bg-1 p-3 font-mono text-xs">
                   {JSON.stringify(selected.context, null, 2)}
@@ -585,6 +591,7 @@ function shortType(t: string): string {
 }
 
 function CategoryBadge({ category }: { category: string }) {
+  const { t } = useLanguage();
   const tone =
     category === "security" || category === "auth"
       ? "bg-warning-50 text-warning-700"
@@ -595,7 +602,7 @@ function CategoryBadge({ category }: { category: string }) {
           : "bg-figma-bg-1 text-fg-t7";
   return (
     <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${tone}`}>
-      {category}
+      {t(`admin.platform_audit_logs.category_${category}`)}
     </span>
   );
 }

@@ -5,6 +5,7 @@ import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 /**
  * Platform-admin connections oversight (Sprint 57, PART 18).
@@ -45,6 +46,7 @@ type Stats = {
 
 export default function PlatformConnectionsPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
 
   const [rows, setRows] = useState<ConnectionRow[]>([]);
@@ -107,7 +109,7 @@ export default function PlatformConnectionsPage() {
           setLastPage(listJson.last_page ?? 1);
           setTotal(listJson.total ?? 0);
         } else {
-          setError(listJson?.message ?? "Failed to load");
+          setError(listJson?.message ?? t("admin.platform_connections.err_load"));
         }
         if (statsJson?.success) {
           setStats(statsJson.data);
@@ -117,7 +119,7 @@ export default function PlatformConnectionsPage() {
         if (e instanceof ApiRequestError && e.status === 403) {
           setForbidden(true);
         } else {
-          setError(e instanceof Error ? e.message : "Failed to load");
+          setError(e instanceof Error ? e.message : t("admin.platform_connections.err_load"));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -127,7 +129,7 @@ export default function PlatformConnectionsPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, allowed, baseURL, page, appliedFilters]);
+  }, [token, allowed, baseURL, page, appliedFilters, t]);
 
   const applyFilters = () => {
     setPage(1);
@@ -154,17 +156,17 @@ export default function PlatformConnectionsPage() {
         setSelected(json.data);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load detail");
+      setError(e instanceof Error ? e.message : t("admin.platform_connections.err_load_detail"));
     }
   };
 
   const forceTerminate = async () => {
     if (!selected) return;
     if (!terminateReason.trim()) {
-      setError("Termination reason is required");
+      setError(t("admin.platform_connections.err_termination_reason_required"));
       return;
     }
-    if (!confirm(`Force-terminate connection ${selected.id}? This is irreversible.`)) return;
+    if (!confirm(t("admin.platform_connections.confirm_force_terminate").replace("{id}", selected.id))) return;
 
     setActionLoading(true);
     try {
@@ -186,10 +188,10 @@ export default function PlatformConnectionsPage() {
         setAppliedFilters((n) => n + 1);
         setTerminateReason("");
       } else {
-        setError(json?.message ?? "Force-terminate failed");
+        setError(json?.message ?? t("admin.platform_connections.err_force_terminate"));
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Force-terminate failed");
+      setError(e instanceof Error ? e.message : t("admin.platform_connections.err_force_terminate"));
     } finally {
       setActionLoading(false);
     }
@@ -198,7 +200,7 @@ export default function PlatformConnectionsPage() {
   if (!allowed || forbidden) {
     return (
       <div>
-        <h1 className="admin-page-title">Connections</h1>
+        <h1 className="admin-page-title">{t("admin.platform_connections.title")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -208,27 +210,27 @@ export default function PlatformConnectionsPage() {
 
   return (
     <div>
-      <h1 className="admin-page-title">Connections</h1>
-      <p className="admin-page-subtitle">B2B partnerships between sellers across the platform.</p>
+      <h1 className="admin-page-title">{t("admin.platform_connections.title")}</h1>
+      <p className="admin-page-subtitle">{t("admin.platform_connections.subtitle")}</p>
 
       {error && <p className="mt-2 text-sm text-error-600">{error}</p>}
 
       {/* Stats */}
       {stats && (
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Total connections" value={stats.total.toLocaleString()} />
+          <StatCard label={t("admin.platform_connections.total_connections")} value={stats.total.toLocaleString()} />
           <StatCard
-            label="Active"
+            label={t("admin.platform_connections.status_active")}
             value={String(stats.by_status?.active ?? 0)}
             tone="good"
           />
           <StatCard
-            label="Proposed"
+            label={t("admin.platform_connections.status_proposed")}
             value={String(stats.by_status?.proposed ?? 0)}
             tone="warn"
           />
           <StatCard
-            label="Terminated"
+            label={t("admin.platform_connections.status_terminated")}
             value={String(stats.by_status?.terminated ?? 0)}
             tone="neutral"
           />
@@ -238,13 +240,13 @@ export default function PlatformConnectionsPage() {
       {/* Filters */}
       <div className="mt-6 grid gap-3 rounded border border-default bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
         <label className="text-xs text-fg-t6">
-          Status
+          {t("admin.platform_connections.status")}
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
             className="mt-1 w-full rounded border border-default px-2 py-1 text-sm"
           >
-            <option value="">All</option>
+            <option value="">{t("common.all")}</option>
             {STATUSES.map((s) => (
               <option key={s} value={s}>
                 {s}
@@ -253,13 +255,13 @@ export default function PlatformConnectionsPage() {
           </select>
         </label>
         <label className="text-xs text-fg-t6">
-          Type
+          {t("admin.platform_connections.type")}
           <select
             value={type}
             onChange={(e) => setType(e.target.value)}
             className="mt-1 w-full rounded border border-default px-2 py-1 text-sm"
           >
-            <option value="">All</option>
+            <option value="">{t("common.all")}</option>
             {TYPES.map((t) => (
               <option key={t} value={t}>
                 {t}
@@ -268,11 +270,11 @@ export default function PlatformConnectionsPage() {
           </select>
         </label>
         <label className="text-xs text-fg-t6">
-          Seller (company ID)
+          {t("admin.platform_connections.seller_company_id")}
           <input
             value={sellerId}
             onChange={(e) => setSellerId(e.target.value)}
-            placeholder="matches either side"
+            placeholder={t("admin.platform_connections.seller_placeholder")}
             className="mt-1 w-full rounded border border-default px-2 py-1 text-sm"
           />
         </label>
@@ -282,14 +284,14 @@ export default function PlatformConnectionsPage() {
             onClick={resetFilters}
             className="rounded border border-default bg-white px-3 py-1.5 text-sm hover:bg-figma-bg-1"
           >
-            Reset
+            {t("common.reset")}
           </button>
           <button
             type="button"
             onClick={applyFilters}
             className="rounded bg-primary-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-600"
           >
-            Apply
+            {t("common.apply")}
           </button>
         </div>
       </div>
@@ -299,12 +301,12 @@ export default function PlatformConnectionsPage() {
         <table className="w-full min-w-[1100px] text-left text-sm">
           <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
-              <th className="px-3 py-2">Seller A</th>
-              <th className="px-3 py-2">Seller B</th>
-              <th className="px-3 py-2">Type</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Proposed by</th>
-              <th className="px-3 py-2">Proposed at</th>
+              <th className="px-3 py-2">{t("admin.platform_connections.seller_a")}</th>
+              <th className="px-3 py-2">{t("admin.platform_connections.seller_b")}</th>
+              <th className="px-3 py-2">{t("admin.platform_connections.type")}</th>
+              <th className="px-3 py-2">{t("admin.platform_connections.status")}</th>
+              <th className="px-3 py-2">{t("admin.platform_connections.proposed_by")}</th>
+              <th className="px-3 py-2">{t("admin.platform_connections.proposed_at")}</th>
               <th className="px-3 py-2"></th>
             </tr>
           </thead>
@@ -312,14 +314,14 @@ export default function PlatformConnectionsPage() {
             {loading && (
               <tr>
                 <td colSpan={7} className="px-3 py-6 text-center text-fg-t6">
-                  Loading…
+                  {t("admin.platform_connections.loading")}
                 </td>
               </tr>
             )}
             {!loading && rows.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-3 py-6 text-center text-fg-t6">
-                  No connections found.
+                  {t("admin.platform_connections.empty")}
                 </td>
               </tr>
             )}
@@ -347,7 +349,7 @@ export default function PlatformConnectionsPage() {
                     onClick={() => openDetail(r)}
                     className="text-xs text-primary-500 hover:underline"
                   >
-                    Details
+                    {t("admin.platform_connections.details")}
                   </button>
                 </td>
               </tr>
@@ -360,7 +362,10 @@ export default function PlatformConnectionsPage() {
       {lastPage > 1 && (
         <div className="mt-3 flex items-center justify-between text-sm">
           <span className="text-fg-t6">
-            Page {page} of {lastPage} ({total.toLocaleString()} entries)
+            {t("admin.platform_connections.pagination")
+              .replace("{page}", String(page))
+              .replace("{lastPage}", String(lastPage))
+              .replace("{total}", total.toLocaleString())}
           </span>
           <div className="flex gap-2">
             <button
@@ -369,7 +374,7 @@ export default function PlatformConnectionsPage() {
               disabled={page <= 1}
               className="rounded border border-default bg-white px-3 py-1 disabled:opacity-50"
             >
-              Prev
+              {t("common.prev")}
             </button>
             <button
               type="button"
@@ -377,7 +382,7 @@ export default function PlatformConnectionsPage() {
               disabled={page >= lastPage}
               className="rounded border border-default bg-white px-3 py-1 disabled:opacity-50"
             >
-              Next
+              {t("common.next")}
             </button>
           </div>
         </div>
@@ -395,7 +400,7 @@ export default function PlatformConnectionsPage() {
           >
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-lg font-semibold">Connection</h2>
+                <h2 className="text-lg font-semibold">{t("admin.platform_connections.connection")}</h2>
                 <p className="mt-1 font-mono text-xs text-fg-t6 break-all">{selected.id}</p>
               </div>
               <button
@@ -410,17 +415,17 @@ export default function PlatformConnectionsPage() {
 
             <dl className="mt-4 space-y-2 text-sm">
               <DetailRow
-                label="Seller A"
+                label={t("admin.platform_connections.seller_a")}
                 value={`${selected.seller_a?.name ?? "#" + selected.seller_a_company_id} (${selected.seller_a?.type ?? "—"})`}
               />
               <DetailRow
-                label="Seller B"
+                label={t("admin.platform_connections.seller_b")}
                 value={`${selected.seller_b?.name ?? "#" + selected.seller_b_company_id} (${selected.seller_b?.type ?? "—"})`}
               />
-              <DetailRow label="Type" value={selected.type} />
-              <DetailRow label="Status" value={selected.status} />
+              <DetailRow label={t("admin.platform_connections.type")} value={selected.type} />
+              <DetailRow label={t("admin.platform_connections.status")} value={selected.status} />
               <DetailRow
-                label="Proposed by"
+                label={t("admin.platform_connections.proposed_by")}
                 value={
                   selected.proposed_by
                     ? `${selected.proposed_by.name} <${selected.proposed_by.email}>`
@@ -428,11 +433,11 @@ export default function PlatformConnectionsPage() {
                 }
               />
               <DetailRow
-                label="Proposed at"
+                label={t("admin.platform_connections.proposed_at")}
                 value={selected.proposed_at ? new Date(selected.proposed_at).toLocaleString() : "—"}
               />
               <DetailRow
-                label="Responded by"
+                label={t("admin.platform_connections.responded_by")}
                 value={
                   selected.responded_by
                     ? `${selected.responded_by.name} <${selected.responded_by.email}>`
@@ -440,7 +445,7 @@ export default function PlatformConnectionsPage() {
                 }
               />
               <DetailRow
-                label="Responded at"
+                label={t("admin.platform_connections.responded_at")}
                 value={
                   selected.responded_at ? new Date(selected.responded_at).toLocaleString() : "—"
                 }
@@ -448,11 +453,11 @@ export default function PlatformConnectionsPage() {
               {selected.terminated_at && (
                 <>
                   <DetailRow
-                    label="Terminated at"
+                    label={t("admin.platform_connections.terminated_at")}
                     value={new Date(selected.terminated_at).toLocaleString()}
                   />
                   <DetailRow
-                    label="Termination reason"
+                    label={t("admin.platform_connections.termination_reason")}
                     value={selected.termination_reason ?? "—"}
                   />
                 </>
@@ -462,7 +467,7 @@ export default function PlatformConnectionsPage() {
             {selected.partner_agreement !== undefined && selected.partner_agreement !== null && (
               <div className="mt-4">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-fg-t6">
-                  Partner agreement
+                  {t("admin.platform_connections.partner_agreement")}
                 </h3>
                 <pre className="mt-1 overflow-x-auto rounded bg-figma-bg-1 p-3 font-mono text-xs">
                   {JSON.stringify(selected.partner_agreement, null, 2)}
@@ -473,7 +478,7 @@ export default function PlatformConnectionsPage() {
               selected.commission_override_rule !== null && (
                 <div className="mt-4">
                   <h3 className="text-xs font-semibold uppercase tracking-wide text-fg-t6">
-                    Commission override
+                    {t("admin.platform_connections.commission_override")}
                   </h3>
                   <pre className="mt-1 overflow-x-auto rounded bg-figma-bg-1 p-3 font-mono text-xs">
                     {JSON.stringify(selected.commission_override_rule, null, 2)}
@@ -484,16 +489,16 @@ export default function PlatformConnectionsPage() {
             {/* Force-terminate action */}
             {!["terminated", "rejected"].includes(selected.status) && (
               <div className="mt-6 rounded border border-error-300 bg-error-50 p-4">
-                <h3 className="text-sm font-semibold text-error-700">Force-terminate</h3>
+                <h3 className="text-sm font-semibold text-error-700">{t("admin.platform_connections.force_terminate")}</h3>
                 <p className="mt-1 text-xs text-error-600">
-                  Reason is required. The connection will be marked terminated with prefix
+                  {t("admin.platform_connections.force_terminate_help")}
                   <code className="ml-1 rounded bg-white px-1 font-mono">ADMIN: …</code>
                 </p>
                 <textarea
                   value={terminateReason}
                   onChange={(e) => setTerminateReason(e.target.value)}
                   rows={2}
-                  placeholder="Reason for force-termination"
+                  placeholder={t("admin.platform_connections.force_terminate_reason_placeholder")}
                   className="mt-2 w-full rounded border border-error-300 px-2 py-1 text-sm"
                 />
                 <button
@@ -502,7 +507,7 @@ export default function PlatformConnectionsPage() {
                   disabled={actionLoading || !terminateReason.trim()}
                   className="mt-2 rounded bg-error-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-error-700 disabled:opacity-50"
                 >
-                  {actionLoading ? "Terminating…" : "Force-terminate"}
+                  {actionLoading ? t("admin.platform_connections.terminating") : t("admin.platform_connections.force_terminate")}
                 </button>
               </div>
             )}
@@ -537,6 +542,7 @@ function StatCard({
 }
 
 function ConnectionStatusBadge({ status }: { status: string }) {
+  const { t } = useLanguage();
   const tone =
     status === "active"
       ? "bg-success-50 text-success-700"
@@ -549,7 +555,7 @@ function ConnectionStatusBadge({ status }: { status: string }) {
             : "bg-figma-bg-1 text-fg-t6";
   return (
     <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${tone}`}>
-      {status}
+      {t(`admin.platform_connections.status_${status}`)}
     </span>
   );
 }

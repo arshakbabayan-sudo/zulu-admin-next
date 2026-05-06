@@ -17,11 +17,13 @@ import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { apiBookings, apiConfirmBooking, apiCancelBooking, type BookingRow } from "@/lib/bookings-api";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useCallback, useEffect, useState } from "react";
 
 const STATUSES = ["", "pending", "confirmed", "cancelled", "completed"];
 
 function StatusPill({ status }: { status: string }) {
+  const { t } = useLanguage();
   const cls =
     status === "confirmed" || status === "completed"
       ? "bg-success-50 text-success-700 border-success-100"
@@ -34,7 +36,7 @@ function StatusPill({ status }: { status: string }) {
     <span
       className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize ${cls}`}
     >
-      {status || "—"}
+      {status ? t(`admin.platform_bookings.status_${status}`) : "—"}
     </span>
   );
 }
@@ -54,6 +56,7 @@ function formatDate(value: string | null | undefined): string {
 }
 
 export default function PlatformBookingsPage() {
+  const { t } = useLanguage();
   const { token, user } = useAdminAuth();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<BookingRow[]>([]);
@@ -80,35 +83,35 @@ export default function PlatformBookingsPage() {
         setRows([]);
         setMeta(null);
       }
-      else setErr(e instanceof ApiRequestError ? e.message : "Failed to load");
+      else setErr(e instanceof ApiRequestError ? e.message : t("admin.platform_bookings.err_load"));
     }
-  }, [token, allowed, page, statusFilter]);
+  }, [token, allowed, page, statusFilter, t]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   async function handleConfirm(id: number) {
-    if (!token || !window.confirm("Confirm this booking?")) return;
+    if (!token || !window.confirm(t("admin.platform_bookings.confirm_confirm"))) return;
     setBusyId(id);
     try {
       await apiConfirmBooking(token, id);
       await load();
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Failed");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.platform_bookings.err_action"));
     } finally {
       setBusyId(null);
     }
   }
 
   async function handleCancel(id: number) {
-    if (!token || !window.confirm("Cancel this booking?")) return;
+    if (!token || !window.confirm(t("admin.platform_bookings.confirm_cancel"))) return;
     setBusyId(id);
     try {
       await apiCancelBooking(token, id);
       await load();
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Failed");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.platform_bookings.err_action"));
     } finally {
       setBusyId(null);
     }
@@ -117,7 +120,7 @@ export default function PlatformBookingsPage() {
   if (!allowed || forbidden) {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">Bookings</h1>
+        <h1 className="admin-page-title">{t("admin.platform_bookings.title")}</h1>
         <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
@@ -142,10 +145,13 @@ export default function PlatformBookingsPage() {
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="admin-page-title">Bookings</h1>
+          <h1 className="admin-page-title">{t("admin.platform_bookings.title")}</h1>
           {meta && (
             <p className="mt-1 text-sm text-fg-t6">
-              {meta.total} total · page {meta.current_page} of {meta.last_page}
+              {t("admin.platform_bookings.meta")
+                .replace("{total}", String(meta.total))
+                .replace("{page}", String(meta.current_page))
+                .replace("{lastPage}", String(meta.last_page))}
             </p>
           )}
         </div>
@@ -168,12 +174,12 @@ export default function PlatformBookingsPage() {
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search reference, company, user, offer…"
+              placeholder={t("admin.platform_bookings.search_placeholder")}
               className="h-9 w-full rounded-zulu border border-default bg-white pl-9 pr-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
             />
           </div>
           <label className="flex items-center gap-2 text-sm text-fg-t6">
-            <span className="font-medium text-fg-t7">Status</span>
+            <span className="font-medium text-fg-t7">{t("admin.platform_bookings.status")}</span>
             <select
               value={statusFilter}
               onChange={(e) => {
@@ -184,7 +190,7 @@ export default function PlatformBookingsPage() {
             >
               {STATUSES.map((s) => (
                 <option key={s} value={s}>
-                  {s ? s.charAt(0).toUpperCase() + s.slice(1) : "All"}
+                  {s ? t(`admin.platform_bookings.status_${s}`) : t("common.all")}
                 </option>
               ))}
             </select>
@@ -198,7 +204,7 @@ export default function PlatformBookingsPage() {
               <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
               <path d="M3 3v5h5" />
             </svg>
-            Refresh
+            {t("admin.platform_bookings.refresh")}
           </button>
         </div>
       </div>
@@ -215,22 +221,22 @@ export default function PlatformBookingsPage() {
           <table className="w-full min-w-[900px] text-left text-sm">
             <thead className="border-b border-default bg-figma-bg-1 text-xs font-medium uppercase tracking-wide text-fg-t6">
               <tr>
-                <th className="px-4 py-3">ID</th>
-                <th className="px-4 py-3">Reference</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Amount</th>
-                <th className="px-4 py-3">Company</th>
-                <th className="px-4 py-3">User</th>
-                <th className="px-4 py-3">Offer</th>
-                <th className="px-4 py-3">Created</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+                <th className="px-4 py-3">{t("admin.crud.common.id")}</th>
+                <th className="px-4 py-3">{t("admin.platform_bookings.reference")}</th>
+                <th className="px-4 py-3">{t("admin.platform_bookings.status")}</th>
+                <th className="px-4 py-3">{t("admin.platform_bookings.amount")}</th>
+                <th className="px-4 py-3">{t("admin.platform_bookings.company")}</th>
+                <th className="px-4 py-3">{t("admin.platform_bookings.user")}</th>
+                <th className="px-4 py-3">{t("admin.platform_bookings.offer")}</th>
+                <th className="px-4 py-3">{t("admin.platform_bookings.created")}</th>
+                <th className="px-4 py-3 text-right">{t("admin.platform_bookings.actions")}</th>
               </tr>
             </thead>
             <tbody>
               {filteredRows.length === 0 && (
                 <tr>
                   <td colSpan={9} className="px-4 py-12 text-center text-sm text-fg-t6">
-                    {search.trim() ? "No bookings match your search." : "No bookings found."}
+                    {search.trim() ? t("admin.platform_bookings.no_match") : t("admin.platform_bookings.empty")}
                   </td>
                 </tr>
               )}
@@ -264,7 +270,7 @@ export default function PlatformBookingsPage() {
                           onClick={() => void handleConfirm(r.id)}
                           className="inline-flex h-8 items-center rounded-zulu border border-success-200 bg-success-50 px-3 text-xs font-medium text-success-700 transition hover:bg-success-100 disabled:opacity-40"
                         >
-                          Confirm
+                          {t("admin.platform_bookings.confirm")}
                         </button>
                       )}
                       {(r.status === "pending" || r.status === "confirmed") && (
@@ -274,7 +280,7 @@ export default function PlatformBookingsPage() {
                           onClick={() => void handleCancel(r.id)}
                           className="inline-flex h-8 items-center rounded-zulu border border-error-200 bg-white px-3 text-xs font-medium text-error-700 transition hover:bg-error-50 disabled:opacity-40"
                         >
-                          Cancel
+                          {t("common.cancel")}
                         </button>
                       )}
                     </div>
@@ -290,7 +296,7 @@ export default function PlatformBookingsPage() {
       <div className="space-y-3 md:hidden">
         {filteredRows.length === 0 && (
           <div className="admin-card p-6 text-center text-sm text-fg-t6">
-            {search.trim() ? "No bookings match your search." : "No bookings found."}
+            {search.trim() ? t("admin.platform_bookings.no_match") : t("admin.platform_bookings.empty")}
           </div>
         )}
         {filteredRows.map((r) => (
@@ -309,19 +315,19 @@ export default function PlatformBookingsPage() {
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div>
-                <div className="text-fg-t6">Amount</div>
+                <div className="text-fg-t6">{t("admin.platform_bookings.amount")}</div>
                 <div className="tabular-nums text-fg-t8">{formatAmount(r.total_amount, r.currency)}</div>
               </div>
               <div>
-                <div className="text-fg-t6">Created</div>
+                <div className="text-fg-t6">{t("admin.platform_bookings.created")}</div>
                 <div className="text-fg-t8">{formatDate(r.created_at)}</div>
               </div>
               <div>
-                <div className="text-fg-t6">Company</div>
+                <div className="text-fg-t6">{t("admin.platform_bookings.company")}</div>
                 <div className="truncate text-fg-t8">{r.company?.name ?? "—"}</div>
               </div>
               <div>
-                <div className="text-fg-t6">User</div>
+                <div className="text-fg-t6">{t("admin.platform_bookings.user")}</div>
                 <div className="truncate text-fg-t8">{r.user?.name ?? "—"}</div>
               </div>
             </div>
@@ -334,7 +340,7 @@ export default function PlatformBookingsPage() {
                     onClick={() => void handleConfirm(r.id)}
                     className="inline-flex h-9 flex-1 items-center justify-center rounded-zulu border border-success-200 bg-success-50 px-3 text-sm font-medium text-success-700 transition hover:bg-success-100 disabled:opacity-40"
                   >
-                    Confirm
+                    {t("admin.platform_bookings.confirm")}
                   </button>
                 )}
                 <button
@@ -343,7 +349,7 @@ export default function PlatformBookingsPage() {
                   onClick={() => void handleCancel(r.id)}
                   className="inline-flex h-9 flex-1 items-center justify-center rounded-zulu border border-error-200 bg-white px-3 text-sm font-medium text-error-700 transition hover:bg-error-50 disabled:opacity-40"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </button>
               </div>
             )}

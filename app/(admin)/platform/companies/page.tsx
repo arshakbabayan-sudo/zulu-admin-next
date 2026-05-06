@@ -18,6 +18,7 @@ import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   apiCompanySellerPermissions,
   apiPatchCompanyGovernance,
@@ -36,6 +37,7 @@ function labelServiceType(t: string): string {
 }
 
 export default function PlatformCompaniesPage() {
+  const { t } = useLanguage();
   const { token, user } = useAdminAuth();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<PlatformCompanyRow[]>([]);
@@ -83,9 +85,9 @@ export default function PlatformCompaniesPage() {
       });
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else setErr(e instanceof ApiRequestError ? e.message : "Failed to load");
+      else setErr(e instanceof ApiRequestError ? e.message : t("admin.platform_companies.err_load"));
     }
-  }, [token, allowed, page, search, governanceFilter, sellerParam]);
+  }, [token, allowed, page, search, governanceFilter, sellerParam, t]);
 
   useEffect(() => {
     load();
@@ -108,7 +110,7 @@ export default function PlatformCompaniesPage() {
       }
       setPermSelected(next);
     } catch (e) {
-      setPermLoadErr(e instanceof ApiRequestError ? e.message : "Failed to load permissions");
+      setPermLoadErr(e instanceof ApiRequestError ? e.message : t("admin.platform_companies.err_load_permissions"));
     } finally {
       setPermLoading(false);
     }
@@ -130,7 +132,7 @@ export default function PlatformCompaniesPage() {
       closePermissionsModal();
       await load();
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Update failed");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.platform_companies.err_update"));
     } finally {
       setBusyId(null);
     }
@@ -138,10 +140,12 @@ export default function PlatformCompaniesPage() {
 
   async function toggleSeller(row: PlatformCompanyRow) {
     if (!token) return;
-    const nextLabel = row.is_seller ? "disable" : "enable";
+    const nextLabel = row.is_seller ? t("admin.platform_companies.disable_seller") : t("admin.platform_companies.enable_seller");
     if (
       !window.confirm(
-        `${nextLabel.charAt(0).toUpperCase() + nextLabel.slice(1)} seller for "${row.name}"?`
+        t("admin.platform_companies.confirm_toggle_seller")
+          .replace("{action}", nextLabel)
+          .replace("{name}", row.name)
       )
     ) {
       return;
@@ -151,7 +155,7 @@ export default function PlatformCompaniesPage() {
       await apiToggleCompanySeller(token, row.id);
       await load();
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Toggle failed");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.platform_companies.err_toggle"));
     } finally {
       setBusyId(null);
     }
@@ -163,10 +167,10 @@ export default function PlatformCompaniesPage() {
     if (!governance_status) return;
     const row = rows.find((r) => r.id === companyId);
     if (row && governance_status === row.governance_status) {
-      alert("No change to save.");
+      alert(t("admin.platform_companies.no_change_to_save"));
       return;
     }
-    const reason = window.prompt("Optional reason (stored with governance change)") ?? "";
+    const reason = window.prompt(t("admin.platform_companies.optional_reason")) ?? "";
     setBusyId(companyId);
     try {
       await apiPatchCompanyGovernance(token, companyId, {
@@ -175,7 +179,7 @@ export default function PlatformCompaniesPage() {
       });
       await load();
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Update failed");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.platform_companies.err_update"));
     } finally {
       setBusyId(null);
     }
@@ -184,7 +188,7 @@ export default function PlatformCompaniesPage() {
   if (!allowed || forbidden) {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">Platform companies</h1>
+        <h1 className="admin-page-title">{t("admin.platform_companies.title")}</h1>
         <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
@@ -196,10 +200,13 @@ export default function PlatformCompaniesPage() {
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="admin-page-title">Platform companies</h1>
+          <h1 className="admin-page-title">{t("admin.platform_companies.title")}</h1>
           {meta && (
             <p className="mt-1 text-sm text-fg-t6">
-              {meta.total} total · page {meta.current_page} of {meta.last_page}
+              {t("admin.platform_companies.meta")
+                .replace("{total}", String(meta.total))
+                .replace("{page}", String(meta.current_page))
+                .replace("{lastPage}", String(meta.last_page))}
             </p>
           )}
         </div>
@@ -221,7 +228,7 @@ export default function PlatformCompaniesPage() {
                   setSearch(searchDraft.trim());
                 }
               }}
-              placeholder="Search by name or slug…"
+              placeholder={t("admin.platform_companies.search_placeholder")}
               className="h-9 w-full rounded-zulu border border-default bg-white pl-9 pr-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
             />
           </div>
@@ -233,10 +240,10 @@ export default function PlatformCompaniesPage() {
             }}
             className="inline-flex h-9 items-center rounded-zulu bg-primary px-4 text-sm font-semibold text-white transition hover:opacity-90"
           >
-            Apply
+            {t("common.apply")}
           </button>
           <label className="flex items-center gap-2 text-sm text-fg-t6">
-            <span className="font-medium text-fg-t7">Governance</span>
+            <span className="font-medium text-fg-t7">{t("admin.platform_companies.governance")}</span>
             <select
               value={governanceFilter}
               onChange={(e) => {
@@ -245,7 +252,7 @@ export default function PlatformCompaniesPage() {
               }}
               className="h-9 rounded-zulu border border-default bg-white px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
             >
-              <option value="">Any</option>
+              <option value="">{t("common.any")}</option>
               {GOVERNANCE_STATUSES.map((s) => (
                 <option key={s} value={s}>
                   {s.charAt(0).toUpperCase() + s.slice(1)}
@@ -254,7 +261,7 @@ export default function PlatformCompaniesPage() {
             </select>
           </label>
           <label className="flex items-center gap-2 text-sm text-fg-t6">
-            <span className="font-medium text-fg-t7">Seller</span>
+            <span className="font-medium text-fg-t7">{t("admin.platform_companies.seller")}</span>
             <select
               value={sellerFilter}
               onChange={(e) => {
@@ -263,9 +270,9 @@ export default function PlatformCompaniesPage() {
               }}
               className="h-9 rounded-zulu border border-default bg-white px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
             >
-              <option value="">Any</option>
-              <option value="1">Yes</option>
-              <option value="0">No</option>
+              <option value="">{t("common.any")}</option>
+              <option value="1">{t("admin.platform_companies.yes")}</option>
+              <option value="0">{t("admin.platform_companies.no")}</option>
             </select>
           </label>
         </div>
@@ -280,20 +287,20 @@ export default function PlatformCompaniesPage() {
           <table className="w-full min-w-[960px] text-left text-sm">
             <thead className="border-b border-default bg-figma-bg-1 text-xs font-medium uppercase tracking-wide text-fg-t6">
               <tr>
-                <th className="px-4 py-3">ID</th>
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Type</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Governance</th>
-                <th className="px-4 py-3">Seller</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+                <th className="px-4 py-3">{t("admin.crud.common.id")}</th>
+                <th className="px-4 py-3">{t("admin.platform_companies.name")}</th>
+                <th className="px-4 py-3">{t("admin.platform_companies.type")}</th>
+                <th className="px-4 py-3">{t("admin.platform_companies.status")}</th>
+                <th className="px-4 py-3">{t("admin.platform_companies.governance")}</th>
+                <th className="px-4 py-3">{t("admin.platform_companies.seller")}</th>
+                <th className="px-4 py-3 text-right">{t("admin.platform_companies.actions")}</th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-4 py-12 text-center text-sm text-fg-t6">
-                    No companies found.
+                    {t("admin.platform_companies.empty")}
                   </td>
                 </tr>
               )}
@@ -326,13 +333,13 @@ export default function PlatformCompaniesPage() {
                   <td className="px-4 py-3">
                     {r.is_seller ? (
                       <StatusPill status="yes" tone="success">
-                        Yes
+                        {t("admin.platform_companies.yes")}
                         {r.active_seller_permissions_count != null && (
                           <span className="ml-1 tabular-nums">· {r.active_seller_permissions_count}</span>
                         )}
                       </StatusPill>
                     ) : (
-                      <StatusPill status="no" tone="muted">No</StatusPill>
+                      <StatusPill status="no" tone="muted">{t("admin.platform_companies.no")}</StatusPill>
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -343,7 +350,7 @@ export default function PlatformCompaniesPage() {
                         onClick={() => saveGovernance(r.id)}
                         className="inline-flex h-8 items-center rounded-zulu border border-default bg-white px-2.5 text-xs font-medium text-fg-t7 transition hover:bg-figma-bg-1 disabled:opacity-40"
                       >
-                        Save gov.
+                        {t("admin.platform_companies.save_gov")}
                       </button>
                       <button
                         type="button"
@@ -351,7 +358,7 @@ export default function PlatformCompaniesPage() {
                         onClick={() => void openPermissionsModal(r)}
                         className="inline-flex h-8 items-center rounded-zulu border border-default bg-white px-2.5 text-xs font-medium text-fg-t7 transition hover:bg-figma-bg-1 disabled:opacity-40"
                       >
-                        Permissions…
+                        {t("admin.platform_companies.permissions")}
                       </button>
                       <button
                         type="button"
@@ -359,7 +366,7 @@ export default function PlatformCompaniesPage() {
                         onClick={() => void toggleSeller(r)}
                         className="inline-flex h-8 items-center rounded-zulu border border-primary-100 bg-primary-50 px-2.5 text-xs font-medium text-primary transition hover:bg-primary-100 disabled:opacity-40"
                       >
-                        {r.is_seller ? "Disable seller" : "Enable seller"}
+                        {r.is_seller ? t("admin.platform_companies.disable_seller") : t("admin.platform_companies.enable_seller")}
                       </button>
                     </div>
                   </td>
@@ -385,16 +392,16 @@ export default function PlatformCompaniesPage() {
             <div className="flex items-start justify-between gap-3 border-b border-default p-5">
               <div>
                 <h2 id="perm-modal-title" className="text-base font-semibold text-fg-t8">
-                  Seller service types
+                  {t("admin.platform_companies.seller_service_types")}
                 </h2>
                 <p className="mt-1 text-xs text-fg-t6">
-                  {permModalCompany.name} · checked types are synced as active.
+                  {t("admin.platform_companies.modal_subtitle").replace("{name}", permModalCompany.name)}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={closePermissionsModal}
-                aria-label="Close"
+                aria-label={t("common.close")}
                 className="inline-flex h-8 w-8 items-center justify-center rounded-zulu text-fg-t6 transition hover:bg-figma-bg-1"
               >
                 <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -409,7 +416,7 @@ export default function PlatformCompaniesPage() {
                 </div>
               )}
               {permLoading ? (
-                <p className="text-sm text-fg-t6">Loading…</p>
+                <p className="text-sm text-fg-t6">{t("admin.platform_companies.loading")}</p>
               ) : !permLoadErr ? (
                 <ul className="space-y-2">
                   {SELLER_SERVICE_TYPES.map((tp) => (
@@ -437,7 +444,7 @@ export default function PlatformCompaniesPage() {
                 onClick={closePermissionsModal}
                 className="inline-flex h-9 items-center rounded-zulu border border-default bg-white px-4 text-sm font-medium text-fg-t7 transition hover:bg-white/70"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 type="button"
@@ -445,7 +452,7 @@ export default function PlatformCompaniesPage() {
                 onClick={() => void savePermissions()}
                 className="inline-flex h-9 items-center rounded-zulu bg-primary px-4 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
               >
-                Save permissions
+                {t("admin.platform_companies.save_permissions")}
               </button>
             </div>
           </div>
