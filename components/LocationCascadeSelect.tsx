@@ -1,5 +1,5 @@
 "use client";
-
+// Force Vercel rebuild — admin deploy was stuck on stale bundle.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { apiTreeLocationChildren, apiTreeLocationNode, type TreeLocationNode } from "@/lib/locations-api";
 
