@@ -517,32 +517,7 @@ export default function OperatorExcursionsPage() {
                       </span>
                     ))}
                   </label>
-                  <label className="flex flex-col gap-1 text-sm">
-                    <span className="font-medium text-fg-t6">{t("admin.crud.excursions.field.country")}</span>
-                    <input
-                      value={form.country}
-                      onChange={(e) => setForm((p) => (p ? { ...p, country: e.target.value } : p))}
-                      className={inputClass("country")}
-                    />
-                    {fieldMsgs("country").map((m, i) => (
-                      <span key={i} className="text-xs text-error-600">
-                        {m}
-                      </span>
-                    ))}
-                  </label>
-                  <label className="flex flex-col gap-1 text-sm">
-                    <span className="font-medium text-fg-t6">{t("admin.crud.excursions.field.city")}</span>
-                    <input
-                      value={form.city}
-                      onChange={(e) => setForm((p) => (p ? { ...p, city: e.target.value } : p))}
-                      className={inputClass("city")}
-                    />
-                    {fieldMsgs("city").map((m, i) => (
-                      <span key={i} className="text-xs text-error-600">
-                        {m}
-                      </span>
-                    ))}
-                  </label>
+                  {/* Country/city auto-filled from the LocationCascadeSelect above. */}
                   <p className="text-xs text-fg-t6 sm:col-span-2">
                     Listing location sent to API: <span className="font-mono text-fg-t7">{derivedLocationFromWizard(form)}</span>
                   </p>

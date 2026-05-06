@@ -559,16 +559,7 @@ export default function OperatorVisasPage() {
                 <p className={hintClass}>{t("admin.crud.visas.hint.offer_status")}</p>
               </div>
             )}
-            <label className="flex flex-col gap-1.5 text-sm">
-              <span className={labelTextClass}>
-                {t("admin.crud.visas.field.country")} <span className="text-red-500">*</span>
-              </span>
-              <input
-                value={form.country ?? ""}
-                onChange={(e) => setForm((p) => (p ? { ...p, country: e.target.value } : p))}
-                className={inputClass("country")}
-              />
-            </label>
+            {/* Country text auto-filled from LocationCascadeSelect above. */}
             <label className="flex flex-col gap-1.5 text-sm">
               <span className={labelTextClass}>{t("admin.crud.visas.field.country_id")}</span>
               <input
