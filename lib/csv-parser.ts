@@ -318,16 +318,7 @@ export function flightTemplateCsv(): string {
 
 // ─── Hotels (template + export shape only — no flat import) ──────────────────
 
-/**
- * CSV ↔ Hotel rooms encoding.
- *
- * Each hotel can carry up to {@link HOTEL_CSV_ROOM_COUNT} rooms in the flat
- * CSV (1 pricing row per room). Rooms beyond this limit are dropped on
- * export and only manageable via the UI Edit form.
- */
-export const HOTEL_CSV_ROOM_COUNT = 3;
-
-const HOTEL_FLAT_CSV_FIELDS = [
+export const HOTEL_CSV_FIELDS = [
   "id", "offer_id", "hotel_name", "property_type", "hotel_type",
   "country", "region_or_state", "city", "district_or_area",
   "full_address", "latitude", "longitude", "meal_type", "star_rating",
@@ -340,42 +331,6 @@ const HOTEL_FLAT_CSV_FIELDS = [
   "review_score", "review_count", "review_label", "room_inventory_mode",
 ] as const;
 
-const HOTEL_ROOM_FIELD_KEYS = [
-  "type", "name", "capacity",
-  "price", "currency", "pricing_mode",
-  "valid_from", "valid_to", "min_nights", "status",
-] as const;
-
-const HOTEL_ROOM_FIELD_LABELS: Record<(typeof HOTEL_ROOM_FIELD_KEYS)[number], string> = {
-  type: "Type",
-  name: "Name",
-  capacity: "Capacity",
-  price: "Price",
-  currency: "Currency",
-  pricing_mode: "Pricing Mode",
-  valid_from: "Valid From",
-  valid_to: "Valid To",
-  min_nights: "Min Nights",
-  status: "Status",
-};
-
-export function hotelRoomCsvField(roomIndex: number, key: (typeof HOTEL_ROOM_FIELD_KEYS)[number]): string {
-  return `room_${roomIndex + 1}_${key}`;
-}
-
-const HOTEL_ROOM_CSV_FIELDS: string[] = (() => {
-  const out: string[] = [];
-  for (let i = 0; i < HOTEL_CSV_ROOM_COUNT; i++) {
-    for (const k of HOTEL_ROOM_FIELD_KEYS) out.push(hotelRoomCsvField(i, k));
-  }
-  return out;
-})();
-
-export const HOTEL_CSV_FIELDS: readonly string[] = [
-  ...HOTEL_FLAT_CSV_FIELDS,
-  ...HOTEL_ROOM_CSV_FIELDS,
-];
-
 const HOTEL_REQUIRED_TEMPLATE_FIELDS = new Set<string>([
   "offer_id",
   "hotel_name",
@@ -386,64 +341,49 @@ const HOTEL_REQUIRED_TEMPLATE_FIELDS = new Set<string>([
   "meal_type",
   "availability_status",
   "status",
-  // Room 1 is mandatory (UI form requires ≥1 room with ≥1 rate).
-  // Rooms 2-3 are optional and only created when their type is filled.
-  hotelRoomCsvField(0, "type"),
-  hotelRoomCsvField(0, "name"),
-  hotelRoomCsvField(0, "capacity"),
-  hotelRoomCsvField(0, "price"),
-  hotelRoomCsvField(0, "currency"),
 ]);
 
-const HOTEL_TEMPLATE_LABELS: Record<string, string> = (() => {
-  const labels: Record<string, string> = {
-    id: "ID (Update Existing; leave blank to create)",
-    offer_id: "Offer ID",
-    hotel_name: "Hotel Name",
-    property_type: "Property Type",
-    hotel_type: "Hotel Type",
-    country: "Country",
-    region_or_state: "Region or State",
-    city: "City",
-    district_or_area: "District or Area",
-    full_address: "Full Address",
-    latitude: "Latitude",
-    longitude: "Longitude",
-    meal_type: "Meal Type",
-    star_rating: "Star Rating",
-    availability_status: "Availability Status",
-    status: "Status",
-    bookable: "Bookable",
-    is_package_eligible: "Is Package Eligible",
-    visibility_rule: "Visibility Rule",
-    appears_in_packages: "Appears In Packages",
-    free_wifi: "Free WiFi",
-    parking: "Parking",
-    airport_shuttle: "Airport Shuttle",
-    indoor_pool: "Indoor Pool",
-    outdoor_pool: "Outdoor Pool",
-    room_service: "Room Service",
-    front_desk_24h: "Front Desk 24h",
-    child_friendly: "Child Friendly",
-    accessibility_support: "Accessibility Support",
-    pets_allowed: "Pets Allowed",
-    free_cancellation: "Free Cancellation",
-    prepayment_required: "Prepayment Required",
-    cancellation_policy_type: "Cancellation Policy Type",
-    cancellation_deadline_at: "Cancellation Deadline At",
-    no_show_policy: "No-show Policy",
-    review_score: "Review Score",
-    review_count: "Review Count",
-    review_label: "Review Label",
-    room_inventory_mode: "Room Inventory Mode",
-  };
-  for (let i = 0; i < HOTEL_CSV_ROOM_COUNT; i++) {
-    for (const k of HOTEL_ROOM_FIELD_KEYS) {
-      labels[hotelRoomCsvField(i, k)] = `Room ${i + 1} ${HOTEL_ROOM_FIELD_LABELS[k]}`;
-    }
-  }
-  return labels;
-})();
+const HOTEL_TEMPLATE_LABELS: Record<string, string> = {
+  id: "ID (Update Existing; leave blank to create)",
+  offer_id: "Offer ID",
+  hotel_name: "Hotel Name",
+  property_type: "Property Type",
+  hotel_type: "Hotel Type",
+  country: "Country",
+  region_or_state: "Region or State",
+  city: "City",
+  district_or_area: "District or Area",
+  full_address: "Full Address",
+  latitude: "Latitude",
+  longitude: "Longitude",
+  meal_type: "Meal Type",
+  star_rating: "Star Rating",
+  availability_status: "Availability Status",
+  status: "Status",
+  bookable: "Bookable",
+  is_package_eligible: "Is Package Eligible",
+  visibility_rule: "Visibility Rule",
+  appears_in_packages: "Appears In Packages",
+  free_wifi: "Free WiFi",
+  parking: "Parking",
+  airport_shuttle: "Airport Shuttle",
+  indoor_pool: "Indoor Pool",
+  outdoor_pool: "Outdoor Pool",
+  room_service: "Room Service",
+  front_desk_24h: "Front Desk 24h",
+  child_friendly: "Child Friendly",
+  accessibility_support: "Accessibility Support",
+  pets_allowed: "Pets Allowed",
+  free_cancellation: "Free Cancellation",
+  prepayment_required: "Prepayment Required",
+  cancellation_policy_type: "Cancellation Policy Type",
+  cancellation_deadline_at: "Cancellation Deadline At",
+  no_show_policy: "No-show Policy",
+  review_score: "Review Score",
+  review_count: "Review Count",
+  review_label: "Review Label",
+  room_inventory_mode: "Room Inventory Mode",
+};
 
 const HOTEL_IMPORT_HEADER_KEY_MAP: Record<string, string> = (() => {
   const map: Record<string, string> = {
@@ -480,41 +420,18 @@ export function hotelRowToFormPayload(row: Record<string, string>): HotelFormPay
     return parseBool(t);
   };
 
-  const rooms: ReturnType<typeof newHotelRoomFormRow>[] = [];
-  for (let i = 0; i < HOTEL_CSV_ROOM_COUNT; i++) {
-    const f = (k: (typeof HOTEL_ROOM_FIELD_KEYS)[number]) => get(hotelRoomCsvField(i, k));
-    const fNum = (k: (typeof HOTEL_ROOM_FIELD_KEYS)[number]) => num(hotelRoomCsvField(i, k));
-
-    const roomType = f("type");
-    const roomName = f("name");
-    const priceVal = f("price");
-
-    // Rooms 2..N are optional — only emit if any room field is filled.
-    if (i > 0 && !roomType && !roomName && !priceVal && !f("capacity")) continue;
-
-    const room = newHotelRoomFormRow();
-    room.room_type = roomType || (i === 0 ? "standard" : `room_${i + 1}`);
-    room.room_name = roomName || (i === 0 ? "Standard Room" : `Room ${i + 1}`);
-    const capRaw = fNum("capacity");
-    room.capacity = capRaw === "" ? 2 : Number(capRaw);
-
-    const pricing = newHotelPricingFormRow();
-    pricing.price = priceVal || (i === 0 ? "100" : "0");
-    pricing.currency = (f("currency") || "USD").toUpperCase().slice(0, 3);
-    pricing.pricing_mode = f("pricing_mode") || "per_night";
-    pricing.valid_from = f("valid_from");
-    pricing.valid_to = f("valid_to");
-    pricing.min_nights = fNum("min_nights");
-    pricing.status = f("status") || "active";
-    room.pricings = [pricing];
-
-    rooms.push(room);
-  }
-  if (rooms.length === 0) rooms.push(newHotelRoomFormRow());
+  const room = newHotelRoomFormRow();
+  room.room_type = "standard";
+  room.room_name = "Standard Room";
+  room.capacity = 2;
+  room.pricings = [newHotelPricingFormRow()];
+  room.pricings[0].price = "100";
+  room.pricings[0].currency = "USD";
+  room.pricings[0].pricing_mode = "per_night";
+  room.pricings[0].status = "active";
 
   return {
     offer_id: num("offer_id"),
-    location_id: "",
     hotel_name: get("hotel_name"),
     property_type: get("property_type") || "hotel",
     hotel_type: get("hotel_type") || "resort",
@@ -552,12 +469,12 @@ export function hotelRowToFormPayload(row: Record<string, string>): HotelFormPay
     review_count: num("review_count"),
     review_label: get("review_label"),
     room_inventory_mode: get("room_inventory_mode"),
-    rooms,
+    rooms: [room],
   };
 }
 
 export function hotelFormToFlatCsv(h: ReturnType<typeof hotelFormFromDetail>): Record<string, unknown> {
-  const rec: Record<string, unknown> = {
+  return {
     offer_id: h.offer_id === "" ? "" : h.offer_id,
     hotel_name: h.hotel_name,
     property_type: h.property_type,
@@ -597,21 +514,6 @@ export function hotelFormToFlatCsv(h: ReturnType<typeof hotelFormFromDetail>): R
     review_label: h.review_label,
     room_inventory_mode: h.room_inventory_mode,
   };
-  for (let i = 0; i < HOTEL_CSV_ROOM_COUNT; i++) {
-    const room = h.rooms[i];
-    const pricing = room?.pricings?.[0];
-    rec[hotelRoomCsvField(i, "type")] = room?.room_type ?? "";
-    rec[hotelRoomCsvField(i, "name")] = room?.room_name ?? "";
-    rec[hotelRoomCsvField(i, "capacity")] = room?.capacity ?? "";
-    rec[hotelRoomCsvField(i, "price")] = pricing?.price ?? "";
-    rec[hotelRoomCsvField(i, "currency")] = pricing?.currency ?? "";
-    rec[hotelRoomCsvField(i, "pricing_mode")] = pricing?.pricing_mode ?? "";
-    rec[hotelRoomCsvField(i, "valid_from")] = pricing?.valid_from ?? "";
-    rec[hotelRoomCsvField(i, "valid_to")] = pricing?.valid_to ?? "";
-    rec[hotelRoomCsvField(i, "min_nights")] = pricing?.min_nights ?? "";
-    rec[hotelRoomCsvField(i, "status")] = pricing?.status ?? "";
-  }
-  return rec;
 }
 
 export function hotelTemplateCsv(): string {
