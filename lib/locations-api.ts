@@ -47,6 +47,8 @@ export type TreeLocationNode = {
   parent_id?: number | null;
   path?: string | null;
   depth?: number | null;
+  country_code?: string | null;
+  flag_emoji?: string | null;
 };
 
 export type TreeLocationNodeDetail = TreeLocationNode & {

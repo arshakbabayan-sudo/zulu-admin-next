@@ -126,9 +126,8 @@ export function LocationCascadeSelect({ token, value, onChange, label = "Locatio
     onChange(selected.final?.id ?? null, selected);
   }, [selected, onChange, value, countryId, regionId, cityId]);
 
-  async function handleCountryChange(nextRaw: string) {
+  async function handleCountryChange(nextId: number | "") {
     if (!token) return;
-    const nextId = nextRaw ? Number(nextRaw) : "";
     setCountryId(nextId);
     setRegionId("");
     setCityId("");
@@ -148,9 +147,8 @@ export function LocationCascadeSelect({ token, value, onChange, label = "Locatio
     }
   }
 
-  async function handleRegionChange(nextRaw: string) {
+  async function handleRegionChange(nextId: number | "") {
     if (!token) return;
-    const nextId = nextRaw ? Number(nextRaw) : "";
     setRegionId(nextId);
     setCityId("");
     if (nextId === "") {
@@ -172,50 +170,201 @@ export function LocationCascadeSelect({ token, value, onChange, label = "Locatio
     <div className="space-y-2 sm:col-span-2">
       <span className="text-sm font-medium text-slate-600">{label}</span>
       <div className="grid gap-2 sm:grid-cols-3">
-        <select
-          value={countryId === "" ? "" : String(countryId)}
-          onChange={(e) => void handleCountryChange(e.target.value)}
-          className="rounded border border-slate-300 px-2 py-1.5 text-sm"
-        >
-          <option value="">Select country</option>
-          {countries.map((row) => (
-            <option key={row.id} value={row.id}>
-              {row.name}
-            </option>
-          ))}
-        </select>
-        <select
-          value={regionId === "" ? "" : String(regionId)}
-          onChange={(e) => void handleRegionChange(e.target.value)}
-          className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+        <Combobox
+          items={countries}
+          value={countryId}
+          onChange={(id) => void handleCountryChange(id)}
+          placeholder="Select country"
+          showFlag
+        />
+        <Combobox
+          items={regions}
+          value={regionId}
+          onChange={(id) => void handleRegionChange(id)}
+          placeholder="Select region (optional)"
           disabled={countryId === "" || regions.length === 0}
-        >
-          <option value="">Select region (optional)</option>
-          {regions.map((row) => (
-            <option key={row.id} value={row.id}>
-              {row.name}
-            </option>
-          ))}
-        </select>
-        <select
-          value={cityId === "" ? "" : String(cityId)}
-          onChange={(e) => setCityId(e.target.value ? Number(e.target.value) : "")}
-          className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+        />
+        <Combobox
+          items={cities}
+          value={cityId}
+          onChange={(id) => setCityId(id)}
+          placeholder="Select city (optional)"
           disabled={regionId === "" || cities.length === 0}
-        >
-          <option value="">Select city (optional)</option>
-          {cities.map((row) => (
-            <option key={row.id} value={row.id}>
-              {row.name}
-            </option>
-          ))}
-        </select>
+        />
       </div>
       {loading && <p className="text-xs text-slate-500">Loading locations…</p>}
       {selected.final && (
         <p className="text-xs text-slate-500">
           Selected: {selected.final.name} ({selected.final.type})
         </p>
+      )}
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Type-ahead combobox: typing a letter filters the list (case-insensitive,
+// works with Latin + Armenian + Cyrillic alphabets). Click to open,
+// click outside to close, ↑/↓/Enter for keyboard navigation.
+// ──────────────────────────────────────────────────────────────────────────
+
+type ComboboxProps = {
+  items: TreeLocationNode[];
+  value: number | "";
+  onChange: (id: number | "") => void;
+  placeholder: string;
+  disabled?: boolean;
+  showFlag?: boolean;
+};
+
+function Combobox({ items, value, onChange, placeholder, disabled = false, showFlag = false }: ComboboxProps) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [highlight, setHighlight] = useState(0);
+
+  const selectedItem = useMemo(
+    () => (value === "" ? null : items.find((i) => i.id === value) ?? null),
+    [items, value]
+  );
+
+  // Filter: items whose name starts with the typed prefix (case-insensitive).
+  // Falls back to "contains" so partial typing still finds matches.
+  const filtered = useMemo(() => {
+    const q = query.trim().toLocaleLowerCase();
+    if (!q) return items;
+    const starts = items.filter((i) => i.name.toLocaleLowerCase().startsWith(q));
+    if (starts.length > 0) return starts;
+    return items.filter((i) => i.name.toLocaleLowerCase().includes(q));
+  }, [items, query]);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    function handler(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setQuery("");
+      }
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  // Keep highlight in range when filtered list changes
+  useEffect(() => {
+    setHighlight(0);
+  }, [query, open]);
+
+  function commit(id: number | "") {
+    onChange(id);
+    setOpen(false);
+    setQuery("");
+  }
+
+  function handleKey(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setOpen(true);
+      setHighlight((h) => Math.min(h + 1, filtered.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlight((h) => Math.max(h - 1, 0));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      const pick = filtered[highlight];
+      if (pick) commit(pick.id);
+    } else if (e.key === "Escape") {
+      setOpen(false);
+      setQuery("");
+    } else if (e.key === "Backspace" && query === "" && selectedItem) {
+      commit("");
+    }
+  }
+
+  const displayValue = open ? query : selectedItem?.name ?? "";
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <div
+        className={`flex items-center gap-1 rounded border px-2 py-1.5 text-sm ${
+          disabled ? "border-slate-200 bg-slate-50 text-slate-400" : "border-slate-300 bg-white"
+        }`}
+      >
+        {showFlag && selectedItem?.flag_emoji && !open && (
+          <span className="text-base leading-none">{selectedItem.flag_emoji}</span>
+        )}
+        <input
+          ref={inputRef}
+          type="text"
+          value={displayValue}
+          placeholder={placeholder}
+          disabled={disabled}
+          onFocus={() => !disabled && setOpen(true)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+          }}
+          onKeyDown={handleKey}
+          className="w-full bg-transparent outline-none placeholder:text-slate-400 disabled:cursor-not-allowed"
+        />
+        {selectedItem && !open && !disabled && (
+          <button
+            type="button"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              commit("");
+            }}
+            className="text-slate-400 hover:text-slate-600"
+            aria-label="Clear selection"
+          >
+            ×
+          </button>
+        )}
+        <button
+          type="button"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            if (disabled) return;
+            setOpen((v) => !v);
+            inputRef.current?.focus();
+          }}
+          className="text-slate-400"
+          aria-label="Toggle dropdown"
+          disabled={disabled}
+        >
+          ▾
+        </button>
+      </div>
+      {open && filtered.length > 0 && (
+        <ul
+          ref={listRef}
+          className="absolute z-30 mt-1 max-h-64 w-full overflow-y-auto rounded-md border border-slate-200 bg-white py-1 shadow-lg"
+        >
+          {filtered.map((item, idx) => (
+            <li
+              key={item.id}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                commit(item.id);
+              }}
+              onMouseEnter={() => setHighlight(idx)}
+              className={`flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm ${
+                idx === highlight ? "bg-violet-50 text-violet-700" : "text-slate-700"
+              }`}
+            >
+              {showFlag && item.flag_emoji && <span className="text-base leading-none">{item.flag_emoji}</span>}
+              <span className="truncate">{item.name}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {open && filtered.length === 0 && (
+        <div className="absolute z-30 mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500 shadow-lg">
+          No matches
+        </div>
       )}
     </div>
   );
