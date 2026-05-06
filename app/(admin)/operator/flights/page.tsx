@@ -135,11 +135,9 @@ const STEP_FIELDS: Record<Exclude<FlightWizardStep, "review">, (keyof FlightPayl
     "offer_id",
     "flight_code_internal",
     "service_type",
-    "departure_country",
-    "departure_city",
+    // Departure / arrival country + city auto-derived from the two
+    // location cascades rendered above this grid.
     "departure_airport",
-    "arrival_country",
-    "arrival_city",
     "arrival_airport",
     "departure_airport_code",
     "arrival_airport_code",
@@ -201,6 +199,8 @@ const STEP_FIELDS: Record<Exclude<FlightWizardStep, "review">, (keyof FlightPayl
 const EMPTY: FlightPayload = {
   offer_id: "",
   location_id: "",
+  departure_location_id: "",
+  arrival_location_id: "",
   flight_code_internal: "",
   service_type: "scheduled",
   departure_country: "",
@@ -757,13 +757,51 @@ export default function OperatorFlightsPage() {
           {wizardStep !== "review" ? (
             <>
               {wizardStep === "general" && (
-                <div className="mb-3">
+                <div className="mb-3 grid gap-3 sm:grid-cols-2">
                   <LocationCascadeSelect
                     token={token}
-                    value={form.location_id === "" || form.location_id == null ? null : Number(form.location_id)}
-                    label="Main location"
-                    onChange={(locationId) =>
-                      setForm((p) => (p ? { ...p, location_id: locationId ?? "" } : p))
+                    value={
+                      form.departure_location_id === "" || form.departure_location_id == null
+                        ? null
+                        : Number(form.departure_location_id)
+                    }
+                    label="Departure location"
+                    onChange={(locationId, meta) =>
+                      setForm((p) =>
+                        p
+                          ? {
+                              ...p,
+                              departure_location_id: locationId ?? "",
+                              // Mirror into the legacy text columns so existing
+                              // consumers (geo restriction, listing card) still work.
+                              departure_country: meta.country?.name ?? p.departure_country,
+                              departure_city: meta.city?.name ?? meta.region?.name ?? p.departure_city,
+                              // Use departure as the back-compat single location_id.
+                              location_id: locationId ?? p.location_id,
+                            }
+                          : p
+                      )
+                    }
+                  />
+                  <LocationCascadeSelect
+                    token={token}
+                    value={
+                      form.arrival_location_id === "" || form.arrival_location_id == null
+                        ? null
+                        : Number(form.arrival_location_id)
+                    }
+                    label="Arrival location"
+                    onChange={(locationId, meta) =>
+                      setForm((p) =>
+                        p
+                          ? {
+                              ...p,
+                              arrival_location_id: locationId ?? "",
+                              arrival_country: meta.country?.name ?? p.arrival_country,
+                              arrival_city: meta.city?.name ?? meta.region?.name ?? p.arrival_city,
+                            }
+                          : p
+                      )
                     }
                   />
                 </div>

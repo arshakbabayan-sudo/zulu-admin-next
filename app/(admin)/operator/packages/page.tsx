@@ -1,6 +1,7 @@
 "use client";
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
+import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
 import { PaginationBar } from "@/components/PaginationBar";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { ApiRequestError } from "@/lib/api-client";
@@ -52,10 +53,30 @@ export default function OperatorPackagesPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  function openCreate() { setEditId(null); setForm({ package_title: "", package_type: "flight", destination_city: "", destination_country: "", duration_days: undefined, currency: "USD" }); setFormErr(null); }
+  function openCreate() {
+    setEditId(null);
+    setForm({
+      package_title: "",
+      package_type: "flight",
+      destination_city: "",
+      destination_country: "",
+      destination_location_id: null,
+      duration_days: undefined,
+      currency: "USD",
+    } as PackagePayload);
+    setFormErr(null);
+  }
   function openEdit(r: PackageRow) {
     setEditId(r.id);
-    setForm({ package_title: r.package_title ?? "", package_type: r.package_type ?? "flight", destination_city: r.destination_city ?? "", destination_country: r.destination_country ?? "", duration_days: r.duration_days ?? undefined, currency: r.currency ?? "USD" });
+    setForm({
+      package_title: r.package_title ?? "",
+      package_type: r.package_type ?? "flight",
+      destination_city: r.destination_city ?? "",
+      destination_country: r.destination_country ?? "",
+      destination_location_id: (r as { destination_location_id?: number | null }).destination_location_id ?? null,
+      duration_days: r.duration_days ?? undefined,
+      currency: r.currency ?? "USD",
+    } as PackagePayload);
     setFormErr(null);
   }
   function closeForm() { setForm(null); setEditId(null); setFormErr(null); }
@@ -131,16 +152,26 @@ export default function OperatorPackagesPage() {
                 {PACKAGE_TYPES.map((pt) => <option key={pt} value={pt}>{pt}</option>)}
               </select>
             </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-fg-t6">{t("admin.crud.packages.field.destination_city")}</span>
-              <input value={(form["destination_city"] as string) ?? ""} onChange={(e) => setForm((p) => p ? { ...p, destination_city: e.target.value } : p)}
-                className="rounded border border-default px-2 py-1.5 text-sm" />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-fg-t6">{t("admin.crud.packages.field.destination_country")}</span>
-              <input value={(form["destination_country"] as string) ?? ""} onChange={(e) => setForm((p) => p ? { ...p, destination_country: e.target.value } : p)}
-                className="rounded border border-default px-2 py-1.5 text-sm" />
-            </label>
+            <LocationCascadeSelect
+              token={token}
+              value={
+                (form as { destination_location_id?: number | null }).destination_location_id ?? null
+              }
+              label="Destination location"
+              onChange={(locationId, meta) =>
+                setForm((p) =>
+                  p
+                    ? ({
+                        ...p,
+                        destination_location_id: locationId ?? null,
+                        // Mirror into legacy text columns for back-compat consumers.
+                        destination_country: meta.country?.name ?? p.destination_country,
+                        destination_city: meta.city?.name ?? meta.region?.name ?? p.destination_city,
+                      } as PackagePayload)
+                    : p
+                )
+              }
+            />
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-fg-t6">{t("admin.crud.packages.field.currency")}</span>
               <input value={(form["currency"] as string) ?? ""} onChange={(e) => setForm((p) => p ? { ...p, currency: e.target.value } : p)}

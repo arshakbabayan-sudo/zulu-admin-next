@@ -106,6 +106,8 @@ export type FlightRow = {
   id: number;
   offer_id?: number | null;
   location_id?: number | null;
+  departure_location_id?: number | null;
+  arrival_location_id?: number | null;
   flight_code_internal?: string | null;
   service_type?: string | null;
   departure_country?: string | null;
@@ -148,6 +150,8 @@ export type FlightRow = {
 export type FlightPayload = {
   offer_id?: number | "";
   location_id?: number | "";
+  departure_location_id?: number | "";
+  arrival_location_id?: number | "";
   flight_code_internal?: string;
   service_type?: string;
   departure_country?: string;
@@ -1399,6 +1403,7 @@ export type PackageRow = {
   package_type?: string | null;
   destination_city?: string | null;
   destination_country?: string | null;
+  destination_location_id?: number | null;
   duration_days?: number | null;
   currency?: string | null;
   status: string;
@@ -1414,6 +1419,7 @@ export type PackagePayload = {
   package_type?: string;
   destination_city?: string;
   destination_country?: string;
+  destination_location_id?: number | null;
   duration_days?: number;
   currency?: string;
   [key: string]: unknown;
