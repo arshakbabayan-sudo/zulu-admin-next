@@ -107,7 +107,6 @@ export default function PlatformCompaniesPage() {
     setPermLoading(true);
     setPermSelected({});
     setCountrySelected({});
-    setCountryHomeCode("");
     setCountryFilter("");
     setCountriesAll([]);
     try {
@@ -116,7 +115,7 @@ export default function PlatformCompaniesPage() {
         apiCompanyCountryPermissions(token, row.id),
         // Pull all countries from the location tree — one shot, no auth.
         fetch(
-          `${process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8008/api"}/locations/search?q=a&types=country&limit=50`,
+          `${process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8008/api"}/locations/search?types=country&limit=200`,
           { headers: { Accept: "application/json" } }
         )
           .then((r) => (r.ok ? r.json() : { data: [] }))
@@ -163,7 +162,6 @@ export default function PlatformCompaniesPage() {
     setPermLoadErr(null);
     setPermSelected({});
     setCountrySelected({});
-    setCountryHomeCode("");
     setCountryFilter("");
     setCountriesAll([]);
     setPermLoading(false);
