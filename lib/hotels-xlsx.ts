@@ -23,6 +23,87 @@ import {
   type HotelRoomFormRow,
 } from "@/lib/inventory-crud-api";
 import { ApiRequestError } from "@/lib/api-client";
+import { getApiBaseUrl } from "@/lib/api-base";
+
+// ─── Location resolver ──────────────────────────────────────────────────────
+// Imports come with Country + Region/State + City as text. The backend's
+// /hotels endpoint requires a structured location_id. Resolve it by hitting
+// the public /locations/search endpoint and matching against the location
+// tree. Cache lookups so we don't re-fetch for repeat country/city pairs.
+
+type LocSuggestion = {
+  id: number;
+  name: string;
+  type: string;
+  country_code: string | null;
+  parent_id: number | null;
+  country_name: string | null;
+};
+
+const _locResolveCache = new Map<string, number | null>();
+
+async function fetchLocations(q: string, types: string): Promise<LocSuggestion[]> {
+  if (!q || q.trim().length === 0) return [];
+  try {
+    const url = `${getApiBaseUrl().replace(/\/$/, "")}/locations/search?q=${encodeURIComponent(q.trim())}&types=${types}&limit=20`;
+    const res = await fetch(url, { headers: { Accept: "application/json" } });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return Array.isArray(json?.data) ? (json.data as LocSuggestion[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function normalize(s: string): string {
+  return (s ?? "").trim().toLocaleLowerCase();
+}
+
+/**
+ * Resolve the most specific location_id from country/region/city text.
+ * Strategy: prefer exact city match within the named country, fall back
+ * to region match, fall back to country match. Returns null if nothing
+ * matches — caller treats that as a row-level error.
+ */
+async function resolveLocationId(country: string, region: string, city: string): Promise<number | null> {
+  const cacheKey = `${normalize(country)}|${normalize(region)}|${normalize(city)}`;
+  if (_locResolveCache.has(cacheKey)) return _locResolveCache.get(cacheKey) ?? null;
+
+  let result: number | null = null;
+
+  if (city.trim().length > 0) {
+    const cityHits = await fetchLocations(city, "city");
+    // Prefer one whose country_name matches the import country
+    const exact = cityHits.find(
+      (h) => normalize(h.name) === normalize(city) && normalize(h.country_name ?? "") === normalize(country)
+    );
+    const partial =
+      exact ??
+      cityHits.find((h) => normalize(h.country_name ?? "") === normalize(country)) ??
+      cityHits.find((h) => normalize(h.name) === normalize(city));
+    if (partial) result = partial.id;
+  }
+
+  if (result === null && region.trim().length > 0) {
+    const regionHits = await fetchLocations(region, "region");
+    const match =
+      regionHits.find(
+        (h) => normalize(h.name) === normalize(region) && normalize(h.country_name ?? "") === normalize(country)
+      ) ??
+      regionHits.find((h) => normalize(h.country_name ?? "") === normalize(country)) ??
+      regionHits.find((h) => normalize(h.name) === normalize(region));
+    if (match) result = match.id;
+  }
+
+  if (result === null && country.trim().length > 0) {
+    const countryHits = await fetchLocations(country, "country");
+    const match = countryHits.find((h) => normalize(h.name) === normalize(country)) ?? countryHits[0];
+    if (match) result = match.id;
+  }
+
+  _locResolveCache.set(cacheKey, result);
+  return result;
+}
 
 // ─── Column definitions ──────────────────────────────────────────────────────
 
@@ -567,6 +648,23 @@ export async function importHotelsXlsx(
     }
 
     const form = buildHotelFormFromRow(row, rooms);
+
+    // Resolve location_id from Country / Region / City text — backend
+    // requires a structured FK and the import sheet only has names.
+    const resolvedLocId = await resolveLocationId(
+      form.country ?? "",
+      form.region_or_state ?? "",
+      form.city ?? ""
+    );
+    if (resolvedLocId === null) {
+      errors.push({
+        sheet: "Hotels",
+        rowNumber: rNum,
+        message: `Could not match Country="${form.country}", City="${form.city}" to a known location. Check the spelling against the location tree.`,
+      });
+      continue;
+    }
+    form.location_id = resolvedLocId;
 
     try {
       await apiCreateHotel(token, hotelCreateBodyFromForm(form));
