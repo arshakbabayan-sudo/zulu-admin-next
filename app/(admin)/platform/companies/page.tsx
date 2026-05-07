@@ -58,10 +58,10 @@ export default function PlatformCompaniesPage() {
   const [permLoadErr, setPermLoadErr] = useState<string | null>(null);
   const [permLoading, setPermLoading] = useState(false);
   // Country permissions (per-(company, country) seller licenses)
-  const [countryHomeCode, setCountryHomeCode] = useState<string>("");
   const [countrySelected, setCountrySelected] = useState<Record<string, { code: string; name: string }>>({});
-  const [countryQuery, setCountryQuery] = useState<string>("");
-  const [countrySuggestions, setCountrySuggestions] = useState<Array<{ code: string; name: string; flag: string | null }>>([]);
+  // Full list of countries from the location tree (one fetch on modal open).
+  const [countriesAll, setCountriesAll] = useState<Array<{ code: string; name: string; flag: string | null }>>([]);
+  const [countryFilter, setCountryFilter] = useState<string>("");
 
   const sellerParam = useMemo((): boolean | undefined => {
     if (sellerFilter === "1") return true;
@@ -108,13 +108,32 @@ export default function PlatformCompaniesPage() {
     setPermSelected({});
     setCountrySelected({});
     setCountryHomeCode("");
-    setCountryQuery("");
-    setCountrySuggestions([]);
+    setCountryFilter("");
+    setCountriesAll([]);
     try {
-      const [permRes, countryRes] = await Promise.all([
+      const [permRes, countryRes, allCountriesRes] = await Promise.all([
         apiCompanySellerPermissions(token, row.id),
         apiCompanyCountryPermissions(token, row.id),
+        // Pull all countries from the location tree — one shot, no auth.
+        fetch(
+          `${process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8008/api"}/locations/search?q=a&types=country&limit=50`,
+          { headers: { Accept: "application/json" } }
+        )
+          .then((r) => (r.ok ? r.json() : { data: [] }))
+          .catch(() => ({ data: [] })),
       ]);
+      const all = Array.isArray(allCountriesRes?.data)
+        ? allCountriesRes.data.map(
+            (c: { country_code: string; name: string; flag_emoji: string | null }) => ({
+              code: c.country_code,
+              name: c.name,
+              flag: c.flag_emoji,
+            })
+          )
+        : [];
+      // Sort alphabetically for predictable UX
+      all.sort((a, b) => a.name.localeCompare(b.name));
+      setCountriesAll(all);
       const next: Record<string, boolean> = {};
       for (const t of SELLER_SERVICE_TYPES) next[t] = false;
       for (const p of permRes.data.permissions) {
@@ -125,9 +144,6 @@ export default function PlatformCompaniesPage() {
       setPermSelected(next);
 
       // Country permissions: keep only active rows in the editable set.
-      const homeName = countryRes.data.home_country ?? "";
-      const homeCode = homeName ? homeName.slice(0, 2).toUpperCase() : "";
-      setCountryHomeCode(homeCode);
       const cs: Record<string, { code: string; name: string }> = {};
       for (const cp of countryRes.data.permissions) {
         if (cp.status === "active") {
@@ -148,33 +164,9 @@ export default function PlatformCompaniesPage() {
     setPermSelected({});
     setCountrySelected({});
     setCountryHomeCode("");
-    setCountryQuery("");
-    setCountrySuggestions([]);
+    setCountryFilter("");
+    setCountriesAll([]);
     setPermLoading(false);
-  }
-
-  async function fetchCountrySuggestions(q: string) {
-    if (!q || q.trim().length < 1) {
-      setCountrySuggestions([]);
-      return;
-    }
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8008/api"}/locations/search?q=${encodeURIComponent(q)}&types=country&limit=8`,
-        { headers: { Accept: "application/json" } }
-      );
-      const json = await res.json();
-      const arr = Array.isArray(json?.data) ? json.data : [];
-      setCountrySuggestions(
-        arr.map((i: { country_code: string; name: string; flag_emoji: string | null }) => ({
-          code: i.country_code,
-          name: i.name,
-          flag: i.flag_emoji,
-        }))
-      );
-    } catch {
-      setCountrySuggestions([]);
-    }
   }
 
   async function savePermissions() {
@@ -505,65 +497,66 @@ export default function PlatformCompaniesPage() {
                     Allowed Countries (where they can sell)
                   </h3>
                   {permModalCompany?.country && (
-                    <div className="mb-2 rounded-zulu border border-success-100 bg-success-50 px-3 py-2 text-sm text-success-700">
+                    <div className="mb-3 rounded-zulu border border-success-100 bg-success-50 px-3 py-2 text-sm text-success-700">
                       🏠 Home country: <span className="font-medium">{permModalCompany.country}</span>
                       <span className="ml-1 text-xs text-success-600">(always allowed)</span>
                     </div>
                   )}
-                  <ul className="mb-3 space-y-1">
-                    {Object.values(countrySelected).map((c) => (
-                      <li key={c.code} className="flex items-center justify-between rounded-zulu border border-default bg-white px-3 py-2 text-sm">
-                        <span className="text-fg-t8">{c.name} <span className="text-fg-t6">({c.code})</span></span>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setCountrySelected((prev) => {
-                              const n = { ...prev };
-                              delete n[c.code];
-                              return n;
-                            })
-                          }
-                          className="text-xs text-error-600 hover:underline"
-                        >
-                          Revoke
-                        </button>
-                      </li>
-                    ))}
-                    {Object.keys(countrySelected).length === 0 && (
-                      <li className="text-xs text-fg-t6">No additional countries granted yet.</li>
-                    )}
-                  </ul>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Search a country to grant…"
-                      value={countryQuery}
-                      onChange={(e) => {
-                        setCountryQuery(e.target.value);
-                        void fetchCountrySuggestions(e.target.value);
-                      }}
-                      className="w-full rounded-zulu border border-default bg-white px-3 py-2 text-sm"
-                    />
-                    {countrySuggestions.length > 0 && (
-                      <ul className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-zulu border border-default bg-white shadow-md">
-                        {countrySuggestions
-                          .filter((s) => !countrySelected[s.code] && s.code.toUpperCase() !== countryHomeCode)
-                          .map((s) => (
-                            <li
-                              key={s.code}
-                              onClick={() => {
-                                setCountrySelected((prev) => ({ ...prev, [s.code]: { code: s.code, name: s.name } }));
-                                setCountryQuery("");
-                                setCountrySuggestions([]);
-                              }}
-                              className="cursor-pointer px-3 py-2 text-sm hover:bg-figma-bg-1"
+
+                  {/* Quick filter — handy for 40+ countries */}
+                  <input
+                    type="text"
+                    placeholder="Filter list…"
+                    value={countryFilter}
+                    onChange={(e) => setCountryFilter(e.target.value)}
+                    className="mb-2 w-full rounded-zulu border border-default bg-white px-3 py-2 text-sm"
+                  />
+
+                  {countriesAll.length === 0 ? (
+                    <p className="text-xs text-fg-t6">Loading countries…</p>
+                  ) : (
+                    <div className="max-h-64 overflow-y-auto rounded-zulu border border-default bg-white">
+                      {countriesAll
+                        .filter((c) => {
+                          // Exclude home country (it's the always-allowed banner above).
+                          const homeName = (permModalCompany?.country ?? "").toLowerCase();
+                          if (c.name.toLowerCase() === homeName) return false;
+                          if (!countryFilter) return true;
+                          const q = countryFilter.toLowerCase();
+                          return c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q);
+                        })
+                        .map((c) => {
+                          const checked = !!countrySelected[c.code];
+                          return (
+                            <label
+                              key={c.code}
+                              className="flex cursor-pointer items-center gap-2 border-b border-default px-3 py-2 text-sm last:border-b-0 hover:bg-figma-bg-1"
                             >
-                              {s.flag} {s.name} <span className="text-fg-t6">({s.code})</span>
-                            </li>
-                          ))}
-                      </ul>
-                    )}
-                  </div>
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={(e) => {
+                                  setCountrySelected((prev) => {
+                                    const n = { ...prev };
+                                    if (e.target.checked) n[c.code] = { code: c.code, name: c.name };
+                                    else delete n[c.code];
+                                    return n;
+                                  });
+                                }}
+                                style={{ accentColor: "var(--admin-primary)" }}
+                                className="h-4 w-4"
+                              />
+                              {c.flag && <span className="text-base leading-none">{c.flag}</span>}
+                              <span className="text-fg-t8">{c.name}</span>
+                              <span className="ml-auto text-xs text-fg-t6">{c.code}</span>
+                            </label>
+                          );
+                        })}
+                    </div>
+                  )}
+                  <p className="mt-2 text-xs text-fg-t6">
+                    {Object.keys(countrySelected).length} additional countries granted
+                  </p>
                 </>
               ) : null}
             </div>
