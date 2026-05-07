@@ -176,6 +176,45 @@ export async function apiPatchCompanySellerPermissions(
   });
 }
 
+// ─── Country permissions (multi-country seller licenses) ─────────────────
+export type CompanyCountryPermissionApiRow = {
+  id: number;
+  country_code: string;
+  country_name: string;
+  status: "active" | "revoked";
+  granted_at?: string | null;
+  notes?: string | null;
+};
+
+export async function apiCompanyCountryPermissions(
+  token: string,
+  companyId: number
+): Promise<
+  ApiSuccessEnvelope<{
+    home_country: string | null;
+    permissions: CompanyCountryPermissionApiRow[];
+  }>
+> {
+  return apiFetchJson(`/companies/${companyId}/country-permissions`, { method: "GET", token });
+}
+
+export async function apiSyncCompanyCountryPermissions(
+  token: string,
+  companyId: number,
+  countries: Array<{ country_code: string; country_name: string }>
+): Promise<
+  ApiSuccessEnvelope<{
+    home_country: string | null;
+    permissions: CompanyCountryPermissionApiRow[];
+  }>
+> {
+  return apiFetchJson(`/companies/${companyId}/country-permissions`, {
+    method: "PATCH",
+    token,
+    body: { countries },
+  });
+}
+
 export async function apiToggleCompanySeller(
   token: string,
   companyId: number
