@@ -22,7 +22,7 @@ import {
   type HotelPricingFormRow,
   type HotelRoomFormRow,
 } from "@/lib/inventory-crud-api";
-import { ApiRequestError } from "@/lib/api-client";
+import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import { getApiBaseUrl } from "@/lib/api-base";
 
 // ─── Location resolver ──────────────────────────────────────────────────────
@@ -156,6 +156,13 @@ const HOTELS_COLUMNS: ColumnDef[] = [
   { key: "review_count", header: "Review Count", example: 124, width: 12 },
   { key: "review_label", header: "Review Label", example: "Very good", width: 16 },
   { key: "room_inventory_mode", header: "Room Inventory Mode", example: "per_room", width: 20 },
+  // Optional translation columns. Operators who don't fill these can still
+  // import (English defaults are used). Filled values are written into
+  // content_translations after the hotel is created.
+  { key: "hotel_name_hy", header: "Hotel Name (HY)", example: "Գրանդ Էրեբունի", width: 24 },
+  { key: "hotel_name_ru", header: "Hotel Name (RU)", example: "Гранд Эребуни", width: 24 },
+  { key: "short_description_hy", header: "Short Description (HY)", example: "", width: 32 },
+  { key: "short_description_ru", header: "Short Description (RU)", example: "", width: 32 },
 ];
 
 const ROOMS_COLUMNS: ColumnDef[] = [
@@ -667,7 +674,48 @@ export async function importHotelsXlsx(
     form.location_id = resolvedLocId;
 
     try {
-      await apiCreateHotel(token, hotelCreateBodyFromForm(form));
+      const created = await apiCreateHotel(token, hotelCreateBodyFromForm(form));
+      const createdHotelId = created?.data?.id;
+
+      // Optional translations: write HY/RU values from extra columns into
+      // content_translations via the localization API. Skipped when both
+      // columns for a language are blank, so single-language imports still
+      // work as before.
+      if (createdHotelId && Number.isFinite(createdHotelId)) {
+        const langs: Array<{ code: "hy" | "ru"; name: string; desc: string }> = [
+          { code: "hy", name: (row.hotel_name_hy ?? "").trim(), desc: (row.short_description_hy ?? "").trim() },
+          { code: "ru", name: (row.hotel_name_ru ?? "").trim(), desc: (row.short_description_ru ?? "").trim() },
+        ];
+        for (const l of langs) {
+          const translations: Record<string, string> = {};
+          if (l.name) translations.hotel_name = l.name;
+          if (l.desc) translations.short_description = l.desc;
+          if (Object.keys(translations).length === 0) continue;
+          try {
+            await apiFetchJson(`/localization/translations`, {
+              method: "POST",
+              token,
+              body: {
+                entity_type: "hotel",
+                entity_id: createdHotelId,
+                language_code: l.code,
+                translations,
+              },
+            });
+          } catch (te) {
+            // Non-fatal: hotel is already created, translation failure
+            // only loses the localized copy. Log to errors panel for visibility.
+            errors.push({
+              sheet: "Hotels",
+              rowNumber: rNum,
+              message: `Hotel #${createdHotelId} created, but ${l.code.toUpperCase()} translation failed: ${
+                te instanceof ApiRequestError ? formatApiError(te) : te instanceof Error ? te.message : "unknown"
+              }`,
+            });
+          }
+        }
+      }
+
       success++;
     } catch (e) {
       const msg = e instanceof ApiRequestError
