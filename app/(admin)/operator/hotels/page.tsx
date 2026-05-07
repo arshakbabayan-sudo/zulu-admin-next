@@ -7,6 +7,7 @@ import { PaginationBar } from "@/components/PaginationBar";
 import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { ApiRequestError } from "@/lib/api-client";
+import { apiSubmitOfferForReview } from "@/lib/platform-admin-api";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import {
   apiHotels,
@@ -199,6 +200,20 @@ export default function OperatorHotelsPage() {
       await load();
     } catch (e) {
       alert(e instanceof ApiRequestError ? e.message : "Failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleSubmitForReview(offerId: number) {
+    if (!token) return;
+    if (!window.confirm("Submit this hotel for super-admin review? Once submitted, you cannot edit it until it's approved or rejected.")) return;
+    setBusy(true);
+    try {
+      await apiSubmitOfferForReview(token, offerId);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : "Submit failed.");
     } finally {
       setBusy(false);
     }
@@ -1075,13 +1090,14 @@ export default function OperatorHotelsPage() {
               <th className="px-3 py-2">{t("admin.crud.hotels.col.city")}</th>
               <th className="px-3 py-2">{t("admin.crud.hotels.col.country")}</th>
               <th className="px-3 py-2">{t("admin.crud.hotels.col.stars")}</th>
+              <th className="px-3 py-2">Status</th>
               <th className="px-3 py-2">{t("admin.crud.common.actions")}</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-3 py-6 text-center text-fg-t6">
+                <td colSpan={7} className="px-3 py-6 text-center text-fg-t6">
                   {t("admin.crud.hotels.empty")}
                 </td>
               </tr>
@@ -1094,7 +1110,10 @@ export default function OperatorHotelsPage() {
                 <td className="px-3 py-2">{r.country ?? "-"}</td>
                 <td className="px-3 py-2">{formatHotelStarRatingDisplay(r.star_rating)}</td>
                 <td className="px-3 py-2">
-                  <div className="flex gap-2">
+                  <OfferStatusBadge status={r.offer?.status ?? null} reason={null} />
+                </td>
+                <td className="px-3 py-2">
+                  <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
                       onClick={() => void openEdit(r)}
@@ -1102,6 +1121,15 @@ export default function OperatorHotelsPage() {
                     >
                       {t("admin.crud.common.edit")}
                     </button>
+                    {r.offer?.id && (r.offer.status === "draft" || r.offer.status === "rejected") && (
+                      <button
+                        type="button"
+                        onClick={() => void handleSubmitForReview(r.offer!.id!)}
+                        className="rounded bg-primary px-2 py-0.5 text-xs font-medium text-white"
+                      >
+                        Submit for review
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => void handleDelete(r.id)}
@@ -1118,5 +1146,23 @@ export default function OperatorHotelsPage() {
       </div>
       {meta && <PaginationBar meta={meta} onPage={setPage} />}
     </div>
+  );
+}
+
+function OfferStatusBadge({ status, reason }: { status: string | null | undefined; reason: string | null | undefined }) {
+  const map: Record<string, { label: string; cls: string }> = {
+    draft: { label: "Draft", cls: "bg-figma-bg-1 text-fg-t7" },
+    pending_review: { label: "In review", cls: "bg-warning-50 text-warning-800" },
+    published: { label: "Published", cls: "bg-success-50 text-success-800" },
+    active: { label: "Active", cls: "bg-success-50 text-success-800" },
+    rejected: { label: "Rejected", cls: "bg-error-50 text-error-800" },
+    archived: { label: "Archived", cls: "bg-figma-bg-1 text-fg-t6" },
+    inactive: { label: "Inactive", cls: "bg-figma-bg-1 text-fg-t6" },
+  };
+  const m = map[status ?? "draft"] ?? { label: status ?? "—", cls: "bg-figma-bg-1 text-fg-t7" };
+  return (
+    <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${m.cls}`} title={reason ?? undefined}>
+      {m.label}
+    </span>
   );
 }

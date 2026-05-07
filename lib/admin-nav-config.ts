@@ -17,6 +17,7 @@ export const ADMIN_PLATFORM_LINKS: AdminPlatformNavLink[] = [
   { href: "/platform/company-applications", labelKey: "admin.nav.company_applications" },
   { href: "/platform/companies", labelKey: "admin.nav.platform_companies" },
   { href: "/platform/approvals", labelKey: "admin.nav.approvals" },
+  { href: "/platform/pending-review", labelKey: "admin.nav.pending_review", superAdminOnly: true },
   { href: "/platform/users", labelKey: "admin.nav.users" },
   { href: "/platform/seller-applications", labelKey: "admin.nav.seller_applications" },
   { href: "/platform/bookings", labelKey: "admin.nav.bookings" },

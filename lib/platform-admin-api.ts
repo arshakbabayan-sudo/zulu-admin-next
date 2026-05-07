@@ -661,3 +661,59 @@ export async function apiDeletePlatformBanner(
 ): Promise<ApiSuccessEnvelope<{ id: number }> & { message?: string }> {
   return apiFetchJson(`${PA}/banners/${bannerId}`, { method: "DELETE", token });
 }
+
+// ─── Offers review queue (Option 2 publishing workflow) ───────────────────
+export type PendingReviewOfferRow = {
+  id: number;
+  type: string;
+  title: string;
+  status: string;
+  company_id: number | null;
+  submitted_for_review_at?: string | null;
+  reviewed_at?: string | null;
+  reviewed_by?: number | null;
+  rejection_reason?: string | null;
+  company?: { id: number; name: string; country?: string | null } | null;
+  created_at?: string | null;
+};
+
+export async function apiPendingReviewOffers(
+  token: string,
+  params: { page?: number; per_page?: number; type?: string; company_id?: number; q?: string } = {}
+): Promise<ApiSuccessEnvelope<PendingReviewOfferRow[]> & { meta: ApiListMeta }> {
+  const q = new URLSearchParams();
+  if (params.page) q.set("page", String(params.page));
+  if (params.per_page) q.set("per_page", String(params.per_page));
+  if (params.type) q.set("type", params.type);
+  if (params.company_id) q.set("company_id", String(params.company_id));
+  if (params.q) q.set("q", params.q);
+  const qs = q.toString();
+  return apiFetchJson(`/admin/offers/pending-review${qs ? `?${qs}` : ""}`, { method: "GET", token });
+}
+
+export async function apiApproveOffer(
+  token: string,
+  offerId: number
+): Promise<ApiSuccessEnvelope<{ id: number; status: string }>> {
+  return apiFetchJson(`/admin/offers/${offerId}/approve`, { method: "POST", token, body: {} });
+}
+
+export async function apiRejectOffer(
+  token: string,
+  offerId: number,
+  reason: string
+): Promise<ApiSuccessEnvelope<{ id: number; status: string }>> {
+  return apiFetchJson(`/admin/offers/${offerId}/reject`, {
+    method: "POST",
+    token,
+    body: { reason },
+  });
+}
+
+// Operator-side: submit own draft/rejected offer for super-admin review.
+export async function apiSubmitOfferForReview(
+  token: string,
+  offerId: number
+): Promise<ApiSuccessEnvelope<{ id: number; status: string }>> {
+  return apiFetchJson(`/offers/${offerId}/submit-for-review`, { method: "POST", token, body: {} });
+}
