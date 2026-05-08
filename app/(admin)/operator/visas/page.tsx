@@ -7,7 +7,12 @@ import { PaginationBar } from "@/components/PaginationBar";
 import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessOperatorToolsNav, userHasSellerServiceType } from "@/lib/access";
-import { ApiRequestError } from "@/lib/api-client";
+import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
+import {
+  buildTranslationHeaderMap,
+  extractTranslationsFromRow,
+  TRANSLATION_CSV_HEADERS,
+} from "@/lib/csv-parser";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import {
   csvExportFilename,
@@ -143,15 +148,13 @@ function normalizeVisaCsvHeader(header: string): string {
   return header.replace(/\*/g, "").replace(/\s+/g, " ").trim().toLowerCase();
 }
 
-const VISA_IMPORT_HEADER_KEY_MAP: Record<string, (typeof VISA_CSV_TEMPLATE_KEYS)[number]> = (() => {
-  const map: Record<string, (typeof VISA_CSV_TEMPLATE_KEYS)[number]> = {} as Record<
-    string,
-    (typeof VISA_CSV_TEMPLATE_KEYS)[number]
-  >;
+const VISA_IMPORT_HEADER_KEY_MAP: Record<string, string> = (() => {
+  const map: Record<string, string> = {};
   for (const key of VISA_CSV_TEMPLATE_KEYS) {
     map[normalizeVisaCsvHeader(key)] = key;
     map[normalizeVisaCsvHeader(VISA_TEMPLATE_LABELS[key])] = key;
   }
+  Object.assign(map, buildTranslationHeaderMap(normalizeVisaCsvHeader));
   return map;
 })();
 
@@ -165,9 +168,12 @@ function normalizeVisaCsvImportRow(row: Record<string, string>): Record<string, 
 }
 
 function visaTemplateCsv(): string {
-  const headers = VISA_CSV_TEMPLATE_KEYS.map((key) =>
-    VISA_REQUIRED_TEMPLATE_KEYS.has(key) ? `${VISA_TEMPLATE_LABELS[key]} *` : VISA_TEMPLATE_LABELS[key]
-  );
+  const headers = [
+    ...VISA_CSV_TEMPLATE_KEYS.map((key) =>
+      VISA_REQUIRED_TEMPLATE_KEYS.has(key) ? `${VISA_TEMPLATE_LABELS[key]} *` : VISA_TEMPLATE_LABELS[key]
+    ),
+    ...TRANSLATION_CSV_HEADERS,
+  ];
   return stringifyCsv(headers, [{}]);
 }
 
@@ -255,6 +261,7 @@ async function runVisaCsvImport(
       }
       try {
         await apiUpdateVisa(token, id, bodyFromForm(form, "update"));
+        await postVisaRowTranslations(token, id, row, line, errors);
         success++;
       } catch (e) {
         errors.push({ rowNumber: line, message: formatImportApiError(e) });
@@ -268,7 +275,9 @@ async function runVisaCsvImport(
       continue;
     }
     try {
-      await apiCreateVisa(token, bodyFromForm(form, "create"));
+      const created = await apiCreateVisa(token, bodyFromForm(form, "create"));
+      const newId = Number(created?.data?.id);
+      await postVisaRowTranslations(token, newId, row, line, errors);
       success++;
     } catch (e) {
       errors.push({ rowNumber: line, message: formatImportApiError(e) });
@@ -276,6 +285,37 @@ async function runVisaCsvImport(
   }
 
   return { success, failed: errors.length, errors };
+}
+
+async function postVisaRowTranslations(
+  token: string,
+  visaId: number,
+  row: Record<string, string>,
+  rowNumber: number,
+  errors: ImportRowError[]
+): Promise<void> {
+  if (!Number.isFinite(visaId) || visaId <= 0) return;
+  for (const t of extractTranslationsFromRow(row)) {
+    try {
+      await apiFetchJson(`/localization/translations`, {
+        method: "POST",
+        token,
+        body: {
+          entity_type: "visa",
+          entity_id: visaId,
+          language_code: t.language_code,
+          translations: t.translations,
+        },
+      });
+    } catch (e) {
+      errors.push({
+        rowNumber,
+        message: `Visa #${visaId} created, but ${t.language_code.toUpperCase()} translation failed: ${
+          e instanceof Error ? e.message : "unknown"
+        }`,
+      });
+    }
+  }
 }
 
 function bodyFromForm(form: VisaPayload, mode: "create" | "update"): VisaPayload {

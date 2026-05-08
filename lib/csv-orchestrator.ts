@@ -51,6 +51,7 @@ import {
   excursionRowToWizard,
   excursionTemplateCsv,
   expandedPayloadFromWizard,
+  extractTranslationsFromRow,
   FLIGHT_CSV_FIELDS,
   flightDetailToCsvRow,
   normalizeFlightCsvImportRow,
@@ -71,6 +72,7 @@ import {
   validateExcursionCsvWizard,
   validateFlightCsvPayload,
 } from "@/lib/csv-parser";
+import { apiFetchJson } from "@/lib/api-client";
 import { type TransferFormValues } from "@/lib/transfers/transfer-field-adapter";
 
 // Re-export template generators so callers can still import them from one place if needed.
@@ -81,6 +83,43 @@ export {
   hotelTemplateCsv,
   transferTemplateCsv,
 };
+
+/**
+ * Write any HY/RU translations from optional CSV columns into content_translations.
+ * Failures are non-fatal — the entity is already created, so we only collect
+ * the translation error in the result panel for visibility.
+ */
+async function postRowTranslations(
+  token: string,
+  entityType: "flight" | "transfer" | "car" | "excursion" | "visa" | "package",
+  entityId: number,
+  row: Record<string, string>,
+  rowNumber: number,
+  errors: ImportRowError[]
+): Promise<void> {
+  if (!Number.isFinite(entityId) || entityId <= 0) return;
+  for (const t of extractTranslationsFromRow(row)) {
+    try {
+      await apiFetchJson(`/localization/translations`, {
+        method: "POST",
+        token,
+        body: {
+          entity_type: entityType,
+          entity_id: entityId,
+          language_code: t.language_code,
+          translations: t.translations,
+        },
+      });
+    } catch (e) {
+      errors.push({
+        rowNumber,
+        message: `${entityType} #${entityId} created, but ${t.language_code.toUpperCase()} translation failed: ${
+          e instanceof Error ? e.message : "unknown"
+        }`,
+      });
+    }
+  }
+}
 
 // ─── Flights ──────────────────────────────────────────────────────────────────
 
@@ -125,10 +164,13 @@ export async function runFlightCsvImport(
           errors.push({ rowNumber: r, message: "Invalid id." });
         } else {
           await apiUpdateFlight(token, id, body);
+          await postRowTranslations(token, "flight", id, row, r, errors);
           success++;
         }
       } else {
-        await apiCreateFlight(token, body);
+        const created = await apiCreateFlight(token, body);
+        const newId = Number(created?.data?.id);
+        await postRowTranslations(token, "flight", newId, row, r, errors);
         success++;
       }
     } catch (e) {
@@ -243,10 +285,13 @@ export async function runTransferCsvImport(
           errors.push({ rowNumber: r, message: "Invalid id." });
         } else {
           await apiUpdateTransfer(token, id, { ...form, offer_id: null } as TransferFormValues);
+          await postRowTranslations(token, "transfer", id, row, r, errors);
           success++;
         }
       } else {
-        await apiCreateTransfer(token, form);
+        const created = await apiCreateTransfer(token, form);
+        const newId = Number(created?.data?.id);
+        await postRowTranslations(token, "transfer", newId, row, r, errors);
         success++;
       }
     } catch (e) {
@@ -318,11 +363,14 @@ export async function runCarCsvImport(
         } else {
           const body: CarUpdatePayload = { pickup_location: pickup, dropoff_location: dropoff, vehicle_class: vclass, ...payloadExpanded };
           await apiUpdateCar(token, id, body);
+          await postRowTranslations(token, "car", id, row, r, errors);
           success++;
         }
       } else {
         const body: CarCreatePayload = { offer_id: offerNum, company_id: companyId, pickup_location: pickup, dropoff_location: dropoff, vehicle_class: vclass, ...payloadExpanded };
-        await apiCreateCar(token, body);
+        const created = await apiCreateCar(token, body);
+        const newId = Number(created?.data?.id);
+        await postRowTranslations(token, "car", newId, row, r, errors);
         success++;
       }
     } catch (e) {
@@ -400,6 +448,7 @@ export async function runExcursionCsvImport(
         } else {
           const body: ExcursionUpdatePayload = { ...coreWritePayloadFromWizard(wizard), ...expanded };
           await apiUpdateExcursion(token, id, body);
+          await postRowTranslations(token, "excursion", id, row, r, errors);
           success++;
         }
       } else {
@@ -409,7 +458,9 @@ export async function runExcursionCsvImport(
           ...coreWritePayloadFromWizard(wizard),
           ...expanded,
         };
-        await apiCreateExcursion(token, body);
+        const created = await apiCreateExcursion(token, body);
+        const newId = Number(created?.data?.id);
+        await postRowTranslations(token, "excursion", newId, row, r, errors);
         success++;
       }
     } catch (e) {

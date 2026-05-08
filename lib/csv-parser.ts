@@ -42,6 +42,60 @@ export function parseBool(v: string): boolean {
   return t === "1" || t === "true" || t === "yes" || t === "on";
 }
 
+// ─── Translation column helpers (shared by all module imports) ───────────────
+// Operators can fill optional Armenian / Russian columns at the end of any
+// module's CSV. After successful create, the orchestrator posts each filled
+// value to /localization/translations. All four columns are optional —
+// omitting them keeps single-language imports working unchanged.
+
+export type TranslationCsvColumn = {
+  key: string;
+  label: string;
+  lang: "hy" | "ru";
+  field: "title" | "description";
+};
+
+export const TRANSLATION_CSV_COLUMNS: readonly TranslationCsvColumn[] = [
+  { key: "title_hy", label: "Title (HY)", lang: "hy", field: "title" },
+  { key: "title_ru", label: "Title (RU)", lang: "ru", field: "title" },
+  { key: "description_hy", label: "Description (HY)", lang: "hy", field: "description" },
+  { key: "description_ru", label: "Description (RU)", lang: "ru", field: "description" },
+] as const;
+
+/** Header strings (no asterisk — translation columns are always optional). */
+export const TRANSLATION_CSV_HEADERS: readonly string[] = TRANSLATION_CSV_COLUMNS.map((c) => c.label);
+
+/** Mapping of normalized header text → canonical row key. Used by per-module
+ * IMPORT_HEADER_KEY_MAPs to recognise both "Title (HY)" and "title_hy". */
+export function buildTranslationHeaderMap(
+  normalize: (h: string) => string
+): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const c of TRANSLATION_CSV_COLUMNS) {
+    map[normalize(c.label)] = c.key;
+    map[normalize(c.key)] = c.key;
+  }
+  return map;
+}
+
+/** Group filled translation values from a normalized CSV row by language. */
+export function extractTranslationsFromRow(
+  row: Record<string, string>
+): Array<{ language_code: "hy" | "ru"; translations: Record<string, string> }> {
+  const byLang: Record<"hy" | "ru", Record<string, string>> = { hy: {}, ru: {} };
+  for (const c of TRANSLATION_CSV_COLUMNS) {
+    const value = (row[c.key] ?? "").trim();
+    if (value.length > 0) byLang[c.lang][c.field] = value;
+  }
+  const out: Array<{ language_code: "hy" | "ru"; translations: Record<string, string> }> = [];
+  for (const lang of ["hy", "ru"] as const) {
+    if (Object.keys(byLang[lang]).length > 0) {
+      out.push({ language_code: lang, translations: byLang[lang] });
+    }
+  }
+  return out;
+}
+
 // ─── Flights ──────────────────────────────────────────────────────────────────
 
 export const FLIGHT_CSV_FIELDS: (keyof FlightPayload)[] = [
@@ -175,15 +229,16 @@ function normalizeCsvTemplateHeader(header: string): string {
   return header.replace(/\*/g, "").replace(/\s+/g, " ").trim().toLowerCase();
 }
 
-const FLIGHT_IMPORT_HEADER_KEY_MAP: Record<string, "id" | keyof FlightPayload> = (() => {
-  const map: Record<string, "id" | keyof FlightPayload> = {
+const FLIGHT_IMPORT_HEADER_KEY_MAP: Record<string, string> = (() => {
+  const map: Record<string, string> = {
     id: "id",
     "id (update existing; leave blank to create)": "id",
   };
   for (const key of FLIGHT_CSV_FIELDS) {
-    map[normalizeCsvTemplateHeader(String(key))] = key;
-    map[normalizeCsvTemplateHeader(FLIGHT_TEMPLATE_LABELS[key])] = key;
+    map[normalizeCsvTemplateHeader(String(key))] = String(key);
+    map[normalizeCsvTemplateHeader(FLIGHT_TEMPLATE_LABELS[key])] = String(key);
   }
+  Object.assign(map, buildTranslationHeaderMap(normalizeCsvTemplateHeader));
   return map;
 })();
 
@@ -312,6 +367,7 @@ export function flightTemplateCsv(): string {
         ? `${FLIGHT_TEMPLATE_LABELS[key]} *`
         : FLIGHT_TEMPLATE_LABELS[key]
     ),
+    ...TRANSLATION_CSV_HEADERS,
   ];
   return stringifyCsv(headers, [{}]);
 }
@@ -640,15 +696,16 @@ const TRANSFER_TEMPLATE_LABELS: Record<keyof TransferFormValues, string> = {
   status: TRANSFER_FIELD_LABELS.status,
 };
 
-const TRANSFER_IMPORT_HEADER_KEY_MAP: Record<string, "id" | keyof TransferFormValues> = (() => {
-  const map: Record<string, "id" | keyof TransferFormValues> = {
+const TRANSFER_IMPORT_HEADER_KEY_MAP: Record<string, string> = (() => {
+  const map: Record<string, string> = {
     id: "id",
     "id (update existing; leave blank to create)": "id",
   };
   for (const key of TRANSFER_CSV_FIELDS) {
-    map[normalizeCsvTemplateHeader(String(key))] = key;
-    map[normalizeCsvTemplateHeader(TRANSFER_TEMPLATE_LABELS[key])] = key;
+    map[normalizeCsvTemplateHeader(String(key))] = String(key);
+    map[normalizeCsvTemplateHeader(TRANSFER_TEMPLATE_LABELS[key])] = String(key);
   }
+  Object.assign(map, buildTranslationHeaderMap(normalizeCsvTemplateHeader));
   return map;
 })();
 
@@ -739,6 +796,7 @@ export function transferTemplateCsv(): string {
         ? `${TRANSFER_TEMPLATE_LABELS[key]} *`
         : TRANSFER_TEMPLATE_LABELS[key]
     ),
+    ...TRANSLATION_CSV_HEADERS,
   ];
   return stringifyCsv(headers, [{}]);
 }
@@ -789,15 +847,16 @@ const CAR_TEMPLATE_LABELS: Record<CarCsvField, string> = {
   availability_status: "Availability Status",
 };
 
-const CAR_IMPORT_HEADER_KEY_MAP: Record<string, "id" | CarCsvField> = (() => {
-  const map: Record<string, "id" | CarCsvField> = {
+const CAR_IMPORT_HEADER_KEY_MAP: Record<string, string> = (() => {
+  const map: Record<string, string> = {
     id: "id",
     "id (update existing; leave blank to create)": "id",
   };
   for (const key of CAR_CSV_FIELDS) {
-    map[normalizeCsvTemplateHeader(String(key))] = key;
-    map[normalizeCsvTemplateHeader(CAR_TEMPLATE_LABELS[key])] = key;
+    map[normalizeCsvTemplateHeader(String(key))] = String(key);
+    map[normalizeCsvTemplateHeader(CAR_TEMPLATE_LABELS[key])] = String(key);
   }
+  Object.assign(map, buildTranslationHeaderMap(normalizeCsvTemplateHeader));
   return map;
 })();
 
@@ -915,6 +974,7 @@ export function carTemplateCsv(): string {
         ? `${CAR_TEMPLATE_LABELS[key]} *`
         : CAR_TEMPLATE_LABELS[key]
     ),
+    ...TRANSLATION_CSV_HEADERS,
   ];
   return stringifyCsv(headers, [{}]);
 }
@@ -974,15 +1034,16 @@ const EXCURSION_TEMPLATE_LABELS: Record<ExcursionCsvField, string> = {
   appears_in_zulu_admin: "Appears In Zulu Admin",
 };
 
-const EXCURSION_IMPORT_HEADER_KEY_MAP: Record<string, "id" | ExcursionCsvField> = (() => {
-  const map: Record<string, "id" | ExcursionCsvField> = {
+const EXCURSION_IMPORT_HEADER_KEY_MAP: Record<string, string> = (() => {
+  const map: Record<string, string> = {
     id: "id",
     "id (update existing; leave blank to create)": "id",
   };
   for (const key of EXCURSION_CSV_FIELDS) {
-    map[normalizeCsvTemplateHeader(String(key))] = key;
-    map[normalizeCsvTemplateHeader(EXCURSION_TEMPLATE_LABELS[key])] = key;
+    map[normalizeCsvTemplateHeader(String(key))] = String(key);
+    map[normalizeCsvTemplateHeader(EXCURSION_TEMPLATE_LABELS[key])] = String(key);
   }
+  Object.assign(map, buildTranslationHeaderMap(normalizeCsvTemplateHeader));
   return map;
 })();
 
@@ -1103,6 +1164,7 @@ export function excursionTemplateCsv(): string {
         ? `${EXCURSION_TEMPLATE_LABELS[key]} *`
         : EXCURSION_TEMPLATE_LABELS[key]
     ),
+    ...TRANSLATION_CSV_HEADERS,
   ];
   return stringifyCsv(headers, [{}]);
 }
