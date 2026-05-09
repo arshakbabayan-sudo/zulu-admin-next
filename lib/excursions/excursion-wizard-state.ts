@@ -118,9 +118,9 @@ function parsePriceByDatesFromRow(r: ExcursionRow): PriceByDateRow[] {
 
 export function excursionWizardFromRow(r: ExcursionRow): ExcursionWizardState {
   const cid =
-    r.company_id != null && r.company_id !== ""
+    r.company_id != null
       ? Number(r.company_id)
-      : r.offer?.company_id != null && r.offer.company_id !== ""
+      : r.offer?.company_id != null
         ? Number(r.offer.company_id)
         : "";
   return {

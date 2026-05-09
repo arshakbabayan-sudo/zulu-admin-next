@@ -246,9 +246,9 @@ function datetimeLocalToIsoOrNull(s: string): string | null {
 
 function carFormFromRow(r: CarRow): CarFormState {
   const cid =
-    r.company_id != null && r.company_id !== ""
+    r.company_id != null
       ? Number(r.company_id)
-      : r.offer?.company_id != null && r.offer.company_id !== ""
+      : r.offer?.company_id != null
         ? Number(r.offer.company_id)
         : "";
   return {
@@ -446,9 +446,9 @@ function buildUpdatePayload(form: CarFormState): CarUpdatePayload {
 }
 
 function companyCell(r: CarRow): string {
-  if (r.company_id != null && r.company_id !== "") return String(r.company_id);
+  if (r.company_id != null) return String(r.company_id);
   const c = r.offer?.company_id;
-  if (c != null && c !== "") return String(c);
+  if (c != null) return String(c);
   return "—";
 }
 
@@ -586,8 +586,7 @@ export default function OperatorCarsPage() {
     setCarOffers(loadedOffers);
     setForm({
       offer_id: available.id,
-      company_id: cid != null && cid !== "" ? Number(cid) : "",
-      location_id: "",
+      company_id: cid != null ? Number(cid) : "",
       ...emptyCarForm(),
     });
     setFormErr(null);
@@ -624,7 +623,7 @@ export default function OperatorCarsPage() {
         ? {
             ...p,
             offer_id: oid,
-            company_id: cid != null && cid !== "" ? Number(cid) : "",
+            company_id: cid != null ? Number(cid) : "",
           }
         : p
     );

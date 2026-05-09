@@ -230,7 +230,7 @@ export default function OperatorExcursionsPage() {
     setExcursionOffers(loadedOffers);
     setForm({
       offer_id: available.id,
-      company_id: cid != null && cid !== "" ? Number(cid) : "",
+      company_id: cid != null ? Number(cid) : "",
       ...emptyExcursionWizardTail(),
     });
     resetToFirstStep();
@@ -270,7 +270,7 @@ export default function OperatorExcursionsPage() {
         ? {
             ...p,
             offer_id: oid,
-            company_id: cid != null && cid !== "" ? Number(cid) : "",
+            company_id: cid != null ? Number(cid) : "",
           }
         : p
     );

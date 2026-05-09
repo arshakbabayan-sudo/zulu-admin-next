@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: { ignoreDuringBuilds: false },
-  typescript: { ignoreBuildErrors: true },
+  typescript: { ignoreBuildErrors: false },
   async rewrites() {
     const api = process.env.ADMIN_API_ORIGIN ?? "http://127.0.0.1:8008";
     return [

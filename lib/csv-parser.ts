@@ -655,10 +655,12 @@ const TRANSFER_TEMPLATE_LABELS: Record<keyof TransferFormValues, string> = {
   transfer_title: TRANSFER_FIELD_LABELS.transfer_title,
   transfer_type: TRANSFER_FIELD_LABELS.transfer_type,
   pickup_country: TRANSFER_FIELD_LABELS.pickup_country,
+  origin_location_id: TRANSFER_FIELD_LABELS.origin_location_id,
   pickup_city: TRANSFER_FIELD_LABELS.pickup_city,
   pickup_point_type: TRANSFER_FIELD_LABELS.pickup_point_type,
   pickup_point_name: TRANSFER_FIELD_LABELS.pickup_point_name,
   dropoff_country: TRANSFER_FIELD_LABELS.dropoff_country,
+  destination_location_id: TRANSFER_FIELD_LABELS.destination_location_id,
   dropoff_city: TRANSFER_FIELD_LABELS.dropoff_city,
   dropoff_point_type: TRANSFER_FIELD_LABELS.dropoff_point_type,
   dropoff_point_name: TRANSFER_FIELD_LABELS.dropoff_point_name,
@@ -737,6 +739,8 @@ export function transferRowToFormValues(row: Record<string, string>, currencyDef
     transfer_title: get("transfer_title"),
     transfer_type: get("transfer_type") || "city_transfer",
     pickup_country: get("pickup_country"),
+    origin_location_id: num("origin_location_id"),
+    destination_location_id: num("destination_location_id"),
     pickup_city: get("pickup_city"),
     pickup_point_type: get("pickup_point_type") || "address",
     pickup_point_name: get("pickup_point_name"),
@@ -1079,6 +1083,7 @@ export function excursionRowToWizard(row: Record<string, string>, offerId: numbe
   return {
     offer_id: offerId,
     company_id: companyId,
+    location_id: "",
     country: get("country"),
     city: get("city"),
     general_category: get("general_category"),
@@ -1119,9 +1124,9 @@ export function excursionDetailToCsvRow(r: ExcursionRow): Record<string, unknown
   const includes = Array.isArray(r.includes) ? r.includes : [];
   const photos = Array.isArray(r.photos) ? r.photos : [];
   const cid =
-    r.company_id != null && r.company_id !== ""
+    r.company_id != null
       ? Number(r.company_id)
-      : r.offer?.company_id != null && r.offer.company_id !== ""
+      : r.offer?.company_id != null
         ? Number(r.offer.company_id)
         : "";
   return {

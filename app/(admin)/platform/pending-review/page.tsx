@@ -225,7 +225,7 @@ export default function PendingReviewPage() {
 
       {meta && meta.last_page > 1 && (
         <div className="mt-4">
-          <PaginationBar meta={meta} onPageChange={setPage} />
+          <PaginationBar meta={meta} onPage={setPage} />
         </div>
       )}
 

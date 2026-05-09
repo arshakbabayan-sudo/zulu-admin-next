@@ -333,7 +333,7 @@ export async function runCarCsvImport(
     try {
       const off = await apiOffer(token, offerNum);
       const cid = off.data.company_id;
-      companyId = cid != null && cid !== "" ? Number(cid) : null;
+      companyId = cid != null ? Number(cid) : null;
     } catch {
       errors.push({ rowNumber: r, message: "Could not load offer; check offer_id." });
       continue;
@@ -412,7 +412,7 @@ export async function runExcursionCsvImport(
     try {
       const off = await apiOffer(token, offerNum);
       const cid = off.data.company_id;
-      companyId = cid != null && cid !== "" ? Number(cid) : null;
+      companyId = cid != null ? Number(cid) : null;
     } catch {
       errors.push({ rowNumber: r, message: "Could not load offer; check offer_id." });
       continue;

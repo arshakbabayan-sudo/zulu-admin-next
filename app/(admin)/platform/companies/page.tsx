@@ -131,7 +131,7 @@ export default function PlatformCompaniesPage() {
           )
         : [];
       // Sort alphabetically for predictable UX
-      all.sort((a, b) => a.name.localeCompare(b.name));
+      all.sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name));
       setCountriesAll(all);
       const next: Record<string, boolean> = {};
       for (const t of SELLER_SERVICE_TYPES) next[t] = false;
