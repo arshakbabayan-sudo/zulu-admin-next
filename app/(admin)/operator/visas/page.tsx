@@ -3,11 +3,13 @@
 import { CsvImportModal } from "@/components/CsvImportModal";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { ImportExportButtons } from "@/components/ImportExportButtons";
+import { OfferStatusBadge, isSubmittableStatus } from "@/components/OfferStatusBadge";
 import { PaginationBar } from "@/components/PaginationBar";
 import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessOperatorToolsNav, userHasSellerServiceType } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
+import { apiSubmitOfferForReview } from "@/lib/platform-admin-api";
 import {
   buildTranslationHeaderMap,
   extractTranslationsFromRow,
@@ -37,7 +39,6 @@ import {
   requiredDocumentsLinesFromApi,
   visaMoneyCell,
   visaNumberFromApi,
-  visaOfferStatusLabel,
 } from "@/lib/visa-ui";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -480,6 +481,20 @@ export default function OperatorVisasPage() {
     }
   }
 
+  async function handleSubmitForReview(offerId: number) {
+    if (!token) return;
+    if (!window.confirm("Submit this visa for super-admin review? Once submitted, you cannot edit it until it's approved or rejected.")) return;
+    setBusy(true);
+    try {
+      await apiSubmitOfferForReview(token, offerId);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : "Submit failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (!allowed || forbidden)
     return (
       <div>
@@ -772,9 +787,11 @@ export default function OperatorVisasPage() {
                 <td className="px-3 py-2 text-fg-t7">
                   {r.processing_days != null ? `${r.processing_days} days` : "—"}
                 </td>
-                <td className="px-3 py-2">{visaOfferStatusLabel(r)}</td>
                 <td className="px-3 py-2">
-                  <div className="flex gap-2">
+                  <OfferStatusBadge status={r.status ?? null} />
+                </td>
+                <td className="px-3 py-2">
+                  <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
                       onClick={() => void openEdit(r)}
@@ -783,6 +800,16 @@ export default function OperatorVisasPage() {
                     >
                       {t("admin.crud.common.edit")}
                     </button>
+                    {r.offer_id && isSubmittableStatus(r.status) && (
+                      <button
+                        type="button"
+                        onClick={() => void handleSubmitForReview(r.offer_id!)}
+                        disabled={busy}
+                        className="rounded bg-primary px-2 py-0.5 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        Submit for review
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => void handleDelete(r.id)}

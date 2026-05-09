@@ -3,10 +3,12 @@
 import { CsvImportModal } from "@/components/CsvImportModal";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { ImportExportButtons } from "@/components/ImportExportButtons";
+import { OfferStatusBadge, isSubmittableStatus } from "@/components/OfferStatusBadge";
 import { PaginationBar } from "@/components/PaginationBar";
 import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { ApiRequestError } from "@/lib/api-client";
+import { apiSubmitOfferForReview } from "@/lib/platform-admin-api";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import {
   csvExportFilename,
@@ -571,6 +573,20 @@ export default function OperatorFlightsPage() {
     finally { setBusy(false); }
   }
 
+  async function handleSubmitForReview(offerId: number) {
+    if (!token) return;
+    if (!window.confirm("Submit this flight for super-admin review? Once submitted, you cannot edit it until it's approved or rejected.")) return;
+    setBusy(true);
+    try {
+      await apiSubmitOfferForReview(token, offerId);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : "Submit failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const loadCabins = useCallback(async (flightId: number) => {
     if (!token) return;
     setCabinBusy(true);
@@ -879,12 +895,13 @@ export default function OperatorFlightsPage() {
               <th className="px-3 py-2">{t("admin.crud.flights.col.route")}</th>
               <th className="px-3 py-2">{t("admin.crud.flights.col.departure")}</th>
               <th className="px-3 py-2">{t("admin.crud.flights.col.arrival")}</th>
+              <th className="px-3 py-2">Status</th>
               <th className="px-3 py-2">{t("admin.crud.common.actions")}</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
-              <tr><td colSpan={7} className="px-3 py-6 text-center text-fg-t6">{t("admin.crud.flights.empty")}</td></tr>
+              <tr><td colSpan={8} className="px-3 py-6 text-center text-fg-t6">{t("admin.crud.flights.empty")}</td></tr>
             )}
             {rows.map((r) => (
               <Fragment key={r.id}>
@@ -896,9 +913,21 @@ export default function OperatorFlightsPage() {
                 <td className="px-3 py-2 text-xs text-fg-t6">{r.departure_at ? new Date(r.departure_at).toLocaleString() : "-"}</td>
                 <td className="px-3 py-2 text-xs text-fg-t6">{r.arrival_at ? new Date(r.arrival_at).toLocaleString() : "-"}</td>
                 <td className="px-3 py-2">
-                  <div className="flex gap-2">
+                  <OfferStatusBadge status={r.offer?.status ?? null} />
+                </td>
+                <td className="px-3 py-2">
+                  <div className="flex flex-wrap gap-2">
                     <button type="button" onClick={() => openEdit(r)}
                       className="text-xs text-info-700 underline">{t("admin.crud.common.edit")}</button>
+                    {r.offer?.id && isSubmittableStatus(r.offer.status) && (
+                      <button
+                        type="button"
+                        onClick={() => void handleSubmitForReview(r.offer!.id!)}
+                        className="rounded bg-primary px-2 py-0.5 text-xs font-medium text-white"
+                      >
+                        Submit for review
+                      </button>
+                    )}
                     <button type="button" onClick={() => openCabinManager(r.id)}
                       className="text-xs text-fg-t7 underline">{t("admin.crud.flights.cabins")}</button>
                     <Link
@@ -914,7 +943,7 @@ export default function OperatorFlightsPage() {
               </tr>
             {activeCabinFlightId === r.id && (
               <tr className="border-b border-default bg-figma-bg-1">
-                <td colSpan={7} className="px-3 py-3">
+                <td colSpan={8} className="px-3 py-3">
                   <div className="rounded border border-default bg-white p-3">
                     <div className="mb-3 flex items-center justify-between">
                       <h3 className="text-sm font-semibold text-fg-t11">{t("admin.crud.flights.cabins")} #{r.id}</h3>

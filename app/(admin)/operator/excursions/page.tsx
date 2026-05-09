@@ -3,11 +3,13 @@
 import { CsvImportModal } from "@/components/CsvImportModal";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { ImportExportButtons } from "@/components/ImportExportButtons";
+import { OfferStatusBadge, isSubmittableStatus } from "@/components/OfferStatusBadge";
 import { PaginationBar } from "@/components/PaginationBar";
 import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useExcursionWizardStepper } from "@/hooks/useExcursionWizardStepper";
 import { ApiRequestError } from "@/lib/api-client";
+import { apiSubmitOfferForReview } from "@/lib/platform-admin-api";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import {
   coreWritePayloadFromWizard,
@@ -338,6 +340,20 @@ export default function OperatorExcursionsPage() {
       await load();
     } catch (e) {
       alert(e instanceof ApiRequestError ? e.message : "Failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleSubmitForReview(offerId: number) {
+    if (!token) return;
+    if (!window.confirm("Submit this excursion for super-admin review? Once submitted, you cannot edit it until it's approved or rejected.")) return;
+    setBusy(true);
+    try {
+      await apiSubmitOfferForReview(token, offerId);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : "Submit failed.");
     } finally {
       setBusy(false);
     }
@@ -1063,13 +1079,14 @@ export default function OperatorExcursionsPage() {
               <th className="px-3 py-2">{t("admin.crud.excursions.col.duration")}</th>
               <th className="px-3 py-2">{t("admin.crud.excursions.col.group")}</th>
               <th className="px-3 py-2">{t("admin.crud.excursions.col.price")}</th>
+              <th className="px-3 py-2">Status</th>
               <th className="px-3 py-2">{t("admin.crud.common.actions")}</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-fg-t6">
+                <td colSpan={8} className="px-3 py-6 text-center text-fg-t6">
                   {t("admin.crud.excursions.empty")}
                 </td>
               </tr>
@@ -1085,10 +1102,22 @@ export default function OperatorExcursionsPage() {
                   {r.offer?.price != null ? `${r.offer.currency ?? ""} ${Number(r.offer.price).toFixed(2)}` : "-"}
                 </td>
                 <td className="px-3 py-2">
-                  <div className="flex gap-2">
+                  <OfferStatusBadge status={r.offer?.status ?? null} />
+                </td>
+                <td className="px-3 py-2">
+                  <div className="flex flex-wrap gap-2">
                     <button type="button" onClick={() => openEdit(r)} className="text-xs text-info-700 underline">
                       {t("admin.crud.common.edit")}
                     </button>
+                    {r.offer?.id && isSubmittableStatus(r.offer.status) && (
+                      <button
+                        type="button"
+                        onClick={() => void handleSubmitForReview(r.offer!.id!)}
+                        className="rounded bg-primary px-2 py-0.5 text-xs font-medium text-white"
+                      >
+                        Submit for review
+                      </button>
+                    )}
                     <button type="button" onClick={() => void handleDelete(r.id)} className="text-xs text-error-600 underline">
                       {t("admin.crud.common.delete")}
                     </button>

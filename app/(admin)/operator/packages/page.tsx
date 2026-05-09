@@ -2,9 +2,11 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
+import { OfferStatusBadge, isSubmittableStatus } from "@/components/OfferStatusBadge";
 import { PaginationBar } from "@/components/PaginationBar";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { ApiRequestError } from "@/lib/api-client";
+import { apiSubmitOfferForReview } from "@/lib/platform-admin-api";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import {
   apiPackages, apiCreatePackage, apiUpdatePackage, apiDeletePackage,
@@ -16,13 +18,6 @@ import { useLanguage } from "@/contexts/LanguageContext";
 
 const PACKAGE_TYPES = ["flight", "hotel", "transfer", "multi_service", "custom"];
 const STATUSES = ["", "draft", "active", "inactive", "archived"];
-
-function StatusBadge({ status }: { status: string }) {
-  const cls = status === "active" ? "bg-success-50 text-success-800" :
-    status === "inactive" ? "bg-error-50 text-error-800" :
-    status === "draft" ? "bg-warning-50 text-warning-800" : "bg-figma-bg-1 text-fg-t7";
-  return <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${cls}`}>{status}</span>;
-}
 
 export default function OperatorPackagesPage() {
   const { token } = useAdminAuth();
@@ -115,6 +110,20 @@ export default function OperatorPackagesPage() {
     finally { setBusyId(null); }
   }
 
+  async function handleSubmitForReview(offerId: number) {
+    if (!token) return;
+    if (!window.confirm("Submit this package for super-admin review? Once submitted, you cannot edit it until it's approved or rejected.")) return;
+    setBusyId(offerId);
+    try {
+      await apiSubmitOfferForReview(token, offerId);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : "Submit failed.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   if (forbidden) return <div><h1 className="admin-page-title">{t("admin.crud.packages.title")}</h1><div className="mt-4"><ForbiddenNotice /></div></div>;
 
   return (
@@ -194,7 +203,7 @@ export default function OperatorPackagesPage() {
       <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
         <table className="w-full min-w-[860px] text-left text-sm">
           <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
-            <tr><th className="px-3 py-2">{t("admin.crud.common.id")}</th><th className="px-3 py-2">{t("admin.crud.packages.col.title")}</th><th className="px-3 py-2">{t("admin.crud.packages.col.type")}</th><th className="px-3 py-2">{t("admin.crud.packages.col.destination")}</th><th className="px-3 py-2">{t("admin.crud.packages.col.days")}</th><th className="px-3 py-2">{t("admin.crud.common.status")}</th><th className="px-3 py-2">{t("admin.crud.packages.col.company")}</th><th className="px-3 py-2">{t("admin.crud.common.actions")}</th></tr>
+            <tr><th className="px-3 py-2">{t("admin.crud.common.id")}</th><th className="px-3 py-2">{t("admin.crud.packages.col.title")}</th><th className="px-3 py-2">{t("admin.crud.packages.col.type")}</th><th className="px-3 py-2">{t("admin.crud.packages.col.destination")}</th><th className="px-3 py-2">{t("admin.crud.packages.col.days")}</th><th className="px-3 py-2">Review status</th><th className="px-3 py-2">{t("admin.crud.packages.col.company")}</th><th className="px-3 py-2">{t("admin.crud.common.actions")}</th></tr>
           </thead>
           <tbody>
             {rows.length === 0 && <tr><td colSpan={8} className="px-3 py-6 text-center text-fg-t6">{t("admin.crud.packages.empty")}</td></tr>}
@@ -205,11 +214,21 @@ export default function OperatorPackagesPage() {
                 <td className="px-3 py-2 text-xs">{r.package_type ?? "-"}</td>
                 <td className="px-3 py-2 text-xs">{[r.destination_city, r.destination_country].filter(Boolean).join(", ") || "-"}</td>
                 <td className="px-3 py-2 tabular-nums">{r.duration_days ?? "-"}</td>
-                <td className="px-3 py-2"><StatusBadge status={r.status} /></td>
+                <td className="px-3 py-2"><OfferStatusBadge status={r.offer?.status ?? null} /></td>
                 <td className="px-3 py-2 text-xs">{r.company?.name ?? r.company_id ?? "-"}</td>
                 <td className="px-3 py-2">
                   <div className="flex flex-col gap-1">
                     <button type="button" onClick={() => openEdit(r)} className="text-left text-xs text-info-700 underline">{t("admin.crud.common.edit")}</button>
+                    {r.offer?.id && isSubmittableStatus(r.offer.status) && (
+                      <button
+                        type="button"
+                        disabled={busyId === r.offer.id}
+                        onClick={() => void handleSubmitForReview(r.offer!.id!)}
+                        className="self-start rounded bg-primary px-2 py-0.5 text-xs font-medium text-white disabled:opacity-40"
+                      >
+                        Submit for review
+                      </button>
+                    )}
                     <button type="button" disabled={busyId === r.id} onClick={() => void handleToggle(r)}
                       className={`text-left text-xs underline disabled:opacity-40 ${r.status === "active" ? "text-amber-600" : "text-success-700"}`}>
                       {r.status === "active" ? t("admin.crud.common.deactivate") : t("admin.crud.common.activate")}

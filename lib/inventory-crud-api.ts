@@ -491,6 +491,8 @@ export type HotelRow = {
   review_label?: string | null;
   room_inventory_mode?: string | null;
   rooms?: HotelRoomDetail[] | null;
+  /** Summary-only embed; full hotel detail from GET `/hotels/:id`, not from offer APIs. */
+  offer?: ModuleRowOfferSummary | null;
 };
 
 /** Single pricing row in operator form (hotel room). */
@@ -1562,6 +1564,7 @@ export async function apiDeleteVisa(
 // ─── Packages ─────────────────────────────────────────────────────────────────
 export type PackageRow = {
   id: number;
+  offer_id?: number | null;
   package_title?: string | null;
   package_type?: string | null;
   destination_city?: string | null;
@@ -1575,6 +1578,8 @@ export type PackageRow = {
   company_id?: number | null;
   created_at?: string | null;
   company?: { id: number; name: string } | null;
+  /** Summary-only embed; full package detail from GET `/packages/:id`, not from offer APIs. */
+  offer?: ModuleRowOfferSummary | null;
 };
 
 export type PackagePayload = {
