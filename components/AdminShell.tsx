@@ -1,12 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getLanguageMeta } from "@/lib/zulu-lang";
 import { reportAdminNextScreenView } from "@/lib/rollout-telemetry";
+import {
+  apiNotificationsPaginated,
+  apiNotificationsUnreadCount,
+  type NotificationRow,
+} from "@/lib/notifications-api";
 import {
   ADMIN_INVENTORY_LINKS,
   ADMIN_LOCALIZATION_LINKS,
@@ -35,10 +41,12 @@ function TopIconButton({
   label,
   onClick,
   children,
+  badge,
 }: {
   label: string;
   onClick?: () => void;
   children: React.ReactNode;
+  badge?: number;
 }) {
   return (
     <button
@@ -46,12 +54,24 @@ function TopIconButton({
       aria-label={label}
       title={label}
       onClick={onClick}
-      className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-700 transition hover:bg-black/5"
+      className="relative inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-700 transition hover:bg-black/5"
     >
       {children}
+      {badge && badge > 0 ? (
+        <span
+          className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white"
+          aria-label={`${badge} unread`}
+        >
+          {badge > 99 ? "99+" : badge}
+        </span>
+      ) : null}
     </button>
   );
 }
+
+const FRONTEND_PUBLIC_URL =
+  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_FRONTEND_URL) ||
+  "https://zulu.am";
 
 const ZULU_ADMIN_THEME_KEY = "zulu_admin_theme";
 
@@ -221,6 +241,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const { lang, setLang, languageOptions, t } = useLanguage();
   const [languageOpen, setLanguageOpen] = useState(false);
   const languageRef = useRef<HTMLDivElement>(null);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const notificationsRef = useRef<HTMLDivElement>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [recentNotifications, setRecentNotifications] = useState<NotificationRow[]>([]);
+  const [appsOpen, setAppsOpen] = useState(false);
+  const appsRef = useRef<HTMLDivElement>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const lastScreenPing = useRef<{ path: string; t: number } | null>(null);
   const lastPathname = useRef<string | null>(null);
   const [isNavigating, setIsNavigating] = useState(false);
@@ -314,17 +342,65 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       if (languageRef.current && !languageRef.current.contains(target)) {
         setLanguageOpen(false);
       }
+      if (notificationsRef.current && !notificationsRef.current.contains(target)) {
+        setNotificationsOpen(false);
+      }
+      if (appsRef.current && !appsRef.current.contains(target)) {
+        setAppsOpen(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(target)) {
+        setUserMenuOpen(false);
+      }
     };
     document.addEventListener("mousedown", handleOutsideClick);
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
+
+  const showNotifications = canAccessNotificationsNav(user);
+
+  const refreshUnreadCount = useCallback(async () => {
+    if (!token || !showNotifications) return;
+    try {
+      const res = await apiNotificationsUnreadCount(token);
+      setUnreadCount(res.data.unread_count ?? 0);
+    } catch {
+      // silent — admin shell shouldn't break on a counter request
+    }
+  }, [token, showNotifications]);
+
+  const loadRecentNotifications = useCallback(async () => {
+    if (!token || !showNotifications) return;
+    try {
+      const res = await apiNotificationsPaginated(token, { page: 1, per_page: 5 });
+      setRecentNotifications(res.data ?? []);
+    } catch {
+      setRecentNotifications([]);
+    }
+  }, [token, showNotifications]);
+
+  // Initial unread fetch + 60s polling.
+  useEffect(() => {
+    if (!token || !showNotifications) return;
+    void refreshUnreadCount();
+    const id = window.setInterval(() => {
+      void refreshUnreadCount();
+    }, 60000);
+    return () => window.clearInterval(id);
+  }, [token, showNotifications, refreshUnreadCount]);
+
+  // Lazy-load the dropdown content the first time the user opens it.
+  useEffect(() => {
+    if (notificationsOpen) {
+      void loadRecentNotifications();
+      void refreshUnreadCount();
+    }
+  }, [notificationsOpen, loadRecentNotifications, refreshUnreadCount]);
 
   const showPlatform = canAccessPlatformAdminNav(user);
   const showOperatorTools = canAccessOperatorToolsNav(user);
   const showSuperAdminOnlyPlatform = canAccessSuperAdminOnlyPlatformNav(user);
   const showSupport = canAccessSupportNav(user);
   const showConnections = canAccessConnectionsNav(user);
-  const showNotifications = canAccessNotificationsNav(user);
   const showStats = canAccessOperatorStatisticsNav(user);
   const showInventory = canAccessInventoryOversightNav(user);
   const showLocalization = canAccessLocalizationSectionNav(user);
@@ -336,15 +412,19 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       <header className="z-20 flex h-14 shrink-0 items-center justify-between border-b px-4 text-slate-800" style={{ backgroundColor: "var(--admin-header-bg)", borderColor: "var(--admin-border)" }}>
         <div className="flex items-center">
           <div className={`hidden md:flex items-center gap-2 border-r pr-4 ${sidebarOpen ? "md:w-72" : "md:w-20 md:justify-center md:pr-0"}`} style={{ borderColor: "var(--admin-border)" }}>
-            {sidebarOpen ? (
-              /* Expanded sidebar: full ZULU wordmark from Figma Zulu_1 */
-              <img src="/branding/logo-zulu.svg" alt="ZULU" className="h-7 w-auto" />
-            ) : (
-              /* Collapsed sidebar: icon mark (the dot of "i" from the wordmark) */
-              <img src="/branding/brand-icon.svg" alt="ZULU" className="h-5 w-5" />
-            )}
+            <Link href="/dashboard" aria-label={t("admin.nav.dashboard")} title={t("admin.nav.dashboard")} className="inline-flex items-center transition hover:opacity-80">
+              {sidebarOpen ? (
+                /* Expanded sidebar: full ZULU wordmark from Figma Zulu_1 */
+                <img src="/branding/logo-zulu.svg" alt="ZULU" className="h-7 w-auto" />
+              ) : (
+                /* Collapsed sidebar: icon mark (the dot of "i" from the wordmark) */
+                <img src="/branding/brand-icon.svg" alt="ZULU" className="h-5 w-5" />
+              )}
+            </Link>
           </div>
-          <img src="/branding/logo-zulu.svg" alt="ZULU" className="h-6 w-auto md:hidden" />
+          <Link href="/dashboard" aria-label={t("admin.nav.dashboard")} title={t("admin.nav.dashboard")} className="md:hidden">
+            <img src="/branding/logo-zulu.svg" alt="ZULU" className="h-6 w-auto" />
+          </Link>
           <button
             type="button"
             aria-label={t("admin.header.toggle_sidebar")}
@@ -365,42 +445,93 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <div className="ml-3 text-sm font-semibold tracking-wide text-slate-800">{pageTitle}</div>
         </div>
         <div className="flex items-center gap-1.5">
+          {/* Frontend-style language switcher with flag + code */}
           <div ref={languageRef} className="relative flex items-center">
             <button
               type="button"
               aria-label={t("common.language")}
               title={t("common.language")}
               onClick={() => setLanguageOpen((o) => !o)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-700 transition hover:bg-black/5"
+              className="inline-flex h-8 items-center gap-1.5 rounded-full px-2 text-slate-700 transition hover:bg-black/5"
             >
-              <span className="text-sm leading-none">
-                {getLanguageMeta(lang, languageOptions).flag ?? "🌐"}
+              {lang === "en" ? (
+                <Image
+                  src="/flags/gb.svg"
+                  alt=""
+                  width={20}
+                  height={14}
+                  className="h-3.5 w-[1.25rem] shrink-0 rounded-[2px] object-cover"
+                />
+              ) : lang === "hy" ? (
+                <Image
+                  src="/flags/am.svg"
+                  alt=""
+                  width={20}
+                  height={14}
+                  className="h-3.5 w-[1.25rem] shrink-0 rounded-[2px] object-cover"
+                />
+              ) : lang === "ru" ? (
+                <Image
+                  src="/flags/ru.svg"
+                  alt=""
+                  width={20}
+                  height={14}
+                  className="h-3.5 w-[1.25rem] shrink-0 rounded-[2px] object-cover"
+                />
+              ) : (
+                <span className="text-sm leading-none" aria-hidden>
+                  {getLanguageMeta(lang, languageOptions).flag ?? "🌐"}
+                </span>
+              )}
+              <span className="text-xs font-semibold uppercase">
+                {getLanguageMeta(lang, languageOptions).code ?? lang}
               </span>
             </button>
             {languageOpen ? (
               <div
-                className="absolute right-0 top-full z-[100] mt-1 min-w-[140px] overflow-hidden rounded-md border bg-white py-1 shadow-lg"
+                className="absolute right-0 top-full z-[100] mt-1 min-w-[160px] overflow-hidden rounded-md border bg-white py-1 shadow-lg"
                 style={{ borderColor: "var(--admin-border)" }}
               >
                 {languageOptions.map((option) => (
                   <button
                     key={option.code}
                     type="button"
-                    className="block w-full px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50"
                     onClick={() => {
                       setLang(option.code);
                       setLanguageOpen(false);
                     }}
                   >
-                    <span className="mr-2" aria-hidden>
-                      {option.flag ?? "🌐"}
-                    </span>
-                    {option.label}
+                    {option.code === "en" ? (
+                      <Image src="/flags/gb.svg" alt="" width={20} height={14} className="h-3.5 w-[1.25rem] shrink-0 rounded-[2px] object-cover" />
+                    ) : option.code === "hy" ? (
+                      <Image src="/flags/am.svg" alt="" width={20} height={14} className="h-3.5 w-[1.25rem] shrink-0 rounded-[2px] object-cover" />
+                    ) : option.code === "ru" ? (
+                      <Image src="/flags/ru.svg" alt="" width={20} height={14} className="h-3.5 w-[1.25rem] shrink-0 rounded-[2px] object-cover" />
+                    ) : (
+                      <span className="text-sm leading-none" aria-hidden>{option.flag ?? "🌐"}</span>
+                    )}
+                    <span>{option.label}</span>
                   </button>
                 ))}
               </div>
             ) : null}
           </div>
+          {/* Open frontend website in new browser tab */}
+          <a
+            href={FRONTEND_PUBLIC_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Open ZULU website"
+            title="Open ZULU website"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-700 transition hover:bg-black/5"
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M15 3h6v6" />
+              <path d="M10 14 21 3" />
+              <path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5" />
+            </svg>
+          </a>
           <TopIconButton
             label={adminTheme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
             onClick={toggleAdminTheme}
@@ -418,37 +549,215 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               </svg>
             )}
           </TopIconButton>
-          <TopIconButton label="Notifications (coming soon)">
-            <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2">
-              <path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5" />
-              <path d="M9 17a3 3 0 0 0 6 0" />
-            </svg>
-          </TopIconButton>
-          <TopIconButton label={`${t("admin.header.apps")} (coming soon)`}>
-            <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current">
-              <circle cx="6" cy="6" r="1.8" />
-              <circle cx="12" cy="6" r="1.8" />
-              <circle cx="18" cy="6" r="1.8" />
-              <circle cx="6" cy="12" r="1.8" />
-              <circle cx="12" cy="12" r="1.8" />
-              <circle cx="18" cy="12" r="1.8" />
-            </svg>
-          </TopIconButton>
-          <div className="mx-1 h-6 w-px" style={{ backgroundColor: "var(--admin-border)" }} />
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded-full px-2 py-1 text-left transition hover:bg-black/5"
-          >
-            <span
-              className="inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold text-white"
-              style={{ backgroundColor: "var(--admin-primary)" }}
+          {/* Notifications */}
+          {showNotifications && (
+            <div ref={notificationsRef} className="relative flex items-center">
+              <TopIconButton
+                label={t("admin.nav.notifications")}
+                onClick={() => setNotificationsOpen((o) => !o)}
+                badge={unreadCount}
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2">
+                  <path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5" />
+                  <path d="M9 17a3 3 0 0 0 6 0" />
+                </svg>
+              </TopIconButton>
+              {notificationsOpen ? (
+                <div
+                  className="absolute right-0 top-full z-[100] mt-1 w-[340px] overflow-hidden rounded-md border bg-white shadow-lg"
+                  style={{ borderColor: "var(--admin-border)" }}
+                >
+                  <div className="flex items-center justify-between border-b px-4 py-2.5" style={{ borderColor: "var(--admin-border)" }}>
+                    <p className="text-sm font-semibold text-slate-800">
+                      {t("admin.nav.notifications")}
+                      {unreadCount > 0 ? (
+                        <span className="ml-2 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{unreadCount}</span>
+                      ) : null}
+                    </p>
+                    <Link
+                      href="/notifications"
+                      onClick={() => setNotificationsOpen(false)}
+                      className="text-xs font-medium hover:underline"
+                      style={{ color: "var(--admin-primary)" }}
+                    >
+                      {t("common.see_all") !== "common.see_all" ? t("common.see_all") : "See all"}
+                    </Link>
+                  </div>
+                  <div className="max-h-[360px] overflow-y-auto">
+                    {recentNotifications.length === 0 ? (
+                      <p className="px-4 py-6 text-center text-xs text-slate-500">
+                        {t("admin.notifications.empty") !== "admin.notifications.empty" ? t("admin.notifications.empty") : "No notifications yet"}
+                      </p>
+                    ) : (
+                      <ul className="divide-y" style={{ borderColor: "var(--admin-border)" }}>
+                        {recentNotifications.map((n) => (
+                          <li key={n.id}>
+                            <Link
+                              href="/notifications"
+                              onClick={() => setNotificationsOpen(false)}
+                              className={`block px-4 py-2.5 transition hover:bg-slate-50 ${n.status !== "read" ? "bg-slate-50/50" : ""}`}
+                            >
+                              <p className="text-xs font-semibold text-slate-800 line-clamp-1">{n.title}</p>
+                              <p className="mt-0.5 text-[11px] text-slate-500 line-clamp-2">{n.message}</p>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )}
+
+          {/* Apps grid — quick links to common admin sections */}
+          <div ref={appsRef} className="relative flex items-center">
+            <TopIconButton
+              label={t("admin.header.apps")}
+              onClick={() => setAppsOpen((o) => !o)}
             >
-              {(user?.name ?? t("admin.user.fallback_initial")).slice(0, 1).toUpperCase()}
-            </span>
+              <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current">
+                <circle cx="6" cy="6" r="1.8" />
+                <circle cx="12" cy="6" r="1.8" />
+                <circle cx="18" cy="6" r="1.8" />
+                <circle cx="6" cy="12" r="1.8" />
+                <circle cx="12" cy="12" r="1.8" />
+                <circle cx="18" cy="12" r="1.8" />
+                <circle cx="6" cy="18" r="1.8" />
+                <circle cx="12" cy="18" r="1.8" />
+                <circle cx="18" cy="18" r="1.8" />
+              </svg>
+            </TopIconButton>
+            {appsOpen ? (
+              <div
+                className="absolute right-0 top-full z-[100] mt-1 w-[280px] overflow-hidden rounded-md border bg-white p-2 shadow-lg"
+                style={{ borderColor: "var(--admin-border)" }}
+              >
+                <p className="px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                  {t("admin.header.apps")}
+                </p>
+                <div className="grid grid-cols-3 gap-1">
+                  {[
+                    { href: "/dashboard", label: t("admin.nav.dashboard"), icon: "/icons/menu/dashboard.svg" },
+                    { href: "/platform/users", label: t("admin.nav.users"), icon: "/icons/menu/users.svg" },
+                    { href: "/platform/bookings", label: t("admin.nav.bookings"), icon: "/icons/menu/booking.svg" },
+                    { href: "/platform/companies", label: t("admin.nav.platform_companies"), icon: "/icons/menu/company.svg" },
+                    { href: "/platform/finance", label: t("admin.nav.finance"), icon: "/icons/menu/finance.svg" },
+                    { href: "/platform/settings", label: t("admin.nav.settings"), icon: "/icons/menu/settings.svg" },
+                  ].map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setAppsOpen(false)}
+                      className="flex flex-col items-center gap-1 rounded-md p-2 text-center transition hover:bg-slate-50"
+                    >
+                      <img src={item.icon} alt="" aria-hidden className="h-5 w-5 opacity-70" />
+                      <span className="text-[10px] font-medium leading-tight text-slate-700 line-clamp-2">{item.label}</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="mx-1 h-6 w-px" style={{ backgroundColor: "var(--admin-border)" }} />
+
+          {/* User avatar — dropdown with profile / settings / logout */}
+          <div ref={userMenuRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setUserMenuOpen((o) => !o)}
+              className="inline-flex items-center gap-2 rounded-full px-2 py-1 text-left transition hover:bg-black/5"
+              aria-label={user?.name ?? t("admin.user.fallback_name")}
+              aria-expanded={userMenuOpen}
+            >
+              <span
+                className="inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold text-white"
+                style={{ backgroundColor: "var(--admin-primary)" }}
+              >
+                {(user?.name ?? t("admin.user.fallback_initial")).slice(0, 1).toUpperCase()}
+              </span>
               <span className="hidden max-w-[160px] truncate text-xs font-medium text-slate-700 md:block">
-              {user?.name ?? t("admin.user.fallback_name")}
-            </span>
-          </button>
+                {user?.name ?? t("admin.user.fallback_name")}
+              </span>
+              <svg viewBox="0 0 24 24" className={`h-3 w-3 fill-none stroke-current text-slate-500 transition-transform ${userMenuOpen ? "rotate-180" : ""}`} strokeWidth="2" strokeLinecap="round" aria-hidden>
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </button>
+            {userMenuOpen ? (
+              <div
+                className="absolute right-0 top-full z-[100] mt-1 w-[260px] overflow-hidden rounded-md border bg-white shadow-lg"
+                style={{ borderColor: "var(--admin-border)" }}
+              >
+                {user ? (
+                  <div className="border-b px-4 py-3" style={{ borderColor: "var(--admin-border)" }}>
+                    <p className="text-sm font-semibold text-slate-800">{user.name}</p>
+                    <p className="mt-0.5 truncate text-xs text-slate-500">{user.email}</p>
+                    <p className="mt-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--admin-primary)" }}>
+                      {user.context.world}
+                      {user.context.is_statistics_elevated_only ? t("admin.user.stats_scope_suffix") : ""}
+                    </p>
+                  </div>
+                ) : null}
+                <div className="py-1">
+                  <Link
+                    href="/profile"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-50"
+                  >
+                    <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current text-slate-500" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="8" r="4" />
+                      <path d="M4 21v-1a8 8 0 0 1 16 0v1" />
+                    </svg>
+                    {t("admin.user.profile") !== "admin.user.profile" ? t("admin.user.profile") : "Profile"}
+                  </Link>
+                  <Link
+                    href="/platform/settings"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-50"
+                  >
+                    <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current text-slate-500" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+                    </svg>
+                    {t("admin.nav.settings") !== "admin.nav.settings" ? t("admin.nav.settings") : "Settings"}
+                  </Link>
+                </div>
+                <div className="border-t py-1" style={{ borderColor: "var(--admin-border)" }}>
+                  {!token ? (
+                    <Link
+                      href="/login"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-50"
+                    >
+                      <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current text-slate-500" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                        <polyline points="10 17 15 12 10 7" />
+                        <line x1="15" y1="12" x2="3" y2="12" />
+                      </svg>
+                      {t("admin.shell.login") !== "admin.shell.login" ? t("admin.shell.login") : "Log in"}
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        void logout().then(() => (window.location.href = "/login"));
+                      }}
+                      className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 transition hover:bg-red-50"
+                    >
+                      <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                        <polyline points="16 17 21 12 16 7" />
+                        <line x1="21" y1="12" x2="9" y2="12" />
+                      </svg>
+                      {t("admin.shell.logout")}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </div>
         </div>
       </header>
       <div className="relative flex min-h-0 flex-1" style={{ backgroundColor: "var(--background)" }}>
@@ -596,25 +905,6 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           )}
         </nav>
 
-        <div className="sticky bottom-0 border-t bg-white px-3 py-3 text-xs text-slate-500" style={{ borderColor: "var(--admin-border)", backgroundColor: "var(--admin-surface)" }}>
-          {user && (
-            <div className={`mb-3 rounded-lg bg-slate-50 px-3 py-2 ${sidebarOpen ? "" : "text-center"}`}>
-              <div className="font-medium text-slate-800">{sidebarOpen ? user.name : (user.name?.slice(0, 1).toUpperCase() ?? t("admin.user.fallback_initial"))}</div>
-              {sidebarOpen && <div className="truncate">{user.email}</div>}
-              {sidebarOpen && <div className="mt-1 text-[10px] uppercase text-slate-400">
-                {user.context.world}
-                {user.context.is_statistics_elevated_only ? t("admin.user.stats_scope_suffix") : ""}
-              </div>}
-            </div>
-          )}
-          <button
-            type="button"
-            onClick={() => logout().then(() => (window.location.href = "/login"))}
-            className={`w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-100 ${sidebarOpen ? "text-left" : "text-center"}`}
-          >
-            {sidebarOpen ? t("admin.shell.logout") : "↩"}
-          </button>
-        </div>
       </aside>
       <main className="admin-content min-w-0 flex-1 overflow-y-auto p-6">{children}</main>
       </div>
