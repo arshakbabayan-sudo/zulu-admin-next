@@ -6,6 +6,7 @@ import { ImportExportButtons } from "@/components/ImportExportButtons";
 import { OfferStatusBadge, isSubmittableStatus } from "@/components/OfferStatusBadge";
 import { PaginationBar } from "@/components/PaginationBar";
 import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
+import { MainImageDescriptionFields } from "@/components/MainImageDescriptionFields";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useExcursionWizardStepper } from "@/hooks/useExcursionWizardStepper";
 import { ApiRequestError } from "@/lib/api-client";
@@ -470,6 +471,13 @@ export default function OperatorExcursionsPage() {
               <div>
                 <h3 className="mb-2 text-sm font-semibold text-fg-t7">{t(EXCURSION_STEP_LABEL_KEYS[0] ?? "")}</h3>
                 <div className="grid gap-3 sm:grid-cols-2">
+                  <MainImageDescriptionFields
+                    mainImage={form.main_image}
+                    shortDescription={form.short_description}
+                    onMainImageChange={(v) => setForm((p) => p ? { ...p, main_image: v } : p)}
+                    onShortDescriptionChange={(v) => setForm((p) => p ? { ...p, short_description: v } : p)}
+                    altText="Excursion preview"
+                  />
                   <LocationCascadeSelect
                     token={token}
                     value={form.location_id === "" || form.location_id == null ? null : Number(form.location_id)}

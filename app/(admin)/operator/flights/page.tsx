@@ -29,6 +29,7 @@ import {
   toCanonicalFlightCabinClass,
 } from "@/lib/flight-cabin-class";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { MainImageDescriptionFields } from "@/components/MainImageDescriptionFields";
 import Link from "next/link";
 import { Fragment, useCallback, useEffect, useState } from "react";
 
@@ -259,6 +260,8 @@ const EMPTY: FlightPayload = {
   appears_in_admin: true,
   appears_in_zulu_admin: true,
   status: "draft",
+  main_image: "",
+  short_description: "",
 };
 
 const EMPTY_CABIN: FlightCabinPayload = {
@@ -774,6 +777,13 @@ export default function OperatorFlightsPage() {
             <>
               {wizardStep === "general" && (
                 <div className="mb-3 grid gap-3 sm:grid-cols-2">
+                  <MainImageDescriptionFields
+                    mainImage={(form.main_image as string | null | undefined) ?? ""}
+                    shortDescription={(form.short_description as string | null | undefined) ?? ""}
+                    onMainImageChange={(v) => setForm((p) => p ? { ...p, main_image: v } : p)}
+                    onShortDescriptionChange={(v) => setForm((p) => p ? { ...p, short_description: v } : p)}
+                    altText="Flight preview"
+                  />
                   <LocationCascadeSelect
                     token={token}
                     value={

@@ -134,6 +134,8 @@ export type FlightRow = {
   appears_in_admin?: boolean | null;
   appears_in_zulu_admin?: boolean | null;
   status?: string | null;
+  main_image?: string | null;
+  short_description?: string | null;
   company_id?: number | null;
   company?: { id: number; name: string } | null;
   /** Summary-only embed; full flight detail from GET `/flights/:id`, not from offer APIs. */
@@ -208,6 +210,8 @@ export type FlightPayload = {
   appears_in_admin?: boolean;
   appears_in_zulu_admin?: boolean;
   status?: string;
+  main_image?: string | null;
+  short_description?: string | null;
   [key: string]: unknown;
 };
 
@@ -1138,6 +1142,8 @@ export type TransferRow = {
   cancellation_deadline_at?: string | null;
   bookable?: boolean | null;
   is_package_eligible?: boolean | null;
+  main_image?: string | null;
+  short_description?: string | null;
   /** Summary-only embed; full transfer detail from GET `/transfers/:id`, not from offer APIs. */
   offer?: ModuleRowOfferSummary | null;
 };
@@ -1270,6 +1276,8 @@ export type CarRow = {
   status?: string | null;
   availability_status?: string | null;
   advanced_options?: CarAdvancedOptionsRow | null;
+  main_image?: string | null;
+  short_description?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
   /** Summary-only embed; full car detail from GET `/cars/:id`, not from offer APIs. */
@@ -1297,6 +1305,8 @@ export type CarExpandedWriteFields = {
   status?: string | null;
   availability_status?: string | null;
   advanced_options?: CarAdvancedOptionsRow | null;
+  main_image?: string | null;
+  short_description?: string | null;
 };
 
 /** POST /cars — must match `CarController::store` validation. */
@@ -1386,6 +1396,8 @@ export type ExcursionRow = {
   appears_in_web?: boolean | null;
   appears_in_admin?: boolean | null;
   appears_in_zulu_admin?: boolean | null;
+  main_image?: string | null;
+  short_description?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
   /** Summary-only embed; full excursion detail from GET `/excursions/:id`, not from offer APIs. */
@@ -1420,6 +1432,8 @@ export type ExcursionExpandedWritePayload = {
   appears_in_web?: boolean;
   appears_in_admin?: boolean;
   appears_in_zulu_admin?: boolean;
+  main_image?: string;
+  short_description?: string;
 };
 
 /** POST /excursions — must match `ExcursionController::store` validation. */
@@ -1588,6 +1602,8 @@ export type PackageRow = {
   company_id?: number | null;
   created_at?: string | null;
   company?: { id: number; name: string } | null;
+  main_image?: string | null;
+  short_description?: string | null;
   /** Summary-only embed; full package detail from GET `/packages/:id`, not from offer APIs. */
   offer?: ModuleRowOfferSummary | null;
 };
@@ -1600,6 +1616,8 @@ export type PackagePayload = {
   destination_location_id?: number | null;
   duration_days?: number;
   currency?: string;
+  main_image?: string | null;
+  short_description?: string | null;
   [key: string]: unknown;
 };
 

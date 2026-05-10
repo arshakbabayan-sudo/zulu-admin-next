@@ -49,6 +49,8 @@ export type TransferCanonicalFields = {
   bookable: boolean;
   is_package_eligible: boolean;
   status: string;
+  main_image: string;
+  short_description: string;
 };
 
 /**
@@ -233,6 +235,8 @@ export function emptyTransferOperatorForm(): TransferFormValues {
     bookable: true,
     is_package_eligible: false,
     status: "draft",
+    main_image: "",
+    short_description: "",
   };
 }
 
@@ -288,6 +292,8 @@ export function newTransferForm(offerId: number | null, currency: string): Trans
     bookable: true,
     is_package_eligible: false,
     status: "draft",
+    main_image: "",
+    short_description: "",
   };
 }
 
@@ -345,6 +351,8 @@ export function transferFormFromRow(row: TransferRow): TransferFormValues {
     bookable: row.bookable !== false,
     is_package_eligible: Boolean(row.is_package_eligible),
     status: row.status ?? "draft",
+    main_image: (row as { main_image?: string | null }).main_image ?? "",
+    short_description: (row as { short_description?: string | null }).short_description ?? "",
   };
 }
 
@@ -421,6 +429,8 @@ export function transferCreateBodyFromForm(form: TransferFormValues): Record<str
     bookable: Boolean(form.bookable),
     is_package_eligible: Boolean(form.is_package_eligible),
     status: normalizeStatus(form.status),
+    main_image: trimOrEmpty(form.main_image) || null,
+    short_description: trimOrEmpty(form.short_description) || null,
   };
 }
 
@@ -480,6 +490,8 @@ export function transferUpdateBodyFromForm(form: TransferFormValues): Record<str
     bookable: Boolean(form.bookable),
     is_package_eligible: Boolean(form.is_package_eligible),
     status: normalizeStatus(form.status),
+    main_image: trimOrEmpty(form.main_image) || null,
+    short_description: trimOrEmpty(form.short_description) || null,
   };
 }
 

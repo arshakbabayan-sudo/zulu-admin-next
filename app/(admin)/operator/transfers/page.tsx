@@ -6,6 +6,7 @@ import { ImportExportButtons } from "@/components/ImportExportButtons";
 import { OfferStatusBadge, isSubmittableStatus } from "@/components/OfferStatusBadge";
 import { PaginationBar } from "@/components/PaginationBar";
 import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
+import { MainImageDescriptionFields } from "@/components/MainImageDescriptionFields";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ApiRequestError } from "@/lib/api-client";
@@ -641,6 +642,13 @@ export default function OperatorTransfersPage() {
                 className="rounded border border-default bg-figma-bg-1 px-2 py-1.5 text-sm text-fg-t6"
               />
             </label>
+            <MainImageDescriptionFields
+              mainImage={form.main_image}
+              shortDescription={form.short_description}
+              onMainImageChange={(v) => setForm((p) => p ? { ...p, main_image: v } : p)}
+              onShortDescriptionChange={(v) => setForm((p) => p ? { ...p, short_description: v } : p)}
+              altText="Transfer preview"
+            />
           </div>
 
           <div className="mb-3 flex flex-wrap gap-2">

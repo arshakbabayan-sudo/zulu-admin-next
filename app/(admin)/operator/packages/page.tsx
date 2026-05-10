@@ -2,6 +2,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
+import { MainImageDescriptionFields } from "@/components/MainImageDescriptionFields";
 import { OfferStatusBadge, isSubmittableStatus } from "@/components/OfferStatusBadge";
 import { PaginationBar } from "@/components/PaginationBar";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
@@ -58,6 +59,8 @@ export default function OperatorPackagesPage() {
       destination_location_id: null,
       duration_days: undefined,
       currency: "USD",
+      main_image: "",
+      short_description: "",
     } as PackagePayload);
     setFormErr(null);
   }
@@ -71,6 +74,8 @@ export default function OperatorPackagesPage() {
       destination_location_id: (r as { destination_location_id?: number | null }).destination_location_id ?? null,
       duration_days: r.duration_days ?? undefined,
       currency: r.currency ?? "USD",
+      main_image: r.main_image ?? "",
+      short_description: r.short_description ?? "",
     } as PackagePayload);
     setFormErr(null);
   }
@@ -191,6 +196,13 @@ export default function OperatorPackagesPage() {
               <input type="number" value={form.duration_days ?? ""} onChange={(e) => setForm((p) => p ? { ...p, duration_days: e.target.value ? Number(e.target.value) : undefined } : p)}
                 className="rounded border border-default px-2 py-1.5 text-sm" />
             </label>
+            <MainImageDescriptionFields
+              mainImage={(form.main_image as string | null | undefined) ?? ""}
+              shortDescription={(form.short_description as string | null | undefined) ?? ""}
+              onMainImageChange={(v) => setForm((p) => p ? { ...p, main_image: v } : p)}
+              onShortDescriptionChange={(v) => setForm((p) => p ? { ...p, short_description: v } : p)}
+              altText="Package preview"
+            />
           </div>
           {formErr && <p className="mt-2 text-sm text-error-600">{formErr}</p>}
           <div className="mt-4 flex gap-2">

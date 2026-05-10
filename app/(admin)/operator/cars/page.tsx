@@ -6,6 +6,7 @@ import { ImportExportButtons } from "@/components/ImportExportButtons";
 import { OfferStatusBadge, isSubmittableStatus } from "@/components/OfferStatusBadge";
 import { PaginationBar } from "@/components/PaginationBar";
 import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
+import { MainImageDescriptionFields } from "@/components/MainImageDescriptionFields";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ApiRequestError } from "@/lib/api-client";
@@ -199,6 +200,8 @@ type CarFormState = {
   status: string;
   availability_status: string;
   advanced_options: CarAdvancedOptionsRow;
+  main_image: string;
+  short_description: string;
 };
 
 function emptyCarForm(): Omit<CarFormState, "offer_id" | "company_id"> {
@@ -225,6 +228,8 @@ function emptyCarForm(): Omit<CarFormState, "offer_id" | "company_id"> {
     status: "",
     availability_status: "",
     advanced_options: defaultCarAdvancedOptions(),
+    main_image: "",
+    short_description: "",
   };
 }
 
@@ -276,6 +281,8 @@ function carFormFromRow(r: CarRow): CarFormState {
     status: r.status ?? "",
     availability_status: r.availability_status ?? "",
     advanced_options: carAdvancedOptionsFromRow(r),
+    main_image: (r as { main_image?: string | null }).main_image ?? "",
+    short_description: (r as { short_description?: string | null }).short_description ?? "",
   };
 }
 
@@ -420,6 +427,8 @@ function mergeExpandedFromForm(form: CarFormState): Record<string, unknown> {
     status: trimOrNull(form.status),
     availability_status: trimOrNull(form.availability_status),
     advanced_options: sanitizeAdvancedOptionsForApi(form.advanced_options),
+    main_image: trimOrNull(form.main_image),
+    short_description: trimOrNull(form.short_description),
   };
 }
 
@@ -780,6 +789,13 @@ export default function OperatorCarsPage() {
             </div>
           )}
           <div className="grid gap-3 sm:grid-cols-2">
+            <MainImageDescriptionFields
+              mainImage={form.main_image}
+              shortDescription={form.short_description}
+              onMainImageChange={(v) => setForm((p) => p ? { ...p, main_image: v } : p)}
+              onShortDescriptionChange={(v) => setForm((p) => p ? { ...p, short_description: v } : p)}
+              altText="Car preview"
+            />
             {isCreate && carOffers && (
               <label className="flex flex-col gap-1 text-sm sm:col-span-2">
                 <span className="font-medium text-fg-t6">{t("admin.crud.cars.field.offer_id")}</span>

@@ -41,6 +41,8 @@ export type ExcursionWizardState = {
   appears_in_web: boolean;
   appears_in_admin: boolean;
   appears_in_zulu_admin: boolean;
+  main_image: string;
+  short_description: string;
 };
 
 export function emptyExcursionWizardTail(): Omit<ExcursionWizardState, "offer_id" | "company_id"> {
@@ -72,6 +74,8 @@ export function emptyExcursionWizardTail(): Omit<ExcursionWizardState, "offer_id
     appears_in_web: true,
     appears_in_admin: true,
     appears_in_zulu_admin: true,
+    main_image: "",
+    short_description: "",
   };
 }
 
@@ -153,6 +157,8 @@ export function excursionWizardFromRow(r: ExcursionRow): ExcursionWizardState {
     appears_in_web: r.appears_in_web != null ? Boolean(r.appears_in_web) : true,
     appears_in_admin: r.appears_in_admin != null ? Boolean(r.appears_in_admin) : true,
     appears_in_zulu_admin: r.appears_in_zulu_admin != null ? Boolean(r.appears_in_zulu_admin) : true,
+    main_image: (r as { main_image?: string | null }).main_image ?? "",
+    short_description: (r as { short_description?: string | null }).short_description ?? "",
   };
 }
 
@@ -326,6 +332,9 @@ export function expandedPayloadFromWizard(form: ExcursionWizardState): Excursion
   out.appears_in_web = form.appears_in_web;
   out.appears_in_admin = form.appears_in_admin;
   out.appears_in_zulu_admin = form.appears_in_zulu_admin;
+
+  setIf("main_image", form.main_image);
+  setIf("short_description", form.short_description);
 
   return out;
 }

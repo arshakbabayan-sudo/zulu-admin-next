@@ -698,6 +698,8 @@ const TRANSFER_TEMPLATE_LABELS: Record<keyof TransferFormValues, string> = {
   bookable: TRANSFER_FIELD_LABELS.bookable,
   is_package_eligible: TRANSFER_FIELD_LABELS.is_package_eligible,
   status: TRANSFER_FIELD_LABELS.status,
+  main_image: "Main image URL",
+  short_description: "Short description",
 };
 
 const TRANSFER_IMPORT_HEADER_KEY_MAP: Record<string, string> = (() => {
@@ -782,6 +784,8 @@ export function transferRowToFormValues(row: Record<string, string>, currencyDef
     bookable: parseBool(get("bookable")),
     is_package_eligible: parseBool(get("is_package_eligible")),
     status: get("status") || "draft",
+    main_image: get("main_image"),
+    short_description: get("short_description"),
   };
 }
 
@@ -1112,6 +1116,8 @@ export function excursionRowToWizard(row: Record<string, string>, offerId: numbe
     appears_in_web: parseBool(get("appears_in_web")),
     appears_in_admin: parseBool(get("appears_in_admin")),
     appears_in_zulu_admin: parseBool(get("appears_in_zulu_admin")),
+    main_image: get("main_image"),
+    short_description: get("short_description"),
   };
 }
 
