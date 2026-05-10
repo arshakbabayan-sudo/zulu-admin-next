@@ -526,6 +526,8 @@ function buildHotelFormFromRow(raw: RawRow, rooms: HotelRoomFormRow[]): HotelFor
     review_count: toNumOr(raw.review_count ?? "", ""),
     review_label: raw.review_label ?? "",
     room_inventory_mode: raw.room_inventory_mode ?? "",
+    main_image: raw.main_image ?? "",
+    short_description: raw.short_description ?? "",
     rooms: rooms.length > 0 ? rooms : [newHotelRoomFormRow()],
   };
 }

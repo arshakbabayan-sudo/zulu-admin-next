@@ -604,6 +604,10 @@ export type HotelFormPayload = {
   review_count: number | "";
   review_label: string;
   room_inventory_mode: string;
+  /** Hero image URL for cards/detail (string URL accepted; backend stores in main_image column). */
+  main_image: string;
+  /** Optional short description shown in detail "About the hotel" section. */
+  short_description: string;
   /** Step B3 — rooms & pricings (POST full set; PATCH sync). */
   rooms: HotelRoomFormRow[];
 };
@@ -797,6 +801,8 @@ export function hotelFormFromDetail(row: HotelRow): HotelFormPayload {
         : "",
     review_label: row.review_label ?? "",
     room_inventory_mode: row.room_inventory_mode ?? "",
+    main_image: (row as { main_image?: string | null }).main_image ?? "",
+    short_description: (row as { short_description?: string | null }).short_description ?? "",
     rooms: mapDetailRoomsToForm(row.rooms),
   };
 }
@@ -961,6 +967,8 @@ export type HotelCreateApiBody = {
   review_count: number;
   review_label: string | null;
   room_inventory_mode: string | null;
+  main_image: string | null;
+  short_description: string | null;
   rooms: HotelRoomApiBody[];
 };
 
@@ -1015,6 +1023,8 @@ function hotelSharedBodyFromForm(form: HotelFormPayload): Omit<HotelCreateApiBod
         : Math.max(0, Math.floor(Number(form.review_count))),
     review_label: trimOrNull(form.review_label),
     room_inventory_mode: trimOrNull(form.room_inventory_mode),
+    main_image: trimOrNull(form.main_image),
+    short_description: trimOrNull(form.short_description),
   };
 }
 

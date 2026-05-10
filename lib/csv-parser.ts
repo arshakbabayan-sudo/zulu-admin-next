@@ -531,6 +531,8 @@ export function hotelRowToFormPayload(row: Record<string, string>): HotelFormPay
     review_count: num("review_count"),
     review_label: get("review_label"),
     room_inventory_mode: get("room_inventory_mode"),
+    main_image: get("main_image"),
+    short_description: get("short_description"),
     rooms: [room],
   };
 }

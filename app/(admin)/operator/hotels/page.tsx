@@ -90,6 +90,8 @@ const EMPTY: HotelFormPayload = {
   review_count: "",
   review_label: "",
   room_inventory_mode: "",
+  main_image: "",
+  short_description: "",
   rooms: [newHotelRoomFormRow()],
 };
 
@@ -323,6 +325,40 @@ export default function OperatorHotelsPage() {
               <input
                 value={form.full_address}
                 onChange={(e) => setForm((p) => (p ? { ...p, full_address: e.target.value } : p))}
+                className="rounded border border-default px-2 py-1.5 text-sm"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm sm:col-span-2">
+              <span className="font-medium text-fg-t6">
+                Main image URL{" "}
+                <span className="text-fg-t7 font-normal">(հղում նկարի, օրինակ` Unsplash, Imgur — ցույց է տրվում card-ի վրա)</span>
+              </span>
+              <input
+                type="url"
+                placeholder="https://images.unsplash.com/photo-XXX?auto=format&w=960"
+                value={form.main_image}
+                onChange={(e) => setForm((p) => (p ? { ...p, main_image: e.target.value } : p))}
+                className="rounded border border-default px-2 py-1.5 text-sm"
+              />
+              {form.main_image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={form.main_image}
+                  alt="Hotel preview"
+                  className="mt-2 h-32 w-48 object-cover rounded border border-default"
+                />
+              ) : null}
+            </label>
+            <label className="flex flex-col gap-1 text-sm sm:col-span-2">
+              <span className="font-medium text-fg-t6">
+                Short description{" "}
+                <span className="text-fg-t7 font-normal">(կարճ նկարագրություն հյուրանոցի մասին` ցույց է տրվում &quot;About the hotel&quot; բաժնում)</span>
+              </span>
+              <textarea
+                rows={4}
+                placeholder="Royal Manotel, Geneva is just 3.5 mi from the airport..."
+                value={form.short_description}
+                onChange={(e) => setForm((p) => (p ? { ...p, short_description: e.target.value } : p))}
                 className="rounded border border-default px-2 py-1.5 text-sm"
               />
             </label>
