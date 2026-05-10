@@ -1118,6 +1118,8 @@ export function excursionRowToWizard(row: Record<string, string>, offerId: numbe
     appears_in_zulu_admin: parseBool(get("appears_in_zulu_admin")),
     main_image: get("main_image"),
     short_description: get("short_description"),
+    latitude: get("latitude"),
+    longitude: get("longitude"),
   };
 }
 

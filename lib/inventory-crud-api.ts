@@ -1278,6 +1278,8 @@ export type CarRow = {
   advanced_options?: CarAdvancedOptionsRow | null;
   main_image?: string | null;
   short_description?: string | null;
+  latitude?: number | string | null;
+  longitude?: number | string | null;
   created_at?: string | null;
   updated_at?: string | null;
   /** Summary-only embed; full car detail from GET `/cars/:id`, not from offer APIs. */
@@ -1307,6 +1309,8 @@ export type CarExpandedWriteFields = {
   advanced_options?: CarAdvancedOptionsRow | null;
   main_image?: string | null;
   short_description?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 };
 
 /** POST /cars — must match `CarController::store` validation. */
@@ -1398,6 +1402,8 @@ export type ExcursionRow = {
   appears_in_zulu_admin?: boolean | null;
   main_image?: string | null;
   short_description?: string | null;
+  latitude?: number | string | null;
+  longitude?: number | string | null;
   created_at?: string | null;
   updated_at?: string | null;
   /** Summary-only embed; full excursion detail from GET `/excursions/:id`, not from offer APIs. */
@@ -1434,6 +1440,8 @@ export type ExcursionExpandedWritePayload = {
   appears_in_zulu_admin?: boolean;
   main_image?: string;
   short_description?: string;
+  latitude?: number;
+  longitude?: number;
 };
 
 /** POST /excursions — must match `ExcursionController::store` validation. */
@@ -1604,6 +1612,8 @@ export type PackageRow = {
   company?: { id: number; name: string } | null;
   main_image?: string | null;
   short_description?: string | null;
+  latitude?: number | string | null;
+  longitude?: number | string | null;
   /** Summary-only embed; full package detail from GET `/packages/:id`, not from offer APIs. */
   offer?: ModuleRowOfferSummary | null;
 };
@@ -1618,6 +1628,8 @@ export type PackagePayload = {
   currency?: string;
   main_image?: string | null;
   short_description?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   [key: string]: unknown;
 };
 

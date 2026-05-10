@@ -7,6 +7,7 @@ import { OfferStatusBadge, isSubmittableStatus } from "@/components/OfferStatusB
 import { PaginationBar } from "@/components/PaginationBar";
 import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
 import { MainImageDescriptionFields } from "@/components/MainImageDescriptionFields";
+import { LatLngFields } from "@/components/LatLngFields";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ApiRequestError } from "@/lib/api-client";
@@ -202,6 +203,8 @@ type CarFormState = {
   advanced_options: CarAdvancedOptionsRow;
   main_image: string;
   short_description: string;
+  latitude: string;
+  longitude: string;
 };
 
 function emptyCarForm(): Omit<CarFormState, "offer_id" | "company_id"> {
@@ -230,6 +233,8 @@ function emptyCarForm(): Omit<CarFormState, "offer_id" | "company_id"> {
     advanced_options: defaultCarAdvancedOptions(),
     main_image: "",
     short_description: "",
+    latitude: "",
+    longitude: "",
   };
 }
 
@@ -283,6 +288,8 @@ function carFormFromRow(r: CarRow): CarFormState {
     advanced_options: carAdvancedOptionsFromRow(r),
     main_image: (r as { main_image?: string | null }).main_image ?? "",
     short_description: (r as { short_description?: string | null }).short_description ?? "",
+    latitude: r.latitude != null ? String(r.latitude) : "",
+    longitude: r.longitude != null ? String(r.longitude) : "",
   };
 }
 
@@ -429,6 +436,8 @@ function mergeExpandedFromForm(form: CarFormState): Record<string, unknown> {
     advanced_options: sanitizeAdvancedOptionsForApi(form.advanced_options),
     main_image: trimOrNull(form.main_image),
     short_description: trimOrNull(form.short_description),
+    latitude: form.latitude.trim() === "" ? null : Number(form.latitude),
+    longitude: form.longitude.trim() === "" ? null : Number(form.longitude),
   };
 }
 
@@ -795,6 +804,12 @@ export default function OperatorCarsPage() {
               onMainImageChange={(v) => setForm((p) => p ? { ...p, main_image: v } : p)}
               onShortDescriptionChange={(v) => setForm((p) => p ? { ...p, short_description: v } : p)}
               altText="Car preview"
+            />
+            <LatLngFields
+              latitude={form.latitude}
+              longitude={form.longitude}
+              onLatitudeChange={(v) => setForm((p) => p ? { ...p, latitude: v } : p)}
+              onLongitudeChange={(v) => setForm((p) => p ? { ...p, longitude: v } : p)}
             />
             {isCreate && carOffers && (
               <label className="flex flex-col gap-1 text-sm sm:col-span-2">

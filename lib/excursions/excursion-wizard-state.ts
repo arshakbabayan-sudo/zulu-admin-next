@@ -43,6 +43,8 @@ export type ExcursionWizardState = {
   appears_in_zulu_admin: boolean;
   main_image: string;
   short_description: string;
+  latitude: string;
+  longitude: string;
 };
 
 export function emptyExcursionWizardTail(): Omit<ExcursionWizardState, "offer_id" | "company_id"> {
@@ -76,6 +78,8 @@ export function emptyExcursionWizardTail(): Omit<ExcursionWizardState, "offer_id
     appears_in_zulu_admin: true,
     main_image: "",
     short_description: "",
+    latitude: "",
+    longitude: "",
   };
 }
 
@@ -159,6 +163,14 @@ export function excursionWizardFromRow(r: ExcursionRow): ExcursionWizardState {
     appears_in_zulu_admin: r.appears_in_zulu_admin != null ? Boolean(r.appears_in_zulu_admin) : true,
     main_image: (r as { main_image?: string | null }).main_image ?? "",
     short_description: (r as { short_description?: string | null }).short_description ?? "",
+    latitude:
+      (r as { latitude?: number | string | null }).latitude != null
+        ? String((r as { latitude?: number | string | null }).latitude)
+        : "",
+    longitude:
+      (r as { longitude?: number | string | null }).longitude != null
+        ? String((r as { longitude?: number | string | null }).longitude)
+        : "",
   };
 }
 
@@ -335,6 +347,14 @@ export function expandedPayloadFromWizard(form: ExcursionWizardState): Excursion
 
   setIf("main_image", form.main_image);
   setIf("short_description", form.short_description);
+  if (form.latitude.trim() !== "") {
+    const lat = Number(form.latitude);
+    if (Number.isFinite(lat)) out.latitude = lat;
+  }
+  if (form.longitude.trim() !== "") {
+    const lng = Number(form.longitude);
+    if (Number.isFinite(lng)) out.longitude = lng;
+  }
 
   return out;
 }

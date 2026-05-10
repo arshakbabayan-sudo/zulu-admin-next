@@ -7,6 +7,7 @@ import { OfferStatusBadge, isSubmittableStatus } from "@/components/OfferStatusB
 import { PaginationBar } from "@/components/PaginationBar";
 import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
 import { MainImageDescriptionFields } from "@/components/MainImageDescriptionFields";
+import { LatLngFields } from "@/components/LatLngFields";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useExcursionWizardStepper } from "@/hooks/useExcursionWizardStepper";
 import { ApiRequestError } from "@/lib/api-client";
@@ -477,6 +478,12 @@ export default function OperatorExcursionsPage() {
                     onMainImageChange={(v) => setForm((p) => p ? { ...p, main_image: v } : p)}
                     onShortDescriptionChange={(v) => setForm((p) => p ? { ...p, short_description: v } : p)}
                     altText="Excursion preview"
+                  />
+                  <LatLngFields
+                    latitude={form.latitude}
+                    longitude={form.longitude}
+                    onLatitudeChange={(v) => setForm((p) => p ? { ...p, latitude: v } : p)}
+                    onLongitudeChange={(v) => setForm((p) => p ? { ...p, longitude: v } : p)}
                   />
                   <LocationCascadeSelect
                     token={token}

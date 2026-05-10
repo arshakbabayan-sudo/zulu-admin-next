@@ -3,6 +3,7 @@
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
 import { MainImageDescriptionFields } from "@/components/MainImageDescriptionFields";
+import { LatLngFields } from "@/components/LatLngFields";
 import { OfferStatusBadge, isSubmittableStatus } from "@/components/OfferStatusBadge";
 import { PaginationBar } from "@/components/PaginationBar";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
@@ -61,6 +62,8 @@ export default function OperatorPackagesPage() {
       currency: "USD",
       main_image: "",
       short_description: "",
+      latitude: null,
+      longitude: null,
     } as PackagePayload);
     setFormErr(null);
   }
@@ -76,6 +79,8 @@ export default function OperatorPackagesPage() {
       currency: r.currency ?? "USD",
       main_image: r.main_image ?? "",
       short_description: r.short_description ?? "",
+      latitude: r.latitude != null ? Number(r.latitude) : null,
+      longitude: r.longitude != null ? Number(r.longitude) : null,
     } as PackagePayload);
     setFormErr(null);
   }
@@ -202,6 +207,20 @@ export default function OperatorPackagesPage() {
               onMainImageChange={(v) => setForm((p) => p ? { ...p, main_image: v } : p)}
               onShortDescriptionChange={(v) => setForm((p) => p ? { ...p, short_description: v } : p)}
               altText="Package preview"
+            />
+            <LatLngFields
+              latitude={form.latitude != null ? String(form.latitude) : ""}
+              longitude={form.longitude != null ? String(form.longitude) : ""}
+              onLatitudeChange={(v) =>
+                setForm((p) =>
+                  p ? { ...p, latitude: v.trim() === "" ? null : Number(v) } : p
+                )
+              }
+              onLongitudeChange={(v) =>
+                setForm((p) =>
+                  p ? { ...p, longitude: v.trim() === "" ? null : Number(v) } : p
+                )
+              }
             />
           </div>
           {formErr && <p className="mt-2 text-sm text-error-600">{formErr}</p>}
