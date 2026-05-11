@@ -254,6 +254,402 @@ export type FlightCabinPayload = {
   [key: string]: unknown;
 };
 
+/* ─── Flight form payload (nested-cabins UI, mirrors HotelFormPayload+rooms) ── */
+
+export type FlightCabinFormRow = {
+  /** Stable React key for unsaved rows; backend id supersedes once persisted. */
+  client_key: string;
+  /** Persisted DB id when editing an existing cabin; null for new rows. */
+  id: number | null;
+  cabin_class: string;
+  seat_capacity_total: number | "";
+  seat_capacity_available: number | "";
+  adult_price: number | "";
+  child_price: number | "";
+  infant_price: number | "";
+  hand_baggage_included: boolean;
+  hand_baggage_weight: string;
+  checked_baggage_included: boolean;
+  checked_baggage_weight: string;
+  extra_baggage_allowed: boolean;
+  baggage_notes: string;
+  fare_family: string;
+  seat_map_available: boolean;
+  seat_selection_policy: string;
+};
+
+export type FlightFormPayload = {
+  offer_id: number | "";
+  /** Cascaded location selects (city-level on both ends). */
+  departure_location_id: number | "";
+  arrival_location_id: number | "";
+  flight_code_internal: string;
+  service_type: string;
+  /** Auto-derived from location cascade but editable. */
+  departure_country: string;
+  departure_city: string;
+  arrival_country: string;
+  arrival_city: string;
+  departure_airport: string;
+  arrival_airport: string;
+  departure_airport_code: string;
+  arrival_airport_code: string;
+  departure_terminal: string;
+  arrival_terminal: string;
+  /** datetime-local strings ("YYYY-MM-DDTHH:MM"); blank → null on API. */
+  departure_at: string;
+  arrival_at: string;
+  duration_minutes: number | "";
+  timezone_context: string;
+  check_in_close_at: string;
+  boarding_close_at: string;
+  connection_type: string;
+  stops_count: number | "";
+  connection_notes: string;
+  layover_summary: string;
+  /** Passenger age tiers (shared across cabins on the same flight). */
+  adult_age_from: number | "";
+  child_age_from: number | "";
+  child_age_to: number | "";
+  infant_age_from: number | "";
+  infant_age_to: number | "";
+  /** Booking policy controls. */
+  reservation_allowed: boolean;
+  online_checkin_allowed: boolean;
+  airport_checkin_allowed: boolean;
+  cancellation_policy_type: string;
+  change_policy_type: string;
+  reservation_deadline_at: string;
+  cancellation_deadline_at: string;
+  change_deadline_at: string;
+  policy_notes: string;
+  /** Visibility / lifecycle. */
+  is_package_eligible: boolean;
+  appears_in_web: boolean;
+  appears_in_admin: boolean;
+  appears_in_zulu_admin: boolean;
+  status: string;
+  /** Marketing — fed straight into Flight.main_image / short_description. */
+  main_image: string;
+  short_description: string;
+  /** Nested cabin classes (1+ rows). Saved through individual cabin endpoints. */
+  cabins: FlightCabinFormRow[];
+};
+
+function newClientKeyForCabin(): string {
+  if (typeof globalThis !== "undefined" && "crypto" in globalThis && globalThis.crypto.randomUUID) {
+    return globalThis.crypto.randomUUID();
+  }
+  return `cabin-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+export function newFlightCabinFormRow(overrides?: Partial<FlightCabinFormRow>): FlightCabinFormRow {
+  return {
+    client_key: newClientKeyForCabin(),
+    id: null,
+    cabin_class: "economy",
+    seat_capacity_total: "",
+    seat_capacity_available: "",
+    adult_price: "",
+    child_price: 0,
+    infant_price: 0,
+    hand_baggage_included: true,
+    hand_baggage_weight: "",
+    checked_baggage_included: false,
+    checked_baggage_weight: "",
+    extra_baggage_allowed: false,
+    baggage_notes: "",
+    fare_family: "",
+    seat_map_available: false,
+    seat_selection_policy: "",
+    ...overrides,
+  };
+}
+
+function cabinPayloadFromForm(row: FlightCabinFormRow): FlightCabinPayload {
+  return {
+    cabin_class: row.cabin_class,
+    seat_capacity_total: row.seat_capacity_total === "" ? 0 : Number(row.seat_capacity_total),
+    seat_capacity_available: row.seat_capacity_available === "" ? 0 : Number(row.seat_capacity_available),
+    adult_price: row.adult_price === "" ? 0 : Number(row.adult_price),
+    child_price: row.child_price === "" ? 0 : Number(row.child_price),
+    infant_price: row.infant_price === "" ? 0 : Number(row.infant_price),
+    hand_baggage_included: row.hand_baggage_included,
+    hand_baggage_weight: row.hand_baggage_weight.trim() === "" ? null : row.hand_baggage_weight.trim(),
+    checked_baggage_included: row.checked_baggage_included,
+    checked_baggage_weight: row.checked_baggage_weight.trim() === "" ? null : row.checked_baggage_weight.trim(),
+    extra_baggage_allowed: row.extra_baggage_allowed,
+    baggage_notes: row.baggage_notes.trim() === "" ? null : row.baggage_notes.trim(),
+    fare_family: row.fare_family.trim() === "" ? null : row.fare_family.trim(),
+    seat_map_available: row.seat_map_available,
+    seat_selection_policy: row.seat_selection_policy.trim() === "" ? null : row.seat_selection_policy.trim(),
+  };
+}
+
+function normalizeDatetimeLocal(s: string): string | null {
+  const t = s?.trim() ?? "";
+  return t === "" ? null : t;
+}
+
+/** Build the FlightPayload (no cabins) from a form. Cabins are persisted via dedicated endpoints. */
+export function flightCreateBodyFromForm(form: FlightFormPayload): FlightPayload {
+  // The legacy FlightController requires a "primary cabin" inline on store
+  // (cabin_class + adult/child/infant prices + capacity + baggage flags).
+  // We mirror the FIRST cabin row into those fields so the flight saves
+  // cleanly, then create the remaining cabins via /flights/:id/cabins.
+  const primary = form.cabins[0];
+
+  return {
+    offer_id: form.offer_id === "" ? "" : Number(form.offer_id),
+    flight_code_internal: form.flight_code_internal.trim(),
+    service_type: form.service_type,
+    departure_country: form.departure_country.trim() || "Unknown",
+    departure_city: form.departure_city.trim() || "Unknown",
+    departure_airport: form.departure_airport.trim(),
+    arrival_country: form.arrival_country.trim() || "Unknown",
+    arrival_city: form.arrival_city.trim() || "Unknown",
+    arrival_airport: form.arrival_airport.trim(),
+    departure_airport_code: form.departure_airport_code.trim() || null,
+    arrival_airport_code: form.arrival_airport_code.trim() || null,
+    departure_terminal: form.departure_terminal.trim() || null,
+    arrival_terminal: form.arrival_terminal.trim() || null,
+    location_id: form.departure_location_id === "" ? "" : Number(form.departure_location_id),
+    departure_location_id: form.departure_location_id === "" ? "" : Number(form.departure_location_id),
+    arrival_location_id: form.arrival_location_id === "" ? "" : Number(form.arrival_location_id),
+    departure_at: form.departure_at,
+    arrival_at: form.arrival_at,
+    duration_minutes: form.duration_minutes === "" ? 0 : Number(form.duration_minutes),
+    timezone_context: normalizeDatetimeLocal(form.timezone_context),
+    check_in_close_at: normalizeDatetimeLocal(form.check_in_close_at),
+    boarding_close_at: normalizeDatetimeLocal(form.boarding_close_at),
+    connection_type: form.connection_type,
+    stops_count: form.stops_count === "" ? 0 : Number(form.stops_count),
+    connection_notes: form.connection_notes.trim() || null,
+    layover_summary: form.layover_summary.trim() || null,
+    // Primary cabin (mirrored from cabins[0]).
+    cabin_class: primary?.cabin_class ?? "economy",
+    seat_capacity_total: primary?.seat_capacity_total === "" ? 0 : Number(primary?.seat_capacity_total ?? 0),
+    seat_capacity_available: primary?.seat_capacity_available === "" ? 0 : Number(primary?.seat_capacity_available ?? 0),
+    fare_family: primary?.fare_family?.trim() || null,
+    seat_map_available: primary?.seat_map_available ?? false,
+    seat_selection_policy: primary?.seat_selection_policy?.trim() || null,
+    adult_age_from: form.adult_age_from === "" ? 12 : Number(form.adult_age_from),
+    child_age_from: form.child_age_from === "" ? 2 : Number(form.child_age_from),
+    child_age_to: form.child_age_to === "" ? 11 : Number(form.child_age_to),
+    infant_age_from: form.infant_age_from === "" ? 0 : Number(form.infant_age_from),
+    infant_age_to: form.infant_age_to === "" ? 1 : Number(form.infant_age_to),
+    adult_price: primary?.adult_price === "" ? 1 : Number(primary?.adult_price ?? 1),
+    child_price: primary?.child_price === "" ? 0 : Number(primary?.child_price ?? 0),
+    infant_price: primary?.infant_price === "" ? 0 : Number(primary?.infant_price ?? 0),
+    hand_baggage_included: primary?.hand_baggage_included ?? true,
+    checked_baggage_included: primary?.checked_baggage_included ?? false,
+    hand_baggage_weight: primary?.hand_baggage_weight?.trim() || null,
+    checked_baggage_weight: primary?.checked_baggage_weight?.trim() || null,
+    extra_baggage_allowed: primary?.extra_baggage_allowed ?? false,
+    baggage_notes: primary?.baggage_notes?.trim() || null,
+    reservation_allowed: form.reservation_allowed,
+    online_checkin_allowed: form.online_checkin_allowed,
+    airport_checkin_allowed: form.airport_checkin_allowed,
+    cancellation_policy_type: form.cancellation_policy_type,
+    change_policy_type: form.change_policy_type,
+    reservation_deadline_at: normalizeDatetimeLocal(form.reservation_deadline_at),
+    cancellation_deadline_at: normalizeDatetimeLocal(form.cancellation_deadline_at),
+    change_deadline_at: normalizeDatetimeLocal(form.change_deadline_at),
+    policy_notes: form.policy_notes.trim() || null,
+    is_package_eligible: form.is_package_eligible,
+    appears_in_web: form.appears_in_web,
+    appears_in_admin: form.appears_in_admin,
+    appears_in_zulu_admin: form.appears_in_zulu_admin,
+    status: form.status,
+    main_image: form.main_image.trim() || null,
+    short_description: form.short_description.trim() || null,
+  } as FlightPayload;
+}
+
+/** PATCH body — exactly the same shape as create, but no offer_id (controller prohibits). */
+export function flightUpdateBodyFromForm(form: FlightFormPayload): Record<string, unknown> {
+  const body = flightCreateBodyFromForm(form) as Record<string, unknown>;
+  delete body.offer_id;
+  return body;
+}
+
+/** Re-hydrate the operator form from a flight-detail response. */
+export function flightFormFromDetail(
+  row: FlightRow & { cabins?: FlightCabinRow[] | null }
+): FlightFormPayload {
+  const dt = (iso: string | null | undefined): string => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+  const r = row as FlightRow & {
+    cabins?: FlightCabinRow[] | null;
+    location_id?: number | null;
+    departure_location_id?: number | null;
+    arrival_location_id?: number | null;
+    reservation_allowed?: boolean | null;
+    online_checkin_allowed?: boolean | null;
+    airport_checkin_allowed?: boolean | null;
+    cancellation_policy_type?: string | null;
+    change_policy_type?: string | null;
+    timezone_context?: string | null;
+    connection_notes?: string | null;
+    layover_summary?: string | null;
+    check_in_close_at?: string | null;
+    boarding_close_at?: string | null;
+    reservation_deadline_at?: string | null;
+    cancellation_deadline_at?: string | null;
+    change_deadline_at?: string | null;
+    policy_notes?: string | null;
+    adult_age_from?: number | null;
+    child_age_from?: number | null;
+    child_age_to?: number | null;
+    infant_age_from?: number | null;
+    infant_age_to?: number | null;
+    adult_price?: number | null;
+    child_price?: number | null;
+    infant_price?: number | null;
+    seat_capacity_total?: number | null;
+    seat_capacity_available?: number | null;
+    cabin_class?: string | null;
+    fare_family?: string | null;
+    seat_map_available?: boolean | null;
+    seat_selection_policy?: string | null;
+    hand_baggage_included?: boolean | null;
+    hand_baggage_weight?: string | null;
+    checked_baggage_included?: boolean | null;
+    checked_baggage_weight?: string | null;
+    extra_baggage_allowed?: boolean | null;
+    baggage_notes?: string | null;
+  };
+
+  const cabinRows: FlightCabinFormRow[] = Array.isArray(r.cabins) && r.cabins.length > 0
+    ? r.cabins.map((c) =>
+        newFlightCabinFormRow({
+          id: c.id,
+          cabin_class: c.cabin_class ?? "economy",
+          seat_capacity_total: c.seat_capacity_total ?? "",
+          seat_capacity_available: c.seat_capacity_available ?? "",
+          adult_price: c.adult_price ?? "",
+          child_price: c.child_price ?? 0,
+          infant_price: c.infant_price ?? 0,
+          hand_baggage_included: Boolean(c.hand_baggage_included),
+          hand_baggage_weight: c.hand_baggage_weight ?? "",
+          checked_baggage_included: Boolean(c.checked_baggage_included),
+          checked_baggage_weight: c.checked_baggage_weight ?? "",
+          extra_baggage_allowed: Boolean(c.extra_baggage_allowed),
+          baggage_notes: c.baggage_notes ?? "",
+          fare_family: c.fare_family ?? "",
+          seat_map_available: Boolean(c.seat_map_available),
+          seat_selection_policy: c.seat_selection_policy ?? "",
+        })
+      )
+    : [
+        // Fall back: derive a single cabin row from the inline flight columns.
+        newFlightCabinFormRow({
+          cabin_class: r.cabin_class ?? "economy",
+          seat_capacity_total: r.seat_capacity_total ?? "",
+          seat_capacity_available: r.seat_capacity_available ?? "",
+          adult_price: r.adult_price ?? "",
+          child_price: r.child_price ?? 0,
+          infant_price: r.infant_price ?? 0,
+          hand_baggage_included: Boolean(r.hand_baggage_included),
+          hand_baggage_weight: r.hand_baggage_weight ?? "",
+          checked_baggage_included: Boolean(r.checked_baggage_included),
+          checked_baggage_weight: r.checked_baggage_weight ?? "",
+          extra_baggage_allowed: Boolean(r.extra_baggage_allowed),
+          baggage_notes: r.baggage_notes ?? "",
+          fare_family: r.fare_family ?? "",
+          seat_map_available: Boolean(r.seat_map_available),
+          seat_selection_policy: r.seat_selection_policy ?? "",
+        }),
+      ];
+
+  return {
+    offer_id: r.offer_id ?? "",
+    departure_location_id: r.departure_location_id ?? r.location_id ?? "",
+    arrival_location_id: r.arrival_location_id ?? "",
+    flight_code_internal: r.flight_code_internal ?? "",
+    service_type: r.service_type ?? "scheduled",
+    departure_country: r.departure_country ?? "",
+    departure_city: r.departure_city ?? "",
+    departure_airport: r.departure_airport ?? "",
+    arrival_country: r.arrival_country ?? "",
+    arrival_city: r.arrival_city ?? "",
+    arrival_airport: r.arrival_airport ?? "",
+    departure_airport_code: r.departure_airport_code ?? "",
+    arrival_airport_code: r.arrival_airport_code ?? "",
+    departure_terminal: "",
+    arrival_terminal: "",
+    departure_at: dt(r.departure_at),
+    arrival_at: dt(r.arrival_at),
+    duration_minutes: r.duration_minutes ?? "",
+    timezone_context: r.timezone_context ?? "",
+    check_in_close_at: dt(r.check_in_close_at),
+    boarding_close_at: dt(r.boarding_close_at),
+    connection_type: r.connection_type ?? "direct",
+    stops_count: r.stops_count ?? 0,
+    connection_notes: r.connection_notes ?? "",
+    layover_summary: r.layover_summary ?? "",
+    adult_age_from: r.adult_age_from ?? 12,
+    child_age_from: r.child_age_from ?? 2,
+    child_age_to: r.child_age_to ?? 11,
+    infant_age_from: r.infant_age_from ?? 0,
+    infant_age_to: r.infant_age_to ?? 1,
+    reservation_allowed: r.reservation_allowed !== false,
+    online_checkin_allowed: r.online_checkin_allowed === true,
+    airport_checkin_allowed: r.airport_checkin_allowed !== false,
+    cancellation_policy_type: r.cancellation_policy_type ?? "non_refundable",
+    change_policy_type: r.change_policy_type ?? "not_allowed",
+    reservation_deadline_at: dt(r.reservation_deadline_at),
+    cancellation_deadline_at: dt(r.cancellation_deadline_at),
+    change_deadline_at: dt(r.change_deadline_at),
+    policy_notes: r.policy_notes ?? "",
+    is_package_eligible: r.is_package_eligible !== false,
+    appears_in_web: r.appears_in_web !== false,
+    appears_in_admin: r.appears_in_admin !== false,
+    appears_in_zulu_admin: r.appears_in_zulu_admin !== false,
+    status: r.status ?? "draft",
+    main_image: r.main_image ?? "",
+    short_description: r.short_description ?? "",
+    cabins: cabinRows,
+  };
+}
+
+/**
+ * Compute the cabin-sync delta vs the persisted cabin set on the server.
+ * Returns three groups (to delete, to update, to create) that the caller
+ * applies via apiDeleteFlightCabin / apiUpdateFlightCabin / apiCreateFlightCabin.
+ */
+export function diffFlightCabins(
+  formRows: FlightCabinFormRow[],
+  serverRows: FlightCabinRow[]
+): {
+  toDelete: number[];
+  toUpdate: { id: number; body: FlightCabinPayload }[];
+  toCreate: FlightCabinPayload[];
+} {
+  const serverById = new Map<number, FlightCabinRow>();
+  for (const s of serverRows) serverById.set(s.id, s);
+
+  const seenIds = new Set<number>();
+  const toUpdate: { id: number; body: FlightCabinPayload }[] = [];
+  const toCreate: FlightCabinPayload[] = [];
+  for (const row of formRows) {
+    if (row.id != null && serverById.has(row.id)) {
+      seenIds.add(row.id);
+      toUpdate.push({ id: row.id, body: cabinPayloadFromForm(row) });
+    } else {
+      toCreate.push(cabinPayloadFromForm(row));
+    }
+  }
+  const toDelete = serverRows.filter((s) => !seenIds.has(s.id)).map((s) => s.id);
+  return { toDelete, toUpdate, toCreate };
+}
+
 export type FlightCabinSeatStatus =
   | "available"
   | "held"
