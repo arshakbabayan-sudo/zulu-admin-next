@@ -1994,15 +1994,21 @@ export type PackageRow = {
   id: number;
   offer_id?: number | null;
   package_title?: string | null;
+  package_subtitle?: string | null;
   package_type?: string | null;
   destination_city?: string | null;
   destination_country?: string | null;
   destination_location_id?: number | null;
   duration_days?: number | null;
+  min_nights?: number | null;
+  adults_count?: number | null;
+  children_count?: number | null;
+  base_price?: number | string | null;
   currency?: string | null;
   status: string;
   is_public?: boolean;
   is_bookable?: boolean;
+  is_featured?: boolean;
   company_id?: number | null;
   created_at?: string | null;
   company?: { id: number; name: string } | null;
@@ -2016,14 +2022,20 @@ export type PackageRow = {
 
 export type PackagePayload = {
   package_title?: string;
+  package_subtitle?: string | null;
   package_type?: string;
   destination_city?: string;
   destination_country?: string;
   destination_location_id?: number | null;
   duration_days?: number;
+  min_nights?: number | null;
+  adults_count?: number | null;
+  children_count?: number | null;
+  base_price?: number | null;
   currency?: string;
   main_image?: string | null;
   short_description?: string | null;
+  is_featured?: boolean;
   latitude?: number | null;
   longitude?: number | null;
   [key: string]: unknown;

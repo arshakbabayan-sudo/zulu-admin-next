@@ -54,14 +54,20 @@ export default function OperatorPackagesPage() {
     setEditId(null);
     setForm({
       package_title: "",
-      package_type: "flight",
+      package_subtitle: "",
+      package_type: "multi_service",
       destination_city: "",
       destination_country: "",
       destination_location_id: null,
       duration_days: undefined,
+      min_nights: null,
+      adults_count: 2,
+      children_count: 0,
+      base_price: null,
       currency: "USD",
       main_image: "",
       short_description: "",
+      is_featured: false,
       latitude: null,
       longitude: null,
     } as PackagePayload);
@@ -71,14 +77,20 @@ export default function OperatorPackagesPage() {
     setEditId(r.id);
     setForm({
       package_title: r.package_title ?? "",
-      package_type: r.package_type ?? "flight",
+      package_subtitle: r.package_subtitle ?? "",
+      package_type: r.package_type ?? "multi_service",
       destination_city: r.destination_city ?? "",
       destination_country: r.destination_country ?? "",
       destination_location_id: (r as { destination_location_id?: number | null }).destination_location_id ?? null,
       duration_days: r.duration_days ?? undefined,
+      min_nights: r.min_nights ?? null,
+      adults_count: r.adults_count ?? 2,
+      children_count: r.children_count ?? 0,
+      base_price: r.base_price != null ? Number(r.base_price) : null,
       currency: r.currency ?? "USD",
       main_image: r.main_image ?? "",
       short_description: r.short_description ?? "",
+      is_featured: r.is_featured ?? false,
       latitude: r.latitude != null ? Number(r.latitude) : null,
       longitude: r.longitude != null ? Number(r.longitude) : null,
     } as PackagePayload);
@@ -164,6 +176,12 @@ export default function OperatorPackagesPage() {
               <input value={form.package_title ?? ""} onChange={(e) => setForm((p) => p ? { ...p, package_title: e.target.value } : p)}
                 className="rounded border border-default px-2 py-1.5 text-sm" />
             </label>
+            <label className="flex flex-col gap-1 text-sm sm:col-span-2">
+              <span className="font-medium text-fg-t6">Subtitle</span>
+              <input value={form.package_subtitle ?? ""} onChange={(e) => setForm((p) => p ? { ...p, package_subtitle: e.target.value } : p)}
+                placeholder="Short tagline shown under the title (e.g. 'Garni + Sevan + Tucson SUV')"
+                className="rounded border border-default px-2 py-1.5 text-sm" />
+            </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-fg-t6">{t("admin.crud.packages.field.type")}</span>
               <select value={form.package_type ?? ""} onChange={(e) => setForm((p) => p ? { ...p, package_type: e.target.value } : p)}
@@ -192,14 +210,66 @@ export default function OperatorPackagesPage() {
               }
             />
             <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-fg-t6">Base price</span>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.base_price ?? ""}
+                onChange={(e) => setForm((p) => p ? { ...p, base_price: e.target.value === "" ? null : Number(e.target.value) } : p)}
+                placeholder="e.g. 580.00"
+                className="rounded border border-default px-2 py-1.5 text-sm"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-fg-t6">{t("admin.crud.packages.field.currency")}</span>
               <input value={(form["currency"] as string) ?? ""} onChange={(e) => setForm((p) => p ? { ...p, currency: e.target.value } : p)}
                 className="rounded border border-default px-2 py-1.5 text-sm" />
             </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-fg-t6">{t("admin.crud.packages.field.duration")}</span>
-              <input type="number" value={form.duration_days ?? ""} onChange={(e) => setForm((p) => p ? { ...p, duration_days: e.target.value ? Number(e.target.value) : undefined } : p)}
+              <input type="number" min="1" value={form.duration_days ?? ""} onChange={(e) => setForm((p) => p ? { ...p, duration_days: e.target.value ? Number(e.target.value) : undefined } : p)}
                 className="rounded border border-default px-2 py-1.5 text-sm" />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-fg-t6">Min nights</span>
+              <input
+                type="number"
+                min="0"
+                value={form.min_nights ?? ""}
+                onChange={(e) => setForm((p) => p ? { ...p, min_nights: e.target.value === "" ? null : Number(e.target.value) } : p)}
+                placeholder="Hotel nights included"
+                className="rounded border border-default px-2 py-1.5 text-sm"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-fg-t6">Adults</span>
+              <input
+                type="number"
+                min="1"
+                value={form.adults_count ?? ""}
+                onChange={(e) => setForm((p) => p ? { ...p, adults_count: e.target.value === "" ? null : Number(e.target.value) } : p)}
+                className="rounded border border-default px-2 py-1.5 text-sm"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-fg-t6">Children</span>
+              <input
+                type="number"
+                min="0"
+                value={form.children_count ?? ""}
+                onChange={(e) => setForm((p) => p ? { ...p, children_count: e.target.value === "" ? null : Number(e.target.value) } : p)}
+                className="rounded border border-default px-2 py-1.5 text-sm"
+              />
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm sm:col-span-2">
+              <input
+                type="checkbox"
+                checked={!!form.is_featured}
+                onChange={(e) => setForm((p) => p ? { ...p, is_featured: e.target.checked } : p)}
+                className="h-4 w-4"
+              />
+              <span className="font-medium text-fg-t6">Featured (surfaces this package on the homepage carousel)</span>
             </label>
             <MainImageDescriptionFields
               mainImage={(form.main_image as string | null | undefined) ?? ""}
