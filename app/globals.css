@@ -321,8 +321,8 @@
   --text-primary: #f8f8fc;
   --surface: #120c20;
   --surface-muted: #1b122e;
-  --border-default: #1b122e;
-  --border-default-rgb: 27 18 46;
+  --border-default: #2c2750;
+  --border-default-rgb: 44 39 80;
 
   --background: #0a0614;
   --foreground: var(--text-primary);
@@ -343,6 +343,42 @@
   --border: var(--border-default);
   --input: var(--border-default);
   --ring: var(--zulu-primary);
+
+  /* Inverted text scale for dark mode — without these,
+     text-fg-t7 / text-fg-t11 stay near-black on dark bg.
+     Mapping preserves semantic hierarchy:
+       t11 = top emphasis (titles)     → near-white
+       t9  = display headings          → bright white
+       t8  = body emphasis             → off-white
+       t7  = labels / secondary text   → light gray
+       t6  = muted / placeholder       → mid gray
+       t4/t3 = subtle dividers          → darker gray
+       t2/t1 = on-dark surfaces (inverse) → stay light */
+  --text-t11: #f5f3fc;
+  --text-t11-rgb: 245 243 252;
+  --text-t9: #f8f8fc;
+  --text-t9-rgb: 248 248 252;
+  --text-t8: #e9e7f0;
+  --text-t8-rgb: 233 231 240;
+  --text-t7: #c9c5dc;
+  --text-t7-rgb: 201 197 220;
+  --text-t6: #8b8aa0;
+  --text-t6-rgb: 139 138 160;
+  --text-t4: #5d5a78;
+  --text-t4-rgb: 93 90 120;
+  --text-t3: #45425e;
+  --text-t3-rgb: 69 66 94;
+  --text-typography-t8: #e9e7f0;
+  --text-typography-t8-rgb: 233 231 240;
+  --text-typography-t6: #8b8aa0;
+  --text-typography-t6-rgb: 139 138 160;
+}
+
+/* Native form controls inherit dark surface + accent so checkboxes,
+   radios, range sliders don't render a stark white square on dark bg. */
+html.dark input[type="checkbox"],
+html.dark input[type="radio"] {
+  accent-color: var(--color-primary-500);
 }
 
 @layer base {
@@ -668,7 +704,108 @@ html.dark thead.bg-figma-bg-1 {
   background-color: #221d42;
   color: #c9c5dc;
 }
-html.dark tr.hover\\:bg-figma-bg-1:hover,
-html.dark tr.hover\\:bg-slate-50:hover {
+html.dark tr.hover\:bg-figma-bg-1:hover,
+html.dark tr.hover\:bg-slate-50:hover,
+html.dark tr.hover\:bg-slate-100:hover {
   background-color: #221d42;
+}
+
+/* Dark-mode patches for raw Tailwind utilities used across admin pages.
+   Login, dashboard, inventory tables, and ~30 other files use `bg-white`
+   / `text-slate-*` / `border-slate-*` directly instead of semantic
+   tokens. Rather than touch every JSX file, override the utility
+   classes in dark mode here.
+   --------------------------------------------------------------------
+   Background swaps */
+html.dark .bg-white {
+  background-color: var(--card);
+}
+html.dark .bg-slate-50,
+html.dark .bg-gray-50 {
+  background-color: #1b1638;
+}
+html.dark .bg-slate-100,
+html.dark .bg-gray-100 {
+  background-color: #221d42;
+}
+
+/* Foreground swaps — keep semantic hierarchy:
+   slate-900 / 800 = strong  → near-white
+   slate-700 / 600 = body    → off-white
+   slate-500 / 400 = muted   → mid gray */
+html.dark .text-slate-900,
+html.dark .text-gray-900,
+html.dark .text-zinc-900 {
+  color: #f5f3fc;
+}
+html.dark .text-slate-800,
+html.dark .text-gray-800,
+html.dark .text-zinc-800 {
+  color: #ebe9f5;
+}
+html.dark .text-slate-700,
+html.dark .text-gray-700,
+html.dark .text-zinc-700 {
+  color: #d6d3e8;
+}
+html.dark .text-slate-600,
+html.dark .text-gray-600,
+html.dark .text-zinc-600 {
+  color: #b7b3cb;
+}
+html.dark .text-slate-500,
+html.dark .text-gray-500,
+html.dark .text-zinc-500 {
+  color: #9c98b3;
+}
+html.dark .text-slate-400,
+html.dark .text-gray-400,
+html.dark .text-zinc-400 {
+  color: #7e7a93;
+}
+
+/* Border swaps */
+html.dark .border-slate-100,
+html.dark .border-gray-100 {
+  border-color: #221d42;
+}
+html.dark .border-slate-200,
+html.dark .border-gray-200,
+html.dark .border-slate-300,
+html.dark .border-gray-300 {
+  border-color: var(--admin-border);
+}
+
+/* Divide utilities (tables / lists) */
+html.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #221d42;
+}
+html.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--admin-border);
+}
+
+/* Soft brand tints used in stat-card icon chips and pill backgrounds */
+html.dark .bg-primary-50,
+html.dark .bg-purple-50 {
+  background-color: rgba(149, 76, 233, 0.18);
+}
+html.dark .bg-success-50,
+html.dark .bg-green-50 {
+  background-color: rgba(79, 179, 86, 0.15);
+}
+html.dark .bg-error-50,
+html.dark .bg-red-50 {
+  background-color: rgba(234, 75, 69, 0.15);
+}
+html.dark .bg-warning-50,
+html.dark .bg-amber-50,
+html.dark .bg-yellow-50 {
+  background-color: rgba(255, 192, 7, 0.15);
+}
+html.dark .bg-info-50,
+html.dark .bg-blue-50,
+html.dark .bg-sky-50 {
+  background-color: rgba(25, 143, 241, 0.18);
 }
