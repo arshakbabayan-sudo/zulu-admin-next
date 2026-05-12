@@ -24,6 +24,14 @@ export function LocationCascadeSelect({
   label = "Location",
 }: Props) {
   const lastEmitKeyRef = useRef<string>("");
+  // When reloading state from a passed `value` (the parent's saved
+  // location_id), we set country/region/city IDs *async + in steps*.
+  // Each setState would otherwise fire the emit effect with a partial
+  // selection (country only), which the parent writes back to its
+  // form state, which re-renders the cascade with a NEW shallower
+  // `value` — clobbering the region/city we were about to load.
+  // This ref tells the emit effect to stay silent during reload.
+  const reloadingRef = useRef<boolean>(false);
   const [loading, setLoading] = useState(false);
   const [countries, setCountries] = useState<TreeLocationNode[]>([]);
   const [regions, setRegions] = useState<TreeLocationNode[]>([]);
@@ -57,7 +65,16 @@ export function LocationCascadeSelect({
 
   useEffect(() => {
     if (!token || !value) return;
+    // Skip reload when `value` already matches the deepest currently-selected
+    // node — happens after the emit effect writes the same id back into the
+    // parent form (e.g. picking Aparan emits 7, parent rewrites value=7, this
+    // effect must NOT clobber the locally-set region/city).
+    const currentDeepest = cityId !== "" ? cityId : regionId !== "" ? regionId : countryId !== "" ? countryId : null;
+    if (currentDeepest !== null && Number(currentDeepest) === Number(value)) {
+      return;
+    }
     let active = true;
+    reloadingRef.current = true;
     setLoading(true);
     void apiTreeLocationNode(token, value)
       .then(async (res) => {
@@ -68,31 +85,36 @@ export function LocationCascadeSelect({
         const region = ancestors.find((a) => a.type === "region") ?? (node.type === "region" ? node : undefined);
         const city = ancestors.find((a) => a.type === "city") ?? (node.type === "city" ? node : undefined);
 
+        // Load children list FIRST so the dropdowns have items by the time
+        // we set the IDs. Then commit IDs in one synchronous burst at the
+        // end — the emit effect runs once with the full state, not three
+        // times with partial states.
         if (country) {
-          setCountryId(country.id);
           const regionRes = await apiTreeLocationChildren(token, country.id);
           if (!active) return;
           setRegions(regionRes.data ?? []);
         } else {
-          setCountryId("");
           setRegions([]);
         }
 
         if (region) {
-          setRegionId(region.id);
           const cityRes = await apiTreeLocationChildren(token, region.id);
           if (!active) return;
           setCities(cityRes.data ?? []);
         } else {
-          setRegionId("");
           setCities([]);
         }
 
-        if (city) {
-          setCityId(city.id);
-        } else {
-          setCityId("");
-        }
+        // Atomic ID commit. React batches these inside the same callback
+        // so the emit effect fires exactly once with the deepest leaf.
+        setCountryId(country ? country.id : "");
+        setRegionId(region ? region.id : "");
+        setCityId(city ? city.id : "");
+
+        // Seed lastEmitKey with the freshly-loaded state so the emit
+        // effect doesn't re-fire with the same selection (which the
+        // parent already has).
+        lastEmitKeyRef.current = `${country?.id ?? "x"}:${region?.id ?? "x"}:${city?.id ?? "x"}:${(city ?? region ?? country)?.id ?? "x"}`;
       })
       .catch(() => {
         if (!active) return;
@@ -105,11 +127,12 @@ export function LocationCascadeSelect({
       .finally(() => {
         if (!active) return;
         setLoading(false);
+        reloadingRef.current = false;
       });
     return () => {
       active = false;
     };
-  }, [token, value]);
+  }, [token, value, countryId, regionId, cityId]);
 
   const selected = useMemo(() => {
     const country = countries.find((row) => row.id === countryId) ?? null;
@@ -120,6 +143,13 @@ export function LocationCascadeSelect({
   }, [countries, regions, cities, countryId, regionId, cityId]);
 
   useEffect(() => {
+    // Don't emit during programmatic reload from `value` prop — see
+    // reloadingRef comment above. The reload effect seeds lastEmitKeyRef
+    // itself when it finishes, so the parent gets the correct final id
+    // without intermediate partial-selection emits.
+    if (reloadingRef.current) {
+      return;
+    }
     if (value && !selected.final && countryId === "" && regionId === "" && cityId === "") {
       return;
     }
