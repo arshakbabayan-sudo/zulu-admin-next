@@ -15,16 +15,6 @@ type Props = {
   value: number | null | undefined;
   onChange: (locationId: number | null, meta: LocationSelectionMeta) => void;
   label?: string;
-  /**
-   * If set, the cascade renders a visible warning + marks itself invalid
-   * when the user's selection doesn't reach this level. Defaults to "city"
-   * because every entity using this cascade (hotels / flights / cars /
-   * transfers / excursions / visas / packages) requires city-level
-   * accuracy server-side.
-   */
-  requireLevel?: "country" | "region" | "city";
-  /** Customize the inline error shown when requireLevel is not satisfied. */
-  requireLevelMessage?: string;
 };
 
 export function LocationCascadeSelect({
@@ -32,8 +22,6 @@ export function LocationCascadeSelect({
   value,
   onChange,
   label = "Location",
-  requireLevel = "city",
-  requireLevelMessage,
 }: Props) {
   const lastEmitKeyRef = useRef<string>("");
   const [loading, setLoading] = useState(false);
@@ -215,47 +203,10 @@ export function LocationCascadeSelect({
           Selected: {selected.final.name} ({selected.final.type})
         </p>
       )}
-      {(() => {
-        // Inline validation hint: warn when the user's selection doesn't
-        // reach the required level. Prevents the confusing "City is
-        // required" error elsewhere on the form by surfacing the issue
-        // exactly where the user must act.
-        const order: Record<string, number> = { country: 1, region: 2, city: 3 };
-        const need = order[requireLevel] ?? 3;
-        const haveType = selected.final?.type ?? null;
-        const have = haveType ? (order[haveType] ?? 0) : 0;
-        if (have >= need) return null;
-        const defaultMsg =
-          requireLevel === "city"
-            ? "⚠ Please pick a City (Country alone isn't enough — hotels / packages / etc. need the city)."
-            : requireLevel === "region"
-              ? "⚠ Please pick a Region or City."
-              : "⚠ Please pick a Country.";
-        return (
-          <p className="text-xs font-medium text-error-700">
-            {requireLevelMessage ?? defaultMsg}
-          </p>
-        );
-      })()}
     </div>
   );
 }
 
-/**
- * Helper for parent forms: returns true when the cascade meta carries a
- * selection at the required level. Use this in local form validation
- * instead of checking the deprecated `city` text field, so the message
- * matches what the cascade itself shows.
- */
-export function isLocationCascadeAtLevel(
-  meta: { city?: { id: number } | null; region?: { id: number } | null; country?: { id: number } | null } | null | undefined,
-  requireLevel: "country" | "region" | "city"
-): boolean {
-  if (!meta) return false;
-  if (requireLevel === "country") return Boolean(meta.country?.id);
-  if (requireLevel === "region") return Boolean(meta.region?.id);
-  return Boolean(meta.city?.id);
-}
 
 // ──────────────────────────────────────────────────────────────────────────
 // Type-ahead combobox: typing a letter filters the list (case-insensitive,

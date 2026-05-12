@@ -316,13 +316,9 @@ export function validateHotelOperatorForm(form: HotelFormPayload, mode: "create"
   if (!form.hotel_name.trim()) errors.push(`${L.hotel_name} is required.`);
   if (!form.property_type.trim()) errors.push(`${L.property_type} is required.`);
   if (!form.hotel_type.trim()) errors.push(`${L.hotel_type} is required.`);
-  // Location: backend requires location_id resolving to a city. The
-  // legacy text columns (country / city) are derived from the cascade
-  // onChange handler, so empty city means the user only picked country.
+  // Location: country / region / city are all acceptable levels.
   if (form.location_id === "" || form.location_id == null) {
-    errors.push("Location is required — open the Location selector and pick Country → Region → City.");
-  } else if (!form.city.trim()) {
-    errors.push("Location must be picked down to City level. Country alone isn't enough — pick a city in the Location selector.");
+    errors.push("Location is required — pick a country, region or city in the Location selector.");
   }
   if (!form.meal_type.trim()) errors.push(`${L.meal_type} is required.`);
   if (!form.availability_status.trim()) errors.push(`${L.availability_status} is required.`);
