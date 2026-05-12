@@ -65,14 +65,6 @@ export function LocationCascadeSelect({
 
   useEffect(() => {
     if (!token || !value) return;
-    // Skip reload when `value` already matches the deepest currently-selected
-    // node — happens after the emit effect writes the same id back into the
-    // parent form (e.g. picking Aparan emits 7, parent rewrites value=7, this
-    // effect must NOT clobber the locally-set region/city).
-    const currentDeepest = cityId !== "" ? cityId : regionId !== "" ? regionId : countryId !== "" ? countryId : null;
-    if (currentDeepest !== null && Number(currentDeepest) === Number(value)) {
-      return;
-    }
     let active = true;
     reloadingRef.current = true;
     setLoading(true);
@@ -132,7 +124,7 @@ export function LocationCascadeSelect({
     return () => {
       active = false;
     };
-  }, [token, value, countryId, regionId, cityId]);
+  }, [token, value]);
 
   const selected = useMemo(() => {
     const country = countries.find((row) => row.id === countryId) ?? null;
