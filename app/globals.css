@@ -375,7 +375,13 @@
 }
 
 /* Native form controls inherit dark surface + accent so checkboxes,
-   radios, range sliders don't render a stark white square on dark bg. */
+   radios, range sliders don't render a stark white square on dark bg.
+   color-scheme tells the browser to render native widgets (checkbox,
+   scrollbar, date picker) in dark — accent-color picks the brand on
+   the checked state. */
+html.dark {
+  color-scheme: dark;
+}
 html.dark input[type="checkbox"],
 html.dark input[type="radio"] {
   accent-color: var(--color-primary-500);
