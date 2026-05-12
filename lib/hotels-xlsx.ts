@@ -492,6 +492,7 @@ function buildHotelFormFromRow(raw: RawRow, rooms: HotelRoomFormRow[]): HotelFor
     hotel_name: raw.hotel_name ?? "",
     property_type: (raw.property_type ?? "").trim() || "hotel",
     hotel_type: (raw.hotel_type ?? "").trim() || "resort",
+    accommodation_type: "hotel",
     country: raw.country ?? "",
     region_or_state: raw.region_or_state ?? "",
     city: raw.city ?? "",

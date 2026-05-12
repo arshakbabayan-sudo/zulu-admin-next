@@ -959,12 +959,16 @@ export type HotelRoomFormRow = {
  * `offer_id` is only sent on POST.
  */
 /** Form state keys match API except `star_rating` is typed here; wire uses `star_rating` (see `lib/hotel-ui.ts`). */
+export const HOTEL_ACCOMMODATION_TYPES = ["hotel", "apartment", "villa", "hostel", "guesthouse"] as const;
+export type HotelAccommodationType = (typeof HOTEL_ACCOMMODATION_TYPES)[number];
+
 export type HotelFormPayload = {
   offer_id: number | "";
   location_id: number | "";
   hotel_name: string;
   property_type: string;
   hotel_type: string;
+  accommodation_type: HotelAccommodationType;
   country: string;
   region_or_state: string;
   city: string;
@@ -1161,6 +1165,11 @@ export function hotelFormFromDetail(row: HotelRow): HotelFormPayload {
     hotel_name: row.hotel_name ?? "",
     property_type: row.property_type ?? "hotel",
     hotel_type: row.hotel_type ?? "resort",
+    accommodation_type: (HOTEL_ACCOMMODATION_TYPES as readonly string[]).includes(
+      (row as { accommodation_type?: string }).accommodation_type ?? ""
+    )
+      ? (((row as { accommodation_type?: string }).accommodation_type ?? "hotel") as HotelAccommodationType)
+      : "hotel",
     country: row.country ?? "",
     region_or_state: row.region_or_state ?? "",
     city: row.city ?? "",
@@ -1332,6 +1341,7 @@ export type HotelCreateApiBody = {
   hotel_name: string;
   property_type: string;
   hotel_type: string;
+  accommodation_type: HotelAccommodationType;
   country: string;
   region_or_state: string | null;
   city: string;
@@ -1382,6 +1392,7 @@ function hotelSharedBodyFromForm(form: HotelFormPayload): Omit<HotelCreateApiBod
     hotel_name: form.hotel_name.trim(),
     property_type: form.property_type.trim(),
     hotel_type: form.hotel_type.trim(),
+    accommodation_type: form.accommodation_type,
     country: form.country.trim(),
     region_or_state: trimOrNull(form.region_or_state),
     city: form.city.trim(),

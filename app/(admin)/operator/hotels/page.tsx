@@ -22,8 +22,10 @@ import {
   hotelFormFromDetail,
   newHotelPricingFormRow,
   newHotelRoomFormRow,
+  HOTEL_ACCOMMODATION_TYPES,
   type HotelRow,
   type HotelFormPayload,
+  type HotelAccommodationType,
 } from "@/lib/inventory-crud-api";
 import { csvExportFilename, downloadCsvFile, exportHotelsCsv } from "@/lib/csv-import-export";
 import { buildHotelsTemplateBlob, downloadBlob } from "@/lib/hotels-xlsx";
@@ -57,6 +59,7 @@ const EMPTY: HotelFormPayload = {
   hotel_name: "",
   property_type: "hotel",
   hotel_type: "resort",
+  accommodation_type: "hotel",
   country: "",
   region_or_state: "",
   city: "",
@@ -321,6 +324,24 @@ export default function OperatorHotelsPage() {
                 </label>
               )
             )}
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-fg-t6">Accommodation type</span>
+              <select
+                value={form.accommodation_type}
+                onChange={(e) =>
+                  setForm((p) =>
+                    p ? { ...p, accommodation_type: e.target.value as HotelAccommodationType } : p
+                  )
+                }
+                className="rounded border border-default px-2 py-1.5 text-sm"
+              >
+                {HOTEL_ACCOMMODATION_TYPES.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </label>
             <label className="flex flex-col gap-1 text-sm sm:col-span-2">
               <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.full_address")}</span>
               <input

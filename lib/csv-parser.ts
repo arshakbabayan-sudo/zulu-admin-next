@@ -497,6 +497,7 @@ export function hotelRowToFormPayload(row: Record<string, string>): HotelFormPay
     hotel_name: get("hotel_name"),
     property_type: get("property_type") || "hotel",
     hotel_type: get("hotel_type") || "resort",
+    accommodation_type: "hotel",
     country: get("country"),
     region_or_state: get("region_or_state"),
     city: get("city"),
