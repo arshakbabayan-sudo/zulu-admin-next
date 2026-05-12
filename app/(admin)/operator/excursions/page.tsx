@@ -477,6 +477,7 @@ export default function OperatorExcursionsPage() {
                     shortDescription={form.short_description}
                     onMainImageChange={(v) => setForm((p) => p ? { ...p, main_image: v } : p)}
                     onShortDescriptionChange={(v) => setForm((p) => p ? { ...p, short_description: v } : p)}
+                    section="excursions"
                     altText="Excursion preview"
                   />
                   <LatLngFields

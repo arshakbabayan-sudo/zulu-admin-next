@@ -647,6 +647,7 @@ export default function OperatorTransfersPage() {
               shortDescription={form.short_description}
               onMainImageChange={(v) => setForm((p) => p ? { ...p, main_image: v } : p)}
               onShortDescriptionChange={(v) => setForm((p) => p ? { ...p, short_description: v } : p)}
+              section="transfers"
               altText="Transfer preview"
             />
           </div>

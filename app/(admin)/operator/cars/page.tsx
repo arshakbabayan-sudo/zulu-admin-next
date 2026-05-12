@@ -803,6 +803,7 @@ export default function OperatorCarsPage() {
               shortDescription={form.short_description}
               onMainImageChange={(v) => setForm((p) => p ? { ...p, main_image: v } : p)}
               onShortDescriptionChange={(v) => setForm((p) => p ? { ...p, short_description: v } : p)}
+              section="cars"
               altText="Car preview"
             />
             <LatLngFields

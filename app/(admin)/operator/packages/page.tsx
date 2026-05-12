@@ -276,6 +276,7 @@ export default function OperatorPackagesPage() {
               shortDescription={(form.short_description as string | null | undefined) ?? ""}
               onMainImageChange={(v) => setForm((p) => p ? { ...p, main_image: v } : p)}
               onShortDescriptionChange={(v) => setForm((p) => p ? { ...p, short_description: v } : p)}
+              section="packages"
               altText="Package preview"
             />
             <LatLngFields

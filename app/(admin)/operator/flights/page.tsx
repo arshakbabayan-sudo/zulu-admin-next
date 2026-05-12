@@ -13,6 +13,7 @@
  */
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
+import { ImageUploadField } from "@/components/ImageUploadField";
 import { ImportExportButtons } from "@/components/ImportExportButtons";
 import { OfferStatusBadge, isSubmittableStatus } from "@/components/OfferStatusBadge";
 import { PaginationBar } from "@/components/PaginationBar";
@@ -521,26 +522,15 @@ export default function OperatorFlightsPage() {
                   ))}
                 </select>
               </Field>
-              <Field
-                label="Main image URL"
-                hint="(հղում նկարի, ցույց է տրվում card-ի վրա)"
-              >
-                <input
-                  type="url"
-                  placeholder="https://images.unsplash.com/photo-XXX?auto=format&w=960"
+              <div className="sm:col-span-2">
+                <ImageUploadField
                   value={form.main_image}
-                  onChange={(e) => updateForm("main_image", e.target.value)}
-                  className={inputCls}
+                  onChange={(v) => updateForm("main_image", v)}
+                  section="flights"
+                  label="Main image"
+                  altText="Flight preview"
                 />
-                {form.main_image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={form.main_image}
-                    alt="Flight preview"
-                    className="mt-2 h-28 w-44 rounded border border-default object-cover"
-                  />
-                ) : null}
-              </Field>
+              </div>
               <Field
                 label="Short description"
                 hint="(կարճ նկարագրություն թռիչքի մասին` ցույց է տրվում card / detail էջում)"
