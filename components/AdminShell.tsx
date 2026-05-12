@@ -14,25 +14,18 @@ import {
   type NotificationRow,
 } from "@/lib/notifications-api";
 import {
-  ADMIN_INVENTORY_LINKS,
-  ADMIN_LOCALIZATION_LINKS,
-  ADMIN_OPERATOR_LINKS,
-  ADMIN_PLATFORM_LINKS,
+  ADMIN_NAV_GROUPS,
+  type AdminNavGroup,
+  findActiveGroup,
   resolveAdminPageTitle,
 } from "@/lib/admin-nav-config";
 import {
   canAccessInventoryOversightNav,
-  canAccessLocalizationLanguagesNav,
   canAccessLocalizationSectionNav,
-  canAccessLocalizationTemplatesNav,
-  canAccessLocalizationTranslationsNav,
-  canAccessConnectionsNav,
   canAccessNotificationsNav,
-  canAccessOperatorStatisticsNav,
   canAccessOperatorToolsNav,
   canAccessPlatformAdminNav,
   canAccessSuperAdminOnlyPlatformNav,
-  canAccessSupportNav,
   userHasPermission,
   userHasSellerServiceType,
 } from "@/lib/access";
@@ -99,131 +92,9 @@ function applyAdminTheme(theme: AdminTheme): void {
   else root.classList.remove("dark");
 }
 
-function NavLink({
-  href,
-  label,
-  pathname,
-  collapsed,
-}: {
-  href: string;
-  label: string;
-  pathname: string;
-  collapsed: boolean;
-}) {
-  const active = href === "/dashboard"
-    ? pathname === href
-    : pathname === href || pathname.startsWith(`${href}/`);
-  const iconByHref: Record<string, string> = {
-    "/dashboard": "/icons/menu/dashboard.svg",
-    "/platform/company-applications": "/icons/menu/application.svg",
-    "/platform/companies": "/icons/menu/company.svg",
-    "/platform/approvals": "/icons/menu/checklist.svg",
-    "/platform/users": "/icons/menu/users.svg",
-    "/platform/seller-applications": "/icons/menu/seller.svg",
-    "/platform/bookings": "/icons/menu/booking.svg",
-    "/platform/invoices": "/icons/menu/invoice.svg",
-    "/platform/commissions": "/icons/menu/commission.svg",
-    "/platform/finance": "/icons/menu/finance.svg",
-    "/platform/payments": "/icons/menu/payment.svg",
-    "/platform/package-orders": "/icons/menu/package.svg",
-    "/platform/finance-summary": "/icons/menu/finance-summary.svg",
-    "/platform/packages": "/icons/menu/package.svg",
-    "/platform/reviews": "/icons/menu/review.svg",
-    "/platform/banners": "/icons/menu/banner.svg",
-    "/platform/settings": "/icons/menu/settings.svg",
-    "/platform/locations": "/icons/menu/location.svg",
-
-    "/operator/flights": "/icons/menu/flight.svg",
-    "/operator/hotels": "/icons/menu/hotel.svg",
-    "/operator/transfers": "/icons/menu/transfer.svg",
-    "/operator/cars": "/icons/menu/car.svg",
-    "/operator/excursions": "/icons/menu/excursion.svg",
-    "/operator/visas": "/icons/menu/visa.svg",
-    "/operator/packages": "/icons/menu/package.svg",
-    "/operator/offers": "/icons/menu/offer.svg",
-
-    "/inventory/flights": "/icons/menu/flight.svg",
-    "/inventory/hotels": "/icons/menu/hotel.svg",
-    "/inventory/transfers": "/icons/menu/transfer.svg",
-    "/inventory/cars": "/icons/menu/car.svg",
-    "/inventory/excursions": "/icons/menu/excursion.svg",
-    "/pages": "/icons/menu/template.svg",
-
-    "/localization/languages": "/icons/menu/language.svg",
-    "/localization/ui-translations": "/icons/menu/translation.svg",
-    "/localization/translations": "/icons/menu/translation.svg",
-    "/localization/templates": "/icons/menu/template.svg",
-
-    "/support/tickets": "/icons/menu/support.svg",
-    "/connections": "/icons/menu/connection.svg",
-    "/notifications": "/icons/menu/notification.svg",
-    "/statistics": "/icons/menu/statistics.svg",
-  };
-  const icon = iconByHref[href] ?? "/icons/menu/settings.svg";
-
-  return (
-    <Link
-      href={href}
-      className={`flex items-center rounded-lg px-3 py-2 transition ${
-        active
-          ? "shadow-sm"
-          : "text-slate-700 hover:bg-slate-100"
-      } ${collapsed ? "justify-center" : "gap-2"}`}
-      title={label}
-      style={active ? { backgroundColor: "var(--admin-primary-soft)", color: "var(--admin-primary)" } : undefined}
-    >
-      <img src={icon} alt="" aria-hidden className="h-4 w-4 shrink-0 opacity-80" />
-      {!collapsed && <span>{label}</span>}
-    </Link>
-  );
-}
-
-function GroupHeader({
-  label,
-  isOpen,
-  onToggle,
-  title,
-}: {
-  label: string;
-  isOpen: boolean;
-  onToggle: () => void;
-  title?: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      title={title}
-      className="mt-3 flex w-full items-center justify-between rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] transition hover:bg-slate-100"
-      style={{ color: "var(--admin-text-muted)" }}
-      aria-expanded={isOpen}
-    >
-      <span className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          checked={isOpen}
-          readOnly
-          aria-hidden
-          className="h-3 w-3 cursor-pointer"
-          style={{ accentColor: "var(--admin-primary)" }}
-        />
-        <span>{label}</span>
-      </span>
-      <svg
-        viewBox="0 0 24 24"
-        className={`h-3.5 w-3.5 transition-transform ${isOpen ? "rotate-90" : "rotate-0"}`}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden
-      >
-        <path d="m9 18 6-6-6-6" />
-      </svg>
-    </button>
-  );
-}
+// Legacy per-link sidebar items + collapsible group header were removed
+// when the sidebar moved to the grouped model (ADMIN_NAV_GROUPS). The
+// component now renders one Link per group inline in <AdminShell/>.
 
 /**
  * Figma layout reference: Quest CRM Copy template
@@ -255,14 +126,6 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [adminTheme, setAdminTheme] = useState<AdminTheme>("light");
-  const [groupOpen, setGroupOpen] = useState({
-    platform: true,
-    operator: true,
-    inventory: true,
-    localization: true,
-    support: true,
-    other: true,
-  });
 
   useEffect(() => {
     if (!token || !pathname) return;
@@ -399,9 +262,6 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const showPlatform = canAccessPlatformAdminNav(user);
   const showOperatorTools = canAccessOperatorToolsNav(user);
   const showSuperAdminOnlyPlatform = canAccessSuperAdminOnlyPlatformNav(user);
-  const showSupport = canAccessSupportNav(user);
-  const showConnections = canAccessConnectionsNav(user);
-  const showStats = canAccessOperatorStatisticsNav(user);
   const showInventory = canAccessInventoryOversightNav(user);
   const showLocalization = canAccessLocalizationSectionNav(user);
 
@@ -753,132 +613,73 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         style={{ borderColor: "var(--admin-border)", backgroundColor: "var(--admin-surface)" }}
       >
         <nav className="flex flex-col gap-1.5 px-3 py-3 text-sm">
-          {showPlatform && (
-            <>
-              {sidebarOpen && (
-                <GroupHeader
-                  label={t("admin.nav.group.platform")}
-                  isOpen={groupOpen.platform}
-                  onToggle={() => setGroupOpen((v) => ({ ...v, platform: !v.platform }))}
-                />
-              )}
-              {(!sidebarOpen || groupOpen.platform) && ADMIN_PLATFORM_LINKS.map((l) => {
-                if (l.superAdminOnly && !showSuperAdminOnlyPlatform) return null;
-                return <NavLink key={l.href} href={l.href} label={t(l.labelKey)} pathname={pathname} collapsed={!sidebarOpen} />;
-              })}
-            </>
-          )}
+          {(() => {
+            const isGroupVisible = (g: AdminNavGroup): boolean => {
+              switch (g.visibility) {
+                case "always":
+                  return true;
+                case "platform_admin":
+                  return showPlatform;
+                case "operator_tools":
+                  return showOperatorTools;
+                case "inventory_oversight":
+                  return showInventory;
+                case "localization":
+                  return showLocalization;
+                case "super_admin":
+                  return showSuperAdminOnlyPlatform;
+                default:
+                  return false;
+              }
+            };
 
-          {showOperatorTools && (
-            <>
-              {!sidebarOpen && <div className="my-1 border-t" style={{ borderColor: "var(--admin-border)" }} />}
-              {sidebarOpen && (
-                <GroupHeader
-                  label={t("admin.nav.group.operator_tools")}
-                  isOpen={groupOpen.operator}
-                  onToggle={() => setGroupOpen((v) => ({ ...v, operator: !v.operator }))}
-                  title={t("admin.nav.group.operator_tools_hint")}
-                />
-              )}
-              {(!sidebarOpen || groupOpen.operator) && ADMIN_OPERATOR_LINKS.map((l) => {
-                if (l.serviceType && !userHasSellerServiceType(user, l.serviceType)) return null;
-                return <NavLink key={l.href} href={l.href} label={t(l.labelKey)} pathname={pathname} collapsed={!sidebarOpen} />;
-              })}
-            </>
-          )}
+            const isTabVisible = (
+              tab: { superAdminOnly?: boolean; perm?: string; serviceType?: import("@/lib/auth-types").SellerServiceType },
+            ): boolean => {
+              if (tab.superAdminOnly && !showSuperAdminOnlyPlatform && !user?.is_super_admin) return false;
+              if (tab.perm && !userHasPermission(user, tab.perm)) return false;
+              if (tab.serviceType && !userHasSellerServiceType(user, tab.serviceType)) return false;
+              return true;
+            };
 
-          {showInventory && (
-            <>
-              {!sidebarOpen && <div className="my-1 border-t" style={{ borderColor: "var(--admin-border)" }} />}
-              {sidebarOpen && (
-                <GroupHeader
-                  label={t("admin.nav.group.inventory_oversight")}
-                  isOpen={groupOpen.inventory}
-                  onToggle={() => setGroupOpen((v) => ({ ...v, inventory: !v.inventory }))}
-                  title={t("admin.nav.group.inventory_oversight_hint")}
-                />
-              )}
-              {(!sidebarOpen || groupOpen.inventory) && ADMIN_INVENTORY_LINKS.map((l) => {
-                if (!userHasPermission(user, l.perm)) return null;
-                return <NavLink key={l.href} href={l.href} label={t(l.labelKey)} pathname={pathname} collapsed={!sidebarOpen} />;
-              })}
-            </>
-          )}
+            const visibleGroups = ADMIN_NAV_GROUPS.filter((g) => {
+              if (!isGroupVisible(g)) return false;
+              // Group with tabs is only visible if at least one tab is visible.
+              if (g.tabs.length === 0) return true;
+              return g.tabs.some(isTabVisible);
+            });
 
-          {showPlatform && (
-            <>
-              {!sidebarOpen && <div className="my-1 border-t" style={{ borderColor: "var(--admin-border)" }} />}
-              <NavLink href="/pages" label="Pages" pathname={pathname} collapsed={!sidebarOpen} />
-            </>
-          )}
+            if (visibleGroups.length === 0) {
+              return (
+                <p className="px-3 text-xs text-slate-500">
+                  {t("admin.shell.no_navigation")}
+                </p>
+              );
+            }
 
-          {showLocalization && (
-            <>
-              {!sidebarOpen && <div className="my-1 border-t" style={{ borderColor: "var(--admin-border)" }} />}
-              {sidebarOpen && (
-                <GroupHeader
-                  label={t("admin.nav.group.localization")}
-                  isOpen={groupOpen.localization}
-                  onToggle={() => setGroupOpen((v) => ({ ...v, localization: !v.localization }))}
-                />
-              )}
-              {(!sidebarOpen || groupOpen.localization) && ADMIN_LOCALIZATION_LINKS.map((l) => {
-                if (l.href === "/localization/languages" && !canAccessLocalizationLanguagesNav(user)) return null;
-                if (l.href === "/localization/templates" && !canAccessLocalizationTemplatesNav(user)) return null;
-                if (l.href === "/localization/translations" && !canAccessLocalizationTranslationsNav(user)) return null;
-                if (l.href === "/localization/ui-translations" && !user?.is_super_admin) return null;
-                return <NavLink key={l.href} href={l.href} label={t(l.labelKey)} pathname={pathname} collapsed={!sidebarOpen} />;
-              })}
-            </>
-          )}
+            const activeGroup = findActiveGroup(pathname ?? "");
 
-          {showSupport && (
-            <>
-              {!sidebarOpen && <div className="my-1 border-t" style={{ borderColor: "var(--admin-border)" }} />}
-              {sidebarOpen && (
-                <GroupHeader
-                  label={t("admin.nav.group.support")}
-                  isOpen={groupOpen.support}
-                  onToggle={() => setGroupOpen((v) => ({ ...v, support: !v.support }))}
-                />
-              )}
-              {(!sidebarOpen || groupOpen.support) && (
-                <NavLink href="/support/tickets" label={t("admin.nav.support_tickets")} pathname={pathname} collapsed={!sidebarOpen} />
-              )}
-            </>
-          )}
-
-          {(showConnections || showNotifications || showStats) && (
-            <>
-              {!sidebarOpen && <div className="my-1 border-t" style={{ borderColor: "var(--admin-border)" }} />}
-              {sidebarOpen && (
-                <GroupHeader
-                  label={t("admin.nav.group.other")}
-                  isOpen={groupOpen.other}
-                  onToggle={() => setGroupOpen((v) => ({ ...v, other: !v.other }))}
-                />
-              )}
-              {(!sidebarOpen || groupOpen.other) && (
-                <>
-                  {showConnections && (
-                    <NavLink href="/connections" label={t("admin.nav.service_connections")} pathname={pathname} collapsed={!sidebarOpen} />
-                  )}
-                  {showNotifications && (
-                    <NavLink href="/notifications" label={t("admin.nav.notifications")} pathname={pathname} collapsed={!sidebarOpen} />
-                  )}
-                  {showStats && (
-                    <NavLink href="/statistics" label={t("admin.nav.operator_statistics")} pathname={pathname} collapsed={!sidebarOpen} />
-                  )}
-                </>
-              )}
-            </>
-          )}
-
-          {!showPlatform && !showOperatorTools && !showSupport && !showConnections && !showNotifications && !showStats && !showInventory && !showLocalization && (
-            <p className="px-3 text-xs text-slate-500">
-              {t("admin.shell.no_navigation")}
-            </p>
-          )}
+            return visibleGroups.map((g) => {
+              // Sidebar link points at the first visible tab (or defaultHref if no tabs).
+              const firstVisibleTab = g.tabs.find(isTabVisible);
+              const href = firstVisibleTab?.href ?? g.defaultHref;
+              const active = activeGroup?.key === g.key;
+              return (
+                <Link
+                  key={g.key}
+                  href={href}
+                  className={`flex items-center rounded-lg px-3 py-2 transition ${
+                    active ? "shadow-sm" : "text-slate-700 hover:bg-slate-100"
+                  } ${sidebarOpen ? "gap-2" : "justify-center"}`}
+                  title={t(g.labelKey)}
+                  style={active ? { backgroundColor: "var(--admin-primary-soft)", color: "var(--admin-primary)" } : undefined}
+                >
+                  <img src={g.icon} alt="" aria-hidden className="h-4 w-4 shrink-0 opacity-80" />
+                  {sidebarOpen && <span>{t(g.labelKey)}</span>}
+                </Link>
+              );
+            });
+          })()}
         </nav>
 
       </aside>

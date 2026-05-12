@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminGroupTabs } from "@/components/AdminGroupTabs";
 import { AdminShell } from "@/components/AdminShell";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useRouter } from "next/navigation";
@@ -31,5 +32,10 @@ export default function AdminSectionLayout({
     return null;
   }
 
-  return <AdminShell>{children}</AdminShell>;
+  return (
+    <AdminShell>
+      <AdminGroupTabs />
+      {children}
+    </AdminShell>
+  );
 }
