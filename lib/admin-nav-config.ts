@@ -151,6 +151,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/platform/banners", labelKey: "admin.nav.tab.banners", superAdminOnly: true },
       { href: "/pages", labelKey: "admin.nav.tab.cms_pages" },
       { href: "/platform/notifications", labelKey: "admin.nav.tab.system_notifications" },
+      { href: "/platform/newsletter", labelKey: "admin.nav.tab.newsletter" },
       { href: "/localization/templates", labelKey: "admin.nav.tab.email_templates" },
     ],
     visibility: "platform_admin",

@@ -665,6 +665,64 @@ export async function apiSyncPackageHomepageFeatures(
   });
 }
 
+export type NewsletterSubscriptionRow = {
+  id: number;
+  email: string;
+  lang: string | null;
+  source: string | null;
+  subscribed_at: string | null;
+  unsubscribed_at: string | null;
+  ip: string | null;
+};
+
+export type NewsletterStats = {
+  total_active: number;
+  by_lang: Record<string, number>;
+  by_source: Record<string, number>;
+};
+
+export async function apiNewsletterSubscriptions(
+  token: string,
+  params: {
+    page?: number;
+    per_page?: number;
+    source?: string;
+    lang?: string;
+    search?: string;
+    active_only?: boolean;
+  }
+): Promise<
+  ApiSuccessEnvelope<NewsletterSubscriptionRow[]> & {
+    meta: { current_page: number; per_page: number; total: number; last_page: number };
+  }
+> {
+  const q = new URLSearchParams();
+  if (params.page != null) q.set("page", String(params.page));
+  if (params.per_page != null) q.set("per_page", String(params.per_page));
+  if (params.source) q.set("source", params.source);
+  if (params.lang) q.set("lang", params.lang);
+  if (params.search) q.set("search", params.search);
+  if (params.active_only !== undefined) q.set("active_only", params.active_only ? "1" : "0");
+  const qs = q.toString();
+  return apiFetchJson(`${PA}/newsletter/subscriptions${qs ? `?${qs}` : ""}`, {
+    method: "GET",
+    token,
+  });
+}
+
+export async function apiNewsletterStats(
+  token: string
+): Promise<ApiSuccessEnvelope<NewsletterStats>> {
+  return apiFetchJson(`${PA}/newsletter/subscriptions/stats`, { method: "GET", token });
+}
+
+export async function apiDeleteNewsletterSubscription(
+  token: string,
+  id: number
+): Promise<ApiSuccessEnvelope<unknown>> {
+  return apiFetchJson(`${PA}/newsletter/subscriptions/${id}`, { method: "DELETE", token });
+}
+
 export type PlatformBannerRow = {
   id: number;
   image_path?: string | null;
