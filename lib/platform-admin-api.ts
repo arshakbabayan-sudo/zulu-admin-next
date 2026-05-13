@@ -81,6 +81,7 @@ export type PlatformCompanyRow = {
   website?: string | null;
   description?: string | null;
   logo?: string | null;
+  is_partner_visible?: boolean;
   governance_status: string;
   is_seller: boolean;
   seller_activated_at?: string | null;
@@ -228,6 +229,18 @@ export async function apiToggleCompanySeller(
     method: "PATCH",
     token,
     body: {},
+  });
+}
+
+export async function apiPatchCompanyPartnerSettings(
+  token: string,
+  companyId: number,
+  body: { logo?: string | null; is_partner_visible?: boolean }
+): Promise<ApiSuccessEnvelope<PlatformCompanyRow>> {
+  return apiFetchJson(`${PA}/companies/${companyId}/partner-settings`, {
+    method: "PATCH",
+    token,
+    body,
   });
 }
 
@@ -613,6 +626,42 @@ export async function apiDeactivatePlatformPackage(
     method: "POST",
     token,
     body: reason ? { reason } : {},
+  });
+}
+
+export type PackageHomepageFeatureSlug = "special_offers" | "popular_destinations";
+
+export type PackageHomepageFeatureRow = {
+  section_slug: PackageHomepageFeatureSlug;
+  position: number;
+  is_active: boolean;
+};
+
+export type PackageHomepageFeaturesPayload = {
+  package_id: number;
+  sections: PackageHomepageFeatureSlug[];
+  features: PackageHomepageFeatureRow[];
+};
+
+export async function apiGetPackageHomepageFeatures(
+  token: string,
+  packageId: number
+): Promise<ApiSuccessEnvelope<PackageHomepageFeaturesPayload>> {
+  return apiFetchJson(`${PA}/packages/${packageId}/homepage-features`, {
+    method: "GET",
+    token,
+  });
+}
+
+export async function apiSyncPackageHomepageFeatures(
+  token: string,
+  packageId: number,
+  features: PackageHomepageFeatureRow[]
+): Promise<ApiSuccessEnvelope<PackageHomepageFeaturesPayload>> {
+  return apiFetchJson(`${PA}/packages/${packageId}/homepage-features`, {
+    method: "PUT",
+    token,
+    body: { features },
   });
 }
 

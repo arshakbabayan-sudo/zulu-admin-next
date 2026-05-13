@@ -1,6 +1,7 @@
 "use client";
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
+import { PackageHomepageFeatureModal } from "@/components/PackageHomepageFeatureModal";
 import { PaginationBar } from "@/components/PaginationBar";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
@@ -25,6 +26,7 @@ export default function PlatformPackagesGovernancePage() {
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [featureRow, setFeatureRow] = useState<PlatformGovernancePackageRow | null>(null);
 
   const load = useCallback(async () => {
     if (!token || !allowed) return;
@@ -167,14 +169,23 @@ export default function PlatformPackagesGovernancePage() {
                   {r.is_public ? "yes" : "no"} / {r.is_bookable ? "yes" : "no"}
                 </td>
                 <td className="px-3 py-2">
-                  <button
-                    type="button"
-                    disabled={busyId === r.id}
-                    onClick={() => deactivate(r)}
-                    className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-error-800 hover:bg-error-50 disabled:opacity-50"
-                  >
-                    {busyId === r.id ? "..." : "Force deactivate"}
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setFeatureRow(r)}
+                      className="rounded border border-default bg-white px-2 py-1 text-xs text-fg-t7 hover:bg-figma-bg-1"
+                    >
+                      Homepage feature
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busyId === r.id}
+                      onClick={() => deactivate(r)}
+                      className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-error-800 hover:bg-error-50 disabled:opacity-50"
+                    >
+                      {busyId === r.id ? "..." : "Force deactivate"}
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -182,6 +193,11 @@ export default function PlatformPackagesGovernancePage() {
         </table>
       </div>
       {meta && <PaginationBar meta={meta} onPage={setPage} />}
+      <PackageHomepageFeatureModal
+        packageId={featureRow?.id ?? null}
+        packageTitle={featureRow?.package_title ?? null}
+        onClose={() => setFeatureRow(null)}
+      />
     </div>
   );
 }

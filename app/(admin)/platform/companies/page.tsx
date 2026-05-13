@@ -13,6 +13,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { PaginationBar } from "@/components/PaginationBar";
+import { PartnerSettingsModal } from "@/components/PartnerSettingsModal";
 import { TranslationsModal } from "@/components/TranslationsModal";
 import { StatusPill, autoStatusTone } from "@/components/ui/StatusPill";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
@@ -56,6 +57,7 @@ export default function PlatformCompaniesPage() {
   const [busyId, setBusyId] = useState<number | null>(null);
   const [permModalCompany, setPermModalCompany] = useState<PlatformCompanyRow | null>(null);
   const [translateRow, setTranslateRow] = useState<PlatformCompanyRow | null>(null);
+  const [partnerRow, setPartnerRow] = useState<PlatformCompanyRow | null>(null);
   const [permSelected, setPermSelected] = useState<Record<string, boolean>>({});
   const [permLoadErr, setPermLoadErr] = useState<string | null>(null);
   const [permLoading, setPermLoading] = useState(false);
@@ -422,6 +424,17 @@ export default function PlatformCompaniesPage() {
                       </button>
                       <button
                         type="button"
+                        onClick={() => setPartnerRow(r)}
+                        className={`inline-flex h-8 items-center rounded-zulu border px-2.5 text-xs font-medium transition ${
+                          r.is_partner_visible
+                            ? "border-success-200 bg-success-50 text-success-800 hover:bg-success-100"
+                            : "border-default bg-white text-fg-t7 hover:bg-figma-bg-1"
+                        }`}
+                      >
+                        {r.is_partner_visible ? "Partner: ON" : "Partner: off"}
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => setTranslateRow(r)}
                         className="inline-flex h-8 items-center rounded-zulu border border-default bg-white px-2.5 text-xs font-medium text-fg-t7 transition hover:bg-figma-bg-1"
                       >
@@ -597,6 +610,13 @@ export default function PlatformCompaniesPage() {
           { name: "title", label: "Company name" },
           { name: "description", label: "Description", multiline: true },
         ]}
+      />
+      <PartnerSettingsModal
+        company={partnerRow}
+        onClose={() => setPartnerRow(null)}
+        onSaved={(next) =>
+          setRows((prev) => prev.map((r) => (r.id === next.id ? { ...r, ...next } : r)))
+        }
       />
     </div>
   );
