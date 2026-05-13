@@ -3,6 +3,7 @@
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { PaginationBar } from "@/components/PaginationBar";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
@@ -80,6 +81,7 @@ function AddPageModal({
   onClose: () => void;
   onSubmit: (pageName: string, pageSlug: string) => Promise<void>;
 }) {
+  const { t } = useLanguage();
   const [pageName, setPageName] = useState("");
   const [pageSlug, setPageSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
@@ -123,12 +125,12 @@ function AddPageModal({
     >
       <div className="w-full max-w-md rounded border border-default bg-white p-5 shadow-xl">
         <h2 id="add-page-modal-title" className="text-base font-semibold text-fg-t11">
-          Add New Page
+          {t("admin.pages.modal.title")}
         </h2>
         {err ? <p className="mt-2 text-sm text-error-600">{err}</p> : null}
         <div className="mt-4 space-y-3">
           <label className="block text-sm text-fg-t7">
-            Page Name
+            {t("admin.pages.modal.name_label")}
             <input
               value={pageName}
               onChange={(e) => setPageName(e.target.value)}
@@ -137,7 +139,7 @@ function AddPageModal({
             />
           </label>
           <label className="block text-sm text-fg-t7">
-            Slug
+            {t("admin.pages.modal.slug_label")}
             <input
               value={pageSlug}
               onChange={(e) => {
@@ -155,7 +157,7 @@ function AddPageModal({
             onClick={onClose}
             className="rounded border border-default bg-white px-3 py-1.5 text-sm"
           >
-            Cancel
+            {t("admin.pages.modal.cancel")}
           </button>
           <button
             type="button"
@@ -163,7 +165,7 @@ function AddPageModal({
             onClick={() => void submit()}
             className="rounded bg-violet-600 px-3 py-1.5 text-sm text-white disabled:opacity-60"
           >
-            {saving ? "Saving..." : "Create"}
+            {saving ? t("admin.static_pages.editor.saving") : t("admin.pages.modal.create")}
           </button>
         </div>
       </div>
@@ -173,6 +175,7 @@ function AddPageModal({
 
 export default function AdminPagesListPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
 
   const [rows, setRows] = useState<AdminPageRow[]>([]);
@@ -252,7 +255,7 @@ export default function AdminPagesListPage() {
   if (!allowed || forbidden) {
     return (
       <div>
-        <h1 className="admin-page-title">Pages</h1>
+        <h1 className="admin-page-title">{t("admin.pages.title")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -267,13 +270,13 @@ export default function AdminPagesListPage() {
       ) : null}
 
       <div className="flex items-center justify-between gap-3">
-        <h1 className="admin-page-title">Pages</h1>
+        <h1 className="admin-page-title">{t("admin.pages.title")}</h1>
         <button
           type="button"
           onClick={() => setShowAddModal(true)}
           className="rounded bg-violet-600 px-3 py-1.5 text-sm font-medium text-white"
         >
-          Add New Page
+          {t("admin.pages.add_new")}
         </button>
       </div>
 
@@ -287,19 +290,19 @@ export default function AdminPagesListPage() {
         <table className="w-full min-w-[960px] text-left text-sm">
           <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
-              <th className="px-3 py-2">S.N</th>
-              <th className="px-3 py-2">Name</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Published</th>
-              <th className="px-3 py-2">Created</th>
-              <th className="px-3 py-2">Actions</th>
+              <th className="px-3 py-2">{t("admin.pages.col.sn")}</th>
+              <th className="px-3 py-2">{t("admin.pages.col.name")}</th>
+              <th className="px-3 py-2">{t("admin.pages.col.status")}</th>
+              <th className="px-3 py-2">{t("admin.pages.col.published")}</th>
+              <th className="px-3 py-2">{t("admin.pages.col.created")}</th>
+              <th className="px-3 py-2">{t("admin.pages.col.actions")}</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-3 py-8 text-center text-sm text-fg-t6">
-                  No pages found.
+                  {t("admin.pages.empty")}
                 </td>
               </tr>
             ) : (
@@ -313,7 +316,7 @@ export default function AdminPagesListPage() {
                       <div className="text-xs text-fg-t6">/{row.page_slug}</div>
                     </td>
                     <td className="px-3 py-2">
-                      <span className={statusBadge(isActive)}>{isActive ? "Active" : "Inactive"}</span>
+                      <span className={statusBadge(isActive)}>{isActive ? t("admin.pages.status.active") : t("admin.pages.status.inactive")}</span>
                     </td>
                     <td className="px-3 py-2">
                       <Toggle
@@ -329,10 +332,10 @@ export default function AdminPagesListPage() {
                           href={`/pages/${row.id}/edit?mode=view`}
                           className="text-info-700 underline"
                         >
-                          View
+                          {t("admin.pages.action.view")}
                         </Link>
                         <Link href={`/pages/${row.id}/edit`} className="text-violet-700 underline">
-                          Edit
+                          {t("admin.pages.action.edit")}
                         </Link>
                         <button
                           type="button"
@@ -340,7 +343,7 @@ export default function AdminPagesListPage() {
                           onClick={() => void handleDelete(row)}
                           className="text-error-700 underline disabled:opacity-40"
                         >
-                          Delete
+                          {t("admin.pages.action.delete")}
                         </button>
                       </div>
                     </td>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import {
@@ -111,6 +112,7 @@ function Toggle({
 
 export default function AdminPageEditorLayoutPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const params = useParams<{ id: string }>();
   const pageId = Number(params?.id ?? 0);
@@ -413,9 +415,9 @@ export default function AdminPageEditorLayoutPage() {
     return (
       <div>
         <Link href="/pages" className="mb-2 inline-flex items-center gap-1 text-xs text-violet-700 hover:underline">
-          ← Back to Pages
+          {t("admin.pages.back_to_pages")}
         </Link>
-        <h1 className="admin-page-title">Page Editor</h1>
+        <h1 className="admin-page-title">{t("admin.pages.editor.title")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -427,7 +429,7 @@ export default function AdminPageEditorLayoutPage() {
     return (
       <div>
         <Link href="/pages" className="mb-2 inline-flex items-center gap-1 text-xs text-violet-700 hover:underline">
-          ← Back to Pages
+          {t("admin.pages.back_to_pages")}
         </Link>
         <p className="text-sm text-error-600">Invalid page id.</p>
       </div>
@@ -437,9 +439,9 @@ export default function AdminPageEditorLayoutPage() {
   return (
     <div>
       <Link href="/pages" className="mb-2 inline-flex items-center gap-1 text-xs text-violet-700 hover:underline">
-        ← Back to Pages
+        {t("admin.pages.back_to_pages")}
       </Link>
-      <h1 className="admin-page-title">Page Visual Editor</h1>
+      <h1 className="admin-page-title">{t("admin.pages.editor.title")}</h1>
       <div className="mt-3 rounded border border-default bg-white p-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -463,7 +465,7 @@ export default function AdminPageEditorLayoutPage() {
           </div>
           <div className="flex items-center gap-2 text-xs">
             <span className="rounded bg-figma-bg-1 px-2 py-1 text-fg-t6">
-              Editing: {activeLanguage.toUpperCase()}
+              {t("admin.pages.editor.editing")}: {activeLanguage.toUpperCase()}
             </span>
             {!isDefaultLanguage && !hasPageTranslation ? (
               <button
@@ -471,7 +473,7 @@ export default function AdminPageEditorLayoutPage() {
                 onClick={copyPageFieldsFromDefault}
                 className="rounded border border-violet-300 bg-violet-50 px-2 py-1 text-violet-700"
               >
-                Copy page fields from default
+                {t("admin.pages.editor.copy_default")}
               </button>
             ) : null}
           </div>
@@ -486,7 +488,7 @@ export default function AdminPageEditorLayoutPage() {
       >
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <label className="text-sm text-fg-t7">
-            Menu Name
+            {t("admin.pages.editor.menu_name")}
             <input
               value={menuName}
               onChange={(e) => setMenuName(e.target.value)}
@@ -495,7 +497,7 @@ export default function AdminPageEditorLayoutPage() {
             />
           </label>
           <label className="text-sm text-fg-t7">
-            Slug Name
+            {t("admin.pages.editor.slug_name")}
             <input
               value={slugName}
               onChange={(e) => setSlugName(e.target.value)}
@@ -504,7 +506,7 @@ export default function AdminPageEditorLayoutPage() {
             />
           </label>
           <label className="text-sm text-fg-t7 md:col-span-2">
-            Meta Title
+            {t("admin.pages.editor.meta_title")}
             <input
               value={metaTitle}
               onChange={(e) => setMetaTitle(e.target.value)}
@@ -513,7 +515,7 @@ export default function AdminPageEditorLayoutPage() {
             />
           </label>
           <label className="text-sm text-fg-t7 md:col-span-2">
-            Meta Keywords (comma separated)
+            {t("admin.pages.editor.meta_keywords")}
             <input
               value={metaKeywords}
               onChange={(e) => setMetaKeywords(e.target.value)}
@@ -529,7 +531,7 @@ export default function AdminPageEditorLayoutPage() {
             />
           </label>
           <label className="text-sm text-fg-t7 md:col-span-2">
-            Meta Description
+            {t("admin.pages.editor.meta_description")}
             <textarea
               value={metaDescription}
               onChange={(e) => setMetaDescription(e.target.value)}
@@ -552,7 +554,7 @@ export default function AdminPageEditorLayoutPage() {
                   void saveHeaderPatch({ enable_seo: checked });
                 }}
               />
-              Allow Page SEO
+              {t("admin.pages.editor.allow_seo")}
             </label>
             <label className="inline-flex items-center gap-2 text-sm text-fg-t7">
               <input
@@ -564,7 +566,7 @@ export default function AdminPageEditorLayoutPage() {
                   void saveHeaderPatch({ is_bread_crumb: checked });
                 }}
               />
-              Bread Crumb Enable
+              {t("admin.pages.editor.breadcrumb")}
             </label>
           </div>
 
@@ -575,7 +577,7 @@ export default function AdminPageEditorLayoutPage() {
               disabled={busyAction === "published" || page == null}
               className="rounded bg-violet-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
             >
-              {page?.status === 1 ? "Published" : "Unpublished"}
+              {page?.status === 1 ? t("admin.pages.editor.published_btn") : t("admin.pages.editor.draft_btn")}
             </button>
             <button
               type="button"
@@ -583,7 +585,7 @@ export default function AdminPageEditorLayoutPage() {
               onClick={() => window.open(`/${slugName}`, "_blank", "noopener,noreferrer")}
               className="rounded border border-default bg-white px-3 py-1.5 text-sm disabled:opacity-40"
             >
-              View Page
+              {t("admin.pages.editor.view_page")}
             </button>
           </div>
         </div>
