@@ -142,38 +142,6 @@ export async function apiSyncFooter(
   });
 }
 
-export type StaticPageAdminPayload = {
-  id: number;
-  slug: string;
-  name: string;
-  meta_title: string | null;
-  meta_description: string | null;
-  body_html_en: string | null;
-  body_html_ru: string | null;
-  body_html_hy: string | null;
-};
-
-export const STATIC_PAGE_SLUGS = ["about", "contact", "terms", "privacy", "cookies"] as const;
-export type StaticPageSlug = (typeof STATIC_PAGE_SLUGS)[number];
-
-export async function apiAdminStaticPage(
-  token: string,
-  slug: StaticPageSlug
-): Promise<ApiSuccessEnvelope<StaticPageAdminPayload>> {
-  return apiFetchJson(`${PA}/static-pages/${slug}`, { method: "GET", token });
-}
-
-export async function apiUpdateStaticPage(
-  token: string,
-  slug: StaticPageSlug,
-  body: Partial<Omit<StaticPageAdminPayload, "id" | "slug">>
-): Promise<ApiSuccessEnvelope<StaticPageAdminPayload>> {
-  return apiFetchJson(`${PA}/static-pages/${slug}`, {
-    method: "PATCH",
-    token,
-    body: body as Record<string, unknown>,
-  });
-}
 
 /** Company onboarding application row (`CompanyApplicationResource`). */
 export type CompanyApplicationRow = {
