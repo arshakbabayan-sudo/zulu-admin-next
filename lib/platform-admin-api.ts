@@ -52,6 +52,96 @@ export async function apiPatchBrandSettings(
   });
 }
 
+export type HeaderMenuAdminRow = {
+  id: number;
+  parent_id: number | null;
+  label_en: string;
+  label_ru: string | null;
+  label_hy: string | null;
+  url: string;
+  position: number;
+  is_visible: boolean;
+  icon: string | null;
+  open_in_new_tab: boolean;
+};
+
+export async function apiAdminHeaderMenu(
+  token: string
+): Promise<ApiSuccessEnvelope<{ items: HeaderMenuAdminRow[] }>> {
+  return apiFetchJson(`${PA}/header-menu`, { method: "GET", token });
+}
+
+export async function apiSyncHeaderMenu(
+  token: string,
+  items: Array<Omit<HeaderMenuAdminRow, "id"> & { id?: number | string | null }>
+): Promise<ApiSuccessEnvelope<{ items: HeaderMenuAdminRow[] }>> {
+  return apiFetchJson(`${PA}/header-menu`, {
+    method: "PUT",
+    token,
+    body: { items },
+  });
+}
+
+export type FooterLinkAdminRow = {
+  id: number;
+  column_id: number;
+  label_en: string;
+  label_ru: string | null;
+  label_hy: string | null;
+  url: string;
+  position: number;
+  is_visible: boolean;
+  open_in_new_tab: boolean;
+};
+
+export type FooterColumnAdminRow = {
+  id: number;
+  slug: string;
+  title_en: string;
+  title_ru: string | null;
+  title_hy: string | null;
+  position: number;
+  is_visible: boolean;
+  links: FooterLinkAdminRow[];
+};
+
+export async function apiAdminFooter(
+  token: string
+): Promise<ApiSuccessEnvelope<{ columns: FooterColumnAdminRow[] }>> {
+  return apiFetchJson(`${PA}/footer`, { method: "GET", token });
+}
+
+export type FooterSyncColumnPayload = {
+  id?: number | null;
+  slug?: string | null;
+  title_en: string;
+  title_ru: string | null;
+  title_hy: string | null;
+  position: number;
+  is_visible: boolean;
+  links: Array<{
+    id?: number | null;
+    label_en: string;
+    label_ru: string | null;
+    label_hy: string | null;
+    url: string;
+    position: number;
+    is_visible: boolean;
+    open_in_new_tab: boolean;
+  }>;
+};
+
+export async function apiSyncFooter(
+  token: string,
+  columns: FooterSyncColumnPayload[]
+): Promise<ApiSuccessEnvelope<{ columns: FooterColumnAdminRow[] }>> {
+  return apiFetchJson(`${PA}/footer`, {
+    method: "PUT",
+    token,
+    body: { columns },
+  });
+}
+
 /** Company onboarding application row (`CompanyApplicationResource`). */
 export type CompanyApplicationRow = {
   id: number;
