@@ -3,6 +3,55 @@ import type { ApiListMeta, ApiSuccessEnvelope } from "./api-envelope";
 
 const PA = "/platform-admin";
 
+/**
+ * Brand settings — single document stored in platform_settings.brand_settings (JSON).
+ * Mixes reserved imagery/contact/social keys with an open custom_fields[] list.
+ */
+export type BrandCustomField = {
+  key: string;
+  label: string;
+  type: "text" | "url" | "email" | "phone" | "image" | "tel";
+  value: string | null;
+};
+
+export type BrandSettings = {
+  logo_url: string | null;
+  emblem_url: string | null;
+  favicon_url: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  address_city: string | null;
+  address_country: string | null;
+  social_links: Record<string, string | null>;
+  custom_fields: BrandCustomField[];
+};
+
+export const BRAND_SOCIAL_PLATFORMS: Array<{ key: string; label: string }> = [
+  { key: "facebook", label: "Facebook" },
+  { key: "instagram", label: "Instagram" },
+  { key: "linkedin", label: "LinkedIn" },
+  { key: "tiktok", label: "TikTok" },
+  { key: "youtube", label: "YouTube" },
+  { key: "telegram", label: "Telegram" },
+  { key: "whatsapp", label: "WhatsApp" },
+];
+
+export async function apiBrandSettings(): Promise<ApiSuccessEnvelope<BrandSettings>> {
+  return apiFetchJson("/brand-settings", { method: "GET" });
+}
+
+export async function apiPatchBrandSettings(
+  token: string,
+  body: Partial<BrandSettings>
+): Promise<ApiSuccessEnvelope<BrandSettings>> {
+  return apiFetchJson(`${PA}/brand-settings`, {
+    method: "PATCH",
+    token,
+    body: body as Record<string, unknown>,
+  });
+}
+
 /** Company onboarding application row (`CompanyApplicationResource`). */
 export type CompanyApplicationRow = {
   id: number;
