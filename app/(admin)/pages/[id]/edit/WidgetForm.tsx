@@ -8,6 +8,7 @@ import {
   type AdminWidgetContentRow,
 } from "@/lib/pages-api";
 import { useEffect, useState } from "react";
+import { RichTextEditor } from "./RichTextEditor";
 
 type Props = {
   widget: AdminWidgetContentRow;
@@ -1731,13 +1732,13 @@ export function WidgetForm({ widget, activeLanguage, saving = false, onSave }: P
     return (
       <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
         <label className="block text-xs font-medium text-fg-t7">{t("admin.widget_form.text_content")}</label>
-        <textarea
-          value={textValue}
-          onChange={(e) => setTextValue(e.target.value)}
-          rows={7}
-          className="mt-1 w-full rounded border border-default px-2 py-2 text-sm"
-          placeholder={t("admin.widget_form.enter_text_content")}
-        />
+        <div className="mt-1">
+          <RichTextEditor
+            value={textValue}
+            onChange={setTextValue}
+            placeholder={t("admin.widget_form.enter_text_content")}
+          />
+        </div>
         <div className="mt-2 flex justify-end">
           <button
             type="button"
