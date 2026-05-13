@@ -19,6 +19,7 @@ import {
   type StaticPageAdminPayload,
   type StaticPageSlug,
 } from "@/lib/platform-admin-api";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
@@ -66,6 +67,9 @@ export default function StaticPageEditPage() {
   if (!allowed || forbidden) {
     return (
       <div>
+        <Link href="/platform/settings/pages" className="mb-2 inline-flex items-center gap-1 text-xs text-violet-700 hover:underline">
+          ← Back to Pages
+        </Link>
         <h1 className="admin-page-title">Page editor</h1>
         <div className="mt-4">
           <ForbiddenNotice />
@@ -77,6 +81,9 @@ export default function StaticPageEditPage() {
   if (!slug || !isValidSlug(slug)) {
     return (
       <div>
+        <Link href="/platform/settings/pages" className="mb-2 inline-flex items-center gap-1 text-xs text-violet-700 hover:underline">
+          ← Back to Pages
+        </Link>
         <h1 className="admin-page-title">Page editor</h1>
         <p className="mt-4 text-sm text-error-600">Unknown page slug.</p>
       </div>
@@ -86,6 +93,9 @@ export default function StaticPageEditPage() {
   if (!data) {
     return (
       <div>
+        <Link href="/platform/settings/pages" className="mb-2 inline-flex items-center gap-1 text-xs text-violet-700 hover:underline">
+          ← Back to Pages
+        </Link>
         <h1 className="admin-page-title">Page editor</h1>
         <p className="mt-4 text-sm text-fg-t7">Loading…</p>
       </div>
@@ -119,6 +129,9 @@ export default function StaticPageEditPage() {
 
   return (
     <div className="max-w-4xl">
+      <Link href="/platform/settings/pages" className="mb-2 inline-flex items-center gap-1 text-xs text-violet-700 hover:underline">
+        ← Back to Pages
+      </Link>
       <div className="flex items-baseline justify-between gap-4">
         <div>
           <h1 className="admin-page-title">Edit page: {data.name}</h1>

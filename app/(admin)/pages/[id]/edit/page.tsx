@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
@@ -411,6 +412,9 @@ export default function AdminPageEditorLayoutPage() {
   if (!allowed || forbidden) {
     return (
       <div>
+        <Link href="/pages" className="mb-2 inline-flex items-center gap-1 text-xs text-violet-700 hover:underline">
+          ← Back to Pages
+        </Link>
         <h1 className="admin-page-title">Page Editor</h1>
         <div className="mt-4">
           <ForbiddenNotice />
@@ -420,11 +424,21 @@ export default function AdminPageEditorLayoutPage() {
   }
 
   if (!Number.isFinite(pageId) || pageId <= 0) {
-    return <p className="text-sm text-error-600">Invalid page id.</p>;
+    return (
+      <div>
+        <Link href="/pages" className="mb-2 inline-flex items-center gap-1 text-xs text-violet-700 hover:underline">
+          ← Back to Pages
+        </Link>
+        <p className="text-sm text-error-600">Invalid page id.</p>
+      </div>
+    );
   }
 
   return (
     <div>
+      <Link href="/pages" className="mb-2 inline-flex items-center gap-1 text-xs text-violet-700 hover:underline">
+        ← Back to Pages
+      </Link>
       <h1 className="admin-page-title">Page Visual Editor</h1>
       <div className="mt-3 rounded border border-default bg-white p-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
