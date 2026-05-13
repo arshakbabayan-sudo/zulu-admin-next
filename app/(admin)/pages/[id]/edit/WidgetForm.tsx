@@ -1399,27 +1399,7 @@ function HomeSpecialOffersWidgetForm({
   onChange: (next: HomeSpecialOffersContent) => void;
   onSave: () => Promise<void>;
 }) {
-  const { token } = useAdminAuth();
   const { t } = useLanguage();
-  const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
-  const [uploadErr, setUploadErr] = useState<string | null>(null);
-  function updateItem(index: number, patch: Partial<HomeSpecialOfferItem>) {
-    onChange({ ...value, items: value.items.map((item, i) => (i === index ? { ...item, ...patch } : item)) });
-  }
-
-  async function uploadItemImage(index: number, file: File) {
-    setUploadingIndex(index);
-    setUploadErr(null);
-    try {
-      const filename = await uploadWidgetImage(token, file);
-      updateItem(index, { image: filename });
-    } catch (e) {
-      setUploadErr(uploadErrorMessage(e));
-    } finally {
-      setUploadingIndex(null);
-    }
-  }
-
   return (
     <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
@@ -1430,33 +1410,13 @@ function HomeSpecialOffersWidgetForm({
           <input value={value.section_subtitle} onChange={(e) => onChange({ ...value, section_subtitle: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
         </label>
       </div>
-      <div className="mt-3 flex items-center justify-between">
-        <p className="text-xs font-medium text-fg-t7">{t("admin.widget_form.offers")}</p>
-        <button type="button" onClick={() => onChange({ ...value, items: [...value.items, { ...DEFAULT_HOME_SPECIAL_OFFER_ITEM }] })} className="rounded border border-default bg-white px-2.5 py-1 text-xs">{t("common.add")}</button>
-      </div>
-      <div className="mt-2 space-y-2">
-        {uploadErr ? <p className="text-xs text-error-600">{uploadErr}</p> : null}
-        {value.items.map((item, index) => (
-          <div key={`home-special-${index}`} className="rounded border border-default bg-white p-2">
-            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-              <label className="text-xs text-fg-t7">{t("admin.widget_form.title")}
-                <input value={item.title} onChange={(e) => updateItem(index, { title: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
-              </label>
-              <label className="text-xs text-fg-t7">{t("admin.widget_form.price")}
-                <input value={item.price} onChange={(e) => updateItem(index, { price: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
-              </label>
-              <label className="text-xs text-fg-t7">{t("admin.widget_form.link")}
-                <input value={item.link} onChange={(e) => updateItem(index, { link: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
-              </label>
-              <label className="text-xs text-fg-t7">{t("admin.widget_form.image")}
-                <input type="file" accept="image/jpeg,image/png,image/jpg,image/webp,image/gif,image/svg+xml" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; void uploadItemImage(index, file); e.currentTarget.value = ""; }} className="mt-1 block w-full text-xs" />
-                {uploadingIndex === index ? <span className="mt-1 block text-xs text-fg-t6">{t("admin.widget_form.uploading")}</span> : null}
-                {item.image ? <span className="mt-1 block text-[11px] text-fg-t6">{t("admin.widget_form.saved_file")}: {item.image}</span> : null}
-              </label>
-            </div>
-            <div className="mt-2 flex justify-end"><button type="button" onClick={() => onChange({ ...value, items: value.items.filter((_, i) => i !== index) })} className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-error-700">{t("admin.widget_form.remove")}</button></div>
-          </div>
-        ))}
+      <div className="mt-3 rounded border border-info-200 bg-info-50 p-2 text-xs text-info-800">
+        <p className="font-medium">Auto-driven from packages</p>
+        <p className="mt-1 text-info-700">
+          Items appear here automatically when you tag a package as
+          «Special offers» via <code>Platform → Packages → Homepage feature</code>.
+          The legacy items[] editor was removed.
+        </p>
       </div>
       <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
@@ -1474,59 +1434,19 @@ function HomePopularDestinationsWidgetForm({
   onChange: (next: HomePopularDestinationsContent) => void;
   onSave: () => Promise<void>;
 }) {
-  const { token } = useAdminAuth();
   const { t } = useLanguage();
-  const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
-  const [uploadErr, setUploadErr] = useState<string | null>(null);
-  function updateItem(index: number, patch: Partial<HomePopularDestinationItem>) {
-    onChange({ ...value, items: value.items.map((item, i) => (i === index ? { ...item, ...patch } : item)) });
-  }
-
-  async function uploadItemImage(index: number, file: File) {
-    setUploadingIndex(index);
-    setUploadErr(null);
-    try {
-      const filename = await uploadWidgetImage(token, file);
-      updateItem(index, { image: filename });
-    } catch (e) {
-      setUploadErr(uploadErrorMessage(e));
-    } finally {
-      setUploadingIndex(null);
-    }
-  }
-
   return (
     <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
       <label className="text-xs text-fg-t7">{t("admin.widget_form.section_title")}
         <input value={value.section_title} onChange={(e) => onChange({ ...value, section_title: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
       </label>
-      <div className="mt-3 flex items-center justify-between">
-        <p className="text-xs font-medium text-fg-t7">{t("admin.widget_form.destinations")}</p>
-        <button type="button" onClick={() => onChange({ ...value, items: [...value.items, { ...DEFAULT_HOME_POPULAR_DESTINATION_ITEM }] })} className="rounded border border-default bg-white px-2.5 py-1 text-xs">{t("common.add")}</button>
-      </div>
-      <div className="mt-2 space-y-2">
-        {uploadErr ? <p className="text-xs text-error-600">{uploadErr}</p> : null}
-        {value.items.map((item, index) => (
-          <div key={`home-destination-${index}`} className="rounded border border-default bg-white p-2">
-            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-              <label className="text-xs text-fg-t7">{t("admin.widget_form.title")}
-                <input value={item.title} onChange={(e) => updateItem(index, { title: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
-              </label>
-              <label className="text-xs text-fg-t7">{t("admin.widget_form.label")}
-                <input value={item.label} onChange={(e) => updateItem(index, { label: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
-              </label>
-              <label className="text-xs text-fg-t7">{t("admin.widget_form.link")}
-                <input value={item.link} onChange={(e) => updateItem(index, { link: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
-              </label>
-              <label className="text-xs text-fg-t7">{t("admin.widget_form.image")}
-                <input type="file" accept="image/jpeg,image/png,image/jpg,image/webp,image/gif,image/svg+xml" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; void uploadItemImage(index, file); e.currentTarget.value = ""; }} className="mt-1 block w-full text-xs" />
-                {uploadingIndex === index ? <span className="mt-1 block text-xs text-fg-t6">{t("admin.widget_form.uploading")}</span> : null}
-                {item.image ? <span className="mt-1 block text-[11px] text-fg-t6">{t("admin.widget_form.saved_file")}: {item.image}</span> : null}
-              </label>
-            </div>
-            <div className="mt-2 flex justify-end"><button type="button" onClick={() => onChange({ ...value, items: value.items.filter((_, i) => i !== index) })} className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-error-700">{t("admin.widget_form.remove")}</button></div>
-          </div>
-        ))}
+      <div className="mt-3 rounded border border-info-200 bg-info-50 p-2 text-xs text-info-800">
+        <p className="font-medium">Auto-driven from packages</p>
+        <p className="mt-1 text-info-700">
+          Items appear here automatically when you tag a package as
+          «Popular destinations» via <code>Platform → Packages → Homepage feature</code>.
+          The legacy items[] editor was removed.
+        </p>
       </div>
       <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
@@ -1534,9 +1454,7 @@ function HomePopularDestinationsWidgetForm({
 }
 
 function HomePartnersWidgetForm({
-  value,
   saving,
-  onChange,
   onSave,
 }: {
   value: HomePartnersContent;
@@ -1544,53 +1462,16 @@ function HomePartnersWidgetForm({
   onChange: (next: HomePartnersContent) => void;
   onSave: () => Promise<void>;
 }) {
-  const { token } = useAdminAuth();
   const { t } = useLanguage();
-  const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
-  const [uploadErr, setUploadErr] = useState<string | null>(null);
-  function updateItem(index: number, patch: Partial<HomePartnerItem>) {
-    onChange({ ...value, items: value.items.map((item, i) => (i === index ? { ...item, ...patch } : item)) });
-  }
-
-  async function uploadLogo(index: number, file: File) {
-    setUploadingIndex(index);
-    setUploadErr(null);
-    try {
-      const filename = await uploadWidgetImage(token, file);
-      updateItem(index, { logo_image: filename });
-    } catch (e) {
-      setUploadErr(uploadErrorMessage(e));
-    } finally {
-      setUploadingIndex(null);
-    }
-  }
-
   return (
     <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-fg-t7">{t("admin.widget_form.partners")}</p>
-        <button type="button" onClick={() => onChange({ ...value, items: [...value.items, { ...DEFAULT_HOME_PARTNER_ITEM }] })} className="rounded border border-default bg-white px-2.5 py-1 text-xs">{t("common.add")}</button>
-      </div>
-      <div className="mt-2 space-y-2">
-        {uploadErr ? <p className="text-xs text-error-600">{uploadErr}</p> : null}
-        {value.items.map((item, index) => (
-          <div key={`home-partner-${index}`} className="rounded border border-default bg-white p-2">
-            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-              <label className="text-xs text-fg-t7">{t("admin.widget_form.partner_name")}
-                <input value={item.partner_name} onChange={(e) => updateItem(index, { partner_name: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
-              </label>
-              <label className="text-xs text-fg-t7">{t("admin.widget_form.link")}
-                <input value={item.link} onChange={(e) => updateItem(index, { link: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
-              </label>
-              <label className="text-xs text-fg-t7 md:col-span-2">{t("admin.widget_form.logo_image")}
-                <input type="file" accept="image/jpeg,image/png,image/jpg,image/webp,image/gif,image/svg+xml" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; void uploadLogo(index, file); e.currentTarget.value = ""; }} className="mt-1 block w-full text-xs" />
-                {uploadingIndex === index ? <span className="mt-1 block text-xs text-fg-t6">{t("admin.widget_form.uploading")}</span> : null}
-                {item.logo_image ? <span className="mt-1 block text-[11px] text-fg-t6">{t("admin.widget_form.saved_file")}: {item.logo_image}</span> : null}
-              </label>
-            </div>
-            <div className="mt-2 flex justify-end"><button type="button" onClick={() => onChange({ ...value, items: value.items.filter((_, i) => i !== index) })} className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-error-700">{t("admin.widget_form.remove")}</button></div>
-          </div>
-        ))}
+      <div className="rounded border border-info-200 bg-info-50 p-2 text-xs text-info-800">
+        <p className="font-medium">Auto-driven from companies</p>
+        <p className="mt-1 text-info-700">
+          Partner logos appear here automatically for operator companies with
+          <code> Partner: ON </code> + a logo (set via <code>Platform → Companies → Partner</code>).
+          The legacy items[] editor was removed.
+        </p>
       </div>
       <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
@@ -1669,6 +1550,7 @@ export function WidgetForm({ widget, activeLanguage, saving = false, onSave }: P
   const [homePopularDestinationsContent, setHomePopularDestinationsContent] = useState<HomePopularDestinationsContent>(DEFAULT_HOME_POPULAR_DESTINATIONS);
   const [homePartnersContent, setHomePartnersContent] = useState<HomePartnersContent>(DEFAULT_HOME_PARTNERS);
   const [homeNewsletterContent, setHomeNewsletterContent] = useState<HomeNewsletterContent>(DEFAULT_HOME_NEWSLETTER);
+  const [homeBottomNewsletterContent, setHomeBottomNewsletterContent] = useState<HomeNewsletterContent>(DEFAULT_HOME_NEWSLETTER);
   const [searchOptions, setSearchOptions] = useState<SearchOptions>(DEFAULT_SEARCH_OPTIONS);
   const [rawJson, setRawJson] = useState("{}");
   const [err, setErr] = useState<string | null>(null);
@@ -1691,6 +1573,7 @@ export function WidgetForm({ widget, activeLanguage, saving = false, onSave }: P
     setHomePopularDestinationsContent(normalizeHomePopularDestinations(data.home_popular_destinations ?? data));
     setHomePartnersContent(normalizeHomePartners(data.home_partners ?? data));
     setHomeNewsletterContent(normalizeHomeNewsletter(data.home_newsletter ?? data));
+    setHomeBottomNewsletterContent(normalizeHomeNewsletter(data.home_bottom_newsletter ?? data));
 
     const search = normalizeObject(
       data.search ?? data.search_options
@@ -1794,7 +1677,6 @@ export function WidgetForm({ widget, activeLanguage, saving = false, onSave }: P
     await onSave({
       section_title: homeSpecialOffersContent.section_title,
       section_subtitle: homeSpecialOffersContent.section_subtitle,
-      items: homeSpecialOffersContent.items,
     });
   }
 
@@ -1802,20 +1684,22 @@ export function WidgetForm({ widget, activeLanguage, saving = false, onSave }: P
     setErr(null);
     await onSave({
       section_title: homePopularDestinationsContent.section_title,
-      items: homePopularDestinationsContent.items,
     });
   }
 
   async function handleSaveHomePartners() {
     setErr(null);
-    await onSave({
-      items: homePartnersContent.items,
-    });
+    await onSave({});
   }
 
   async function handleSaveHomeNewsletter() {
     setErr(null);
     await onSave(homeNewsletterContent as unknown as Record<string, unknown>);
+  }
+
+  async function handleSaveHomeBottomNewsletter() {
+    setErr(null);
+    await onSave(homeBottomNewsletterContent as unknown as Record<string, unknown>);
   }
 
   async function handleSaveFallbackJson() {
@@ -2013,6 +1897,34 @@ export function WidgetForm({ widget, activeLanguage, saving = false, onSave }: P
         onChange={setHomeNewsletterContent}
         onSave={handleSaveHomeNewsletter}
       />
+    );
+  }
+
+  if (widget.widget_slug === "home-bottom-newsletter") {
+    return (
+      <HomeNewsletterWidgetForm
+        value={homeBottomNewsletterContent}
+        saving={saving}
+        onChange={setHomeBottomNewsletterContent}
+        onSave={handleSaveHomeBottomNewsletter}
+      />
+    );
+  }
+
+  if (widget.widget_slug === "home-hero-settings") {
+    return (
+      <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
+        <div className="rounded border border-info-200 bg-info-50 p-3 text-xs text-info-800">
+          <p className="font-medium">Hero tabs configuration</p>
+          <p className="mt-1 text-info-700">
+            Hero tab labels, order, and visibility are managed centrally —
+            open <a className="underline" href="/platform/settings">Platform → Settings → Hero tabs</a>.
+          </p>
+          <p className="mt-2 text-info-700">
+            Used endpoint: <code>PATCH /api/platform-admin/site-settings/hero-tabs</code>.
+          </p>
+        </div>
+      </div>
     );
   }
 
