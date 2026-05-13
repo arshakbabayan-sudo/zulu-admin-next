@@ -8,6 +8,7 @@ import { PaginationBar } from "@/components/PaginationBar";
 import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
 import { MainImageDescriptionFields } from "@/components/MainImageDescriptionFields";
 import { LatLngFields } from "@/components/LatLngFields";
+import { TranslationTabs } from "@/components/TranslationTabs";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useExcursionWizardStepper } from "@/hooks/useExcursionWizardStepper";
 import { ApiRequestError } from "@/lib/api-client";
@@ -1044,6 +1045,22 @@ export default function OperatorExcursionsPage() {
             )}
           </div>
           {formErr && <p className="mt-2 text-sm text-error-600">{formErr}</p>}
+          {editId !== null && (
+            <div className="mt-6 rounded border border-default bg-figma-bg-1 p-3">
+              <h3 className="mb-2 text-sm font-medium text-fg-t6">
+                Translations <span className="text-fg-t7 font-normal">(EN-ից բացի՝ RU / HY)</span>
+              </h3>
+              <TranslationTabs
+                entityType="excursion"
+                entityId={editId}
+                fields={[
+                  { name: "title", label: "Title" },
+                  { name: "description", label: "Description", multiline: true },
+                  { name: "highlights", label: "Highlights", multiline: true },
+                ]}
+              />
+            </div>
+          )}
           <div className="mt-4 flex flex-wrap gap-2">
             {step > 1 && (
               <button

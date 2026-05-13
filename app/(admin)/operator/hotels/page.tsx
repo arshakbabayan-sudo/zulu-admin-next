@@ -7,6 +7,7 @@ import { ImportExportButtons } from "@/components/ImportExportButtons";
 import { OfferStatusBadge, isSubmittableStatus } from "@/components/OfferStatusBadge";
 import { PaginationBar } from "@/components/PaginationBar";
 import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
+import { TranslationTabs } from "@/components/TranslationTabs";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { ApiRequestError } from "@/lib/api-client";
 import { apiSubmitOfferForReview } from "@/lib/platform-admin-api";
@@ -1110,6 +1111,21 @@ export default function OperatorHotelsPage() {
                 <li key={i}>{line}</li>
               ))}
             </ul>
+          )}
+          {editId !== null && (
+            <div className="mt-6 rounded border border-default bg-figma-bg-1 p-3">
+              <h3 className="mb-2 text-sm font-medium text-fg-t6">
+                Translations <span className="text-fg-t7 font-normal">(EN-ից բացի՝ RU / HY)</span>
+              </h3>
+              <TranslationTabs
+                entityType="hotel"
+                entityId={editId}
+                fields={[
+                  { name: "hotel_name", label: "Hotel name" },
+                  { name: "short_description", label: "Short description", multiline: true },
+                ]}
+              />
+            </div>
           )}
           <div className="mt-4 flex gap-2">
             <button

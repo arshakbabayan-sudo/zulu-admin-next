@@ -6,6 +6,7 @@ import { MainImageDescriptionFields } from "@/components/MainImageDescriptionFie
 import { LatLngFields } from "@/components/LatLngFields";
 import { OfferStatusBadge, isSubmittableStatus } from "@/components/OfferStatusBadge";
 import { PaginationBar } from "@/components/PaginationBar";
+import { TranslationTabs } from "@/components/TranslationTabs";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { ApiRequestError } from "@/lib/api-client";
 import { apiSubmitOfferForReview } from "@/lib/platform-admin-api";
@@ -295,6 +296,22 @@ export default function OperatorPackagesPage() {
             />
           </div>
           {formErr && <p className="mt-2 text-sm text-error-600">{formErr}</p>}
+          {editId !== null && (
+            <div className="mt-6 rounded border border-default bg-figma-bg-1 p-3">
+              <h3 className="mb-2 text-sm font-medium text-fg-t6">
+                Translations <span className="text-fg-t7 font-normal">(EN-ից բացի՝ RU / HY)</span>
+              </h3>
+              <TranslationTabs
+                entityType="package"
+                entityId={editId}
+                fields={[
+                  { name: "package_title", label: "Package title" },
+                  { name: "package_subtitle", label: "Subtitle" },
+                  { name: "short_description", label: "Short description", multiline: true },
+                ]}
+              />
+            </div>
+          )}
           <div className="mt-4 flex gap-2">
             <button type="button" disabled={busy} onClick={() => void handleSubmit()} className="admin-btn-primary">{busy ? t("admin.crud.common.saving") : t("common.save")}</button>
             <button type="button" onClick={closeForm} className="rounded border border-default px-4 py-1.5 text-sm">{t("common.cancel")}</button>

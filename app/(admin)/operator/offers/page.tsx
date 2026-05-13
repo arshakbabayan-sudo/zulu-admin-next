@@ -2,6 +2,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { PaginationBar } from "@/components/PaginationBar";
+import { TranslationsModal } from "@/components/TranslationsModal";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessOperatorToolsNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
@@ -30,6 +31,7 @@ export default function OperatorOffersPage() {
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [translateRow, setTranslateRow] = useState<OfferRow | null>(null);
 
   const load = useCallback(async () => {
     if (!token || !allowed) return;
@@ -107,6 +109,8 @@ export default function OperatorOffersPage() {
                       <button type="button" disabled={busyId === r.id} onClick={() => void handleArchive(r.id)}
                         className="text-left text-xs text-warning-700 underline disabled:opacity-40">{t("admin.crud.common.archive")}</button>
                     )}
+                    <button type="button" onClick={() => setTranslateRow(r)}
+                      className="text-left text-xs text-info-700 underline">Translations</button>
                   </div>
                 </td>
               </tr>
@@ -115,6 +119,18 @@ export default function OperatorOffersPage() {
         </table>
       </div>
       {meta && <PaginationBar meta={meta} onPage={setPage} />}
+      <TranslationsModal
+        open={translateRow !== null}
+        onClose={() => setTranslateRow(null)}
+        entityType="offer"
+        entityId={translateRow?.id ?? null}
+        entityLabel={translateRow?.title ?? undefined}
+        fields={[
+          { name: "title", label: "Title" },
+          { name: "subtitle", label: "Subtitle" },
+          { name: "description", label: "Description", multiline: true },
+        ]}
+      />
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { OfferStatusBadge, isSubmittableStatus } from "@/components/OfferStatusB
 import { PaginationBar } from "@/components/PaginationBar";
 import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
 import { MainImageDescriptionFields } from "@/components/MainImageDescriptionFields";
+import { TranslationTabs } from "@/components/TranslationTabs";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ApiRequestError } from "@/lib/api-client";
@@ -759,6 +760,22 @@ export default function OperatorTransfersPage() {
             <p className="mt-2 text-sm text-error-600">{stepErrors.slice(0, 4).join(" ")}</p>
           )}
           {formErr && <p className="mt-2 text-sm text-error-600">{formErr}</p>}
+
+          {editId !== null && (
+            <div className="mt-6 rounded border border-default bg-figma-bg-1 p-3">
+              <h3 className="mb-2 text-sm font-medium text-fg-t6">
+                Translations <span className="text-fg-t7 font-normal">(EN-ից բացի՝ RU / HY)</span>
+              </h3>
+              <TranslationTabs
+                entityType="transfer"
+                entityId={editId}
+                fields={[
+                  { name: "title", label: "Title" },
+                  { name: "description", label: "Description", multiline: true },
+                ]}
+              />
+            </div>
+          )}
 
           <div className="mt-4 flex gap-2">
             <button

@@ -13,6 +13,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { PaginationBar } from "@/components/PaginationBar";
+import { TranslationsModal } from "@/components/TranslationsModal";
 import { StatusPill, autoStatusTone } from "@/components/ui/StatusPill";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
@@ -54,6 +55,7 @@ export default function PlatformCompaniesPage() {
   const [forbidden, setForbidden] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [permModalCompany, setPermModalCompany] = useState<PlatformCompanyRow | null>(null);
+  const [translateRow, setTranslateRow] = useState<PlatformCompanyRow | null>(null);
   const [permSelected, setPermSelected] = useState<Record<string, boolean>>({});
   const [permLoadErr, setPermLoadErr] = useState<string | null>(null);
   const [permLoading, setPermLoading] = useState(false);
@@ -418,6 +420,13 @@ export default function PlatformCompaniesPage() {
                       >
                         {r.is_seller ? t("admin.platform_companies.disable_seller") : t("admin.platform_companies.enable_seller")}
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => setTranslateRow(r)}
+                        className="inline-flex h-8 items-center rounded-zulu border border-default bg-white px-2.5 text-xs font-medium text-fg-t7 transition hover:bg-figma-bg-1"
+                      >
+                        Translations
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -578,6 +587,17 @@ export default function PlatformCompaniesPage() {
           </div>
         </div>
       )}
+      <TranslationsModal
+        open={translateRow !== null}
+        onClose={() => setTranslateRow(null)}
+        entityType="company"
+        entityId={translateRow?.id ?? null}
+        entityLabel={translateRow?.name ?? undefined}
+        fields={[
+          { name: "title", label: "Company name" },
+          { name: "description", label: "Description", multiline: true },
+        ]}
+      />
     </div>
   );
 }
