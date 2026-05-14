@@ -206,7 +206,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/platform/settings/brand", labelKey: "admin.nav.tab.brand_settings" },
       { href: "/platform/settings/header-menu", labelKey: "admin.nav.tab.header_menu" },
       { href: "/platform/settings/footer", labelKey: "admin.nav.tab.footer" },
-      { href: "/platform/settings/pages", labelKey: "admin.nav.tab.static_pages" },
     ],
     visibility: "super_admin",
   },
