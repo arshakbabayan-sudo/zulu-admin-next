@@ -15,6 +15,7 @@
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { ImageUploadField } from "@/components/ImageUploadField";
 import { ImportExportButtons } from "@/components/ImportExportButtons";
+import { CsvImportModal } from "@/components/CsvImportModal";
 import { OfferStatusBadge, isSubmittableStatus } from "@/components/OfferStatusBadge";
 import { PaginationBar } from "@/components/PaginationBar";
 import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
@@ -23,6 +24,8 @@ import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ApiRequestError } from "@/lib/api-client";
 import { apiSubmitOfferForReview } from "@/lib/platform-admin-api";
+import { csvExportFilename, downloadCsvFile } from "@/lib/csv-import-export";
+import { exportFlightsCsv, flightTemplateCsv, runFlightCsvImport } from "@/lib/csv-orchestrator";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import {
   apiFlights,
@@ -204,6 +207,8 @@ export default function OperatorFlightsPage() {
   const [form, setForm] = useState<FlightFormPayload | null>(null);
   const [editId, setEditId] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
+  const [exportBusy, setExportBusy] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [formErrLines, setFormErrLines] = useState<string[]>([]);
   /** Persisted cabin rows from the server when opening edit; used to diff on save. */
@@ -439,11 +444,22 @@ export default function OperatorFlightsPage() {
         <h1 className="admin-page-title">{t("admin.crud.flights.title")}</h1>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <ImportExportButtons
-            busy={busy}
-            exportDisabled={true}
-            onTemplate={() => alert("Flight template export — coming soon")}
-            onExport={() => alert("Flight CSV export — coming soon")}
-            onImport={() => alert("Flight CSV import — coming soon")}
+            busy={busy || exportBusy}
+            exportDisabled={!token}
+            onTemplate={() => downloadCsvFile("flights-template.csv", flightTemplateCsv())}
+            onExport={async () => {
+              if (!token) return;
+              setExportBusy(true);
+              try {
+                const csv = await exportFlightsCsv(token);
+                downloadCsvFile(csvExportFilename("flights"), csv);
+              } catch (e) {
+                alert(e instanceof ApiRequestError ? e.message : "Export failed");
+              } finally {
+                setExportBusy(false);
+              }
+            }}
+            onImport={() => setImportOpen(true)}
           />
           <button type="button" onClick={openCreate} className="admin-btn-primary">
             {t("admin.crud.flights.new_btn")}
@@ -1244,6 +1260,23 @@ export default function OperatorFlightsPage() {
         </table>
       </div>
       {meta && <PaginationBar meta={meta} onPage={setPage} />}
+      <CsvImportModal
+        open={importOpen}
+        title={t("admin.crud.flights.import_title")}
+        onClose={() => setImportOpen(false)}
+        onRun={async (csvRows, rowLineNumbers) => {
+          if (!token) {
+            return {
+              success: 0,
+              failed: csvRows.length,
+              errors: [{ rowNumber: rowLineNumbers[0] ?? 2, message: "Not signed in." }],
+            };
+          }
+          const res = await runFlightCsvImport(token, csvRows, rowLineNumbers);
+          if (res.success > 0) await load();
+          return res;
+        }}
+      />
     </div>
   );
 }
