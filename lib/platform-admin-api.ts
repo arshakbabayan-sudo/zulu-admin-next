@@ -240,6 +240,8 @@ export async function apiPlatformCompanies(
     is_seller?: boolean;
     search?: string;
     type?: string;
+    sort_by?: string;
+    sort_dir?: "asc" | "desc";
   }
 ): Promise<ApiSuccessEnvelope<PlatformCompanyRow[]> & { meta: ApiListMeta }> {
   const q = new URLSearchParams();
@@ -250,6 +252,8 @@ export async function apiPlatformCompanies(
   if (params.is_seller === false) q.set("is_seller", "0");
   if (params.search) q.set("search", params.search);
   if (params.type) q.set("type", params.type);
+  if (params.sort_by) q.set("sort_by", params.sort_by);
+  if (params.sort_dir) q.set("sort_dir", params.sort_dir);
   const qs = q.toString();
   return apiFetchJson(`${PA}/companies${qs ? `?${qs}` : ""}`, { method: "GET", token });
 }

@@ -11,6 +11,7 @@
  * Last synced: 2026-05-03
  */
 
+import Link from "next/link";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { PaginationBar } from "@/components/PaginationBar";
 import { PartnerSettingsModal } from "@/components/PartnerSettingsModal";
@@ -34,6 +35,9 @@ import {
 } from "@/lib/platform-admin-api";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+type SortDir = "asc" | "desc";
+type SortField = "id" | "name" | "type" | "status" | "governance_status" | "is_seller";
+
 const GOVERNANCE_STATUSES = ["pending", "active", "suspended", "rejected"] as const;
 
 function labelServiceType(t: string): string {
@@ -51,6 +55,8 @@ export default function PlatformCompaniesPage() {
   const [searchDraft, setSearchDraft] = useState("");
   const [governanceFilter, setGovernanceFilter] = useState<string>("");
   const [sellerFilter, setSellerFilter] = useState<string>("");
+  const [sortBy, setSortBy] = useState<SortField>("id");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [draftGovernance, setDraftGovernance] = useState<Record<number, string>>({});
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
@@ -84,6 +90,8 @@ export default function PlatformCompaniesPage() {
         search: search || undefined,
         governance_status: governanceFilter || undefined,
         is_seller: sellerParam,
+        sort_by: sortBy,
+        sort_dir: sortDir,
       });
       setRows(res.data);
       setMeta(res.meta);
@@ -98,7 +106,22 @@ export default function PlatformCompaniesPage() {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
       else setErr(e instanceof ApiRequestError ? e.message : t("admin.platform_companies.err_load"));
     }
-  }, [token, allowed, page, search, governanceFilter, sellerParam, t]);
+  }, [token, allowed, page, search, governanceFilter, sellerParam, sortBy, sortDir, t]);
+
+  function toggleSort(field: SortField) {
+    if (sortBy === field) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortDir("asc");
+    }
+    setPage(1);
+  }
+
+  function sortIndicator(field: SortField): string {
+    if (sortBy !== field) return "";
+    return sortDir === "asc" ? " ↑" : " ↓";
+  }
 
   useEffect(() => {
     load();
@@ -269,7 +292,7 @@ export default function PlatformCompaniesPage() {
       <div className="admin-card p-4">
         <div className="flex flex-wrap items-end gap-3">
           <div className="relative min-w-[220px] flex-1">
-            <svg viewBox="0 0 24 24" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 fill-none stroke-current text-fg-t6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg viewBox="0 0 24 24" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 fill-none stroke-current text-fg-t6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8" />
               <path d="m21 21-4.3-4.3" />
             </svg>
@@ -283,7 +306,7 @@ export default function PlatformCompaniesPage() {
                 }
               }}
               placeholder={t("admin.platform_companies.search_placeholder")}
-              className="h-9 w-full rounded-zulu border border-default bg-white pl-9 pr-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+              className="h-9 w-full rounded-zulu border border-default bg-white pl-10 pr-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
             />
           </div>
           <button
@@ -341,12 +364,66 @@ export default function PlatformCompaniesPage() {
           <table className="w-full min-w-[960px] text-left text-sm">
             <thead className="border-b border-default bg-figma-bg-1 text-xs font-medium uppercase tracking-wide text-fg-t6">
               <tr>
-                <th className="px-4 py-3">{t("admin.crud.common.id")}</th>
-                <th className="px-4 py-3">{t("admin.platform_companies.name")}</th>
-                <th className="px-4 py-3">{t("admin.platform_companies.type")}</th>
-                <th className="px-4 py-3">{t("admin.platform_companies.status")}</th>
-                <th className="px-4 py-3">{t("admin.platform_companies.governance")}</th>
-                <th className="px-4 py-3">{t("admin.platform_companies.seller")}</th>
+                <th className="px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() => toggleSort("id")}
+                    className="inline-flex items-center gap-1 uppercase tracking-wide transition hover:text-primary"
+                  >
+                    {t("admin.crud.common.id")}
+                    <span className="tabular-nums">{sortIndicator("id")}</span>
+                  </button>
+                </th>
+                <th className="px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() => toggleSort("name")}
+                    className="inline-flex items-center gap-1 uppercase tracking-wide transition hover:text-primary"
+                  >
+                    {t("admin.platform_companies.name")}
+                    <span className="tabular-nums">{sortIndicator("name")}</span>
+                  </button>
+                </th>
+                <th className="px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() => toggleSort("type")}
+                    className="inline-flex items-center gap-1 uppercase tracking-wide transition hover:text-primary"
+                  >
+                    {t("admin.platform_companies.type")}
+                    <span className="tabular-nums">{sortIndicator("type")}</span>
+                  </button>
+                </th>
+                <th className="px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() => toggleSort("status")}
+                    className="inline-flex items-center gap-1 uppercase tracking-wide transition hover:text-primary"
+                  >
+                    {t("admin.platform_companies.status")}
+                    <span className="tabular-nums">{sortIndicator("status")}</span>
+                  </button>
+                </th>
+                <th className="px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() => toggleSort("governance_status")}
+                    className="inline-flex items-center gap-1 uppercase tracking-wide transition hover:text-primary"
+                  >
+                    {t("admin.platform_companies.governance")}
+                    <span className="tabular-nums">{sortIndicator("governance_status")}</span>
+                  </button>
+                </th>
+                <th className="px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() => toggleSort("is_seller")}
+                    className="inline-flex items-center gap-1 uppercase tracking-wide transition hover:text-primary"
+                  >
+                    {t("admin.platform_companies.seller")}
+                    <span className="tabular-nums">{sortIndicator("is_seller")}</span>
+                  </button>
+                </th>
                 <th className="px-4 py-3 text-right">{t("admin.platform_companies.actions")}</th>
               </tr>
             </thead>
@@ -360,8 +437,22 @@ export default function PlatformCompaniesPage() {
               )}
               {rows.map((r) => (
                 <tr key={r.id} className="border-b border-default last:border-0 transition hover:bg-figma-bg-1">
-                  <td className="px-4 py-3 tabular-nums text-fg-t7">{r.id}</td>
-                  <td className="px-4 py-3 font-medium text-fg-t8">{r.name}</td>
+                  <td className="px-4 py-3 tabular-nums text-fg-t7">
+                    <Link
+                      href={`/platform/companies/${r.id}`}
+                      className="text-primary transition hover:underline"
+                    >
+                      {r.id}
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3 font-medium text-fg-t8">
+                    <Link
+                      href={`/platform/companies/${r.id}`}
+                      className="text-fg-t8 transition hover:text-primary hover:underline"
+                    >
+                      {r.name}
+                    </Link>
+                  </td>
                   <td className="px-4 py-3 text-fg-t7 capitalize">{r.type ?? "—"}</td>
                   <td className="px-4 py-3">
                     {r.status ? <StatusPill status={r.status} /> : <span className="text-fg-t6">—</span>}
@@ -431,14 +522,16 @@ export default function PlatformCompaniesPage() {
                             : "border-default bg-white text-fg-t7 hover:bg-figma-bg-1"
                         }`}
                       >
-                        {r.is_partner_visible ? "Partner: ON" : "Partner: off"}
+                        {r.is_partner_visible
+                          ? t("admin.platform_companies.partner_on")
+                          : t("admin.platform_companies.partner_off")}
                       </button>
                       <button
                         type="button"
                         onClick={() => setTranslateRow(r)}
                         className="inline-flex h-8 items-center rounded-zulu border border-default bg-white px-2.5 text-xs font-medium text-fg-t7 transition hover:bg-figma-bg-1"
                       >
-                        Translations
+                        {t("admin.platform_companies.translations")}
                       </button>
                     </div>
                   </td>
