@@ -224,35 +224,15 @@ const DEFAULT_HOME_HERO: HomeHeroContent = {
   button_url: "",
 };
 
-const DEFAULT_HOME_SPECIAL_OFFER_ITEM: HomeSpecialOfferItem = {
-  image: "",
-  title: "",
-  price: "",
-  link: "",
-};
-
 const DEFAULT_HOME_SPECIAL_OFFERS: HomeSpecialOffersContent = {
   section_title: "",
   section_subtitle: "",
   items: [],
 };
 
-const DEFAULT_HOME_POPULAR_DESTINATION_ITEM: HomePopularDestinationItem = {
-  image: "",
-  title: "",
-  label: "",
-  link: "",
-};
-
 const DEFAULT_HOME_POPULAR_DESTINATIONS: HomePopularDestinationsContent = {
   section_title: "",
   items: [],
-};
-
-const DEFAULT_HOME_PARTNER_ITEM: HomePartnerItem = {
-  logo_image: "",
-  partner_name: "",
-  link: "",
 };
 
 const DEFAULT_HOME_PARTNERS: HomePartnersContent = {
