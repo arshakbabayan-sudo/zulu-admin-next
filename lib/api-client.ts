@@ -84,7 +84,26 @@ export async function apiFetchJson<T>(
   }
 
   if (!res.ok) {
-    const msg = isApiError(json) ? json.message : `HTTP ${res.status}`;
+    // Surface field-level validation reasons rather than the generic
+    // "Validation failed" Laravel uses for 422. This unblocks admin operators
+    // who need to know *which* rule failed (e.g. "A user with this business
+    // email already exists.") — caught 2026-05-15 when approving Letour
+    // application returned a generic 'Validation failed' modal.
+    let msg: string = `HTTP ${res.status}`;
+    if (isApiError(json)) {
+      msg = json.message ?? msg;
+      const errors = (json as { errors?: Record<string, string[] | string> }).errors;
+      if (errors && typeof errors === "object") {
+        const firstFieldMsg = Object.values(errors)
+          .map((v) => (Array.isArray(v) ? v[0] : v))
+          .find((v) => typeof v === "string" && v.length > 0);
+        if (firstFieldMsg && (msg === "Validation failed" || !msg)) {
+          msg = String(firstFieldMsg);
+        } else if (firstFieldMsg && msg !== firstFieldMsg) {
+          msg = `${msg}: ${firstFieldMsg}`;
+        }
+      }
+    }
     throw new ApiRequestError(msg, res.status, isApiError(json) ? json : undefined);
   }
 
