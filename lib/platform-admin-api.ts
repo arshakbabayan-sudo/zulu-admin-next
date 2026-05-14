@@ -231,6 +231,13 @@ export type PlatformCompanyRow = {
   updated_at?: string | null;
 };
 
+export async function apiPlatformCompany(
+  token: string,
+  companyId: number
+): Promise<ApiSuccessEnvelope<PlatformCompanyRow>> {
+  return apiFetchJson(`${PA}/companies/${companyId}`, { method: "GET", token });
+}
+
 export async function apiPlatformCompanies(
   token: string,
   params: {
