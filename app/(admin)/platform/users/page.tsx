@@ -13,6 +13,7 @@ import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { PaginationBar } from "@/components/PaginationBar";
 import { StatusPill } from "@/components/ui/StatusPill";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
@@ -25,6 +26,7 @@ import { useCallback, useEffect, useState } from "react";
 
 export default function PlatformUsersPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<PlatformAdminUserRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -45,22 +47,22 @@ export default function PlatformUsersPage() {
       setMeta(res.meta);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else setErr(e instanceof ApiRequestError ? e.message : "Failed to load users");
+      else setErr(e instanceof ApiRequestError ? e.message : t("admin.users.err_load"));
     }
-  }, [token, allowed, page, search]);
+  }, [token, allowed, page, search, t]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   async function deactivate(id: number) {
-    if (!token || !window.confirm(`Deactivate user #${id}?`)) return;
+    if (!token || !window.confirm(t("admin.users.confirm_deactivate").replace("{id}", String(id)))) return;
     setBusyId(id);
     try {
       await apiDeactivatePlatformUser(token, id);
       await load();
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Deactivate failed");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.users.err_deactivate"));
     } finally {
       setBusyId(null);
     }
@@ -69,7 +71,7 @@ export default function PlatformUsersPage() {
   if (!allowed || forbidden) {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">Users</h1>
+        <h1 className="admin-page-title">{t("admin.users.title")}</h1>
         <div className="admin-card p-4">
           <ForbiddenNotice messageKey={!allowed ? "admin.forbidden.platform_users" : undefined} />
         </div>
@@ -81,10 +83,13 @@ export default function PlatformUsersPage() {
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="admin-page-title">Platform users</h1>
+          <h1 className="admin-page-title">{t("admin.users.title_long")}</h1>
           {meta && (
             <p className="mt-1 text-sm text-fg-t6">
-              {meta.total} total · page {meta.current_page} of {meta.last_page}
+              {t("admin.users.meta_summary")
+                .replace("{total}", String(meta.total))
+                .replace("{current}", String(meta.current_page))
+                .replace("{last}", String(meta.last_page))}
             </p>
           )}
         </div>
@@ -104,7 +109,7 @@ export default function PlatformUsersPage() {
             <path d="m21 21-4.3-4.3" />
           </svg>
           <input
-            placeholder="Search name or email…"
+            placeholder={t("admin.users.search_placeholder")}
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             className="h-9 w-full rounded-zulu border border-default bg-white pl-9 pr-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
@@ -114,7 +119,7 @@ export default function PlatformUsersPage() {
           type="submit"
           className="inline-flex h-9 items-center rounded-zulu bg-primary px-4 text-sm font-semibold text-white transition hover:opacity-90"
         >
-          Search
+          {t("common.search")}
         </button>
       </form>
 
@@ -128,19 +133,19 @@ export default function PlatformUsersPage() {
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead className="border-b border-default bg-figma-bg-1 text-xs font-medium uppercase tracking-wide text-fg-t6">
               <tr>
-                <th className="px-4 py-3">ID</th>
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Email</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Companies</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+                <th className="px-4 py-3">{t("admin.users.col_id")}</th>
+                <th className="px-4 py-3">{t("admin.users.col_name")}</th>
+                <th className="px-4 py-3">{t("admin.users.col_email")}</th>
+                <th className="px-4 py-3">{t("admin.users.col_status")}</th>
+                <th className="px-4 py-3">{t("admin.users.col_companies")}</th>
+                <th className="px-4 py-3 text-right">{t("admin.users.col_actions")}</th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-12 text-center text-sm text-fg-t6">
-                    No users found.
+                    {t("admin.users.empty")}
                   </td>
                 </tr>
               )}
@@ -176,7 +181,7 @@ export default function PlatformUsersPage() {
                       onClick={() => deactivate(r.id)}
                       className="inline-flex h-8 items-center rounded-zulu border border-error-200 bg-white px-3 text-xs font-medium text-error-700 transition hover:bg-error-50 disabled:opacity-40"
                     >
-                      Deactivate
+                      {t("admin.users.btn_deactivate")}
                     </button>
                   </td>
                 </tr>
@@ -189,7 +194,7 @@ export default function PlatformUsersPage() {
       {/* Mobile card list */}
       <div className="space-y-3 md:hidden">
         {rows.length === 0 && (
-          <div className="admin-card p-6 text-center text-sm text-fg-t6">No users found.</div>
+          <div className="admin-card p-6 text-center text-sm text-fg-t6">{t("admin.users.empty")}</div>
         )}
         {rows.map((r) => (
           <div key={r.id} className="admin-card p-4 space-y-3">
@@ -218,7 +223,7 @@ export default function PlatformUsersPage() {
                 onClick={() => deactivate(r.id)}
                 className="inline-flex h-9 w-full items-center justify-center rounded-zulu border border-error-200 bg-white px-3 text-sm font-medium text-error-700 transition hover:bg-error-50 disabled:opacity-40"
               >
-                Deactivate
+                {t("admin.users.btn_deactivate")}
               </button>
             </div>
           </div>

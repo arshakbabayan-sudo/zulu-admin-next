@@ -3,6 +3,7 @@
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { PaginationBar } from "@/components/PaginationBar";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
@@ -16,6 +17,7 @@ import { useCallback, useEffect, useState } from "react";
 
 export default function SellerApplicationsPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<SellerApplicationRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -40,9 +42,9 @@ export default function SellerApplicationsPage() {
       setMeta(res.meta);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else setErr(e instanceof ApiRequestError ? e.message : "Failed to load");
+      else setErr(e instanceof ApiRequestError ? e.message : t("admin.seller_applications.err_load"));
     }
-  }, [token, allowed, page, statusFilter]);
+  }, [token, allowed, page, statusFilter, t]);
 
   useEffect(() => {
     load();
@@ -50,13 +52,13 @@ export default function SellerApplicationsPage() {
 
   async function approve(id: number) {
     if (!token) return;
-    const notes = window.prompt("Optional notes") ?? "";
+    const notes = window.prompt(t("admin.seller_applications.prompt_optional_notes")) ?? "";
     setBusyId(id);
     try {
       await apiApproveSellerApplication(token, id, notes || undefined);
       await load();
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Approve failed");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.seller_applications.err_approve"));
     } finally {
       setBusyId(null);
     }
@@ -64,9 +66,9 @@ export default function SellerApplicationsPage() {
 
   async function reject(id: number) {
     if (!token) return;
-    const rejection_reason = window.prompt("Rejection reason (required)") ?? "";
+    const rejection_reason = window.prompt(t("admin.seller_applications.prompt_rejection_reason")) ?? "";
     if (!rejection_reason.trim()) {
-      alert("Rejection reason is required by the API.");
+      alert(t("admin.seller_applications.err_reason_required"));
       return;
     }
     setBusyId(id);
@@ -74,7 +76,7 @@ export default function SellerApplicationsPage() {
       await apiRejectSellerApplication(token, id, rejection_reason.trim());
       await load();
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Reject failed");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.seller_applications.err_reject"));
     } finally {
       setBusyId(null);
     }
@@ -83,7 +85,7 @@ export default function SellerApplicationsPage() {
   if (!allowed) {
     return (
       <div>
-        <h1 className="admin-page-title">Seller applications</h1>
+        <h1 className="admin-page-title">{t("admin.seller_applications.title")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -94,7 +96,7 @@ export default function SellerApplicationsPage() {
   if (forbidden) {
     return (
       <div>
-        <h1 className="admin-page-title">Seller applications</h1>
+        <h1 className="admin-page-title">{t("admin.seller_applications.title")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -104,10 +106,10 @@ export default function SellerApplicationsPage() {
 
   return (
     <div>
-      <h1 className="admin-page-title">Seller applications</h1>
+      <h1 className="admin-page-title">{t("admin.seller_applications.title")}</h1>
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <label className="text-sm text-fg-t6">
-          Status filter
+          {t("admin.seller_applications.filter_status")}
           <select
             value={statusFilter}
             onChange={(e) => {
@@ -116,11 +118,11 @@ export default function SellerApplicationsPage() {
             }}
             className="ml-2 rounded border border-default px-2 py-1 text-sm"
           >
-            <option value="">Default queue (pending / under review)</option>
-            <option value="pending">pending</option>
-            <option value="under_review">under_review</option>
-            <option value="approved">approved</option>
-            <option value="rejected">rejected</option>
+            <option value="">{t("admin.seller_applications.filter_default_queue")}</option>
+            <option value="pending">{t("admin.seller_applications.status_pending")}</option>
+            <option value="under_review">{t("admin.seller_applications.status_under_review")}</option>
+            <option value="approved">{t("admin.seller_applications.status_approved")}</option>
+            <option value="rejected">{t("admin.seller_applications.status_rejected")}</option>
           </select>
         </label>
       </div>
@@ -129,12 +131,12 @@ export default function SellerApplicationsPage() {
         <table className="w-full min-w-[800px] text-left text-sm">
           <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
-              <th className="px-3 py-2">ID</th>
-              <th className="px-3 py-2">Company</th>
-              <th className="px-3 py-2">Service</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Applied</th>
-              <th className="px-3 py-2">Actions</th>
+              <th className="px-3 py-2">{t("admin.seller_applications.col_id")}</th>
+              <th className="px-3 py-2">{t("admin.seller_applications.col_company")}</th>
+              <th className="px-3 py-2">{t("admin.seller_applications.col_service")}</th>
+              <th className="px-3 py-2">{t("admin.seller_applications.col_status")}</th>
+              <th className="px-3 py-2">{t("admin.seller_applications.col_applied")}</th>
+              <th className="px-3 py-2">{t("admin.seller_applications.col_actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -152,7 +154,7 @@ export default function SellerApplicationsPage() {
                     onClick={() => approve(r.id)}
                     className="text-xs text-emerald-700 underline disabled:opacity-40"
                   >
-                    Approve
+                    {t("admin.seller_applications.btn_approve")}
                   </button>
                   <button
                     type="button"
@@ -160,7 +162,7 @@ export default function SellerApplicationsPage() {
                     onClick={() => reject(r.id)}
                     className="text-xs text-error-700 underline disabled:opacity-40"
                   >
-                    Reject
+                    {t("admin.seller_applications.btn_reject")}
                   </button>
                 </td>
               </tr>

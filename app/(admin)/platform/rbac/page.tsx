@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
@@ -29,6 +30,7 @@ type Stats = {
 
 export default function PlatformRbacPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
 
   const [stats, setStats] = useState<Stats | null>(null);
@@ -74,7 +76,7 @@ export default function PlatformRbacPage() {
         if (e instanceof ApiRequestError && e.status === 403) {
           setForbidden(true);
         } else {
-          setError(e instanceof Error ? e.message : "Failed to load");
+          setError(e instanceof Error ? e.message : t("admin.rbac.err_load"));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -84,7 +86,7 @@ export default function PlatformRbacPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, allowed, baseURL]);
+  }, [token, allowed, baseURL, t]);
 
   const filteredPermissions = useMemo(() => {
     if (!filter.trim()) return permissions;
@@ -100,7 +102,7 @@ export default function PlatformRbacPage() {
   if (!allowed || forbidden) {
     return (
       <div>
-        <h1 className="admin-page-title">Roles & permissions</h1>
+        <h1 className="admin-page-title">{t("admin.rbac.title")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -110,22 +112,19 @@ export default function PlatformRbacPage() {
 
   return (
     <div>
-      <h1 className="admin-page-title">Roles & permissions</h1>
-      <p className="admin-page-subtitle">
-        Read-only inventory of the seeded RBAC scheme. Use this for security audits
-        before any fine-grained refactor.
-      </p>
+      <h1 className="admin-page-title">{t("admin.rbac.title")}</h1>
+      <p className="admin-page-subtitle">{t("admin.rbac.subtitle")}</p>
 
       {error && <p className="mt-2 text-sm text-error-600">{error}</p>}
-      {loading && <p className="mt-4 text-sm text-fg-t6">Loading…</p>}
+      {loading && <p className="mt-4 text-sm text-fg-t6">{t("common.loading")}</p>}
 
       {stats && (
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Roles" value={stats.total_roles.toLocaleString()} />
-          <StatCard label="Permissions" value={stats.total_permissions.toLocaleString()} />
-          <StatCard label="Memberships" value={stats.total_memberships.toLocaleString()} />
+          <StatCard label={t("admin.rbac.stat_roles")} value={stats.total_roles.toLocaleString()} />
+          <StatCard label={t("admin.rbac.stat_permissions")} value={stats.total_permissions.toLocaleString()} />
+          <StatCard label={t("admin.rbac.stat_memberships")} value={stats.total_memberships.toLocaleString()} />
           <StatCard
-            label="Super admins"
+            label={t("admin.rbac.stat_super_admins")}
             value={stats.super_admins.toLocaleString()}
             tone="warn"
           />
@@ -134,11 +133,11 @@ export default function PlatformRbacPage() {
 
       <div className="mt-6 flex items-end gap-2 rounded border border-default bg-white p-4">
         <label className="flex-1 text-xs text-fg-t6">
-          Filter permissions
+          {t("admin.rbac.filter_permissions")}
           <input
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            placeholder="e.g. inventory, payment, voucher"
+            placeholder={t("admin.rbac.filter_placeholder")}
             className="mt-1 w-full rounded border border-default px-2 py-1 text-sm"
           />
         </label>
@@ -148,7 +147,7 @@ export default function PlatformRbacPage() {
             onClick={() => setFilter("")}
             className="rounded border border-default bg-white px-3 py-1.5 text-sm hover:bg-figma-bg-1"
           >
-            Reset
+            {t("common.reset")}
           </button>
         )}
       </div>
@@ -157,7 +156,7 @@ export default function PlatformRbacPage() {
         <table className="min-w-full text-left text-sm">
           <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7 sticky top-0">
             <tr>
-              <th className="px-3 py-2 text-left">Role</th>
+              <th className="px-3 py-2 text-left">{t("admin.rbac.col_role")}</th>
               {filteredPermissions.map((p) => (
                 <th
                   key={p.id}
@@ -174,7 +173,7 @@ export default function PlatformRbacPage() {
             {roles.length === 0 && !loading && (
               <tr>
                 <td colSpan={filteredPermissions.length + 1} className="px-3 py-6 text-center text-fg-t6">
-                  No roles configured.
+                  {t("admin.rbac.empty")}
                 </td>
               </tr>
             )}
