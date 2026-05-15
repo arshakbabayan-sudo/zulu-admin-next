@@ -2,6 +2,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import {
@@ -23,6 +24,7 @@ export default function CompanyApplicationDetailPage() {
   const router = useRouter();
   const id = Number(params.id);
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [row, setRow] = useState<CompanyApplicationRow | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -38,10 +40,10 @@ export default function CompanyApplicationDetailPage() {
       setRow(res.data);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else if (e instanceof ApiRequestError && e.status === 404) setErr("Application not found.");
-      else setErr(e instanceof ApiRequestError ? e.message : "Failed to load");
+      else if (e instanceof ApiRequestError && e.status === 404) setErr(t("admin.company_application_detail.err_not_found"));
+      else setErr(e instanceof ApiRequestError ? e.message : t("admin.company_applications.err_load"));
     }
-  }, [token, allowed, id]);
+  }, [token, allowed, id, t]);
 
   useEffect(() => {
     load();
@@ -49,13 +51,13 @@ export default function CompanyApplicationDetailPage() {
 
   async function approve() {
     if (!token || !row) return;
-    if (!window.confirm("Approve this application? A company and company_admin user will be created.")) return;
+    if (!window.confirm(t("admin.company_application_detail.confirm_approve"))) return;
     setBusy(true);
     try {
       await apiApproveCompanyApplication(token, row.id);
       await load();
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Approve failed");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.pending_review.err_approve"));
     } finally {
       setBusy(false);
     }
@@ -63,9 +65,9 @@ export default function CompanyApplicationDetailPage() {
 
   async function reject() {
     if (!token || !row) return;
-    const rejection_reason = window.prompt("Rejection reason (required)") ?? "";
+    const rejection_reason = window.prompt(t("admin.company_application_detail.prompt_rejection_reason")) ?? "";
     if (!rejection_reason.trim()) {
-      alert("Rejection reason is required by the API.");
+      alert(t("admin.company_application_detail.err_rejection_reason_required"));
       return;
     }
     setBusy(true);
@@ -73,7 +75,7 @@ export default function CompanyApplicationDetailPage() {
       await apiRejectCompanyApplication(token, row.id, rejection_reason.trim());
       await load();
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Reject failed");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.pending_review.err_reject"));
     } finally {
       setBusy(false);
     }
@@ -82,7 +84,7 @@ export default function CompanyApplicationDetailPage() {
   if (!allowed || forbidden) {
     return (
       <div>
-        <h1 className="admin-page-title">Company application</h1>
+        <h1 className="admin-page-title">{t("admin.company_application_detail.title")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -95,14 +97,14 @@ export default function CompanyApplicationDetailPage() {
       <div>
         <p className="text-sm text-red-600">{err}</p>
         <Link href="/platform/company-applications" className="mt-4 inline-block text-sm text-blue-700 underline">
-          Back to list
+          {t("admin.company_application_detail.back_to_list")}
         </Link>
       </div>
     );
   }
 
   if (!row) {
-    return <p className="text-sm text-slate-600">Loading...</p>;
+    return <p className="text-sm text-slate-600">{t("common.loading")}</p>;
   }
 
   return (
@@ -113,57 +115,57 @@ export default function CompanyApplicationDetailPage() {
           onClick={() => router.push("/platform/company-applications")}
           className="text-blue-700 underline"
         >
-          ← Company applications
+          ← {t("admin.company_applications.title")}
         </button>
       </div>
-      <h1 className="admin-page-title">Application #{row.id}</h1>
+      <h1 className="admin-page-title">{t("admin.company_application_detail.application_number").replace("{id}", String(row.id))}</h1>
       {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
 
       <dl className="mt-6 grid max-w-2xl gap-3 text-sm sm:grid-cols-2">
         <div>
-          <dt className="text-xs uppercase text-slate-700">Status</dt>
+          <dt className="text-xs uppercase text-slate-700">{t("admin.company_application_detail.label_status")}</dt>
           <dd className="font-medium">{row.status}</dd>
         </div>
         <div>
-          <dt className="text-xs uppercase text-slate-700">Company name</dt>
+          <dt className="text-xs uppercase text-slate-700">{t("admin.company_application_detail.label_company_name")}</dt>
           <dd>{row.company_name}</dd>
         </div>
         <div>
-          <dt className="text-xs uppercase text-slate-700">Business email</dt>
+          <dt className="text-xs uppercase text-slate-700">{t("admin.company_application_detail.label_business_email")}</dt>
           <dd>{row.business_email}</dd>
         </div>
         <div>
-          <dt className="text-xs uppercase text-slate-700">Contact</dt>
+          <dt className="text-xs uppercase text-slate-700">{t("admin.company_application_detail.label_contact")}</dt>
           <dd>
             {row.contact_person} - {row.position}
           </dd>
         </div>
         <div className="sm:col-span-2">
-          <dt className="text-xs uppercase text-slate-700">Legal address</dt>
+          <dt className="text-xs uppercase text-slate-700">{t("admin.company_application_detail.label_legal_address")}</dt>
           <dd>{row.legal_address}</dd>
         </div>
         <div className="sm:col-span-2">
-          <dt className="text-xs uppercase text-slate-700">Actual address</dt>
+          <dt className="text-xs uppercase text-slate-700">{t("admin.company_application_detail.label_actual_address")}</dt>
           <dd>{row.actual_address}</dd>
         </div>
         <div>
-          <dt className="text-xs uppercase text-slate-700">Country / city</dt>
+          <dt className="text-xs uppercase text-slate-700">{t("admin.company_application_detail.label_country_city")}</dt>
           <dd>
             {row.country} / {row.city}
           </dd>
         </div>
         <div>
-          <dt className="text-xs uppercase text-slate-700">Phone / tax ID</dt>
+          <dt className="text-xs uppercase text-slate-700">{t("admin.company_application_detail.label_phone_tax")}</dt>
           <dd>
             {row.phone} / {row.tax_id}
           </dd>
         </div>
         <div>
-          <dt className="text-xs uppercase text-slate-700">Submitted</dt>
+          <dt className="text-xs uppercase text-slate-700">{t("admin.company_applications.col_submitted")}</dt>
           <dd className="text-slate-600">{row.submitted_at ?? "-"}</dd>
         </div>
         <div>
-          <dt className="text-xs uppercase text-slate-700">Reviewed</dt>
+          <dt className="text-xs uppercase text-slate-700">{t("admin.company_application_detail.label_reviewed")}</dt>
           <dd className="text-slate-600">
             {row.reviewed_at ?? "-"}
             {row.reviewer ? ` | ${row.reviewer.name}` : ""}
@@ -171,21 +173,21 @@ export default function CompanyApplicationDetailPage() {
         </div>
         {row.rejection_reason && (
           <div className="sm:col-span-2">
-            <dt className="text-xs uppercase text-slate-700">Rejection reason</dt>
+            <dt className="text-xs uppercase text-slate-700">{t("admin.company_application_detail.label_rejection_reason")}</dt>
             <dd>{row.rejection_reason}</dd>
           </div>
         )}
         {row.notes && (
           <div className="sm:col-span-2">
-            <dt className="text-xs uppercase text-slate-700">Notes</dt>
+            <dt className="text-xs uppercase text-slate-700">{t("admin.company_application_detail.label_notes")}</dt>
             <dd>{row.notes}</dd>
           </div>
         )}
         <div>
-          <dt className="text-xs uppercase text-slate-700">Documents on disk</dt>
+          <dt className="text-xs uppercase text-slate-700">{t("admin.company_application_detail.label_documents")}</dt>
           <dd>
-            State cert: {row.state_certificate_path ? "yes" : "no"} | License:{" "}
-            {row.license_path ? "yes" : "no"}
+            {t("admin.company_application_detail.label_state_cert")}: {row.state_certificate_path ? t("admin.inventory_hotels.opt_yes") : t("admin.inventory_hotels.opt_no")} | {t("admin.company_application_detail.label_license")}:{" "}
+            {row.license_path ? t("admin.inventory_hotels.opt_yes") : t("admin.inventory_hotels.opt_no")}
           </dd>
         </div>
       </dl>
@@ -198,7 +200,7 @@ export default function CompanyApplicationDetailPage() {
             onClick={() => approve()}
             className="rounded border border-emerald-600 bg-emerald-50 px-3 py-1.5 text-sm text-emerald-900 disabled:opacity-40"
           >
-            Approve
+            {t("admin.pending_review.btn_approve")}
           </button>
           <button
             type="button"
@@ -206,7 +208,7 @@ export default function CompanyApplicationDetailPage() {
             onClick={() => reject()}
             className="rounded border border-red-300 bg-red-50 px-3 py-1.5 text-sm text-red-900 disabled:opacity-40"
           >
-            Reject
+            {t("admin.pending_review.btn_reject")}
           </button>
         </div>
       )}

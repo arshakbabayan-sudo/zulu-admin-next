@@ -4,6 +4,7 @@ import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { PaginationBar } from "@/components/PaginationBar";
 import { StatusPill } from "@/components/ui/StatusPill";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
@@ -13,6 +14,7 @@ import { useCallback, useEffect, useState } from "react";
 
 export default function CompanyApplicationsPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<CompanyApplicationRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -34,9 +36,9 @@ export default function CompanyApplicationsPage() {
       setMeta(res.meta);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else setErr(e instanceof ApiRequestError ? e.message : "Failed to load");
+      else setErr(e instanceof ApiRequestError ? e.message : t("admin.company_applications.err_load"));
     }
-  }, [token, allowed, page, statusFilter]);
+  }, [token, allowed, page, statusFilter, t]);
 
   useEffect(() => {
     load();
@@ -45,7 +47,7 @@ export default function CompanyApplicationsPage() {
   if (!allowed || forbidden) {
     return (
       <div>
-        <h1 className="admin-page-title">Company applications</h1>
+        <h1 className="admin-page-title">{t("admin.company_applications.title")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -55,10 +57,10 @@ export default function CompanyApplicationsPage() {
 
   return (
     <div>
-      <h1 className="admin-page-title">Company applications</h1>
+      <h1 className="admin-page-title">{t("admin.company_applications.title")}</h1>
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <label className="text-sm text-fg-t6">
-          Status
+          {t("admin.approvals.filter_status")}
           <select
             value={statusFilter}
             onChange={(e) => {
@@ -67,11 +69,11 @@ export default function CompanyApplicationsPage() {
             }}
             className="ml-2 rounded border border-default px-2 py-1 text-sm"
           >
-            <option value="">All</option>
-            <option value="pending">pending</option>
-            <option value="under_review">under_review</option>
-            <option value="approved">approved</option>
-            <option value="rejected">rejected</option>
+            <option value="">{t("common.all")}</option>
+            <option value="pending">{t("admin.approvals.status_pending")}</option>
+            <option value="under_review">{t("admin.approvals.status_under_review")}</option>
+            <option value="approved">{t("admin.approvals.status_approved")}</option>
+            <option value="rejected">{t("admin.approvals.status_rejected")}</option>
           </select>
         </label>
       </div>
@@ -80,11 +82,11 @@ export default function CompanyApplicationsPage() {
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
-              <th className="px-3 py-2">ID</th>
-              <th className="px-3 py-2">Company</th>
-              <th className="px-3 py-2">Email</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Submitted</th>
+              <th className="px-3 py-2">{t("admin.company_applications.col_id")}</th>
+              <th className="px-3 py-2">{t("admin.company_applications.col_company")}</th>
+              <th className="px-3 py-2">{t("admin.company_applications.col_email")}</th>
+              <th className="px-3 py-2">{t("admin.company_applications.col_status")}</th>
+              <th className="px-3 py-2">{t("admin.company_applications.col_submitted")}</th>
               <th className="px-3 py-2"> </th>
             </tr>
           </thead>
@@ -101,7 +103,7 @@ export default function CompanyApplicationsPage() {
                     href={`/platform/company-applications/${r.id}`}
                     className="text-xs text-info-700 underline"
                   >
-                    Open
+                    {t("admin.company_applications.btn_open")}
                   </Link>
                 </td>
               </tr>
