@@ -9,9 +9,13 @@ import {
   apiAdminLanguages,
   apiLocalizationCreateLanguage,
   apiLocalizationDeleteLanguage,
+  apiLocalizationScan,
+  apiLocalizationScanStatus,
   apiSetDefaultLanguage,
   apiEditLanguage,
   type LocalizationLanguageRow,
+  type ScanScope,
+  type ScanStatusResponse,
 } from "@/lib/localization-api";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -261,6 +265,152 @@ function AddModal({ onClose, onAdd }: {
   );
 }
 
+/* ── AI translator panel — Phase 13.6 ────────────────────── */
+function AiTranslatorPanel({ token }: { token: string }) {
+  const { t } = useLanguage();
+  const [busy, setBusy] = useState<null | ScanScope | "status">(null);
+  const [output, setOutput] = useState<string>("");
+  const [status, setStatus] = useState<ScanStatusResponse | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  const refreshStatus = useCallback(async () => {
+    if (!token) return;
+    setBusy("status");
+    setErr(null);
+    try {
+      const res = await apiLocalizationScanStatus(token);
+      setStatus(res.data);
+    } catch (e) {
+      setErr(e instanceof ApiRequestError ? e.message : "Status check failed");
+    } finally {
+      setBusy(null);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    refreshStatus();
+  }, [refreshStatus]);
+
+  async function runScan(scope: ScanScope, dryRun: boolean) {
+    if (!token) return;
+    setBusy(scope);
+    setErr(null);
+    setOutput("");
+    try {
+      const res = await apiLocalizationScan(token, { scope, dry_run: dryRun });
+      setOutput(res.data.output);
+      // Give the queue a moment, then refresh status so the user sees
+      // the bump in pending count.
+      setTimeout(() => { refreshStatus(); }, 500);
+    } catch (e) {
+      setErr(e instanceof ApiRequestError ? e.message : "Scan failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const pendingTotal = status?.pending?.total ?? 0;
+  const failedTotal = status?.failed?.total ?? 0;
+
+  return (
+    <div style={{
+      marginTop: 24, padding: 20, borderRadius: 12, border: "1px solid #e2e8f0",
+      backgroundColor: "#fafafa",
+    }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+        <h2 style={{ fontSize: 16, fontWeight: 600, color: "#1e293b" }}>
+          🤖 {t("admin.localization.ai_translator_title")}
+        </h2>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 13, color: "#475569" }}>
+          <span>{t("admin.localization.ai_pending")}: <b>{pendingTotal}</b></span>
+          {failedTotal > 0 && (
+            <span style={{ color: "#ef4444" }}>
+              {t("admin.localization.ai_failed")}: <b>{failedTotal}</b>
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={refreshStatus}
+            disabled={busy !== null}
+            style={{
+              padding: "4px 10px", borderRadius: 6, border: "1px solid #cbd5e1",
+              backgroundColor: "#fff", fontSize: 12, cursor: "pointer", color: "#475569",
+            }}
+          >
+            {busy === "status" ? "…" : t("admin.localization.ai_refresh")}
+          </button>
+        </div>
+      </div>
+
+      <p style={{ fontSize: 13, color: "#64748b", marginBottom: 16, lineHeight: 1.5 }}>
+        {t("admin.localization.ai_description")}
+      </p>
+
+      {err && <p style={{ color: "#ef4444", fontSize: 12, marginBottom: 12 }}>{err}</p>}
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
+        <button
+          type="button"
+          onClick={() => runScan("both", true)}
+          disabled={busy !== null}
+          style={{
+            padding: "8px 14px", borderRadius: 8, border: "1px solid #7c3aed",
+            backgroundColor: "#fff", color: "#7c3aed", fontSize: 13, fontWeight: 500,
+            cursor: busy !== null ? "wait" : "pointer", opacity: busy !== null ? 0.6 : 1,
+          }}
+        >
+          🔍 {t("admin.localization.ai_dry_run")}
+        </button>
+        <button
+          type="button"
+          onClick={() => runScan("ui", false)}
+          disabled={busy !== null}
+          style={{
+            padding: "8px 14px", borderRadius: 8, border: "none",
+            backgroundColor: "#7c3aed", color: "#fff", fontSize: 13, fontWeight: 500,
+            cursor: busy !== null ? "wait" : "pointer", opacity: busy !== null ? 0.6 : 1,
+          }}
+        >
+          ✨ {t("admin.localization.ai_scan_ui")}
+        </button>
+        <button
+          type="button"
+          onClick={() => runScan("content", false)}
+          disabled={busy !== null}
+          style={{
+            padding: "8px 14px", borderRadius: 8, border: "none",
+            backgroundColor: "#7c3aed", color: "#fff", fontSize: 13, fontWeight: 500,
+            cursor: busy !== null ? "wait" : "pointer", opacity: busy !== null ? 0.6 : 1,
+          }}
+        >
+          ✨ {t("admin.localization.ai_scan_content")}
+        </button>
+        <button
+          type="button"
+          onClick={() => runScan("both", false)}
+          disabled={busy !== null}
+          style={{
+            padding: "8px 14px", borderRadius: 8, border: "none",
+            backgroundColor: "#10b981", color: "#fff", fontSize: 13, fontWeight: 600,
+            cursor: busy !== null ? "wait" : "pointer", opacity: busy !== null ? 0.6 : 1,
+          }}
+        >
+          ✨ {t("admin.localization.ai_scan_both")}
+        </button>
+      </div>
+
+      {output && (
+        <pre style={{
+          backgroundColor: "#0f172a", color: "#e2e8f0", padding: 14, borderRadius: 8,
+          fontSize: 12, lineHeight: 1.55, overflowX: "auto", whiteSpace: "pre-wrap",
+          fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+          margin: 0,
+        }}>{output}</pre>
+      )}
+    </div>
+  );
+}
+
 /* ── main page ───────────────────────────────────────────── */
 export default function LocalizationLanguagesPage() {
   const { t } = useLanguage();
@@ -426,6 +576,8 @@ export default function LocalizationLanguagesPage() {
           </tbody>
         </table>
       </div>
+
+      {token && <AiTranslatorPanel token={token} />}
     </div>
   );
 }

@@ -247,3 +247,41 @@ export async function apiLocalizationTemplatePatch(
     body,
   });
 }
+
+/**
+ * Phase 13.6 — wake up the AI translator. POST kicks off the scan
+ * (queues jobs for every missing-locale gap). Pass `dry_run: true`
+ * to see counts without enqueueing anything.
+ */
+export type ScanScope = "ui" | "content" | "both";
+
+export type ScanResponse = {
+  scope: ScanScope;
+  dry_run: boolean;
+  overwrite: boolean;
+  output: string;
+};
+
+export async function apiLocalizationScan(
+  token: string,
+  body: {
+    scope?: ScanScope;
+    dry_run?: boolean;
+    overwrite?: boolean;
+    source?: string;
+    limit?: number;
+  } = {}
+): Promise<ApiSuccessEnvelope<ScanResponse>> {
+  return apiFetchJson(`${LOC}/scan`, { method: "POST", token, body });
+}
+
+export type ScanStatusResponse = {
+  pending: Record<string, number>;
+  failed: Record<string, number>;
+};
+
+export async function apiLocalizationScanStatus(
+  token: string
+): Promise<ApiSuccessEnvelope<ScanStatusResponse>> {
+  return apiFetchJson(`${LOC}/scan/status`, { method: "GET", token });
+}
