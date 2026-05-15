@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo } from "react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 
@@ -14,6 +15,7 @@ import { ForbiddenNotice } from "@/components/ForbiddenNotice";
  */
 export default function PlatformApiDocsPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
 
   const baseURL = useMemo(
@@ -70,7 +72,7 @@ export default function PlatformApiDocsPage() {
   if (!allowed) {
     return (
       <div>
-        <h1 className="admin-page-title">API documentation</h1>
+        <h1 className="admin-page-title">{t("admin.api_docs.title")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -81,19 +83,15 @@ export default function PlatformApiDocsPage() {
   return (
     <div>
       <h1 className="admin-page-title">API documentation</h1>
-      <p className="admin-page-subtitle">
-        Live OpenAPI 3.0 spec generated nightly from registered routes. Try-it-out works
-        with your current admin token.
-      </p>
+      <p className="admin-page-subtitle">{t("admin.api_docs.subtitle")}</p>
 
       <div className="mt-6 rounded border border-default bg-white p-4 text-sm text-fg-t7">
         <p>
-          Spec source: <code className="font-mono">storage/app/openapi.json</code> on the
-          backend, regenerated daily at 04:00 UTC (
-          <code className="font-mono">api:generate-openapi</code> scheduler).
+          {t("admin.api_docs.spec_source_prefix")} <code className="font-mono">storage/app/openapi.json</code> {t("admin.api_docs.spec_source_suffix")} (
+          <code className="font-mono">api:generate-openapi</code> {t("admin.api_docs.spec_scheduler")}).
         </p>
         <p className="mt-1">
-          To regenerate now from the backend:{" "}
+          {t("admin.api_docs.regenerate_hint")}{" "}
           <code className="font-mono">php artisan api:generate-openapi</code>
         </p>
       </div>

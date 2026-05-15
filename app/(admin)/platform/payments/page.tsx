@@ -4,6 +4,7 @@ import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { PaginationBar } from "@/components/PaginationBar";
 import { StatusPill } from "@/components/ui/StatusPill";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
@@ -12,6 +13,7 @@ import { useCallback, useEffect, useState } from "react";
 
 export default function PlatformPaymentsPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<PlatformPaymentRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -34,9 +36,9 @@ export default function PlatformPaymentsPage() {
       setMeta(res.meta);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else setErr(e instanceof ApiRequestError ? e.message : "Failed to load payments");
+      else setErr(e instanceof ApiRequestError ? e.message : t("admin.payments.err_load"));
     }
-  }, [token, allowed, page, statusFilter]);
+  }, [token, allowed, page, statusFilter, t]);
 
   useEffect(() => {
     load();
@@ -45,7 +47,7 @@ export default function PlatformPaymentsPage() {
   if (!allowed) {
     return (
       <div>
-        <h1 className="admin-page-title">Payments</h1>
+        <h1 className="admin-page-title">{t("admin.payments.title_short")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -56,7 +58,7 @@ export default function PlatformPaymentsPage() {
   if (forbidden) {
     return (
       <div>
-        <h1 className="admin-page-title">Payments</h1>
+        <h1 className="admin-page-title">{t("admin.payments.title_short")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -66,17 +68,17 @@ export default function PlatformPaymentsPage() {
 
   return (
     <div>
-      <h1 className="admin-page-title">Platform payments</h1>
+      <h1 className="admin-page-title">{t("admin.payments.title")}</h1>
       <div className="mt-4">
         <label className="text-sm text-fg-t6">
-          Status
+          {t("admin.approvals.filter_status")}
           <input
             value={statusFilter}
             onChange={(e) => {
               setPage(1);
               setStatusFilter(e.target.value);
             }}
-            placeholder="e.g. completed"
+            placeholder={t("admin.payments.placeholder_status")}
             className="ml-2 rounded border border-default px-2 py-1 text-sm"
           />
         </label>
@@ -86,13 +88,13 @@ export default function PlatformPaymentsPage() {
         <table className="w-full min-w-[800px] text-left text-sm">
           <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
-              <th className="px-3 py-2">ID</th>
-              <th className="px-3 py-2">Amount</th>
-              <th className="px-3 py-2">Currency</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Method</th>
-              <th className="px-3 py-2">Paid at</th>
-              <th className="px-3 py-2">Invoice</th>
+              <th className="px-3 py-2">{t("admin.invoices.col_id")}</th>
+              <th className="px-3 py-2">{t("admin.invoices.col_amount")}</th>
+              <th className="px-3 py-2">{t("admin.payments.col_currency")}</th>
+              <th className="px-3 py-2">{t("admin.invoices.col_status")}</th>
+              <th className="px-3 py-2">{t("admin.payments.col_method")}</th>
+              <th className="px-3 py-2">{t("admin.payments.col_paid_at")}</th>
+              <th className="px-3 py-2">{t("admin.payments.col_invoice")}</th>
             </tr>
           </thead>
           <tbody>
