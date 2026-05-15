@@ -2,6 +2,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import {
@@ -25,6 +26,7 @@ import { useCallback, useEffect, useState } from "react";
 
 export default function PlatformLocationsPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [countries, setCountries] = useState<LocationCountryRow[]>([]);
   const [regions, setRegions] = useState<LocationRegionRow[]>([]);
@@ -58,9 +60,9 @@ export default function PlatformLocationsPage() {
       setCountries(res.data);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else setErr(e instanceof ApiRequestError ? e.message : "Failed to load countries");
+      else setErr(e instanceof ApiRequestError ? e.message : t("admin.locations.err_load_countries"));
     }
-  }, [token, allowed]);
+  }, [token, allowed, t]);
 
   const loadRegions = useCallback(
     async (countryId: number) => {
@@ -70,10 +72,10 @@ export default function PlatformLocationsPage() {
         const res = await apiLocationRegions(token, countryId);
         setRegions(res.data);
       } catch (e) {
-        setErr(e instanceof ApiRequestError ? e.message : "Failed to load regions");
+        setErr(e instanceof ApiRequestError ? e.message : t("admin.locations.err_load_regions"));
       }
     },
-    [token, allowed]
+    [token, allowed, t]
   );
 
   const loadCities = useCallback(
@@ -84,10 +86,10 @@ export default function PlatformLocationsPage() {
         const res = await apiLocationCities(token, regionId);
         setCities(res.data);
       } catch (e) {
-        setErr(e instanceof ApiRequestError ? e.message : "Failed to load cities");
+        setErr(e instanceof ApiRequestError ? e.message : t("admin.locations.err_load_cities"));
       }
     },
-    [token, allowed]
+    [token, allowed, t]
   );
 
   useEffect(() => {
@@ -110,7 +112,7 @@ export default function PlatformLocationsPage() {
 
   async function addCountry() {
     if (!token || !cName.trim() || cCode.trim().length !== 2) {
-      alert("Name and 2-letter code are required.");
+      alert(t("admin.locations.err_name_code_required"));
       return;
     }
     setBusy(true);
@@ -128,7 +130,7 @@ export default function PlatformLocationsPage() {
       setCSort("0");
       await loadCountries();
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Create country failed");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.locations.err_create_country"));
     } finally {
       setBusy(false);
     }
@@ -136,10 +138,10 @@ export default function PlatformLocationsPage() {
 
   async function updCountry(row: LocationCountryRow) {
     if (!token) return;
-    const name = window.prompt("Country name", row.name) ?? row.name;
-    const code = window.prompt("Country code (2 chars)", row.code) ?? row.code;
+    const name = window.prompt(t("admin.locations.prompt_country_name"), row.name) ?? row.name;
+    const code = window.prompt(t("admin.locations.prompt_country_code"), row.code) ?? row.code;
     if (code.trim().length !== 2) {
-      alert("Code must be 2 characters.");
+      alert(t("admin.locations.err_code_2_chars"));
       return;
     }
     setBusy(true);
@@ -155,7 +157,7 @@ export default function PlatformLocationsPage() {
       await loadCountries();
       if (selectedCountryId === row.id) await loadRegions(row.id);
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Update failed");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.locations.err_update"));
     } finally {
       setBusy(false);
     }
@@ -163,7 +165,7 @@ export default function PlatformLocationsPage() {
 
   async function delCountry(id: number) {
     if (!token) return;
-    if (!window.confirm("Delete this country?")) return;
+    if (!window.confirm(t("admin.locations.confirm_delete_country"))) return;
     setBusy(true);
     try {
       await apiLocationCountryDelete(token, id);
@@ -173,7 +175,7 @@ export default function PlatformLocationsPage() {
       }
       await loadCountries();
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Delete failed");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.locations.err_delete"));
     } finally {
       setBusy(false);
     }
@@ -195,7 +197,7 @@ export default function PlatformLocationsPage() {
       setRSort("0");
       await loadRegions(selectedCountryId);
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Create region failed");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.locations.err_create_region"));
     } finally {
       setBusy(false);
     }
@@ -203,7 +205,7 @@ export default function PlatformLocationsPage() {
 
   async function updRegion(row: LocationRegionRow) {
     if (!token) return;
-    const name = window.prompt("Region name", row.name) ?? row.name;
+    const name = window.prompt(t("admin.locations.prompt_region_name"), row.name) ?? row.name;
     setBusy(true);
     try {
       await apiLocationRegionUpdate(token, {
@@ -215,7 +217,7 @@ export default function PlatformLocationsPage() {
       });
       if (selectedCountryId != null) await loadRegions(selectedCountryId);
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Update failed");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.locations.err_update"));
     } finally {
       setBusy(false);
     }
@@ -223,14 +225,14 @@ export default function PlatformLocationsPage() {
 
   async function delRegion(id: number) {
     if (!token) return;
-    if (!window.confirm("Delete this region?")) return;
+    if (!window.confirm(t("admin.locations.confirm_delete_region"))) return;
     setBusy(true);
     try {
       await apiLocationRegionDelete(token, id);
       if (selectedRegionId === id) setSelectedRegionId(null);
       if (selectedCountryId != null) await loadRegions(selectedCountryId);
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Delete failed");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.locations.err_delete"));
     } finally {
       setBusy(false);
     }
@@ -254,7 +256,7 @@ export default function PlatformLocationsPage() {
       setCiLng("");
       await loadCities(selectedRegionId);
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Create city failed");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.locations.err_create_city"));
     } finally {
       setBusy(false);
     }
@@ -262,7 +264,7 @@ export default function PlatformLocationsPage() {
 
   async function updCity(row: LocationCityRow) {
     if (!token) return;
-    const name = window.prompt("City name", row.name) ?? row.name;
+    const name = window.prompt(t("admin.locations.prompt_city_name"), row.name) ?? row.name;
     setBusy(true);
     try {
       const lat =
@@ -283,7 +285,7 @@ export default function PlatformLocationsPage() {
       });
       if (selectedRegionId != null) await loadCities(selectedRegionId);
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Update failed");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.locations.err_update"));
     } finally {
       setBusy(false);
     }
@@ -291,13 +293,13 @@ export default function PlatformLocationsPage() {
 
   async function delCity(id: number) {
     if (!token) return;
-    if (!window.confirm("Delete this city?")) return;
+    if (!window.confirm(t("admin.locations.confirm_delete_city"))) return;
     setBusy(true);
     try {
       await apiLocationCityDelete(token, id);
       if (selectedRegionId != null) await loadCities(selectedRegionId);
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Delete failed");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.locations.err_delete"));
     } finally {
       setBusy(false);
     }
@@ -306,7 +308,7 @@ export default function PlatformLocationsPage() {
   if (!allowed || forbidden) {
     return (
       <div>
-        <h1 className="admin-page-title">Locations</h1>
+        <h1 className="admin-page-title">{t("admin.locations.title")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -316,18 +318,15 @@ export default function PlatformLocationsPage() {
 
   return (
     <div>
-      <h1 className="admin-page-title">Locations / destinations</h1>
-      <p className="mt-1 text-sm text-fg-t7">
-        GET|POST /api/locations/countries, /countries/{"{id}"}/regions, POST /regions, GET
-        /regions/{"{id}"}/cities, POST /cities - super admin only
-      </p>
+      <h1 className="admin-page-title">{t("admin.locations.title_long")}</h1>
+      <p className="mt-1 text-sm text-fg-t7">{t("admin.locations.subtitle")}</p>
       {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
 
       <section className="mt-6 rounded border border-default bg-white p-4">
-        <h2 className="text-sm font-semibold">Countries</h2>
+        <h2 className="text-sm font-semibold">{t("admin.locations.section_countries")}</h2>
         <div className="mt-3 flex flex-wrap items-end gap-2 text-sm">
           <label>
-            Name
+            {t("admin.locations.field_name")}
             <input
               value={cName}
               onChange={(e) => setCName(e.target.value)}
@@ -335,7 +334,7 @@ export default function PlatformLocationsPage() {
             />
           </label>
           <label>
-            Code
+            {t("admin.locations.field_code")}
             <input
               value={cCode}
               onChange={(e) => setCCode(e.target.value.toUpperCase())}
@@ -344,7 +343,7 @@ export default function PlatformLocationsPage() {
             />
           </label>
           <label>
-            Flag
+            {t("admin.locations.field_flag")}
             <input
               value={cFlag}
               onChange={(e) => setCFlag(e.target.value)}
@@ -352,7 +351,7 @@ export default function PlatformLocationsPage() {
             />
           </label>
           <label>
-            Sort
+            {t("admin.locations.field_sort")}
             <input
               value={cSort}
               onChange={(e) => setCSort(e.target.value)}
@@ -365,18 +364,18 @@ export default function PlatformLocationsPage() {
             onClick={() => addCountry()}
             className="rounded border border-default bg-figma-bg-1 px-3 py-1 disabled:opacity-40"
           >
-            Add country
+            {t("admin.locations.btn_add_country")}
           </button>
         </div>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[520px] text-left text-sm">
             <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
               <tr>
-                <th className="px-2 py-2">ID</th>
-                <th className="px-2 py-2">Name</th>
-                <th className="px-2 py-2">Code</th>
-                <th className="px-2 py-2">R/C</th>
-                <th className="px-2 py-2">Actions</th>
+                <th className="px-2 py-2">{t("admin.locations.col_id")}</th>
+                <th className="px-2 py-2">{t("admin.locations.col_name")}</th>
+                <th className="px-2 py-2">{t("admin.locations.col_code")}</th>
+                <th className="px-2 py-2">{t("admin.locations.col_regions_cities")}</th>
+                <th className="px-2 py-2">{t("admin.locations.col_actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -403,7 +402,7 @@ export default function PlatformLocationsPage() {
                       }}
                       className="mr-2 text-xs text-fg-t7 underline"
                     >
-                      Select
+                      {t("admin.locations.btn_select")}
                     </button>
                     <button
                       type="button"
@@ -411,7 +410,7 @@ export default function PlatformLocationsPage() {
                       onClick={() => updCountry(c)}
                       className="mr-2 text-xs text-fg-t7 underline disabled:opacity-40"
                     >
-                      Edit
+                      {t("admin.locations.btn_edit")}
                     </button>
                     <button
                       type="button"
@@ -419,7 +418,7 @@ export default function PlatformLocationsPage() {
                       onClick={() => delCountry(c.id)}
                       className="text-xs text-error-700 underline disabled:opacity-40"
                     >
-                      Delete
+                      {t("admin.locations.btn_delete")}
                     </button>
                   </td>
                 </tr>
@@ -431,10 +430,12 @@ export default function PlatformLocationsPage() {
 
       {selectedCountryId != null && (
         <section className="mt-6 rounded border border-default bg-white p-4">
-          <h2 className="text-sm font-semibold">Regions (country #{selectedCountryId})</h2>
+          <h2 className="text-sm font-semibold">
+            {t("admin.locations.section_regions").replace("{id}", String(selectedCountryId))}
+          </h2>
           <div className="mt-3 flex flex-wrap items-end gap-2 text-sm">
             <label>
-              Name
+              {t("admin.locations.field_name")}
               <input
                 value={rName}
                 onChange={(e) => setRName(e.target.value)}
@@ -442,7 +443,7 @@ export default function PlatformLocationsPage() {
               />
             </label>
             <label>
-              Code
+              {t("admin.locations.field_code")}
               <input
                 value={rCode}
                 onChange={(e) => setRCode(e.target.value)}
@@ -450,7 +451,7 @@ export default function PlatformLocationsPage() {
               />
             </label>
             <label>
-              Sort
+              {t("admin.locations.field_sort")}
               <input
                 value={rSort}
                 onChange={(e) => setRSort(e.target.value)}
@@ -463,17 +464,17 @@ export default function PlatformLocationsPage() {
               onClick={() => addRegion()}
               className="rounded border border-default bg-figma-bg-1 px-3 py-1 disabled:opacity-40"
             >
-              Add region
+              {t("admin.locations.btn_add_region")}
             </button>
           </div>
           <div className="mt-4 overflow-x-auto">
             <table className="w-full min-w-[480px] text-left text-sm">
               <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
                 <tr>
-                  <th className="px-2 py-2">ID</th>
-                  <th className="px-2 py-2">Name</th>
-                  <th className="px-2 py-2">Cities</th>
-                  <th className="px-2 py-2">Actions</th>
+                  <th className="px-2 py-2">{t("admin.locations.col_id")}</th>
+                  <th className="px-2 py-2">{t("admin.locations.col_name")}</th>
+                  <th className="px-2 py-2">{t("admin.locations.col_cities")}</th>
+                  <th className="px-2 py-2">{t("admin.locations.col_actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -494,7 +495,7 @@ export default function PlatformLocationsPage() {
                         onClick={() => setSelectedRegionId(r.id)}
                         className="mr-2 text-xs text-fg-t7 underline"
                       >
-                        Select
+                        {t("admin.locations.btn_select")}
                       </button>
                       <button
                         type="button"
@@ -502,7 +503,7 @@ export default function PlatformLocationsPage() {
                         onClick={() => updRegion(r)}
                         className="mr-2 text-xs text-fg-t7 underline disabled:opacity-40"
                       >
-                        Edit
+                        {t("admin.locations.btn_edit")}
                       </button>
                       <button
                         type="button"
@@ -510,7 +511,7 @@ export default function PlatformLocationsPage() {
                         onClick={() => delRegion(r.id)}
                         className="text-xs text-error-700 underline disabled:opacity-40"
                       >
-                        Delete
+                        {t("admin.locations.btn_delete")}
                       </button>
                     </td>
                   </tr>
@@ -523,10 +524,12 @@ export default function PlatformLocationsPage() {
 
       {selectedRegionId != null && (
         <section className="mt-6 rounded border border-default bg-white p-4">
-          <h2 className="text-sm font-semibold">Cities (region #{selectedRegionId})</h2>
+          <h2 className="text-sm font-semibold">
+            {t("admin.locations.section_cities").replace("{id}", String(selectedRegionId))}
+          </h2>
           <div className="mt-3 flex flex-wrap items-end gap-2 text-sm">
             <label>
-              Name
+              {t("admin.locations.field_name")}
               <input
                 value={ciName}
                 onChange={(e) => setCiName(e.target.value)}
@@ -534,7 +537,7 @@ export default function PlatformLocationsPage() {
               />
             </label>
             <label>
-              Sort
+              {t("admin.locations.field_sort")}
               <input
                 value={ciSort}
                 onChange={(e) => setCiSort(e.target.value)}
@@ -542,7 +545,7 @@ export default function PlatformLocationsPage() {
               />
             </label>
             <label>
-              Lat
+              {t("admin.locations.field_lat")}
               <input
                 value={ciLat}
                 onChange={(e) => setCiLat(e.target.value)}
@@ -550,7 +553,7 @@ export default function PlatformLocationsPage() {
               />
             </label>
             <label>
-              Lng
+              {t("admin.locations.field_lng")}
               <input
                 value={ciLng}
                 onChange={(e) => setCiLng(e.target.value)}
@@ -563,16 +566,16 @@ export default function PlatformLocationsPage() {
               onClick={() => addCity()}
               className="rounded border border-default bg-figma-bg-1 px-3 py-1 disabled:opacity-40"
             >
-              Add city
+              {t("admin.locations.btn_add_city")}
             </button>
           </div>
           <div className="mt-4 overflow-x-auto">
             <table className="w-full min-w-[400px] text-left text-sm">
               <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
                 <tr>
-                  <th className="px-2 py-2">ID</th>
-                  <th className="px-2 py-2">Name</th>
-                  <th className="px-2 py-2">Actions</th>
+                  <th className="px-2 py-2">{t("admin.locations.col_id")}</th>
+                  <th className="px-2 py-2">{t("admin.locations.col_name")}</th>
+                  <th className="px-2 py-2">{t("admin.locations.col_actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -587,7 +590,7 @@ export default function PlatformLocationsPage() {
                         onClick={() => updCity(x)}
                         className="mr-2 text-xs text-fg-t7 underline disabled:opacity-40"
                       >
-                        Edit
+                        {t("admin.locations.btn_edit")}
                       </button>
                       <button
                         type="button"
@@ -595,7 +598,7 @@ export default function PlatformLocationsPage() {
                         onClick={() => delCity(x.id)}
                         className="text-xs text-error-700 underline disabled:opacity-40"
                       >
-                        Delete
+                        {t("admin.locations.btn_delete")}
                       </button>
                     </td>
                   </tr>
