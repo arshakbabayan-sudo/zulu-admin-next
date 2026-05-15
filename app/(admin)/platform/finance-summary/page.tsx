@@ -2,6 +2,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import {
@@ -30,6 +31,7 @@ function SummaryCard({
 
 export default function PlatformFinanceSummaryPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [data, setData] = useState<PlatformFinanceSummary | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -44,9 +46,9 @@ export default function PlatformFinanceSummaryPage() {
       setData(res.data);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else setErr(e instanceof ApiRequestError ? e.message : "Failed to load finance summary");
+      else setErr(e instanceof ApiRequestError ? e.message : t("admin.finance_summary.err_load"));
     }
-  }, [token, allowed]);
+  }, [token, allowed, t]);
 
   useEffect(() => {
     load();
@@ -55,7 +57,7 @@ export default function PlatformFinanceSummaryPage() {
   if (!allowed) {
     return (
       <div>
-        <h1 className="admin-page-title">Finance summary</h1>
+        <h1 className="admin-page-title">{t("admin.finance_summary.title_short")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -66,7 +68,7 @@ export default function PlatformFinanceSummaryPage() {
   if (forbidden) {
     return (
       <div>
-        <h1 className="admin-page-title">Finance summary</h1>
+        <h1 className="admin-page-title">{t("admin.finance_summary.title_short")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -76,39 +78,39 @@ export default function PlatformFinanceSummaryPage() {
 
   return (
     <div>
-      <h1 className="admin-page-title">Platform finance summary</h1>
+      <h1 className="admin-page-title">{t("admin.finance_summary.title")}</h1>
       <button
         type="button"
         onClick={() => load()}
         className="mt-4 rounded border border-default bg-white px-3 py-1.5 text-sm hover:bg-figma-bg-1"
       >
-        Refresh
+        {t("admin.finance_summary.btn_refresh")}
       </button>
       {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
       {data && (
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <SummaryCard
-            label="Total payments (paid)"
+            label={t("admin.finance_summary.card_total_payments")}
             value={data.total_payments_paid.toLocaleString(undefined, {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}
-            sub={`${data.payments_count_paid} paid payment(s)`}
+            sub={t("admin.finance_summary.sub_paid_payments").replace("{n}", String(data.payments_count_paid))}
           />
           <SummaryCard
-            label="Commission accrued"
+            label={t("admin.finance_summary.card_commission_accrued")}
             value={data.total_commission_accrued.toLocaleString(undefined, {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}
           />
           <SummaryCard
-            label="Commission pending"
+            label={t("admin.finance_summary.card_commission_pending")}
             value={data.total_commission_pending.toLocaleString(undefined, {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}
-            sub={`${data.commission_records_count} commission record(s) total`}
+            sub={t("admin.finance_summary.sub_commission_records").replace("{n}", String(data.commission_records_count))}
           />
         </div>
       )}
