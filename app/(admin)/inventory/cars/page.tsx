@@ -1,5 +1,6 @@
 "use client";
 
+import { useLanguage } from "@/contexts/LanguageContext";
 import { InventoryOversightList } from "../_components/InventoryOversightList";
 import { useMemo, useState } from "react";
 
@@ -45,6 +46,7 @@ function parseOptionalCompanyId(s: string): number | undefined {
 }
 
 export default function CarsInventoryPage() {
+  const { t } = useLanguage();
   const [draftCompany, setDraftCompany] = useState("");
   const [draftCountry, setDraftCountry] = useState("");
   const [draftCity, setDraftCity] = useState("");
@@ -176,25 +178,25 @@ export default function CarsInventoryPage() {
 
   return (
     <InventoryOversightList
-      title="Cars inventory"
+      title={t("admin.inventory_cars.title")}
       segment="cars"
       permission="cars.view"
       queryParams={queryParams}
       columns={[
-        { header: "ID", getCell: (r) => cell(r.id) },
-        { header: "Company", getCell: (r) => companyIdCell(r) },
-        { header: "Pickup", getCell: (r) => cell(r.pickup_location) },
-        { header: "Dropoff", getCell: (r) => cell(r.dropoff_location) },
-        { header: "Fleet", getCell: (r) => cell(r.fleet) },
-        { header: "Class", getCell: (r) => cell(r.vehicle_class) },
-        { header: "Base price", getCell: (r) => cell(r.base_price) },
-        { header: "Status", getCell: (r) => cell(r.status) },
-        { header: "Offer", getCell: (r) => offerTitle(r) },
+        { header: t("admin.inventory_cars.col_id"), getCell: (r) => cell(r.id) },
+        { header: t("admin.inventory_cars.col_company"), getCell: (r) => companyIdCell(r) },
+        { header: t("admin.inventory_cars.col_pickup"), getCell: (r) => cell(r.pickup_location) },
+        { header: t("admin.inventory_cars.col_dropoff"), getCell: (r) => cell(r.dropoff_location) },
+        { header: t("admin.inventory_cars.col_fleet"), getCell: (r) => cell(r.fleet) },
+        { header: t("admin.inventory_cars.col_class"), getCell: (r) => cell(r.vehicle_class) },
+        { header: t("admin.inventory_cars.col_base_price"), getCell: (r) => cell(r.base_price) },
+        { header: t("admin.inventory_cars.col_status"), getCell: (r) => cell(r.status) },
+        { header: t("admin.inventory_cars.col_offer"), getCell: (r) => offerTitle(r) },
       ]}
       filterBar={
         <>
           <label className="text-sm text-fg-t6">
-            Advanced phase
+            {t("admin.inventory_hotels.filter_advanced_phase")}
             <select
               value={advancedPhase}
               onChange={(e) => setAdvancedPhase(Number(e.target.value) as 1 | 2 | 3)}
@@ -206,7 +208,7 @@ export default function CarsInventoryPage() {
             </select>
           </label>
           <label className="text-sm text-fg-t6">
-            company_id
+            {t("admin.inventory_hotels.filter_company_id")}
             <input
               value={draftCompany}
               onChange={(e) => setDraftCompany(e.target.value)}
@@ -215,27 +217,27 @@ export default function CarsInventoryPage() {
             />
           </label>
           <label className="text-sm text-fg-t6">
-            country
+            {t("admin.inventory_hotels.filter_country")}
             <input
               value={draftCountry}
               onChange={(e) => setDraftCountry(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
               className="ml-2 rounded border border-default px-2 py-1 text-sm"
-              placeholder="substring"
+              placeholder={t("admin.inventory_cars.placeholder_substring")}
             />
           </label>
           <label className="text-sm text-fg-t6">
-            city
+            {t("admin.inventory_hotels.filter_city")}
             <input
               value={draftCity}
               onChange={(e) => setDraftCity(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
               className="ml-2 rounded border border-default px-2 py-1 text-sm"
-              placeholder="substring"
+              placeholder={t("admin.inventory_cars.placeholder_substring")}
             />
           </label>
           <label className="text-sm text-fg-t6">
-            fleet
+            {t("admin.inventory_cars.filter_fleet")}
             <input
               value={draftFleet}
               onChange={(e) => setDraftFleet(e.target.value)}
@@ -244,7 +246,7 @@ export default function CarsInventoryPage() {
             />
           </label>
           <label className="text-sm text-fg-t6">
-            origin (pickup)
+            {t("admin.inventory_cars.filter_origin")}
             <input
               value={draftOrigin}
               onChange={(e) => setDraftOrigin(e.target.value)}
@@ -253,7 +255,7 @@ export default function CarsInventoryPage() {
             />
           </label>
           <label className="text-sm text-fg-t6">
-            destination (dropoff)
+            {t("admin.inventory_cars.filter_destination")}
             <input
               value={draftDestination}
               onChange={(e) => setDraftDestination(e.target.value)}
@@ -262,13 +264,13 @@ export default function CarsInventoryPage() {
             />
           </label>
           <label className="text-sm text-fg-t6">
-            status
+            {t("admin.inventory_cars.filter_status")}
             <select
               value={draftStatus}
               onChange={(e) => setDraftStatus(e.target.value)}
               className="ml-2 rounded border border-default bg-white px-2 py-1 text-sm"
             >
-              <option value="">Any</option>
+              <option value="">{t("admin.inventory_hotels.opt_any")}</option>
               {CAR_OPERATIONAL_STATUSES.map((s) => (
                 <option key={s} value={s}>
                   {s}
@@ -277,13 +279,13 @@ export default function CarsInventoryPage() {
             </select>
           </label>
           <label className="text-sm text-fg-t6">
-            availability
+            {t("admin.inventory_hotels.filter_availability")}
             <select
               value={draftAvailability}
               onChange={(e) => setDraftAvailability(e.target.value)}
               className="ml-2 rounded border border-default bg-white px-2 py-1 text-sm"
             >
-              <option value="">Any</option>
+              <option value="">{t("admin.inventory_hotels.opt_any")}</option>
               {CAR_AVAILABILITY_STATUSES.map((s) => (
                 <option key={s} value={s}>
                   {s}
@@ -292,29 +294,29 @@ export default function CarsInventoryPage() {
             </select>
           </label>
           <label className="text-sm text-fg-t6">
-            Min price
+            {t("admin.inventory_hotels.filter_min_price")}
             <input
               value={draftPriceMin}
               onChange={(e) => setDraftPriceMin(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
               className="ml-2 w-24 rounded border border-default px-2 py-1 text-sm"
-              placeholder="from"
+              placeholder={t("admin.inventory_hotels.placeholder_from")}
             />
           </label>
           <label className="text-sm text-fg-t6">
-            Max price
+            {t("admin.inventory_hotels.filter_max_price")}
             <input
               value={draftPriceMax}
               onChange={(e) => setDraftPriceMax(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
               className="ml-2 w-24 rounded border border-default px-2 py-1 text-sm"
-              placeholder="to"
+              placeholder={t("admin.inventory_hotels.placeholder_to")}
             />
           </label>
           {advancedPhase >= 2 ? (
             <>
               <label className="text-sm text-fg-t6">
-                Invoice id
+                {t("admin.inventory_hotels.filter_invoice_id")}
                 <input
                   value={draftInvoiceId}
                   onChange={(e) => setDraftInvoiceId(e.target.value)}
@@ -324,7 +326,7 @@ export default function CarsInventoryPage() {
                 />
               </label>
               <label className="text-sm text-fg-t6">
-                Booking date (invoice)
+                {t("admin.inventory_cars.filter_booking_date")}
                 <input
                   type="date"
                   value={draftDate}
@@ -334,7 +336,7 @@ export default function CarsInventoryPage() {
                 />
               </label>
               <label className="text-sm text-fg-t6">
-                Rental day (availability)
+                {t("admin.inventory_cars.filter_rental_date")}
                 <input
                   type="date"
                   value={draftRentalDate}
@@ -344,7 +346,7 @@ export default function CarsInventoryPage() {
                 />
               </label>
               <label className="text-sm text-fg-t6">
-                Rental from
+                {t("admin.inventory_cars.filter_rental_from")}
                 <input
                   type="date"
                   value={draftRentalFrom}
@@ -354,7 +356,7 @@ export default function CarsInventoryPage() {
                 />
               </label>
               <label className="text-sm text-fg-t6">
-                Rental to
+                {t("admin.inventory_cars.filter_rental_to")}
                 <input
                   type="date"
                   value={draftRentalTo}
@@ -367,7 +369,7 @@ export default function CarsInventoryPage() {
           ) : null}
           {advancedPhase >= 3 ? (
             <label className="text-sm text-fg-t6">
-              User email
+              {t("admin.inventory_hotels.filter_user_email")}
               <input
                 value={draftUserEmail}
                 onChange={(e) => setDraftUserEmail(e.target.value)}
@@ -378,10 +380,10 @@ export default function CarsInventoryPage() {
             </label>
           ) : null}
           <button type="button" onClick={applyFilters} className="rounded-zulu bg-primary-500 px-3 py-1 text-sm font-medium text-white hover:bg-purple-dark">
-            Apply filters
+            {t("admin.inventory_hotels.btn_apply")}
           </button>
           <button type="button" onClick={clearFilters} className="rounded border border-default bg-white px-3 py-1 text-sm">
-            Clear
+            {t("admin.inventory_hotels.btn_clear")}
           </button>
         </>
       }

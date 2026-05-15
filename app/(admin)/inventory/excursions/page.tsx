@@ -1,5 +1,6 @@
 "use client";
 
+import { useLanguage } from "@/contexts/LanguageContext";
 import { InventoryOversightList } from "../_components/InventoryOversightList";
 import { useMemo, useState } from "react";
 
@@ -52,6 +53,7 @@ function parseOptionalCompanyId(s: string): number | undefined {
 }
 
 export default function ExcursionsInventoryPage() {
+  const { t } = useLanguage();
   const [draftCompany, setDraftCompany] = useState("");
   const [draftLocation, setDraftLocation] = useState("");
   const [draftCountry, setDraftCountry] = useState("");
@@ -170,40 +172,40 @@ export default function ExcursionsInventoryPage() {
 
   return (
     <InventoryOversightList
-      title="Excursions inventory"
+      title={t("admin.inventory_excursions.title")}
       segment="excursions"
       permission="excursions.view"
       queryParams={queryParams}
       columns={[
-        { header: "ID", getCell: (r) => cell(r.id) },
-        { header: "Company", getCell: (r) => companyIdCell(r) },
-        { header: "Country", getCell: (r) => cell(r.country) },
-        { header: "City", getCell: (r) => cell(r.city) },
-        { header: "Category", getCell: (r) => cell(r.category) },
-        { header: "Location", getCell: (r) => cell(r.location) },
-        { header: "Duration", getCell: (r) => cell(r.duration) },
-        { header: "Group size", getCell: (r) => cell(r.group_size) },
-        { header: "Price", getCell: (r) => offerPriceCell(r) },
-        { header: "Status", getCell: (r) => cell(r.status) },
-        { header: "Offer", getCell: (r) => offerTitle(r) },
+        { header: t("admin.inventory_cars.col_id"), getCell: (r) => cell(r.id) },
+        { header: t("admin.inventory_cars.col_company"), getCell: (r) => companyIdCell(r) },
+        { header: t("admin.inventory_hotels.col_country"), getCell: (r) => cell(r.country) },
+        { header: t("admin.inventory_hotels.col_city"), getCell: (r) => cell(r.city) },
+        { header: t("admin.inventory_excursions.col_category"), getCell: (r) => cell(r.category) },
+        { header: t("admin.inventory_excursions.col_location"), getCell: (r) => cell(r.location) },
+        { header: t("admin.inventory_excursions.col_duration"), getCell: (r) => cell(r.duration) },
+        { header: t("admin.inventory_excursions.col_group_size"), getCell: (r) => cell(r.group_size) },
+        { header: t("admin.inventory_excursions.col_price"), getCell: (r) => offerPriceCell(r) },
+        { header: t("admin.inventory_cars.col_status"), getCell: (r) => cell(r.status) },
+        { header: t("admin.inventory_cars.col_offer"), getCell: (r) => offerTitle(r) },
       ]}
       filterBar={
         <>
           <label className="text-sm text-fg-t6">
-            Advanced phase
+            {t("admin.inventory_hotels.filter_advanced_phase")}
             <select
               value={advancedPhase}
               onChange={(e) => setAdvancedPhase(Number(e.target.value) as 1 | 2 | 3 | 4)}
               className="ml-2 rounded border border-default bg-white px-2 py-1 text-sm"
             >
-              <option value={1}>1 — location & geography</option>
-              <option value={2}>2 — schedule & status</option>
-              <option value={3}>3 — orders & invoices</option>
-              <option value={4}>4 — price</option>
+              <option value={1}>{t("admin.inventory_excursions.phase_1")}</option>
+              <option value={2}>{t("admin.inventory_excursions.phase_2")}</option>
+              <option value={3}>{t("admin.inventory_excursions.phase_3")}</option>
+              <option value={4}>{t("admin.inventory_excursions.phase_4")}</option>
             </select>
           </label>
           <label className="text-sm text-fg-t6">
-            company_id
+            {t("admin.inventory_hotels.filter_company_id")}
             <input
               value={draftCompany}
               onChange={(e) => setDraftCompany(e.target.value)}
@@ -212,7 +214,7 @@ export default function ExcursionsInventoryPage() {
             />
           </label>
           <label className="text-sm text-fg-t6">
-            location
+            {t("admin.inventory_excursions.col_location")}
             <input
               value={draftLocation}
               onChange={(e) => setDraftLocation(e.target.value)}
@@ -223,33 +225,33 @@ export default function ExcursionsInventoryPage() {
           {advancedPhase >= 1 ? (
             <>
               <label className="text-sm text-fg-t6">
-                country
+                {t("admin.inventory_hotels.filter_country")}
                 <input
                   value={draftCountry}
                   onChange={(e) => setDraftCountry(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && applyFilters()}
                   className="ml-2 rounded border border-default px-2 py-1 text-sm"
-                  placeholder="substring"
+                  placeholder={t("admin.inventory_cars.placeholder_substring")}
                 />
               </label>
               <label className="text-sm text-fg-t6">
-                city
+                {t("admin.inventory_hotels.filter_city")}
                 <input
                   value={draftCity}
                   onChange={(e) => setDraftCity(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && applyFilters()}
                   className="ml-2 rounded border border-default px-2 py-1 text-sm"
-                  placeholder="substring"
+                  placeholder={t("admin.inventory_cars.placeholder_substring")}
                 />
               </label>
               <label className="text-sm text-fg-t6">
-                category
+                {t("admin.inventory_excursions.col_category")}
                 <input
                   value={draftCategory}
                   onChange={(e) => setDraftCategory(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && applyFilters()}
                   className="ml-2 rounded border border-default px-2 py-1 text-sm"
-                  placeholder="substring"
+                  placeholder={t("admin.inventory_cars.placeholder_substring")}
                 />
               </label>
             </>
@@ -257,17 +259,17 @@ export default function ExcursionsInventoryPage() {
           {advancedPhase >= 2 ? (
             <>
               <label className="text-sm text-fg-t6">
-                date (overlap)
+                {t("admin.inventory_excursions.filter_date_overlap")}
                 <input
                   value={draftDate}
                   onChange={(e) => setDraftDate(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && applyFilters()}
                   className="ml-2 rounded border border-default px-2 py-1 text-sm"
-                  placeholder="YYYY-MM-DD or ISO"
+                  placeholder={t("admin.inventory_excursions.placeholder_date")}
                 />
               </label>
               <label className="text-sm text-fg-t6">
-                date_from
+                {t("admin.inventory_excursions.filter_date_from")}
                 <input
                   type="date"
                   value={draftDateFrom}
@@ -277,7 +279,7 @@ export default function ExcursionsInventoryPage() {
                 />
               </label>
               <label className="text-sm text-fg-t6">
-                date_to
+                {t("admin.inventory_excursions.filter_date_to")}
                 <input
                   type="date"
                   value={draftDateTo}
@@ -287,13 +289,13 @@ export default function ExcursionsInventoryPage() {
                 />
               </label>
               <label className="text-sm text-fg-t6">
-                status
+                {t("admin.inventory_cars.filter_status")}
                 <input
                   value={draftStatus}
                   onChange={(e) => setDraftStatus(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && applyFilters()}
                   className="ml-2 rounded border border-default px-2 py-1 text-sm"
-                  placeholder="substring"
+                  placeholder={t("admin.inventory_cars.placeholder_substring")}
                 />
               </label>
             </>
@@ -301,17 +303,17 @@ export default function ExcursionsInventoryPage() {
           {advancedPhase >= 3 ? (
             <>
               <label className="text-sm text-fg-t6">
-                order_number
+                {t("admin.inventory_excursions.filter_order_number")}
                 <input
                   value={draftOrderNumber}
                   onChange={(e) => setDraftOrderNumber(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && applyFilters()}
                   className="ml-2 rounded border border-default px-2 py-1 text-sm"
-                  placeholder="invoice ref"
+                  placeholder={t("admin.inventory_excursions.placeholder_invoice_ref")}
                 />
               </label>
               <label className="text-sm text-fg-t6">
-                invoice_id
+                {t("admin.inventory_hotels.filter_invoice_id")}
                 <input
                   value={draftInvoiceId}
                   onChange={(e) => setDraftInvoiceId(e.target.value)}
@@ -320,7 +322,7 @@ export default function ExcursionsInventoryPage() {
                 />
               </label>
               <label className="text-sm text-fg-t6">
-                user_email
+                {t("admin.inventory_hotels.filter_user_email")}
                 <input
                   value={draftUserEmail}
                   onChange={(e) => setDraftUserEmail(e.target.value)}
@@ -333,7 +335,7 @@ export default function ExcursionsInventoryPage() {
           {advancedPhase >= 4 ? (
             <>
               <label className="text-sm text-fg-t6">
-                Min price (offer)
+                {t("admin.inventory_excursions.filter_min_price")}
                 <input
                   value={draftPriceMin}
                   onChange={(e) => setDraftPriceMin(e.target.value)}
@@ -342,7 +344,7 @@ export default function ExcursionsInventoryPage() {
                 />
               </label>
               <label className="text-sm text-fg-t6">
-                Max price (offer)
+                {t("admin.inventory_excursions.filter_max_price")}
                 <input
                   value={draftPriceMax}
                   onChange={(e) => setDraftPriceMax(e.target.value)}
@@ -353,10 +355,10 @@ export default function ExcursionsInventoryPage() {
             </>
           ) : null}
           <button type="button" onClick={applyFilters} className="rounded-zulu bg-primary-500 px-3 py-1 text-sm font-medium text-white hover:bg-purple-dark">
-            Apply filters
+            {t("admin.inventory_hotels.btn_apply")}
           </button>
           <button type="button" onClick={clearFilters} className="rounded border border-default bg-white px-3 py-1 text-sm">
-            Clear
+            {t("admin.inventory_hotels.btn_clear")}
           </button>
         </>
       }

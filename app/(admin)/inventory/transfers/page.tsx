@@ -1,5 +1,6 @@
 "use client";
 
+import { useLanguage } from "@/contexts/LanguageContext";
 import { InventoryOversightList } from "../_components/InventoryOversightList";
 import { useMemo, useState } from "react";
 
@@ -19,6 +20,7 @@ function offerTitle(row: Record<string, unknown>): string {
 }
 
 export default function TransfersInventoryPage() {
+  const { t } = useLanguage();
   const [draftCompany, setDraftCompany] = useState("");
   const [draftStatus, setDraftStatus] = useState("");
   const [draftCountry, setDraftCountry] = useState("");
@@ -151,24 +153,24 @@ export default function TransfersInventoryPage() {
 
   return (
     <InventoryOversightList
-      title="Transfers inventory"
+      title={t("admin.inventory_transfers.title")}
       segment="transfers"
       permission="transfers.view"
       queryParams={queryParams}
       columns={[
-        { header: "ID", getCell: (r) => cell(r.id) },
-        { header: "Company ID", getCell: (r) => cell(r.company_id) },
-        { header: "Title", getCell: (r) => cell(r.transfer_title) },
-        { header: "Pickup", getCell: (r) => cell(r.pickup_city) },
-        { header: "Dropoff", getCell: (r) => cell(r.dropoff_city) },
-        { header: "Type", getCell: (r) => cell(r.transfer_type) },
-        { header: "Status", getCell: (r) => cell(r.status) },
-        { header: "Offer", getCell: (r) => offerTitle(r) },
+        { header: t("admin.inventory_cars.col_id"), getCell: (r) => cell(r.id) },
+        { header: t("admin.inventory_hotels.col_company_id"), getCell: (r) => cell(r.company_id) },
+        { header: t("admin.inventory_transfers.col_title"), getCell: (r) => cell(r.transfer_title) },
+        { header: t("admin.inventory_cars.col_pickup"), getCell: (r) => cell(r.pickup_city) },
+        { header: t("admin.inventory_cars.col_dropoff"), getCell: (r) => cell(r.dropoff_city) },
+        { header: t("admin.inventory_transfers.col_type"), getCell: (r) => cell(r.transfer_type) },
+        { header: t("admin.inventory_cars.col_status"), getCell: (r) => cell(r.status) },
+        { header: t("admin.inventory_cars.col_offer"), getCell: (r) => offerTitle(r) },
       ]}
       filterBar={
         <>
           <label className="text-sm text-fg-t6">
-            company_id
+            {t("admin.inventory_hotels.filter_company_id")}
             <input
               value={draftCompany}
               onChange={(e) => setDraftCompany(e.target.value)}
@@ -177,7 +179,7 @@ export default function TransfersInventoryPage() {
             />
           </label>
           <label className="text-sm text-fg-t6">
-            status
+            {t("admin.inventory_cars.filter_status")}
             <input
               value={draftStatus}
               onChange={(e) => setDraftStatus(e.target.value)}
@@ -186,7 +188,7 @@ export default function TransfersInventoryPage() {
             />
           </label>
           <label className="text-sm text-fg-t6">
-            country
+            {t("admin.inventory_hotels.filter_country")}
             <input
               value={draftCountry}
               onChange={(e) => setDraftCountry(e.target.value)}
@@ -195,7 +197,7 @@ export default function TransfersInventoryPage() {
             />
           </label>
           <label className="text-sm text-fg-t6">
-            city
+            {t("admin.inventory_hotels.filter_city")}
             <input
               value={draftCity}
               onChange={(e) => setDraftCity(e.target.value)}
@@ -204,7 +206,7 @@ export default function TransfersInventoryPage() {
             />
           </label>
           <label className="text-sm text-fg-t6">
-            fleet
+            {t("admin.inventory_cars.filter_fleet")}
             <input
               value={draftFleet}
               onChange={(e) => setDraftFleet(e.target.value)}
@@ -213,7 +215,7 @@ export default function TransfersInventoryPage() {
             />
           </label>
           <label className="text-sm text-fg-t6">
-            origin
+            {t("admin.inventory_transfers.filter_origin")}
             <input
               value={draftOrigin}
               onChange={(e) => setDraftOrigin(e.target.value)}
@@ -222,7 +224,7 @@ export default function TransfersInventoryPage() {
             />
           </label>
           <label className="text-sm text-fg-t6">
-            destination
+            {t("admin.inventory_transfers.filter_destination")}
             <input
               value={draftDestination}
               onChange={(e) => setDraftDestination(e.target.value)}
@@ -231,7 +233,7 @@ export default function TransfersInventoryPage() {
             />
           </label>
           <label className="text-sm text-fg-t6">
-            vehicle_category
+            {t("admin.inventory_transfers.filter_vehicle_category")}
             <input
               value={draftVehicleCategory}
               onChange={(e) => setDraftVehicleCategory(e.target.value)}
@@ -240,7 +242,7 @@ export default function TransfersInventoryPage() {
             />
           </label>
           <label className="text-sm text-fg-t6">
-            trip_date
+            {t("admin.inventory_transfers.filter_trip_date")}
             <input
               value={draftTripDate}
               onChange={(e) => setDraftTripDate(e.target.value)}
@@ -250,7 +252,7 @@ export default function TransfersInventoryPage() {
             />
           </label>
           <label className="text-sm text-fg-t6">
-            passenger
+            {t("admin.inventory_transfers.filter_passenger")}
             <input
               value={draftPassengers}
               onChange={(e) => setDraftPassengers(e.target.value)}
@@ -259,7 +261,7 @@ export default function TransfersInventoryPage() {
             />
           </label>
           <label className="text-sm text-fg-t6">
-            user_email
+            {t("admin.inventory_hotels.filter_user_email")}
             <input
               value={draftUserEmail}
               onChange={(e) => setDraftUserEmail(e.target.value)}
@@ -268,7 +270,7 @@ export default function TransfersInventoryPage() {
             />
           </label>
           <label className="text-sm text-fg-t6">
-            order_number
+            {t("admin.inventory_excursions.filter_order_number")}
             <input
               value={draftOrderNumber}
               onChange={(e) => setDraftOrderNumber(e.target.value)}
@@ -277,7 +279,7 @@ export default function TransfersInventoryPage() {
             />
           </label>
           <label className="text-sm text-fg-t6">
-            invoice_id
+            {t("admin.inventory_hotels.filter_invoice_id")}
             <input
               value={draftInvoiceId}
               onChange={(e) => setDraftInvoiceId(e.target.value)}
@@ -286,7 +288,7 @@ export default function TransfersInventoryPage() {
             />
           </label>
           <label className="text-sm text-fg-t6">
-            price_min
+            {t("admin.inventory_excursions.filter_min_price")}
             <input
               value={draftPriceMin}
               onChange={(e) => setDraftPriceMin(e.target.value)}
@@ -295,7 +297,7 @@ export default function TransfersInventoryPage() {
             />
           </label>
           <label className="text-sm text-fg-t6">
-            price_max
+            {t("admin.inventory_excursions.filter_max_price")}
             <input
               value={draftPriceMax}
               onChange={(e) => setDraftPriceMax(e.target.value)}
@@ -304,10 +306,10 @@ export default function TransfersInventoryPage() {
             />
           </label>
           <button type="button" onClick={applyFilters} className="rounded-zulu bg-primary-500 px-3 py-1 text-sm font-medium text-white hover:bg-purple-dark">
-            Apply filters
+            {t("admin.inventory_hotels.btn_apply")}
           </button>
           <button type="button" onClick={clearFilters} className="rounded border border-default bg-white px-3 py-1 text-sm">
-            Clear
+            {t("admin.inventory_hotels.btn_clear")}
           </button>
         </>
       }
