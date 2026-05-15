@@ -5,6 +5,7 @@ import { PaginationBar } from "@/components/PaginationBar";
 import { Button } from "@/components/ui/Button";
 import { StatusPill } from "@/components/ui/StatusPill";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
@@ -22,6 +23,7 @@ function canActOnApproval(status: string): boolean {
 
 export default function GenericApprovalsPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<GenericApprovalRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -48,9 +50,9 @@ export default function GenericApprovalsPage() {
       setMeta(res.meta);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else setErr(e instanceof ApiRequestError ? e.message : "Failed to load");
+      else setErr(e instanceof ApiRequestError ? e.message : t("admin.approvals.err_load"));
     }
-  }, [token, allowed, page, statusFilter, entityType]);
+  }, [token, allowed, page, statusFilter, entityType, t]);
 
   useEffect(() => {
     load();
@@ -58,13 +60,13 @@ export default function GenericApprovalsPage() {
 
   async function approve(id: number) {
     if (!token) return;
-    const decision_notes = window.prompt("Optional decision notes") ?? "";
+    const decision_notes = window.prompt(t("admin.approvals.prompt_notes_approve")) ?? "";
     setBusyId(id);
     try {
       await apiApproveGenericApproval(token, id, decision_notes.trim() || undefined);
       await load();
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Approve failed");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.approvals.err_approve"));
     } finally {
       setBusyId(null);
     }
@@ -72,13 +74,13 @@ export default function GenericApprovalsPage() {
 
   async function reject(id: number) {
     if (!token) return;
-    const decision_notes = window.prompt("Optional decision notes (rejection)") ?? "";
+    const decision_notes = window.prompt(t("admin.approvals.prompt_notes_reject")) ?? "";
     setBusyId(id);
     try {
       await apiRejectGenericApproval(token, id, decision_notes.trim() || undefined);
       await load();
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Reject failed");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.approvals.err_reject"));
     } finally {
       setBusyId(null);
     }
@@ -87,7 +89,7 @@ export default function GenericApprovalsPage() {
   if (!allowed || forbidden) {
     return (
       <div>
-        <h1 className="admin-page-title">Approvals</h1>
+        <h1 className="admin-page-title">{t("admin.approvals.title_short")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -97,10 +99,10 @@ export default function GenericApprovalsPage() {
 
   return (
     <div>
-      <h1 className="admin-page-title">Generic approvals</h1>
+      <h1 className="admin-page-title">{t("admin.approvals.title")}</h1>
       <div className="mt-4 flex flex-wrap items-end gap-3">
         <label className="text-sm text-fg-t6">
-          Status
+          {t("admin.approvals.filter_status")}
           <select
             value={statusFilter}
             onChange={(e) => {
@@ -109,15 +111,15 @@ export default function GenericApprovalsPage() {
             }}
             className="ml-2 rounded border border-default px-2 py-1 text-sm"
           >
-            <option value="">Any</option>
-            <option value="pending">pending</option>
-            <option value="under_review">under_review</option>
-            <option value="approved">approved</option>
-            <option value="rejected">rejected</option>
+            <option value="">{t("admin.approvals.status_any")}</option>
+            <option value="pending">{t("admin.approvals.status_pending")}</option>
+            <option value="under_review">{t("admin.approvals.status_under_review")}</option>
+            <option value="approved">{t("admin.approvals.status_approved")}</option>
+            <option value="rejected">{t("admin.approvals.status_rejected")}</option>
           </select>
         </label>
         <label className="text-sm text-fg-t6">
-          Entity type
+          {t("admin.approvals.filter_entity_type")}
           <input
             value={entityTypeDraft}
             onChange={(e) => setEntityTypeDraft(e.target.value)}
@@ -128,7 +130,7 @@ export default function GenericApprovalsPage() {
               }
             }}
             className="ml-2 rounded border border-default px-2 py-1 text-sm"
-            placeholder="Filter by entity_type"
+            placeholder={t("admin.approvals.placeholder_entity_type")}
           />
         </label>
         <Button
@@ -139,7 +141,7 @@ export default function GenericApprovalsPage() {
             setEntityType(entityTypeDraft.trim());
           }}
         >
-          Apply entity filter
+          {t("admin.approvals.btn_apply_filter")}
         </Button>
       </div>
       {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
@@ -147,13 +149,13 @@ export default function GenericApprovalsPage() {
         <table className="w-full min-w-[900px] text-left text-sm">
           <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
-              <th className="px-3 py-2">ID</th>
-              <th className="px-3 py-2">Entity</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Priority</th>
-              <th className="px-3 py-2">Requested by</th>
-              <th className="px-3 py-2">Created</th>
-              <th className="px-3 py-2">Actions</th>
+              <th className="px-3 py-2">{t("admin.approvals.col_id")}</th>
+              <th className="px-3 py-2">{t("admin.approvals.col_entity")}</th>
+              <th className="px-3 py-2">{t("admin.approvals.col_status")}</th>
+              <th className="px-3 py-2">{t("admin.approvals.col_priority")}</th>
+              <th className="px-3 py-2">{t("admin.approvals.col_requested_by")}</th>
+              <th className="px-3 py-2">{t("admin.approvals.col_created")}</th>
+              <th className="px-3 py-2">{t("admin.approvals.col_actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -186,7 +188,7 @@ export default function GenericApprovalsPage() {
                         onClick={() => approve(r.id)}
                         className="text-xs text-emerald-700 underline disabled:opacity-40"
                       >
-                        Approve
+                        {t("admin.approvals.btn_approve")}
                       </button>
                       <button
                         type="button"
@@ -194,7 +196,7 @@ export default function GenericApprovalsPage() {
                         onClick={() => reject(r.id)}
                         className="text-xs text-error-700 underline disabled:opacity-40"
                       >
-                        Reject
+                        {t("admin.approvals.btn_reject")}
                       </button>
                     </>
                   ) : (

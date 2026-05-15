@@ -3,6 +3,7 @@
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { PaginationBar } from "@/components/PaginationBar";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
@@ -18,6 +19,7 @@ const TYPE_FILTERS = ["", "hotel", "car", "transfer", "excursion", "flight", "pa
 
 export default function PendingReviewPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
 
   const [rows, setRows] = useState<PendingReviewOfferRow[]>([]);
@@ -48,9 +50,9 @@ export default function PendingReviewPage() {
       setMeta(res.meta);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else setErr(e instanceof ApiRequestError ? e.message : "Failed to load review queue.");
+      else setErr(e instanceof ApiRequestError ? e.message : t("admin.pending_review.err_load"));
     }
-  }, [token, allowed, page, typeFilter, search]);
+  }, [token, allowed, page, typeFilter, search, t]);
 
   useEffect(() => {
     load();
@@ -63,7 +65,7 @@ export default function PendingReviewPage() {
       await apiApproveOffer(token, row.id);
       await load();
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Approve failed.");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.pending_review.err_approve"));
     } finally {
       setBusyId(null);
     }
@@ -82,7 +84,7 @@ export default function PendingReviewPage() {
   async function submitReject() {
     if (!token || !rejectModalOffer) return;
     if (rejectReason.trim().length < 3) {
-      alert("Please provide a reason (minimum 3 characters).");
+      alert(t("admin.pending_review.err_reject_min"));
       return;
     }
     setBusyId(rejectModalOffer.id);
@@ -91,7 +93,7 @@ export default function PendingReviewPage() {
       closeRejectModal();
       await load();
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Reject failed.");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.pending_review.err_reject"));
     } finally {
       setBusyId(null);
     }
@@ -104,17 +106,14 @@ export default function PendingReviewPage() {
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-fg-t8">Pending Review</h1>
-          <p className="mt-1 text-sm text-fg-t6">
-            Operator-submitted offers awaiting super-admin approval. Once approved, they appear on
-            the customer-facing site.
-          </p>
+          <h1 className="text-xl font-semibold text-fg-t8">{t("admin.pending_review.title")}</h1>
+          <p className="mt-1 text-sm text-fg-t6">{t("admin.pending_review.subtitle")}</p>
         </div>
       </div>
 
       <div className="mb-4 flex flex-wrap items-end gap-3 rounded-zulu border border-default bg-white p-4">
         <label className="flex flex-col gap-1 text-xs">
-          <span className="font-medium text-fg-t6">Type</span>
+          <span className="font-medium text-fg-t6">{t("admin.pending_review.filter_type")}</span>
           <select
             value={typeFilter}
             onChange={(e) => {
@@ -123,15 +122,15 @@ export default function PendingReviewPage() {
             }}
             className="rounded border border-default px-2 py-1.5 text-sm"
           >
-            {TYPE_FILTERS.map((t) => (
-              <option key={t} value={t}>
-                {t || "All types"}
+            {TYPE_FILTERS.map((tf) => (
+              <option key={tf} value={tf}>
+                {tf ? t(`admin.module_type.${tf}`) : t("admin.pending_review.filter_all_types")}
               </option>
             ))}
           </select>
         </label>
         <label className="flex flex-1 min-w-[240px] flex-col gap-1 text-xs">
-          <span className="font-medium text-fg-t6">Search title</span>
+          <span className="font-medium text-fg-t6">{t("admin.pending_review.filter_search_title")}</span>
           <input
             type="text"
             value={searchDraft}
@@ -142,7 +141,7 @@ export default function PendingReviewPage() {
                 setPage(1);
               }
             }}
-            placeholder="title…"
+            placeholder={t("admin.pending_review.placeholder_title")}
             className="rounded border border-default px-2 py-1.5 text-sm"
           />
         </label>
@@ -154,7 +153,7 @@ export default function PendingReviewPage() {
           }}
           className="rounded-zulu bg-primary px-4 py-2 text-sm font-medium text-white"
         >
-          Search
+          {t("admin.pending_review.btn_search")}
         </button>
       </div>
 
@@ -168,20 +167,20 @@ export default function PendingReviewPage() {
         <table className="w-full text-sm">
           <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase tracking-wide text-fg-t6">
             <tr>
-              <th className="px-3 py-2 text-left">ID</th>
-              <th className="px-3 py-2 text-left">Type</th>
-              <th className="px-3 py-2 text-left">Title</th>
-              <th className="px-3 py-2 text-left">Operator</th>
-              <th className="px-3 py-2 text-left">Country</th>
-              <th className="px-3 py-2 text-left">Submitted</th>
-              <th className="px-3 py-2 text-right">Actions</th>
+              <th className="px-3 py-2 text-left">{t("admin.pending_review.col_id")}</th>
+              <th className="px-3 py-2 text-left">{t("admin.pending_review.col_type")}</th>
+              <th className="px-3 py-2 text-left">{t("admin.pending_review.col_title")}</th>
+              <th className="px-3 py-2 text-left">{t("admin.pending_review.col_operator")}</th>
+              <th className="px-3 py-2 text-left">{t("admin.pending_review.col_country")}</th>
+              <th className="px-3 py-2 text-left">{t("admin.pending_review.col_submitted")}</th>
+              <th className="px-3 py-2 text-right">{t("admin.pending_review.col_actions")}</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-3 py-8 text-center text-fg-t6">
-                  No offers waiting for review. 🎉
+                  {t("admin.pending_review.empty")}
                 </td>
               </tr>
             )}
@@ -205,7 +204,7 @@ export default function PendingReviewPage() {
                       onClick={() => void handleApprove(r)}
                       className="rounded-zulu bg-success-500 px-3 py-1 text-xs font-medium text-white hover:bg-success-600 disabled:opacity-40"
                     >
-                      Approve
+                      {t("admin.pending_review.btn_approve")}
                     </button>
                     <button
                       type="button"
@@ -213,7 +212,7 @@ export default function PendingReviewPage() {
                       onClick={() => openRejectModal(r)}
                       className="rounded-zulu border border-error-200 bg-white px-3 py-1 text-xs font-medium text-error-600 hover:bg-error-50 disabled:opacity-40"
                     >
-                      Reject
+                      {t("admin.pending_review.btn_reject")}
                     </button>
                   </div>
                 </td>
@@ -241,7 +240,7 @@ export default function PendingReviewPage() {
         >
           <div className="w-full max-w-lg rounded-zulu-modal bg-white shadow-zulu-modal">
             <div className="border-b border-default p-5">
-              <h2 className="text-base font-semibold text-fg-t8">Reject offer</h2>
+              <h2 className="text-base font-semibold text-fg-t8">{t("admin.pending_review.modal_title")}</h2>
               <p className="mt-1 text-xs text-fg-t6">
                 #{rejectModalOffer.id} — {rejectModalOffer.title}
               </p>
@@ -249,13 +248,13 @@ export default function PendingReviewPage() {
             <div className="p-5">
               <label className="flex flex-col gap-1.5 text-sm">
                 <span className="font-medium text-fg-t7">
-                  Reason <span className="text-error-500">*</span>
+                  {t("admin.pending_review.modal_reason")} <span className="text-error-500">*</span>
                 </span>
                 <textarea
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
                   rows={4}
-                  placeholder="Explain why this is being rejected so the operator can fix it…"
+                  placeholder={t("admin.pending_review.modal_reason_placeholder")}
                   className="rounded border border-default px-3 py-2 text-sm"
                 />
               </label>
@@ -266,7 +265,7 @@ export default function PendingReviewPage() {
                 onClick={closeRejectModal}
                 className="rounded-zulu border border-default bg-white px-4 py-2 text-sm font-medium text-fg-t7"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 type="button"
@@ -274,7 +273,7 @@ export default function PendingReviewPage() {
                 onClick={() => void submitReject()}
                 className="rounded-zulu bg-error-500 px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
               >
-                Reject offer
+                {t("admin.pending_review.modal_submit_reject")}
               </button>
             </div>
           </div>

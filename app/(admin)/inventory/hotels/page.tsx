@@ -1,5 +1,6 @@
 "use client";
 
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   HOTEL_AVAILABILITY_STATUSES,
   HOTEL_LIFECYCLE_STATUSES,
@@ -46,6 +47,7 @@ function triBoolToApplied(v: string): boolean | undefined {
 }
 
 export default function HotelsInventoryPage() {
+  const { t } = useLanguage();
   const [draftCompany, setDraftCompany] = useState("");
   const [draftCity, setDraftCity] = useState("");
   const [draftCountry, setDraftCountry] = useState("");
@@ -160,30 +162,30 @@ export default function HotelsInventoryPage() {
 
   return (
     <InventoryOversightList
-      title="Hotels inventory"
+      title={t("admin.inventory_hotels.title")}
       segment="hotels"
       permission="hotels.view"
       queryParams={queryParams}
       columns={[
-        { header: "ID", getCell: (r) => cell(r.id) },
-        { header: "Company ID", getCell: (r) => cell(r.company_id) },
-        { header: "Hotel", getCell: (r) => cell(r.hotel_name) },
-        { header: "City", getCell: (r) => cell(r.city) },
-        { header: "Country", getCell: (r) => cell(r.country) },
+        { header: t("admin.inventory_hotels.col_id"), getCell: (r) => cell(r.id) },
+        { header: t("admin.inventory_hotels.col_company_id"), getCell: (r) => cell(r.company_id) },
+        { header: t("admin.inventory_hotels.col_hotel"), getCell: (r) => cell(r.hotel_name) },
+        { header: t("admin.inventory_hotels.col_city"), getCell: (r) => cell(r.city) },
+        { header: t("admin.inventory_hotels.col_country"), getCell: (r) => cell(r.country) },
         {
-          header: "Lifecycle status",
+          header: t("admin.inventory_hotels.col_lifecycle"),
           getCell: (r) => {
             const s = r.status;
             return typeof s === "string" && s !== "" ? hotelLifecycleStatusLabel(s) : cell(s);
           },
         },
-        { header: "From", getCell: (r) => `${cell(r.starting_price)} ${cell(r.currency)}`.trim() },
-        { header: "Offer", getCell: (r) => offerTitle(r) },
+        { header: t("admin.inventory_hotels.col_from"), getCell: (r) => `${cell(r.starting_price)} ${cell(r.currency)}`.trim() },
+        { header: t("admin.inventory_hotels.col_offer"), getCell: (r) => offerTitle(r) },
       ]}
       filterBar={
         <>
           <label className="text-sm text-fg-t6">
-            Advanced phase
+            {t("admin.inventory_hotels.filter_advanced_phase")}
             <select
               value={advancedPhase}
               onChange={(e) => setAdvancedPhase(Number(e.target.value) as 1 | 2 | 3)}
@@ -195,7 +197,7 @@ export default function HotelsInventoryPage() {
             </select>
           </label>
           <label className="text-sm text-fg-t6">
-            Company ID
+            {t("admin.inventory_hotels.filter_company_id")}
             <input
               value={draftCompany}
               onChange={(e) => setDraftCompany(e.target.value)}
@@ -204,7 +206,7 @@ export default function HotelsInventoryPage() {
             />
           </label>
           <label className="text-sm text-fg-t6">
-            Country
+            {t("admin.inventory_hotels.filter_country")}
             <input
               value={draftCountry}
               onChange={(e) => setDraftCountry(e.target.value)}
@@ -213,7 +215,7 @@ export default function HotelsInventoryPage() {
             />
           </label>
           <label className="text-sm text-fg-t6">
-            City
+            {t("admin.inventory_hotels.filter_city")}
             <input
               value={draftCity}
               onChange={(e) => setDraftCity(e.target.value)}
@@ -222,13 +224,13 @@ export default function HotelsInventoryPage() {
             />
           </label>
           <label className="text-sm text-fg-t6">
-            Lifecycle status
+            {t("admin.inventory_hotels.filter_lifecycle")}
             <select
               value={draftStatus}
               onChange={(e) => setDraftStatus(e.target.value)}
               className="ml-2 rounded border border-default bg-white px-2 py-1 text-sm"
             >
-              <option value="">Any</option>
+              <option value="">{t("admin.inventory_hotels.opt_any")}</option>
               {HOTEL_LIFECYCLE_STATUSES.map((s) => (
                 <option key={s} value={s}>
                   {hotelLifecycleStatusLabel(s)}
@@ -237,13 +239,13 @@ export default function HotelsInventoryPage() {
             </select>
           </label>
           <label className="text-sm text-fg-t6">
-            Availability
+            {t("admin.inventory_hotels.filter_availability")}
             <select
               value={draftAvailability}
               onChange={(e) => setDraftAvailability(e.target.value)}
               className="ml-2 rounded border border-default bg-white px-2 py-1 text-sm"
             >
-              <option value="">Any</option>
+              <option value="">{t("admin.inventory_hotels.opt_any")}</option>
               {HOTEL_AVAILABILITY_STATUSES.map((s) => (
                 <option key={s} value={s}>
                   {hotelAvailabilityLabel(s)}
@@ -252,45 +254,45 @@ export default function HotelsInventoryPage() {
             </select>
           </label>
           <label className="text-sm text-fg-t6">
-            Package eligible
+            {t("admin.inventory_hotels.filter_package_eligible")}
             <select
               value={draftPackageEligible}
               onChange={(e) => setDraftPackageEligible(e.target.value)}
               className="ml-2 rounded border border-default bg-white px-2 py-1 text-sm"
             >
-              <option value="">Any</option>
-              <option value="1">Yes</option>
-              <option value="0">No</option>
+              <option value="">{t("admin.inventory_hotels.opt_any")}</option>
+              <option value="1">{t("admin.inventory_hotels.opt_yes")}</option>
+              <option value="0">{t("admin.inventory_hotels.opt_no")}</option>
             </select>
           </label>
           <label className="text-sm text-fg-t6">
-            Free cancellation
+            {t("admin.inventory_hotels.filter_free_cancellation")}
             <select
               value={draftFreeCancellation}
               onChange={(e) => setDraftFreeCancellation(e.target.value)}
               className="ml-2 rounded border border-default bg-white px-2 py-1 text-sm"
             >
-              <option value="">Any</option>
-              <option value="1">Yes</option>
-              <option value="0">No</option>
+              <option value="">{t("admin.inventory_hotels.opt_any")}</option>
+              <option value="1">{t("admin.inventory_hotels.opt_yes")}</option>
+              <option value="0">{t("admin.inventory_hotels.opt_no")}</option>
             </select>
           </label>
           {advancedPhase >= 1 ? (
             <label className="text-sm text-fg-t6">
-              Room type
+              {t("admin.inventory_hotels.filter_room_type")}
               <input
                 value={draftRoomType}
                 onChange={(e) => setDraftRoomType(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && applyFilters()}
                 className="ml-2 rounded border border-default px-2 py-1 text-sm"
-                placeholder="e.g. double"
+                placeholder={t("admin.inventory_hotels.placeholder_room_type")}
               />
             </label>
           ) : null}
           {advancedPhase >= 2 ? (
             <>
               <label className="text-sm text-fg-t6">
-                Invoice id
+                {t("admin.inventory_hotels.filter_invoice_id")}
                 <input
                   value={draftInvoiceId}
                   onChange={(e) => setDraftInvoiceId(e.target.value)}
@@ -300,7 +302,7 @@ export default function HotelsInventoryPage() {
                 />
               </label>
               <label className="text-sm text-fg-t6">
-                Date
+                {t("admin.inventory_hotels.filter_date")}
                 <input
                   type="date"
                   value={draftDate}
@@ -313,7 +315,7 @@ export default function HotelsInventoryPage() {
           ) : null}
           {advancedPhase >= 3 ? (
             <label className="text-sm text-fg-t6">
-              User email
+              {t("admin.inventory_hotels.filter_user_email")}
               <input
                 value={draftUserEmail}
                 onChange={(e) => setDraftUserEmail(e.target.value)}
@@ -324,30 +326,30 @@ export default function HotelsInventoryPage() {
             </label>
           ) : null}
           <label className="text-sm text-fg-t6">
-            Min price
+            {t("admin.inventory_hotels.filter_min_price")}
             <input
               value={draftPriceMin}
               onChange={(e) => setDraftPriceMin(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
               className="ml-2 w-24 rounded border border-default px-2 py-1 text-sm"
-              placeholder="from"
+              placeholder={t("admin.inventory_hotels.placeholder_from")}
             />
           </label>
           <label className="text-sm text-fg-t6">
-            Max price
+            {t("admin.inventory_hotels.filter_max_price")}
             <input
               value={draftPriceMax}
               onChange={(e) => setDraftPriceMax(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && applyFilters()}
               className="ml-2 w-24 rounded border border-default px-2 py-1 text-sm"
-              placeholder="to"
+              placeholder={t("admin.inventory_hotels.placeholder_to")}
             />
           </label>
           <button type="button" onClick={applyFilters} className="rounded-zulu bg-primary-500 px-3 py-1 text-sm font-medium text-white hover:bg-purple-dark">
-            Apply filters
+            {t("admin.inventory_hotels.btn_apply")}
           </button>
           <button type="button" onClick={clearFilters} className="rounded border border-default bg-white px-3 py-1 text-sm">
-            Clear
+            {t("admin.inventory_hotels.btn_clear")}
           </button>
         </>
       }

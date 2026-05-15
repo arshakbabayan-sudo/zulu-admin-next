@@ -2,6 +2,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessLocalizationTranslationsNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import {
@@ -17,6 +18,7 @@ import { useCallback, useRef, useState } from "react";
 
 export default function LocalizationTranslationsPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessLocalizationTranslationsNav(user);
   const isSuper = user?.is_super_admin === true;
 
@@ -53,7 +55,7 @@ export default function LocalizationTranslationsPage() {
     if (!token) return;
     const id = parseInt(entityId, 10);
     if (!entityType || Number.isNaN(id) || id < 1) {
-      setErr("Enter a valid entity id.");
+      setErr(t("admin.content_translations.err_invalid_id"));
       return;
     }
     setErr(null);
@@ -78,9 +80,9 @@ export default function LocalizationTranslationsPage() {
         next[f] = v == null ? "" : String(v);
       }
       setDrafts(next);
-      setMsg("Loaded.");
+      setMsg(t("admin.content_translations.msg_loaded"));
     } catch (e) {
-      setErr(e instanceof ApiRequestError ? e.message : "Load failed");
+      setErr(e instanceof ApiRequestError ? e.message : t("admin.content_translations.err_load"));
     } finally {
       setBusy(false);
     }
@@ -90,7 +92,7 @@ export default function LocalizationTranslationsPage() {
     if (!token) return;
     const id = parseInt(entityId, 10);
     if (!entityType || Number.isNaN(id) || id < 1) {
-      setErr("Enter a valid entity id.");
+      setErr(t("admin.content_translations.err_invalid_id"));
       return;
     }
     const translations: Record<string, string> = {};
@@ -99,7 +101,7 @@ export default function LocalizationTranslationsPage() {
       if (v !== undefined && v.trim() !== "") translations[f] = v;
     }
     if (Object.keys(translations).length === 0) {
-      setErr("Add at least one non-empty field before saving.");
+      setErr(t("admin.content_translations.err_empty_fields"));
       return;
     }
     setErr(null);
@@ -113,14 +115,14 @@ export default function LocalizationTranslationsPage() {
         language_code: languageCode,
         translations,
       });
-      setMsg("Saved.");
+      setMsg(t("admin.content_translations.msg_saved"));
       setLoadedMeta({
         entity_type: entityType,
         entity_id: id,
         language_code: languageCode,
       });
     } catch (e) {
-      setErr(e instanceof ApiRequestError ? e.message : "Save failed");
+      setErr(e instanceof ApiRequestError ? e.message : t("admin.content_translations.err_save"));
     } finally {
       setBusy(false);
     }
@@ -130,10 +132,10 @@ export default function LocalizationTranslationsPage() {
     if (!token || !isSuper) return;
     const id = parseInt(entityId, 10);
     if (!entityType || Number.isNaN(id) || id < 1) {
-      setErr("Enter a valid entity id.");
+      setErr(t("admin.content_translations.err_invalid_id"));
       return;
     }
-    if (!window.confirm("Delete translations for this entity?")) return;
+    if (!window.confirm(t("admin.content_translations.confirm_delete"))) return;
     setErr(null);
     setMsg(null);
     setBusy(true);
@@ -144,11 +146,11 @@ export default function LocalizationTranslationsPage() {
         entity_id: id,
         language_code: lang,
       });
-      setMsg("Deleted.");
+      setMsg(t("admin.content_translations.msg_deleted"));
       setDrafts({});
       setLoadedMeta(null);
     } catch (e) {
-      setErr(e instanceof ApiRequestError ? e.message : "Delete failed");
+      setErr(e instanceof ApiRequestError ? e.message : t("admin.content_translations.err_delete"));
     } finally {
       setBusy(false);
     }
@@ -157,7 +159,7 @@ export default function LocalizationTranslationsPage() {
   if (!allowed) {
     return (
       <div>
-        <h1 className="admin-page-title">Translations</h1>
+        <h1 className="admin-page-title">{t("admin.content_translations.title_short")}</h1>
         <div className="mt-4">
           <ForbiddenNotice messageKey="admin.forbidden.managing_translations" />
         </div>
@@ -167,28 +169,28 @@ export default function LocalizationTranslationsPage() {
 
   return (
     <div>
-      <h1 className="admin-page-title">Content translations</h1>
+      <h1 className="admin-page-title">{t("admin.content_translations.title")}</h1>
       {msg && <p className="mt-2 text-sm text-success-700">{msg}</p>}
       {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
 
       <div className="admin-card mt-4 space-y-3 p-4">
         <div className="flex flex-wrap gap-3">
           <label className="flex flex-col text-xs text-fg-t6">
-            Entity type
+            {t("admin.content_translations.entity_type")}
             <select
               value={entityType}
               onChange={(e) => setEntityType(e.target.value)}
               className="mt-1 rounded border border-default px-2 py-1 text-sm"
             >
-              {LOCALIZATION_ENTITY_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
+              {LOCALIZATION_ENTITY_TYPES.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
                 </option>
               ))}
             </select>
           </label>
           <label className="flex flex-col text-xs text-fg-t6">
-            Entity id
+            {t("admin.content_translations.entity_id")}
             <input
               type="number"
               min={1}
@@ -198,7 +200,7 @@ export default function LocalizationTranslationsPage() {
             />
           </label>
           <label className="flex flex-col text-xs text-fg-t6">
-            Language
+            {t("admin.content_translations.language")}
             <select
               value={languageCode}
               onChange={(e) => setLanguageCode(e.target.value)}
@@ -223,7 +225,7 @@ export default function LocalizationTranslationsPage() {
             onClick={() => loadTranslations()}
             className="admin-btn-secondary"
           >
-            Load
+            {t("admin.content_translations.btn_load")}
           </button>
           <button
             type="button"
@@ -231,12 +233,12 @@ export default function LocalizationTranslationsPage() {
             onClick={() => saveTranslations()}
             className="admin-btn-primary"
           >
-            Save
+            {t("common.save")}
           </button>
         </div>
         {loadedMeta && (
           <p className="text-xs text-fg-t7">
-            Editing {loadedMeta.entity_type} #{loadedMeta.entity_id} | {loadedMeta.language_code}
+            {t("admin.content_translations.editing_prefix")} {loadedMeta.entity_type} #{loadedMeta.entity_id} | {loadedMeta.language_code}
           </p>
         )}
       </div>
@@ -257,15 +259,15 @@ export default function LocalizationTranslationsPage() {
 
       {isSuper && (
         <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <h2 className="text-sm font-semibold text-amber-900">Delete translations (super admin)</h2>
+          <h2 className="text-sm font-semibold text-amber-900">{t("admin.content_translations.delete_section_title")}</h2>
           <p className="mt-1 text-xs text-warning-800">
-            Optional language code - leave empty to delete all languages for this entity.
+            {t("admin.content_translations.delete_section_hint")}
           </p>
           <input
             type="text"
             value={deleteLang}
             onChange={(e) => setDeleteLang(e.target.value)}
-            placeholder="e.g. ru (optional)"
+            placeholder={t("admin.content_translations.delete_lang_placeholder")}
             className="mt-2 w-48 rounded border border-amber-300 px-2 py-1 text-sm"
           />
           <button
@@ -274,7 +276,7 @@ export default function LocalizationTranslationsPage() {
             onClick={() => deleteTranslations()}
             className="ml-2 rounded bg-amber-900 px-3 py-1 text-sm text-white disabled:opacity-50"
           >
-            Delete
+            {t("common.delete")}
           </button>
         </div>
       )}
