@@ -3,6 +3,7 @@
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { PaginationBar } from "@/components/PaginationBar";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { getApiBaseUrl } from "@/lib/api-base";
 import { ApiRequestError } from "@/lib/api-client";
@@ -21,6 +22,7 @@ const LANGS = ["", "en", "ru", "hy"];
 
 export default function PlatformNewsletterPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<NewsletterSubscriptionRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -52,9 +54,9 @@ export default function PlatformNewsletterPage() {
       setMeta(res.meta as unknown as ApiListMeta);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else setErr(e instanceof ApiRequestError ? e.message : "Failed to load");
+      else setErr(e instanceof ApiRequestError ? e.message : t("admin.newsletter.err_load"));
     }
-  }, [token, allowed, page, source, lang, search, activeOnly]);
+  }, [token, allowed, page, source, lang, search, activeOnly, t]);
 
   const loadStats = useCallback(async () => {
     if (!token || !allowed) return;
@@ -73,14 +75,14 @@ export default function PlatformNewsletterPage() {
 
   async function handleDelete(id: number) {
     if (!token) return;
-    if (!window.confirm("Mark this subscriber as unsubscribed?")) return;
+    if (!window.confirm(t("admin.newsletter.confirm_unsubscribe"))) return;
     setBusyId(id);
     try {
       await apiDeleteNewsletterSubscription(token, id);
       await load();
       await loadStats();
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Failed");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.newsletter.err_unsubscribe"));
     } finally {
       setBusyId(null);
     }
@@ -93,8 +95,6 @@ export default function PlatformNewsletterPage() {
     if (lang) q.set("lang", lang);
     q.set("active_only", activeOnly ? "1" : "0");
     const url = `${getApiBaseUrl().replace(/\/$/, "")}/api/platform-admin/newsletter/subscriptions/export.csv?${q.toString()}`;
-    // Use a fetch with auth + blob to avoid losing the bearer token via a plain
-    // anchor click.
     void fetch(url, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -109,13 +109,13 @@ export default function PlatformNewsletterPage() {
         link.click();
         URL.revokeObjectURL(link.href);
       })
-      .catch(() => alert("Export failed"));
+      .catch(() => alert(t("admin.newsletter.err_export")));
   }
 
   if (!allowed || forbidden) {
     return (
       <div>
-        <h1 className="admin-page-title">Newsletter</h1>
+        <h1 className="admin-page-title">{t("admin.newsletter.title")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -125,22 +125,22 @@ export default function PlatformNewsletterPage() {
 
   return (
     <div>
-      <h1 className="admin-page-title">Newsletter subscribers</h1>
+      <h1 className="admin-page-title">{t("admin.newsletter.title_long")}</h1>
 
       {stats && (
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
           <div className="rounded border border-default bg-white p-3">
-            <p className="text-xs text-fg-t7">Active subscribers</p>
+            <p className="text-xs text-fg-t7">{t("admin.newsletter.stat_active")}</p>
             <p className="mt-1 text-2xl font-semibold text-fg-t11 tabular-nums">{stats.total_active}</p>
           </div>
           <div className="rounded border border-default bg-white p-3">
-            <p className="text-xs text-fg-t7">By language</p>
+            <p className="text-xs text-fg-t7">{t("admin.newsletter.stat_by_lang")}</p>
             <p className="mt-1 text-xs text-fg-t8">
               {Object.entries(stats.by_lang).map(([k, v]) => `${k}: ${v}`).join("  ·  ") || "—"}
             </p>
           </div>
           <div className="rounded border border-default bg-white p-3">
-            <p className="text-xs text-fg-t7">By source</p>
+            <p className="text-xs text-fg-t7">{t("admin.newsletter.stat_by_source")}</p>
             <p className="mt-1 text-xs text-fg-t8">
               {Object.entries(stats.by_source).map(([k, v]) => `${k || "—"}: ${v}`).join("  ·  ") || "—"}
             </p>
@@ -150,7 +150,7 @@ export default function PlatformNewsletterPage() {
 
       <div className="mt-4 flex flex-wrap items-end gap-3">
         <label className="text-sm text-fg-t6">
-          Source
+          {t("admin.newsletter.filter_source")}
           <select
             value={source}
             onChange={(e) => {
@@ -161,13 +161,13 @@ export default function PlatformNewsletterPage() {
           >
             {SOURCES.map((s) => (
               <option key={s} value={s}>
-                {s || "All"}
+                {s || t("common.all")}
               </option>
             ))}
           </select>
         </label>
         <label className="text-sm text-fg-t6">
-          Lang
+          {t("admin.newsletter.filter_lang")}
           <select
             value={lang}
             onChange={(e) => {
@@ -178,13 +178,13 @@ export default function PlatformNewsletterPage() {
           >
             {LANGS.map((l) => (
               <option key={l} value={l}>
-                {l || "All"}
+                {l || t("common.all")}
               </option>
             ))}
           </select>
         </label>
         <label className="text-sm text-fg-t6">
-          Search email
+          {t("admin.newsletter.filter_search")}
           <input
             value={searchDraft}
             onChange={(e) => setSearchDraft(e.target.value)}
@@ -194,7 +194,7 @@ export default function PlatformNewsletterPage() {
                 setSearch(searchDraft.trim());
               }
             }}
-            placeholder="email contains…"
+            placeholder={t("admin.newsletter.search_placeholder")}
             className="ml-2 w-56 rounded border border-default px-2 py-1 text-sm"
           />
         </label>
@@ -208,7 +208,7 @@ export default function PlatformNewsletterPage() {
             }}
             className="h-4 w-4"
           />
-          Active only
+          {t("admin.newsletter.filter_active_only")}
         </label>
         <button
           type="button"
@@ -218,14 +218,14 @@ export default function PlatformNewsletterPage() {
           }}
           className="rounded border border-default bg-white px-3 py-1 text-sm hover:bg-figma-bg-1"
         >
-          Apply
+          {t("admin.newsletter.btn_apply")}
         </button>
         <button
           type="button"
           onClick={exportCsv}
           className="rounded bg-violet-600 px-3 py-1 text-sm font-medium text-white hover:bg-violet-700"
         >
-          Export CSV
+          {t("admin.newsletter.btn_export_csv")}
         </button>
       </div>
 
@@ -235,20 +235,20 @@ export default function PlatformNewsletterPage() {
         <table className="w-full min-w-[760px] text-left text-sm">
           <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
-              <th className="px-3 py-2">ID</th>
-              <th className="px-3 py-2">Email</th>
-              <th className="px-3 py-2">Lang</th>
-              <th className="px-3 py-2">Source</th>
-              <th className="px-3 py-2">Subscribed</th>
-              <th className="px-3 py-2">Unsubscribed</th>
-              <th className="px-3 py-2">Actions</th>
+              <th className="px-3 py-2">{t("admin.newsletter.col_id")}</th>
+              <th className="px-3 py-2">{t("admin.newsletter.col_email")}</th>
+              <th className="px-3 py-2">{t("admin.newsletter.col_lang")}</th>
+              <th className="px-3 py-2">{t("admin.newsletter.col_source")}</th>
+              <th className="px-3 py-2">{t("admin.newsletter.col_subscribed")}</th>
+              <th className="px-3 py-2">{t("admin.newsletter.col_unsubscribed")}</th>
+              <th className="px-3 py-2">{t("admin.newsletter.col_actions")}</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-3 py-6 text-center text-fg-t6">
-                  No subscribers match
+                  {t("admin.newsletter.empty")}
                 </td>
               </tr>
             )}
@@ -267,7 +267,7 @@ export default function PlatformNewsletterPage() {
                       {new Date(r.unsubscribed_at).toLocaleString()}
                     </span>
                   ) : (
-                    <span className="text-emerald-700">active</span>
+                    <span className="text-emerald-700">{t("admin.newsletter.status_active")}</span>
                   )}
                 </td>
                 <td className="px-3 py-2">
@@ -278,7 +278,7 @@ export default function PlatformNewsletterPage() {
                       onClick={() => void handleDelete(r.id)}
                       className="text-xs text-error-600 underline disabled:opacity-40"
                     >
-                      Unsubscribe
+                      {t("admin.newsletter.btn_unsubscribe")}
                     </button>
                   )}
                 </td>

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
@@ -47,6 +48,7 @@ type Stats = {
 
 export default function PlatformSecurityPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
 
   const [rows, setRows] = useState<TwoFactorRow[]>([]);
@@ -105,7 +107,7 @@ export default function PlatformSecurityPage() {
           setRows(listJson.data ?? []);
           setMeta(listJson.meta ?? null);
         } else {
-          setError(listJson?.message ?? "Failed to load");
+          setError(listJson?.message ?? t("admin.security.err_load"));
         }
         if (statsJson?.success) {
           setStats(statsJson.data);
@@ -115,7 +117,7 @@ export default function PlatformSecurityPage() {
         if (e instanceof ApiRequestError && e.status === 403) {
           setForbidden(true);
         } else {
-          setError(e instanceof Error ? e.message : "Failed to load");
+          setError(e instanceof Error ? e.message : t("admin.security.err_load"));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -125,7 +127,7 @@ export default function PlatformSecurityPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, allowed, baseURL, page, appliedFilters]);
+  }, [token, allowed, baseURL, page, appliedFilters, t]);
 
   const applyFilters = () => {
     setPage(1);
@@ -133,12 +135,8 @@ export default function PlatformSecurityPage() {
   };
 
   const forceDisable = async (row: TwoFactorRow) => {
-    if (
-      !confirm(
-        `Force-disable 2FA for ${row.user?.name ?? "user #" + row.user_id}? They will be able to log in with password only until they re-enroll.`
-      )
-    )
-      return;
+    const target = row.user?.name ?? `user #${row.user_id}`;
+    if (!confirm(t("admin.security.confirm_force_disable_2fa").replace("{target}", target))) return;
 
     setActionLoading(`disable-${row.user_id}`);
     setError(null);
@@ -153,25 +151,21 @@ export default function PlatformSecurityPage() {
       );
       const json = await res.json();
       if (json?.success) {
-        setSuccess(`2FA disabled for user #${row.user_id}`);
+        setSuccess(t("admin.security.success_2fa_disabled").replace("{id}", String(row.user_id)));
         setAppliedFilters((n) => n + 1);
       } else {
-        setError(json?.message ?? "Force-disable failed");
+        setError(json?.message ?? t("admin.security.err_force_disable"));
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Force-disable failed");
+      setError(e instanceof Error ? e.message : t("admin.security.err_force_disable"));
     } finally {
       setActionLoading(null);
     }
   };
 
   const forceLogoutById = async (userId: number, userName?: string) => {
-    if (
-      !confirm(
-        `Force-logout ${userName ?? "user #" + userId}? All sanctum tokens will be revoked and they'll need to re-authenticate.`
-      )
-    )
-      return;
+    const target = userName ?? `user #${userId}`;
+    if (!confirm(t("admin.security.confirm_force_logout").replace("{target}", target))) return;
 
     setActionLoading(`logout-${userId}`);
     setError(null);
@@ -187,13 +181,15 @@ export default function PlatformSecurityPage() {
       const json = await res.json();
       if (json?.success) {
         setSuccess(
-          `Force-logout: ${json.data.tokens_revoked} token(s) revoked for user #${userId}`
+          t("admin.security.success_force_logout")
+            .replace("{count}", String(json.data.tokens_revoked))
+            .replace("{id}", String(userId))
         );
       } else {
-        setError(json?.message ?? "Force-logout failed");
+        setError(json?.message ?? t("admin.security.err_force_logout"));
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Force-logout failed");
+      setError(e instanceof Error ? e.message : t("admin.security.err_force_logout"));
     } finally {
       setActionLoading(null);
     }
@@ -202,7 +198,7 @@ export default function PlatformSecurityPage() {
   const submitForceLogout = async () => {
     const id = parseInt(forceLogoutUserId.trim(), 10);
     if (isNaN(id) || id <= 0) {
-      setError("Enter a valid user ID");
+      setError(t("admin.security.err_invalid_user_id"));
       return;
     }
     await forceLogoutById(id);
@@ -212,7 +208,7 @@ export default function PlatformSecurityPage() {
   if (!allowed || forbidden) {
     return (
       <div>
-        <h1 className="admin-page-title">Security</h1>
+        <h1 className="admin-page-title">{t("admin.security.title")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -222,10 +218,8 @@ export default function PlatformSecurityPage() {
 
   return (
     <div>
-      <h1 className="admin-page-title">Security</h1>
-      <p className="admin-page-subtitle">
-        Two-factor authentication coverage and incident-response actions.
-      </p>
+      <h1 className="admin-page-title">{t("admin.security.title")}</h1>
+      <p className="admin-page-subtitle">{t("admin.security.subtitle")}</p>
 
       {error && <p className="mt-2 text-sm text-error-600">{error}</p>}
       {success && <p className="mt-2 text-sm text-success-700">{success}</p>}
@@ -233,19 +227,19 @@ export default function PlatformSecurityPage() {
       {/* Stats */}
       {stats && (
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Total users" value={stats.total_users.toLocaleString()} />
+          <StatCard label={t("admin.security.stat_total_users")} value={stats.total_users.toLocaleString()} />
           <StatCard
-            label="2FA enabled"
+            label={t("admin.security.stat_2fa_enabled")}
             value={stats.two_factor_confirmed.toLocaleString()}
             tone="good"
           />
           <StatCard
-            label="2FA pending"
+            label={t("admin.security.stat_2fa_pending")}
             value={stats.two_factor_pending.toLocaleString()}
             tone={stats.two_factor_pending > 0 ? "warn" : "neutral"}
           />
           <StatCard
-            label="Coverage"
+            label={t("admin.security.stat_coverage")}
             value={`${stats.two_factor_coverage_pct}%`}
             tone={stats.two_factor_coverage_pct >= 50 ? "good" : "warn"}
           />
@@ -254,15 +248,13 @@ export default function PlatformSecurityPage() {
 
       {/* Force-logout by ID */}
       <div className="mt-6 rounded border border-error-300 bg-error-50 p-4">
-        <h2 className="text-sm font-semibold text-error-700">Incident response</h2>
-        <p className="mt-1 text-xs text-error-600">
-          Force-logout works on any user (not just those with 2FA). Use after a credential leak.
-        </p>
+        <h2 className="text-sm font-semibold text-error-700">{t("admin.security.incident_title")}</h2>
+        <p className="mt-1 text-xs text-error-600">{t("admin.security.incident_help")}</p>
         <div className="mt-3 flex gap-2">
           <input
             value={forceLogoutUserId}
             onChange={(e) => setForceLogoutUserId(e.target.value)}
-            placeholder="User ID"
+            placeholder={t("admin.security.placeholder_user_id")}
             className="rounded border border-default px-2 py-1 text-sm"
           />
           <button
@@ -271,7 +263,7 @@ export default function PlatformSecurityPage() {
             disabled={!forceLogoutUserId.trim() || actionLoading !== null}
             className="rounded bg-error-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-error-700 disabled:opacity-50"
           >
-            Force-logout
+            {t("admin.security.btn_force_logout")}
           </button>
         </div>
       </div>
@@ -279,7 +271,7 @@ export default function PlatformSecurityPage() {
       {/* Search */}
       <div className="mt-6 flex flex-wrap items-end gap-2 rounded border border-default bg-white p-4">
         <label className="flex-1 text-xs text-fg-t6">
-          Search 2FA users (name or email)
+          {t("admin.security.search_label")}
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -294,7 +286,7 @@ export default function PlatformSecurityPage() {
           onClick={applyFilters}
           className="rounded bg-primary-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-600"
         >
-          Apply
+          {t("admin.security.btn_apply")}
         </button>
         {q && (
           <button
@@ -306,7 +298,7 @@ export default function PlatformSecurityPage() {
             }}
             className="rounded border border-default bg-white px-3 py-1.5 text-sm hover:bg-figma-bg-1"
           >
-            Reset
+            {t("common.reset")}
           </button>
         )}
       </div>
@@ -316,25 +308,25 @@ export default function PlatformSecurityPage() {
         <table className="w-full min-w-[1000px] text-left text-sm">
           <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
-              <th className="px-3 py-2">User</th>
-              <th className="px-3 py-2">Role</th>
-              <th className="px-3 py-2">Confirmed at</th>
-              <th className="px-3 py-2">Last verified</th>
-              <th className="px-3 py-2 text-right">Actions</th>
+              <th className="px-3 py-2">{t("admin.security.col_user")}</th>
+              <th className="px-3 py-2">{t("admin.security.col_role")}</th>
+              <th className="px-3 py-2">{t("admin.security.col_confirmed_at")}</th>
+              <th className="px-3 py-2">{t("admin.security.col_last_verified")}</th>
+              <th className="px-3 py-2 text-right">{t("admin.security.col_actions")}</th>
             </tr>
           </thead>
           <tbody>
             {loading && (
               <tr>
                 <td colSpan={5} className="px-3 py-6 text-center text-fg-t6">
-                  Loading…
+                  {t("common.loading")}
                 </td>
               </tr>
             )}
             {!loading && rows.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-3 py-6 text-center text-fg-t6">
-                  No 2FA-enabled users found.
+                  {t("admin.security.empty")}
                 </td>
               </tr>
             )}
@@ -347,7 +339,7 @@ export default function PlatformSecurityPage() {
                 <td className="px-3 py-2 text-xs">
                   {r.user?.is_super_admin ? (
                     <span className="rounded bg-warning-50 px-2 py-0.5 text-warning-700">
-                      super admin
+                      {t("admin.security.role_super_admin")}
                     </span>
                   ) : (
                     <span className="text-fg-t7">{r.user?.role ?? "—"}</span>
@@ -357,7 +349,7 @@ export default function PlatformSecurityPage() {
                   {r.confirmed_at ? new Date(r.confirmed_at).toLocaleString() : "—"}
                 </td>
                 <td className="px-3 py-2 text-xs text-fg-t7">
-                  {r.last_verified_at ? new Date(r.last_verified_at).toLocaleString() : "Never"}
+                  {r.last_verified_at ? new Date(r.last_verified_at).toLocaleString() : t("admin.security.never")}
                 </td>
                 <td className="px-3 py-2 text-right">
                   <div className="inline-flex gap-2">
@@ -367,7 +359,7 @@ export default function PlatformSecurityPage() {
                       disabled={actionLoading !== null}
                       className="text-xs text-warning-700 hover:underline disabled:opacity-40"
                     >
-                      {actionLoading === `logout-${r.user_id}` ? "…" : "Force-logout"}
+                      {actionLoading === `logout-${r.user_id}` ? "…" : t("admin.security.btn_force_logout")}
                     </button>
                     <button
                       type="button"
@@ -375,7 +367,7 @@ export default function PlatformSecurityPage() {
                       disabled={actionLoading !== null}
                       className="text-xs text-error-700 hover:underline disabled:opacity-40"
                     >
-                      {actionLoading === `disable-${r.user_id}` ? "…" : "Disable 2FA"}
+                      {actionLoading === `disable-${r.user_id}` ? "…" : t("admin.security.btn_disable_2fa")}
                     </button>
                   </div>
                 </td>
@@ -389,7 +381,10 @@ export default function PlatformSecurityPage() {
       {meta && meta.last_page > 1 && (
         <div className="mt-3 flex items-center justify-between text-sm">
           <span className="text-fg-t6">
-            Page {meta.current_page} of {meta.last_page} ({meta.total.toLocaleString()} entries)
+            {t("admin.security.pagination_summary")
+              .replace("{current}", String(meta.current_page))
+              .replace("{last}", String(meta.last_page))
+              .replace("{total}", meta.total.toLocaleString())}
           </span>
           <div className="flex gap-2">
             <button
@@ -398,7 +393,7 @@ export default function PlatformSecurityPage() {
               disabled={page <= 1}
               className="rounded border border-default bg-white px-3 py-1 disabled:opacity-50"
             >
-              Prev
+              {t("admin.security.btn_prev")}
             </button>
             <button
               type="button"
@@ -406,7 +401,7 @@ export default function PlatformSecurityPage() {
               disabled={page >= meta.last_page}
               className="rounded border border-default bg-white px-3 py-1 disabled:opacity-50"
             >
-              Next
+              {t("admin.security.btn_next")}
             </button>
           </div>
         </div>

@@ -2,6 +2,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { getApiPublicOrigin } from "@/lib/api-base";
 import { ApiRequestError } from "@/lib/api-client";
@@ -24,6 +25,7 @@ function resolveBannerImageSrc(row: PlatformBannerRow): string | null {
 
 export default function PlatformBannersPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<PlatformBannerRow[]>([]);
   const [err, setErr] = useState<string | null>(null);
@@ -54,9 +56,9 @@ export default function PlatformBannersPage() {
       setRows(res.data);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else setErr(e instanceof ApiRequestError ? e.message : "Failed to load banners");
+      else setErr(e instanceof ApiRequestError ? e.message : t("admin.banners.err_load"));
     }
-  }, [token, allowed]);
+  }, [token, allowed, t]);
 
   useEffect(() => {
     load();
@@ -74,7 +76,7 @@ export default function PlatformBannersPage() {
 
   async function submitCreate() {
     if (!token || !createFile) {
-      alert("Image file is required.");
+      alert(t("admin.banners.err_image_required"));
       return;
     }
     const fd = new FormData();
@@ -95,7 +97,7 @@ export default function PlatformBannersPage() {
       setCreateSort("0");
       await load();
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Create failed");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.banners.err_create"));
     } finally {
       setBusyId(null);
     }
@@ -116,7 +118,7 @@ export default function PlatformBannersPage() {
       setEditing(null);
       await load();
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Update failed");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.banners.err_update"));
     } finally {
       setBusyId(null);
     }
@@ -124,14 +126,14 @@ export default function PlatformBannersPage() {
 
   async function remove(id: number) {
     if (!token) return;
-    if (!window.confirm("Delete this banner?")) return;
+    if (!window.confirm(t("admin.banners.confirm_delete"))) return;
     setBusyId(id);
     try {
       await apiDeletePlatformBanner(token, id);
       if (editing?.id === id) setEditing(null);
       await load();
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Delete failed");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.banners.err_delete"));
     } finally {
       setBusyId(null);
     }
@@ -140,7 +142,7 @@ export default function PlatformBannersPage() {
   if (!allowed || forbidden) {
     return (
       <div>
-        <h1 className="admin-page-title">Banners</h1>
+        <h1 className="admin-page-title">{t("admin.banners.title")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -150,17 +152,15 @@ export default function PlatformBannersPage() {
 
   return (
     <div>
-      <h1 className="admin-page-title">Banner CMS</h1>
-      <p className="mt-1 text-sm text-fg-t7">
-        GET|POST|PATCH|DELETE /api/platform-admin/banners* | multipart image on create / optional on update
-      </p>
+      <h1 className="admin-page-title">{t("admin.banners.title_long")}</h1>
+      <p className="mt-1 text-sm text-fg-t7">{t("admin.banners.subtitle")}</p>
       {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
 
       <section className="mt-6 rounded border border-default bg-white p-4">
-        <h2 className="text-sm font-semibold">Create banner</h2>
+        <h2 className="text-sm font-semibold">{t("admin.banners.create_title")}</h2>
         <div className="mt-3 grid max-w-xl gap-2 text-sm">
           <label className="block">
-            Image (required)
+            {t("admin.banners.field_image_required")}
             <input
               type="file"
               accept="image/jpeg,image/png,image/jpg,image/webp"
@@ -169,7 +169,7 @@ export default function PlatformBannersPage() {
             />
           </label>
           <label>
-            title_en
+            {t("admin.banners.field_title_en")}
             <input
               value={createTitleEn}
               onChange={(e) => setCreateTitleEn(e.target.value)}
@@ -177,7 +177,7 @@ export default function PlatformBannersPage() {
             />
           </label>
           <label>
-            title_ru
+            {t("admin.banners.field_title_ru")}
             <input
               value={createTitleRu}
               onChange={(e) => setCreateTitleRu(e.target.value)}
@@ -185,7 +185,7 @@ export default function PlatformBannersPage() {
             />
           </label>
           <label>
-            title_hy
+            {t("admin.banners.field_title_hy")}
             <input
               value={createTitleHy}
               onChange={(e) => setCreateTitleHy(e.target.value)}
@@ -193,7 +193,7 @@ export default function PlatformBannersPage() {
             />
           </label>
           <label>
-            link_url
+            {t("admin.banners.field_link")}
             <input
               value={createLink}
               onChange={(e) => setCreateLink(e.target.value)}
@@ -201,7 +201,7 @@ export default function PlatformBannersPage() {
             />
           </label>
           <label>
-            sort_order
+            {t("admin.banners.field_sort")}
             <input
               value={createSort}
               onChange={(e) => setCreateSort(e.target.value)}
@@ -214,17 +214,19 @@ export default function PlatformBannersPage() {
             onClick={() => submitCreate()}
             className="w-fit rounded border border-default bg-figma-bg-1 px-3 py-1 text-sm disabled:opacity-40"
           >
-            Create
+            {t("admin.banners.btn_create")}
           </button>
         </div>
       </section>
 
       {editing && (
         <section className="mt-6 rounded border border-amber-200 bg-amber-50/50 p-4">
-          <h2 className="text-sm font-semibold">Edit banner #{editing.id}</h2>
+          <h2 className="text-sm font-semibold">
+            {t("admin.banners.edit_title").replace("{id}", String(editing.id))}
+          </h2>
           <div className="mt-3 grid max-w-xl gap-2 text-sm">
             <label className="block">
-              New image (optional)
+              {t("admin.banners.field_new_image_optional")}
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/jpg,image/webp"
@@ -233,7 +235,7 @@ export default function PlatformBannersPage() {
               />
             </label>
             <label>
-              title_en
+              {t("admin.banners.field_title_en")}
               <input
                 value={editTitleEn}
                 onChange={(e) => setEditTitleEn(e.target.value)}
@@ -241,7 +243,7 @@ export default function PlatformBannersPage() {
               />
             </label>
             <label>
-              title_ru
+              {t("admin.banners.field_title_ru")}
               <input
                 value={editTitleRu}
                 onChange={(e) => setEditTitleRu(e.target.value)}
@@ -249,7 +251,7 @@ export default function PlatformBannersPage() {
               />
             </label>
             <label>
-              title_hy
+              {t("admin.banners.field_title_hy")}
               <input
                 value={editTitleHy}
                 onChange={(e) => setEditTitleHy(e.target.value)}
@@ -257,7 +259,7 @@ export default function PlatformBannersPage() {
               />
             </label>
             <label>
-              link_url
+              {t("admin.banners.field_link")}
               <input
                 value={editLink}
                 onChange={(e) => setEditLink(e.target.value)}
@@ -265,7 +267,7 @@ export default function PlatformBannersPage() {
               />
             </label>
             <label>
-              sort_order
+              {t("admin.banners.field_sort")}
               <input
                 value={editSort}
                 onChange={(e) => setEditSort(e.target.value)}
@@ -279,14 +281,14 @@ export default function PlatformBannersPage() {
                 onClick={() => submitEdit()}
                 className="rounded border border-default bg-white px-3 py-1 text-sm disabled:opacity-40"
               >
-                Save
+                {t("admin.banners.btn_save")}
               </button>
               <button
                 type="button"
                 onClick={() => setEditing(null)}
                 className="rounded border border-default bg-white px-3 py-1 text-sm"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
             </div>
           </div>
@@ -297,13 +299,13 @@ export default function PlatformBannersPage() {
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
-              <th className="px-3 py-2">ID</th>
-              <th className="px-3 py-2">Preview</th>
-              <th className="px-3 py-2">Titles</th>
-              <th className="px-3 py-2">Link</th>
-              <th className="px-3 py-2">Sort</th>
-              <th className="px-3 py-2">Active</th>
-              <th className="px-3 py-2">Actions</th>
+              <th className="px-3 py-2">{t("admin.banners.col_id")}</th>
+              <th className="px-3 py-2">{t("admin.banners.col_preview")}</th>
+              <th className="px-3 py-2">{t("admin.banners.col_titles")}</th>
+              <th className="px-3 py-2">{t("admin.banners.col_link")}</th>
+              <th className="px-3 py-2">{t("admin.banners.col_sort")}</th>
+              <th className="px-3 py-2">{t("admin.banners.col_active")}</th>
+              <th className="px-3 py-2">{t("admin.banners.col_actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -331,7 +333,7 @@ export default function PlatformBannersPage() {
                     {r.link_url ?? "-"}
                   </td>
                   <td className="px-3 py-2 tabular-nums">{r.sort_order}</td>
-                  <td className="px-3 py-2">{r.is_active ? "yes" : "no"}</td>
+                  <td className="px-3 py-2">{r.is_active ? t("admin.banners.yes") : t("admin.banners.no")}</td>
                   <td className="px-3 py-2">
                     <div className="flex flex-col gap-1">
                       <button
@@ -340,7 +342,7 @@ export default function PlatformBannersPage() {
                         onClick={() => openEdit(r)}
                         className="text-left text-xs text-fg-t7 underline disabled:opacity-40"
                       >
-                        Edit
+                        {t("admin.banners.btn_edit")}
                       </button>
                       <button
                         type="button"
@@ -348,7 +350,7 @@ export default function PlatformBannersPage() {
                         onClick={() => remove(r.id)}
                         className="text-left text-xs text-error-700 underline disabled:opacity-40"
                       >
-                        Delete
+                        {t("admin.banners.btn_delete")}
                       </button>
                     </div>
                   </td>

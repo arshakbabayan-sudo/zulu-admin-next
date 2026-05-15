@@ -2,6 +2,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessLocalizationTemplatesNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import {
@@ -17,6 +18,7 @@ const CHANNELS = ["in_app", "email"] as const;
 
 export default function LocalizationTemplatesPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessLocalizationTemplatesNav(user);
 
   const [langs, setLangs] = useState<LocalizationLanguageRow[]>([]);
@@ -33,7 +35,6 @@ export default function LocalizationTemplatesPage() {
   const [forbidden, setForbidden] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  // Lazy — load languages only once, on first Load/Save click.
   const ensureLangsLoaded = useCallback(async () => {
     if (langsLoaded.current) return;
     try {
@@ -55,15 +56,15 @@ export default function LocalizationTemplatesPage() {
       setTitleTemplate(res.data.title_template);
       setBodyTemplate(res.data.body_template);
       setIsActive(res.data.is_active);
-      setMsg("Loaded.");
+      setMsg(t("admin.localization_templates.msg_loaded"));
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 404) {
         setTitleTemplate("");
         setBodyTemplate("");
         setIsActive(true);
-        setMsg("No template found - fill below and save to create.");
+        setMsg(t("admin.localization_templates.msg_not_found"));
       } else {
-        setErr(e instanceof ApiRequestError ? e.message : "Load failed");
+        setErr(e instanceof ApiRequestError ? e.message : t("admin.localization_templates.err_load"));
       }
     } finally {
       setBusy(false);
@@ -85,10 +86,10 @@ export default function LocalizationTemplatesPage() {
         body_template: bodyTemplate,
         is_active: isActive,
       });
-      setMsg("Saved.");
+      setMsg(t("admin.localization_templates.msg_saved"));
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else setErr(e instanceof ApiRequestError ? e.message : "Save failed");
+      else setErr(e instanceof ApiRequestError ? e.message : t("admin.localization_templates.err_save"));
     } finally {
       setBusy(false);
     }
@@ -97,7 +98,7 @@ export default function LocalizationTemplatesPage() {
   if (!allowed) {
     return (
       <div>
-        <h1 className="admin-page-title">Notification templates</h1>
+        <h1 className="admin-page-title">{t("admin.localization_templates.title")}</h1>
         <div className="mt-4">
           <ForbiddenNotice messageKey="admin.forbidden.templates" />
         </div>
@@ -108,7 +109,7 @@ export default function LocalizationTemplatesPage() {
   if (forbidden) {
     return (
       <div>
-        <h1 className="admin-page-title">Notification templates</h1>
+        <h1 className="admin-page-title">{t("admin.localization_templates.title")}</h1>
         <div className="mt-4">
           <ForbiddenNotice />
         </div>
@@ -118,14 +119,14 @@ export default function LocalizationTemplatesPage() {
 
   return (
     <div>
-      <h1 className="admin-page-title">Notification templates</h1>
+      <h1 className="admin-page-title">{t("admin.localization_templates.title")}</h1>
       {msg && <p className="mt-2 text-sm text-emerald-700">{msg}</p>}
       {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
 
       <div className="mt-4 space-y-3 admin-card p-4">
         <div className="flex flex-wrap gap-3">
           <label className="flex flex-col text-xs text-fg-t6">
-            Event
+            {t("admin.localization_templates.field_event")}
             <select
               value={event}
               onChange={(e) => setEvent(e.target.value)}
@@ -139,7 +140,7 @@ export default function LocalizationTemplatesPage() {
             </select>
           </label>
           <label className="flex flex-col text-xs text-fg-t6">
-            Language
+            {t("admin.localization_templates.field_language")}
             <select
               value={lang}
               onChange={(e) => setLang(e.target.value)}
@@ -157,7 +158,7 @@ export default function LocalizationTemplatesPage() {
             </select>
           </label>
           <label className="flex flex-col text-xs text-fg-t6">
-            Channel
+            {t("admin.localization_templates.field_channel")}
             <select
               value={channel}
               onChange={(e) => setChannel(e.target.value)}
@@ -178,7 +179,7 @@ export default function LocalizationTemplatesPage() {
             onClick={() => loadTemplate()}
             className="rounded bg-figma-bg-1 px-3 py-1 text-sm disabled:opacity-50"
           >
-            Load
+            {t("admin.localization_templates.btn_load")}
           </button>
           <button
             type="button"
@@ -186,14 +187,14 @@ export default function LocalizationTemplatesPage() {
             onClick={() => saveTemplate()}
             className="admin-btn-primary"
           >
-            Save
+            {t("admin.localization_templates.btn_save")}
           </button>
         </div>
       </div>
 
       <div className="mt-4 space-y-3 admin-card p-4">
         <label className="block text-xs text-fg-t6">
-          Title template
+          {t("admin.localization_templates.field_title_template")}
           <input
             value={titleTemplate}
             onChange={(e) => setTitleTemplate(e.target.value)}
@@ -202,7 +203,7 @@ export default function LocalizationTemplatesPage() {
           />
         </label>
         <label className="block text-xs text-fg-t6">
-          Body template
+          {t("admin.localization_templates.field_body_template")}
           <textarea
             value={bodyTemplate}
             onChange={(e) => setBodyTemplate(e.target.value)}
@@ -216,7 +217,7 @@ export default function LocalizationTemplatesPage() {
             checked={isActive}
             onChange={(e) => setIsActive(e.target.checked)}
           />
-          Active
+          {t("admin.localization_templates.field_active")}
         </label>
       </div>
     </div>
