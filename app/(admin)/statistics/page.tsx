@@ -22,6 +22,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessOperatorStatisticsNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { apiOperatorStatistics } from "@/lib/platform-admin-api";
@@ -29,6 +30,7 @@ import { useCallback, useEffect, useState } from "react";
 
 export default function OperatorStatisticsPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessOperatorStatisticsNav(user);
   const [companyIdInput, setCompanyIdInput] = useState("");
   const [payload, setPayload] = useState<unknown>(null);
@@ -56,7 +58,7 @@ export default function OperatorStatisticsPage() {
       if (e instanceof ApiRequestError) {
         setErr(e.message);
       } else {
-        setErr("Failed to load statistics");
+        setErr(t("admin.operator_statistics.err_load"));
       }
       setPayload(null);
     } finally {
@@ -73,7 +75,7 @@ export default function OperatorStatisticsPage() {
   if (!allowed) {
     return (
       <div>
-        <h1 className="admin-page-title">Operator statistics</h1>
+        <h1 className="admin-page-title">{t("admin.operator_statistics.title")}</h1>
         <div className="mt-4">
           <ForbiddenNotice messageKey="admin.forbidden.statistics_scope" />
         </div>
@@ -87,13 +89,13 @@ export default function OperatorStatisticsPage() {
       {isSuper && (
         <div className="mt-4 flex flex-wrap items-end gap-2">
           <label className="text-sm">
-            company_id
+            {t("admin.inventory_hotels.filter_company_id")}
             <input
               type="number"
               min={1}
               value={companyIdInput}
               onChange={(e) => setCompanyIdInput(e.target.value)}
-              placeholder="Required for super-admin scope"
+              placeholder={t("admin.operator_statistics.placeholder_company_required")}
               className="ml-2 rounded border border-default px-2 py-1 text-sm"
             />
           </label>
@@ -103,17 +105,17 @@ export default function OperatorStatisticsPage() {
             disabled={loading}
             className="admin-btn-primary"
           >
-            Load
+            {t("admin.content_translations.btn_load")}
           </button>
         </div>
       )}
       {!isSuper && defaultCompanyId && (
         <p className="mt-2 text-xs text-fg-t7">
-          Using context active company id {defaultCompanyId} (server resolves membership).
+          {t("admin.operator_statistics.context_active_company").replace("{id}", String(defaultCompanyId))}
         </p>
       )}
       {err && <p className="mt-4 text-sm text-error-600">{err}</p>}
-      {loading && <p className="mt-4 text-sm text-fg-t7">Loading...</p>}
+      {loading && <p className="mt-4 text-sm text-fg-t7">{t("common.loading")}</p>}
       {payload !== null && !loading && (
         <pre className="mt-4 max-h-[70vh] overflow-auto rounded border border-default bg-slate-800 p-4 text-xs text-slate-100">
           {JSON.stringify(payload, null, 2)}
