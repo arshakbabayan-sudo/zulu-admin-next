@@ -102,7 +102,7 @@ const EMPTY: HotelFormPayload = {
 
 export default function OperatorHotelsPage() {
   const { token } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, contentLang } = useLanguage();
   const [rows, setRows] = useState<HotelRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
   const [page, setPage] = useState(1);
@@ -128,7 +128,9 @@ export default function OperatorHotelsPage() {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
       else setErr(e instanceof ApiRequestError ? e.message : "Failed");
     }
-  }, [token, page]);
+    // contentLang is intentionally in deps: changing the content preview language
+    // must refetch hotel rows so the localized hotel_name / description show up.
+  }, [token, page, contentLang]);
 
   useEffect(() => {
     load();

@@ -123,7 +123,7 @@ const EXCURSION_STEP_LABEL_KEYS: Record<number, string> = {
 
 export default function OperatorExcursionsPage() {
   const { token } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, contentLang } = useLanguage();
   const [rows, setRows] = useState<ExcursionRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
   const [page, setPage] = useState(1);
@@ -153,7 +153,7 @@ export default function OperatorExcursionsPage() {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
       else setErr(e instanceof ApiRequestError ? e.message : "Failed");
     }
-  }, [token, page]);
+  }, [token, page, contentLang]);
 
   useEffect(() => {
     void load();

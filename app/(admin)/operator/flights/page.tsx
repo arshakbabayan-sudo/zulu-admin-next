@@ -197,7 +197,7 @@ const inputCls = "rounded border border-default px-2 py-1.5 text-sm";
 
 export default function OperatorFlightsPage() {
   const { token } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, contentLang } = useLanguage();
   const [rows, setRows] = useState<FlightRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
   const [page, setPage] = useState(1);
@@ -236,7 +236,7 @@ export default function OperatorFlightsPage() {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
       else setErr(e instanceof ApiRequestError ? e.message : "Failed");
     }
-  }, [token, page]);
+  }, [token, page, contentLang]);
 
   useEffect(() => {
     void load();

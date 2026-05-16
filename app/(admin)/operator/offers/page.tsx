@@ -22,7 +22,7 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function OperatorOffersPage() {
   const { token, user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, contentLang } = useLanguage();
   const allowed = canAccessOperatorToolsNav(user);
   const [rows, setRows] = useState<OfferRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -43,7 +43,7 @@ export default function OperatorOffersPage() {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
       else setErr(e instanceof ApiRequestError ? e.message : "Failed");
     }
-  }, [token, allowed, page, statusFilter]);
+  }, [token, allowed, page, statusFilter, contentLang]);
 
   useEffect(() => { load(); }, [load]);
 

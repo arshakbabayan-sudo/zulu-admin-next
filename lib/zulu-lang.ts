@@ -1,6 +1,7 @@
 import { getApiBaseUrl } from "./api-base";
 
 export const ZULU_LANG_KEY = "zulu_lang";
+export const ZULU_CONTENT_LANG_KEY = "zulu_content_lang";
 
 /** API shape from GET /api/localization/languages */
 export type SupportedLanguageRow = {
@@ -171,6 +172,43 @@ export function writeStoredLanguage(lang: string): void {
   }
   try {
     document.cookie = `${ZULU_LANG_KEY}=${encodeURIComponent(canonical)}; path=/; max-age=31536000; SameSite=Lax`;
+  } catch {
+    // ignore
+  }
+}
+
+export function resolveInitialContentLanguage(
+  allowedCodes: string[],
+  defaultCode: string,
+  uiLang: string
+): LangCode {
+  // Content preview lang falls back to UI lang on first load — preserves existing
+  // single-selector behavior until user explicitly picks a different content lang.
+  const uiFallback = canonicalizeLanguageCode(uiLang, allowedCodes) ?? defaultCode;
+
+  if (typeof window === "undefined") return uiFallback;
+  try {
+    const raw = window.localStorage.getItem(ZULU_CONTENT_LANG_KEY);
+    const stored = canonicalizeLanguageCode(raw, allowedCodes);
+    if (stored) return stored;
+  } catch {
+    // ignore
+  }
+  return uiFallback;
+}
+
+export function writeStoredContentLanguage(lang: string): void {
+  if (typeof window === "undefined") return;
+  const allowedCodes = getCachedLanguageOptions().map((o) => o.code);
+  const canonical = canonicalizeLanguageCode(lang, allowedCodes);
+  if (!canonical) return;
+  try {
+    window.localStorage.setItem(ZULU_CONTENT_LANG_KEY, canonical);
+  } catch {
+    // ignore
+  }
+  try {
+    document.cookie = `${ZULU_CONTENT_LANG_KEY}=${encodeURIComponent(canonical)}; path=/; max-age=31536000; SameSite=Lax`;
   } catch {
     // ignore
   }

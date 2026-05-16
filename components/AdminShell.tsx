@@ -109,9 +109,11 @@ function applyAdminTheme(theme: AdminTheme): void {
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, token, logout } = useAdminAuth();
-  const { lang, setLang, languageOptions, t } = useLanguage();
+  const { lang, contentLang, setLang, setContentLang, languageOptions, t } = useLanguage();
   const [languageOpen, setLanguageOpen] = useState(false);
   const languageRef = useRef<HTMLDivElement>(null);
+  const [contentLanguageOpen, setContentLanguageOpen] = useState(false);
+  const contentLanguageRef = useRef<HTMLDivElement>(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const notificationsRef = useRef<HTMLDivElement>(null);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -204,6 +206,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       const target = event.target as Node;
       if (languageRef.current && !languageRef.current.contains(target)) {
         setLanguageOpen(false);
+      }
+      if (contentLanguageRef.current && !contentLanguageRef.current.contains(target)) {
+        setContentLanguageOpen(false);
       }
       if (notificationsRef.current && !notificationsRef.current.contains(target)) {
         setNotificationsOpen(false);
@@ -305,12 +310,12 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <div className="ml-3 text-sm font-semibold tracking-wide text-slate-800">{pageTitle}</div>
         </div>
         <div className="flex items-center gap-1.5">
-          {/* Frontend-style language switcher with flag + code */}
+          {/* UI language switcher — controls admin chrome (buttons, sidebar, menus) */}
           <div ref={languageRef} className="relative flex items-center">
             <button
               type="button"
-              aria-label={t("common.language")}
-              title={t("common.language")}
+              aria-label={t("admin.shell.ui_language") || t("common.language")}
+              title={t("admin.shell.ui_language") || t("common.language")}
               onClick={() => setLanguageOpen((o) => !o)}
               className="inline-flex h-8 items-center gap-1.5 rounded-full px-2 text-slate-700 transition hover:bg-black/5"
             >
@@ -360,6 +365,67 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                     onClick={() => {
                       setLang(option.code);
                       setLanguageOpen(false);
+                    }}
+                  >
+                    {option.code === "en" ? (
+                      <Image src="/flags/gb.svg" alt="" width={20} height={14} className="h-3.5 w-[1.25rem] shrink-0 rounded-[2px] object-cover" />
+                    ) : option.code === "hy" ? (
+                      <Image src="/flags/am.svg" alt="" width={20} height={14} className="h-3.5 w-[1.25rem] shrink-0 rounded-[2px] object-cover" />
+                    ) : option.code === "ru" ? (
+                      <Image src="/flags/ru.svg" alt="" width={20} height={14} className="h-3.5 w-[1.25rem] shrink-0 rounded-[2px] object-cover" />
+                    ) : (
+                      <span className="text-sm leading-none" aria-hidden>{option.flag ?? "🌐"}</span>
+                    )}
+                    <span>{option.label}</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+          {/* Content preview language — controls what language hotel names, descriptions, etc. load in */}
+          <div ref={contentLanguageRef} className="relative flex items-center">
+            <button
+              type="button"
+              aria-label={t("admin.shell.content_language") || "Content preview language"}
+              title={t("admin.shell.content_language") || "Content preview language"}
+              onClick={() => setContentLanguageOpen((o) => !o)}
+              className="inline-flex h-8 items-center gap-1.5 rounded-full px-2 text-slate-700 transition hover:bg-black/5"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current text-slate-500" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+              {contentLang === "en" ? (
+                <Image src="/flags/gb.svg" alt="" width={20} height={14} className="h-3.5 w-[1.25rem] shrink-0 rounded-[2px] object-cover" />
+              ) : contentLang === "hy" ? (
+                <Image src="/flags/am.svg" alt="" width={20} height={14} className="h-3.5 w-[1.25rem] shrink-0 rounded-[2px] object-cover" />
+              ) : contentLang === "ru" ? (
+                <Image src="/flags/ru.svg" alt="" width={20} height={14} className="h-3.5 w-[1.25rem] shrink-0 rounded-[2px] object-cover" />
+              ) : (
+                <span className="text-sm leading-none" aria-hidden>
+                  {getLanguageMeta(contentLang, languageOptions).flag ?? "🌐"}
+                </span>
+              )}
+              <span className="text-xs font-semibold uppercase">
+                {getLanguageMeta(contentLang, languageOptions).code ?? contentLang}
+              </span>
+            </button>
+            {contentLanguageOpen ? (
+              <div
+                className="absolute right-0 top-full z-[100] mt-1 min-w-[200px] overflow-hidden rounded-md border bg-white py-1 shadow-lg"
+                style={{ borderColor: "var(--admin-border)" }}
+              >
+                <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                  {t("admin.shell.content_language") || "Content preview"}
+                </div>
+                {languageOptions.map((option) => (
+                  <button
+                    key={option.code}
+                    type="button"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50"
+                    onClick={() => {
+                      setContentLang(option.code);
+                      setContentLanguageOpen(false);
                     }}
                   >
                     {option.code === "en" ? (

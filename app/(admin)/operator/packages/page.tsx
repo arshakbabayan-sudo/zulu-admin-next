@@ -24,7 +24,7 @@ const STATUSES = ["", "draft", "active", "inactive", "archived"];
 
 export default function OperatorPackagesPage() {
   const { token } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, contentLang } = useLanguage();
   const [rows, setRows] = useState<PackageRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
   const [page, setPage] = useState(1);
@@ -47,7 +47,7 @@ export default function OperatorPackagesPage() {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
       else setErr(e instanceof ApiRequestError ? e.message : "Failed");
     }
-  }, [token, page, statusFilter]);
+  }, [token, page, statusFilter, contentLang]);
 
   useEffect(() => { load(); }, [load]);
 

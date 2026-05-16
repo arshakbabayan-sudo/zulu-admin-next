@@ -15,19 +15,25 @@ import {
   fetchSupportedLanguagesMeta,
   fetchUiTranslations,
   getCachedLanguageOptions,
+  resolveInitialContentLanguage,
   resolveInitialLanguage,
   t as translateKey,
+  writeStoredContentLanguage,
   writeStoredLanguage,
   type LangCode,
   type LanguageOption,
 } from "@/lib/zulu-lang";
 
 type LanguageContextValue = {
+  /** Admin chrome language (button labels, sidebar, menus). */
   lang: LangCode;
+  /** Language used when fetching catalog content (hotel names, descriptions). */
+  contentLang: LangCode;
   translations: Record<string, string>;
   isReady: boolean;
   languageOptions: LanguageOption[];
   setLang: (lang: LangCode) => void;
+  setContentLang: (lang: LangCode) => void;
   t: (key: string) => string;
 };
 
@@ -49,6 +55,9 @@ export function LanguageProvider({
 }) {
   const router = useRouter();
   const [lang, setLangState] = useState<LangCode>(() => normalizeInitialLang(initialLang));
+  const [contentLang, setContentLangState] = useState<LangCode>(() =>
+    normalizeInitialLang(initialLang)
+  );
   const [translations, setTranslations] = useState<Record<string, string>>({});
   /** English UI map for fallback when selected locale is missing a key (same ref as translations when lang is en). */
   const [defaultTranslations, setDefaultTranslations] = useState<Record<string, string>>({});
@@ -78,12 +87,13 @@ export function LanguageProvider({
       const { options, defaultCode } = await fetchSupportedLanguagesMeta();
       if (cancelled) return;
       setLanguageOptions(options);
-      const initial = resolveInitialLanguage(
-        options.map((o) => o.code),
-        defaultCode
-      );
+      const codes = options.map((o) => o.code);
+      const initial = resolveInitialLanguage(codes, defaultCode);
+      const initialContent = resolveInitialContentLanguage(codes, defaultCode, initial);
       setLangState(initial);
+      setContentLangState(initialContent);
       writeStoredLanguage(initial);
+      writeStoredContentLanguage(initialContent);
       await loadTranslations(initial);
       if (!cancelled) {
         setIsReady(true);
@@ -113,14 +123,35 @@ export function LanguageProvider({
     [languageOptions, loadTranslations, router]
   );
 
+  const setContentLang = useCallback(
+    (code: LangCode) => {
+      const allowed = new Set(languageOptions.map((o) => o.code));
+      if (!allowed.has(code)) return;
+      writeStoredContentLanguage(code);
+      setContentLangState(code);
+      // Content lang switch does not refresh router or UI strings — it only
+      // signals catalog list pages (via contentLang dep) to refetch.
+    },
+    [languageOptions]
+  );
+
   const t = useCallback(
     (key: string) => translateKey(key, translations, defaultTranslations),
     [translations, defaultTranslations]
   );
 
   const value = useMemo<LanguageContextValue>(
-    () => ({ lang, translations, isReady, languageOptions, setLang, t }),
-    [lang, translations, isReady, languageOptions, setLang, t]
+    () => ({
+      lang,
+      contentLang,
+      translations,
+      isReady,
+      languageOptions,
+      setLang,
+      setContentLang,
+      t,
+    }),
+    [lang, contentLang, translations, isReady, languageOptions, setLang, setContentLang, t]
   );
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;

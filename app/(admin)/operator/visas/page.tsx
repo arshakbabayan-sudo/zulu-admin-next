@@ -352,7 +352,7 @@ function bodyFromForm(form: VisaPayload, mode: "create" | "update"): VisaPayload
 
 export default function OperatorVisasPage() {
   const { token, user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, contentLang } = useLanguage();
   const allowed = canAccessOperatorToolsNav(user) && userHasSellerServiceType(user, "visa");
   const [rows, setRows] = useState<VisaRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -390,7 +390,7 @@ export default function OperatorVisasPage() {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
       else setErr(e instanceof ApiRequestError ? e.message : "Failed");
     }
-  }, [token, allowed, page]);
+  }, [token, allowed, page, contentLang]);
 
   useEffect(() => {
     void load();

@@ -492,7 +492,7 @@ function renderApiFieldErrors(errors: FieldErrors | undefined): { title: string;
 
 export default function OperatorCarsPage() {
   const { token } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, contentLang } = useLanguage();
   const [rows, setRows] = useState<CarRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
   const [page, setPage] = useState(1);
@@ -521,7 +521,7 @@ export default function OperatorCarsPage() {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
       else setErr(e instanceof ApiRequestError ? e.message : "Failed");
     }
-  }, [token, page]);
+  }, [token, page, contentLang]);
 
   useEffect(() => {
     void load();

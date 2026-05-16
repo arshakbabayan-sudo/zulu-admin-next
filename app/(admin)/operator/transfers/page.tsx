@@ -215,7 +215,7 @@ const TRANSFER_STEP_LABEL_KEYS: Record<string, string> = {
 
 export default function OperatorTransfersPage() {
   const { token } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, contentLang } = useLanguage();
   const [rows, setRows] = useState<TransferRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
   const [page, setPage] = useState(1);
@@ -245,7 +245,7 @@ export default function OperatorTransfersPage() {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
       else setErr(e instanceof ApiRequestError ? e.message : "Failed");
     }
-  }, [token, page]);
+  }, [token, page, contentLang]);
 
   useEffect(() => {
     load();
