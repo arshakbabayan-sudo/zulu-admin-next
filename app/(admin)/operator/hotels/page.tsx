@@ -245,7 +245,11 @@ export default function OperatorHotelsPage() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-3">
           <h1 className="admin-page-title">{t("admin.crud.hotels.title")}</h1>
-          <ContentLanguagePill />
+          {/* Pill is hidden when edit/create form is open: switching content lang
+              there would either discard unsaved edits (refetch) or silently
+              overwrite the EN source on save (no refetch). Use the Translations
+              tabs at the bottom of the edit form instead. */}
+          {form === null && <ContentLanguagePill />}
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <ImportExportButtons

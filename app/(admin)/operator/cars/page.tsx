@@ -735,7 +735,7 @@ export default function OperatorCarsPage() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-3">
           <h1 className="admin-page-title">{t("admin.crud.cars.title")}</h1>
-          <ContentLanguagePill />
+          {form === null && <ContentLanguagePill />}
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <ImportExportButtons

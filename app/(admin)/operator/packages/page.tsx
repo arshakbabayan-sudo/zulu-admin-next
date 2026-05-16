@@ -155,7 +155,7 @@ export default function OperatorPackagesPage() {
       <div className="flex items-center justify-between">
         <div className="flex min-w-0 items-center gap-3">
           <h1 className="admin-page-title">{t("admin.crud.packages.title")}</h1>
-          <ContentLanguagePill />
+          {form === null && <ContentLanguagePill />}
         </div>
         <button type="button" onClick={openCreate} className="admin-btn-primary">{t("admin.crud.packages.new_btn")}</button>
       </div>
