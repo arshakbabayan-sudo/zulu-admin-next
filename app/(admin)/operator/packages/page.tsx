@@ -1,5 +1,6 @@
 "use client";
 
+import { ContentLanguagePill } from "@/components/ContentLanguagePill";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
 import { MainImageDescriptionFields } from "@/components/MainImageDescriptionFields";
@@ -152,7 +153,10 @@ export default function OperatorPackagesPage() {
   return (
     <div>
       <div className="flex items-center justify-between">
-        <div><h1 className="admin-page-title">{t("admin.crud.packages.title")}</h1></div>
+        <div className="flex min-w-0 items-center gap-3">
+          <h1 className="admin-page-title">{t("admin.crud.packages.title")}</h1>
+          <ContentLanguagePill />
+        </div>
         <button type="button" onClick={openCreate} className="admin-btn-primary">{t("admin.crud.packages.new_btn")}</button>
       </div>
 

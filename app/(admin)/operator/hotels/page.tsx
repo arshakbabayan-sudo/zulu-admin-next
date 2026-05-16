@@ -1,5 +1,6 @@
 "use client";
 
+import { ContentLanguagePill } from "@/components/ContentLanguagePill";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { HotelsXlsxImportModal } from "@/components/HotelsXlsxImportModal";
 import { ImageUploadField } from "@/components/ImageUploadField";
@@ -242,8 +243,9 @@ export default function OperatorHotelsPage() {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="min-w-0">
+        <div className="flex min-w-0 items-center gap-3">
           <h1 className="admin-page-title">{t("admin.crud.hotels.title")}</h1>
+          <ContentLanguagePill />
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <ImportExportButtons

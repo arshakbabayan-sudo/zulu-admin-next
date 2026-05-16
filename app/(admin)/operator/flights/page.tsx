@@ -12,6 +12,7 @@
  * Last synced: 2026-05-11
  */
 
+import { ContentLanguagePill } from "@/components/ContentLanguagePill";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { ImageUploadField } from "@/components/ImageUploadField";
 import { ImportExportButtons } from "@/components/ImportExportButtons";
@@ -441,7 +442,10 @@ export default function OperatorFlightsPage() {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="admin-page-title">{t("admin.crud.flights.title")}</h1>
+        <div className="flex min-w-0 items-center gap-3">
+          <h1 className="admin-page-title">{t("admin.crud.flights.title")}</h1>
+          <ContentLanguagePill />
+        </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <ImportExportButtons
             busy={busy || exportBusy}

@@ -1,5 +1,6 @@
 "use client";
 
+import { ContentLanguagePill } from "@/components/ContentLanguagePill";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { PaginationBar } from "@/components/PaginationBar";
 import { TranslationsModal } from "@/components/TranslationsModal";
@@ -69,7 +70,10 @@ export default function OperatorOffersPage() {
 
   return (
     <div>
-      <h1 className="admin-page-title">{t("admin.crud.offers.title")}</h1>
+      <div className="flex min-w-0 items-center gap-3">
+        <h1 className="admin-page-title">{t("admin.crud.offers.title")}</h1>
+        <ContentLanguagePill />
+      </div>
 
       <div className="mt-4 flex items-center gap-3">
         <label className="text-sm text-fg-t6">
