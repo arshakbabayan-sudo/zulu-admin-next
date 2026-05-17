@@ -629,6 +629,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   return showLocalization;
                 case "super_admin":
                   return showSuperAdminOnlyPlatform;
+                case "bucket3":
+                  // Bucket-3 placeholders: same gate as platform admin for now.
+                  return showPlatform;
                 default:
                   return false;
               }

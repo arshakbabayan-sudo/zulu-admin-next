@@ -50,7 +50,8 @@ export type AdminNavGroup = {
     | "operator_tools"
     | "inventory_oversight"
     | "localization"
-    | "super_admin";
+    | "super_admin"
+    | "bucket3";
 };
 
 export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
@@ -190,6 +191,30 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/platform/loyalty", labelKey: "admin.nav.tab.loyalty_programs" },
     ],
     visibility: "platform_admin",
+  },
+  {
+    key: "bucket3",
+    labelKey: "admin.nav.group.bucket3",
+    icon: "/icons/menu/banner.svg",
+    defaultHref: "/bucket3/customers",
+    tabs: [
+      { href: "/bucket3/customers", labelKey: "admin.nav.tab.bucket3.customers" },
+      { href: "/bucket3/block-dates", labelKey: "admin.nav.tab.bucket3.block_dates" },
+      { href: "/bucket3/per-x-invoicing", labelKey: "admin.nav.tab.bucket3.per_x_invoicing" },
+      { href: "/bucket3/custom-fields", labelKey: "admin.nav.tab.bucket3.custom_fields" },
+      { href: "/bucket3/employees", labelKey: "admin.nav.tab.bucket3.employees" },
+      { href: "/bucket3/bulk-notifications", labelKey: "admin.nav.tab.bucket3.bulk_notifications" },
+      { href: "/bucket3/requests", labelKey: "admin.nav.tab.bucket3.requests" },
+      { href: "/bucket3/unverified-accounts", labelKey: "admin.nav.tab.bucket3.unverified_accounts" },
+      { href: "/bucket3/service-logs", labelKey: "admin.nav.tab.bucket3.service_logs" },
+      { href: "/bucket3/cases", labelKey: "admin.nav.tab.bucket3.cases" },
+      { href: "/bucket3/subscriptions", labelKey: "admin.nav.tab.bucket3.subscriptions" },
+      { href: "/bucket3/service-catalog", labelKey: "admin.nav.tab.bucket3.service_catalog" },
+      { href: "/bucket3/non-service-hours", labelKey: "admin.nav.tab.bucket3.non_service_hours" },
+      { href: "/bucket3/pin-settings", labelKey: "admin.nav.tab.bucket3.pin_settings" },
+      { href: "/bucket3/payroll", labelKey: "admin.nav.tab.bucket3.payroll" },
+    ],
+    visibility: "bucket3",
   },
   {
     key: "system",
