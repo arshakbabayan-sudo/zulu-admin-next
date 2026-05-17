@@ -1,8 +1,9 @@
 "use client";
 
+/** Phase-2 migration to shared @/components/ui primitives. */
+
 import { ContentLanguagePill } from "@/components/ContentLanguagePill";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
-import { PaginationBar } from "@/components/PaginationBar";
 import { TranslationsModal } from "@/components/TranslationsModal";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessOperatorToolsNav } from "@/lib/access";
@@ -11,15 +12,23 @@ import type { ApiListMeta } from "@/lib/api-envelope";
 import { apiOffers, apiPublishOffer, apiArchiveOffer, type OfferRow } from "@/lib/inventory-crud-api";
 import { useCallback, useEffect, useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import {
+  Button,
+  FormField,
+  PageHeader,
+  Pagination,
+  Select,
+  StatusPill,
+  Table,
+  TBody,
+  TD,
+  TEmpty,
+  TH,
+  THead,
+  TR,
+} from "@/components/ui";
 
 const STATUSES = ["", "draft", "published", "archived"];
-
-function StatusBadge({ status }: { status: string }) {
-  const cls = status === "published" ? "bg-success-50 text-success-800" :
-    status === "archived" ? "bg-figma-bg-1 text-fg-t6" :
-    status === "draft" ? "bg-warning-50 text-warning-800" : "bg-figma-bg-1 text-fg-t7";
-  return <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${cls}`}>{status}</span>;
-}
 
 export default function OperatorOffersPage() {
   const { token, user } = useAdminAuth();
@@ -36,10 +45,12 @@ export default function OperatorOffersPage() {
 
   const load = useCallback(async () => {
     if (!token || !allowed) return;
-    setErr(null); setForbidden(false);
+    setErr(null);
+    setForbidden(false);
     try {
       const res = await apiOffers(token, { page, per_page: 20, status: statusFilter || undefined });
-      setRows(res.data); setMeta(res.meta);
+      setRows(res.data);
+      setMeta(res.meta);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
       else setErr(e instanceof ApiRequestError ? e.message : "Failed");
@@ -64,65 +75,95 @@ export default function OperatorOffersPage() {
     finally { setBusyId(null); }
   }
 
-  if (!allowed || forbidden) return (
-    <div><h1 className="admin-page-title">{t("admin.crud.offers.title")}</h1><div className="mt-4"><ForbiddenNotice /></div></div>
-  );
+  if (!allowed || forbidden) {
+    return (
+      <div className="space-y-4">
+        <h1 className="admin-page-title">{t("admin.crud.offers.title")}</h1>
+        <div className="admin-card p-4">
+          <ForbiddenNotice />
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <div className="flex min-w-0 items-center gap-3">
-        <h1 className="admin-page-title">{t("admin.crud.offers.title")}</h1>
-        <ContentLanguagePill />
+    <div className="space-y-6">
+      <PageHeader
+        title={
+          <span className="flex items-center gap-3">
+            {t("admin.crud.offers.title")}
+            <ContentLanguagePill />
+          </span>
+        }
+      />
+
+      <div className="admin-card p-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <FormField label={t("admin.crud.offers.filter.status")} htmlFor="off-status" className="max-w-xs">
+            <Select
+              id="off-status"
+              fieldSize="sm"
+              value={statusFilter}
+              onChange={(e) => { setPage(1); setStatusFilter(e.target.value); }}
+            >
+              {STATUSES.map((s) => <option key={s} value={s}>{s || t("admin.crud.common.all")}</option>)}
+            </Select>
+          </FormField>
+          <Button variant="outline" size="sm" onClick={load}>{t("admin.crud.common.refresh")}</Button>
+        </div>
       </div>
 
-      <div className="mt-4 flex items-center gap-3">
-        <label className="text-sm text-fg-t6">
-          {t("admin.crud.offers.filter.status")}
-          <select value={statusFilter} onChange={(e) => { setPage(1); setStatusFilter(e.target.value); }}
-            className="ml-2 rounded border border-default px-2 py-1 text-sm">
-            {STATUSES.map((s) => <option key={s} value={s}>{s || t("admin.crud.common.all")}</option>)}
-          </select>
-        </label>
-        <button type="button" onClick={load} className="rounded border border-default bg-white px-3 py-1 text-sm">{t("admin.crud.common.refresh")}</button>
-      </div>
+      {err && (
+        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
+      )}
 
-      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
+      <Table>
+        <THead>
+          <TR>
+            <TH>{t("admin.crud.common.id")}</TH>
+            <TH>{t("admin.crud.offers.col.title")}</TH>
+            <TH>{t("admin.crud.offers.col.type")}</TH>
+            <TH>{t("admin.crud.offers.col.price")}</TH>
+            <TH>{t("admin.crud.common.status")}</TH>
+            <TH>{t("admin.crud.offers.col.company")}</TH>
+            <TH>{t("admin.crud.common.actions")}</TH>
+          </TR>
+        </THead>
+        <TBody>
+          {rows.length === 0 ? <TEmpty colSpan={7}>{t("admin.crud.offers.empty")}</TEmpty> : null}
+          {rows.map((r) => (
+            <TR key={r.id}>
+              <TD className="tabular-nums">{r.id}</TD>
+              <TD className="font-medium max-w-[200px] truncate">{r.title}</TD>
+              <TD className="text-xs">{r.type}</TD>
+              <TD className="tabular-nums">
+                {r.price != null ? `${r.currency ?? ""} ${Number(r.price).toFixed(2)}` : "—"}
+              </TD>
+              <TD><StatusPill status={r.status} /></TD>
+              <TD className="text-xs">{r.company?.name ?? r.company_id ?? "—"}</TD>
+              <TD>
+                <div className="flex flex-col gap-1">
+                  {r.status === "draft" && (
+                    <button type="button" disabled={busyId === r.id} onClick={() => void handlePublish(r.id)}
+                      className="text-left text-xs text-success-700 underline disabled:opacity-40">{t("admin.crud.common.publish")}</button>
+                  )}
+                  {r.status === "published" && (
+                    <button type="button" disabled={busyId === r.id} onClick={() => void handleArchive(r.id)}
+                      className="text-left text-xs text-warning-700 underline disabled:opacity-40">{t("admin.crud.common.archive")}</button>
+                  )}
+                  <button type="button" onClick={() => setTranslateRow(r)}
+                    className="text-left text-xs text-info-700 underline">Translations</button>
+                </div>
+              </TD>
+            </TR>
+          ))}
+        </TBody>
+      </Table>
 
-      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
-        <table className="w-full min-w-[800px] text-left text-sm">
-          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
-            <tr><th className="px-3 py-2">{t("admin.crud.common.id")}</th><th className="px-3 py-2">{t("admin.crud.offers.col.title")}</th><th className="px-3 py-2">{t("admin.crud.offers.col.type")}</th><th className="px-3 py-2">{t("admin.crud.offers.col.price")}</th><th className="px-3 py-2">{t("admin.crud.common.status")}</th><th className="px-3 py-2">{t("admin.crud.offers.col.company")}</th><th className="px-3 py-2">{t("admin.crud.common.actions")}</th></tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && <tr><td colSpan={7} className="px-3 py-6 text-center text-fg-t6">{t("admin.crud.offers.empty")}</td></tr>}
-            {rows.map((r) => (
-              <tr key={r.id} className="border-b border-default hover:bg-figma-bg-1">
-                <td className="px-3 py-2 tabular-nums text-fg-t7">{r.id}</td>
-                <td className="px-3 py-2 font-medium max-w-[200px] truncate">{r.title}</td>
-                <td className="px-3 py-2 text-xs">{r.type}</td>
-                <td className="px-3 py-2 tabular-nums">{r.price != null ? `${r.currency ?? ""} ${Number(r.price).toFixed(2)}` : "-"}</td>
-                <td className="px-3 py-2"><StatusBadge status={r.status} /></td>
-                <td className="px-3 py-2 text-xs">{r.company?.name ?? r.company_id ?? "-"}</td>
-                <td className="px-3 py-2">
-                  <div className="flex flex-col gap-1">
-                    {r.status === "draft" && (
-                      <button type="button" disabled={busyId === r.id} onClick={() => void handlePublish(r.id)}
-                        className="text-left text-xs text-success-700 underline disabled:opacity-40">{t("admin.crud.common.publish")}</button>
-                    )}
-                    {r.status === "published" && (
-                      <button type="button" disabled={busyId === r.id} onClick={() => void handleArchive(r.id)}
-                        className="text-left text-xs text-warning-700 underline disabled:opacity-40">{t("admin.crud.common.archive")}</button>
-                    )}
-                    <button type="button" onClick={() => setTranslateRow(r)}
-                      className="text-left text-xs text-info-700 underline">Translations</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {meta && <PaginationBar meta={meta} onPage={setPage} />}
+      {meta && meta.last_page > 1 ? (
+        <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />
+      ) : null}
+
       <TranslationsModal
         open={translateRow !== null}
         onClose={() => setTranslateRow(null)}
