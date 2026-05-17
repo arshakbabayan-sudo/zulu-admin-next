@@ -1,7 +1,8 @@
 "use client";
 
+/** Phase-2 migration to shared @/components/ui primitives. */
+
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
-import { PaginationBar } from "@/components/PaginationBar";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
@@ -16,6 +17,22 @@ import {
   type NewsletterSubscriptionRow,
 } from "@/lib/platform-admin-api";
 import { useCallback, useEffect, useState } from "react";
+import {
+  Button,
+  Checkbox,
+  FormField,
+  Input,
+  PageHeader,
+  Pagination,
+  Select,
+  Table,
+  TBody,
+  TD,
+  TEmpty,
+  TH,
+  THead,
+  TR,
+} from "@/components/ui";
 
 const SOURCES = ["", "home", "footer", "newsletter-block", "other"];
 const LANGS = ["", "en", "ru", "hy"];
@@ -96,10 +113,7 @@ export default function PlatformNewsletterPage() {
     q.set("active_only", activeOnly ? "1" : "0");
     const url = `${getApiBaseUrl().replace(/\/$/, "")}/api/platform-admin/newsletter/subscriptions/export.csv?${q.toString()}`;
     void fetch(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "text/csv",
-      },
+      headers: { Authorization: `Bearer ${token}`, Accept: "text/csv" },
     })
       .then((r) => r.blob())
       .then((blob) => {
@@ -114,9 +128,9 @@ export default function PlatformNewsletterPage() {
 
   if (!allowed || forbidden) {
     return (
-      <div>
+      <div className="space-y-4">
         <h1 className="admin-page-title">{t("admin.newsletter.title")}</h1>
-        <div className="mt-4">
+        <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
       </div>
@@ -124,23 +138,23 @@ export default function PlatformNewsletterPage() {
   }
 
   return (
-    <div>
-      <h1 className="admin-page-title">{t("admin.newsletter.title_long")}</h1>
+    <div className="space-y-6">
+      <PageHeader title={t("admin.newsletter.title_long")} />
 
       {stats && (
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <div className="rounded border border-default bg-white p-3">
-            <p className="text-xs text-fg-t7">{t("admin.newsletter.stat_active")}</p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="admin-card p-4">
+            <p className="text-xs text-fg-t6 uppercase tracking-wide">{t("admin.newsletter.stat_active")}</p>
             <p className="mt-1 text-2xl font-semibold text-fg-t11 tabular-nums">{stats.total_active}</p>
           </div>
-          <div className="rounded border border-default bg-white p-3">
-            <p className="text-xs text-fg-t7">{t("admin.newsletter.stat_by_lang")}</p>
+          <div className="admin-card p-4">
+            <p className="text-xs text-fg-t6 uppercase tracking-wide">{t("admin.newsletter.stat_by_lang")}</p>
             <p className="mt-1 text-xs text-fg-t8">
               {Object.entries(stats.by_lang).map(([k, v]) => `${k}: ${v}`).join("  ·  ") || "—"}
             </p>
           </div>
-          <div className="rounded border border-default bg-white p-3">
-            <p className="text-xs text-fg-t7">{t("admin.newsletter.stat_by_source")}</p>
+          <div className="admin-card p-4">
+            <p className="text-xs text-fg-t6 uppercase tracking-wide">{t("admin.newsletter.stat_by_source")}</p>
             <p className="mt-1 text-xs text-fg-t8">
               {Object.entries(stats.by_source).map(([k, v]) => `${k || "—"}: ${v}`).join("  ·  ") || "—"}
             </p>
@@ -148,146 +162,91 @@ export default function PlatformNewsletterPage() {
         </div>
       )}
 
-      <div className="mt-4 flex flex-wrap items-end gap-3">
-        <label className="text-sm text-fg-t6">
-          {t("admin.newsletter.filter_source")}
-          <select
-            value={source}
-            onChange={(e) => {
-              setPage(1);
-              setSource(e.target.value);
-            }}
-            className="ml-2 rounded border border-default px-2 py-1 text-sm"
-          >
-            {SOURCES.map((s) => (
-              <option key={s} value={s}>
-                {s || t("common.all")}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="text-sm text-fg-t6">
-          {t("admin.newsletter.filter_lang")}
-          <select
-            value={lang}
-            onChange={(e) => {
-              setPage(1);
-              setLang(e.target.value);
-            }}
-            className="ml-2 rounded border border-default px-2 py-1 text-sm"
-          >
-            {LANGS.map((l) => (
-              <option key={l} value={l}>
-                {l || t("common.all")}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="text-sm text-fg-t6">
-          {t("admin.newsletter.filter_search")}
-          <input
-            value={searchDraft}
-            onChange={(e) => setSearchDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                setPage(1);
-                setSearch(searchDraft.trim());
-              }
-            }}
-            placeholder={t("admin.newsletter.search_placeholder")}
-            className="ml-2 w-56 rounded border border-default px-2 py-1 text-sm"
-          />
-        </label>
-        <label className="inline-flex items-center gap-2 text-sm text-fg-t6">
-          <input
-            type="checkbox"
+      <div className="admin-card p-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <FormField label={t("admin.newsletter.filter_source")} htmlFor="nl-src" className="min-w-[180px]">
+            <Select id="nl-src" fieldSize="sm" value={source} onChange={(e) => { setPage(1); setSource(e.target.value); }}>
+              {SOURCES.map((s) => <option key={s} value={s}>{s || t("common.all")}</option>)}
+            </Select>
+          </FormField>
+          <FormField label={t("admin.newsletter.filter_lang")} htmlFor="nl-lang" className="min-w-[140px]">
+            <Select id="nl-lang" fieldSize="sm" value={lang} onChange={(e) => { setPage(1); setLang(e.target.value); }}>
+              {LANGS.map((l) => <option key={l} value={l}>{l || t("common.all")}</option>)}
+            </Select>
+          </FormField>
+          <FormField label={t("admin.newsletter.filter_search")} htmlFor="nl-q" className="flex-1 min-w-[240px]">
+            <Input
+              id="nl-q"
+              value={searchDraft}
+              onChange={(e) => setSearchDraft(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { setPage(1); setSearch(searchDraft.trim()); } }}
+              placeholder={t("admin.newsletter.search_placeholder")}
+            />
+          </FormField>
+          <Checkbox
             checked={activeOnly}
-            onChange={(e) => {
-              setPage(1);
-              setActiveOnly(e.target.checked);
-            }}
-            className="h-4 w-4"
+            onChange={(e) => { setPage(1); setActiveOnly(e.target.checked); }}
+            label={t("admin.newsletter.filter_active_only")}
           />
-          {t("admin.newsletter.filter_active_only")}
-        </label>
-        <button
-          type="button"
-          onClick={() => {
-            setPage(1);
-            setSearch(searchDraft.trim());
-          }}
-          className="rounded border border-default bg-white px-3 py-1 text-sm hover:bg-figma-bg-1"
-        >
-          {t("admin.newsletter.btn_apply")}
-        </button>
-        <button
-          type="button"
-          onClick={exportCsv}
-          className="rounded bg-violet-600 px-3 py-1 text-sm font-medium text-white hover:bg-violet-700"
-        >
-          {t("admin.newsletter.btn_export_csv")}
-        </button>
+          <Button size="sm" onClick={() => { setPage(1); setSearch(searchDraft.trim()); }}>
+            {t("admin.newsletter.btn_apply")}
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportCsv}>
+            {t("admin.newsletter.btn_export_csv")}
+          </Button>
+        </div>
       </div>
 
-      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
+      {err && <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
 
-      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
-        <table className="w-full min-w-[760px] text-left text-sm">
-          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
-            <tr>
-              <th className="px-3 py-2">{t("admin.newsletter.col_id")}</th>
-              <th className="px-3 py-2">{t("admin.newsletter.col_email")}</th>
-              <th className="px-3 py-2">{t("admin.newsletter.col_lang")}</th>
-              <th className="px-3 py-2">{t("admin.newsletter.col_source")}</th>
-              <th className="px-3 py-2">{t("admin.newsletter.col_subscribed")}</th>
-              <th className="px-3 py-2">{t("admin.newsletter.col_unsubscribed")}</th>
-              <th className="px-3 py-2">{t("admin.newsletter.col_actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-fg-t6">
-                  {t("admin.newsletter.empty")}
-                </td>
-              </tr>
-            )}
-            {rows.map((r) => (
-              <tr key={r.id} className="border-b border-default hover:bg-figma-bg-1">
-                <td className="px-3 py-2 tabular-nums text-fg-t7">{r.id}</td>
-                <td className="px-3 py-2 font-medium">{r.email}</td>
-                <td className="px-3 py-2 text-xs">{r.lang ?? "—"}</td>
-                <td className="px-3 py-2 text-xs">{r.source ?? "—"}</td>
-                <td className="px-3 py-2 text-xs">
-                  {r.subscribed_at ? new Date(r.subscribed_at).toLocaleString() : "—"}
-                </td>
-                <td className="px-3 py-2 text-xs">
-                  {r.unsubscribed_at ? (
-                    <span className="text-error-600">
-                      {new Date(r.unsubscribed_at).toLocaleString()}
-                    </span>
-                  ) : (
-                    <span className="text-emerald-700">{t("admin.newsletter.status_active")}</span>
-                  )}
-                </td>
-                <td className="px-3 py-2">
-                  {!r.unsubscribed_at && (
-                    <button
-                      type="button"
-                      disabled={busyId === r.id}
-                      onClick={() => void handleDelete(r.id)}
-                      className="text-xs text-error-600 underline disabled:opacity-40"
-                    >
-                      {t("admin.newsletter.btn_unsubscribe")}
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {meta && <PaginationBar meta={meta} onPage={setPage} />}
+      <Table>
+        <THead>
+          <TR>
+            <TH>{t("admin.newsletter.col_id")}</TH>
+            <TH>{t("admin.newsletter.col_email")}</TH>
+            <TH>{t("admin.newsletter.col_lang")}</TH>
+            <TH>{t("admin.newsletter.col_source")}</TH>
+            <TH>{t("admin.newsletter.col_subscribed")}</TH>
+            <TH>{t("admin.newsletter.col_unsubscribed")}</TH>
+            <TH>{t("admin.newsletter.col_actions")}</TH>
+          </TR>
+        </THead>
+        <TBody>
+          {rows.length === 0 ? <TEmpty colSpan={7}>{t("admin.newsletter.empty")}</TEmpty> : null}
+          {rows.map((r) => (
+            <TR key={r.id}>
+              <TD className="tabular-nums">{r.id}</TD>
+              <TD className="font-medium">{r.email}</TD>
+              <TD className="text-xs">{r.lang ?? "—"}</TD>
+              <TD className="text-xs">{r.source ?? "—"}</TD>
+              <TD className="text-xs">{r.subscribed_at ? new Date(r.subscribed_at).toLocaleString() : "—"}</TD>
+              <TD className="text-xs">
+                {r.unsubscribed_at ? (
+                  <span className="text-error-600">{new Date(r.unsubscribed_at).toLocaleString()}</span>
+                ) : (
+                  <span className="text-success-700">{t("admin.newsletter.status_active")}</span>
+                )}
+              </TD>
+              <TD>
+                {!r.unsubscribed_at && (
+                  <button
+                    type="button"
+                    disabled={busyId === r.id}
+                    onClick={() => void handleDelete(r.id)}
+                    className="text-xs text-error-600 underline disabled:opacity-40 hover:text-error-800"
+                  >
+                    {t("admin.newsletter.btn_unsubscribe")}
+                  </button>
+                )}
+              </TD>
+            </TR>
+          ))}
+        </TBody>
+      </Table>
+
+      {meta && meta.last_page > 1 ? (
+        <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />
+      ) : null}
     </div>
   );
 }
