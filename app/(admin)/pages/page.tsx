@@ -1,7 +1,8 @@
 "use client";
 
+/** Phase-2 migration to shared @/components/ui primitives. */
+
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
-import { PaginationBar } from "@/components/PaginationBar";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
@@ -16,6 +17,23 @@ import {
 } from "@/lib/pages-api";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Button,
+  FormField,
+  Input,
+  Modal,
+  PageHeader,
+  Pagination,
+  StatusPill,
+  Switch,
+  Table,
+  TBody,
+  TD,
+  TEmpty,
+  TH,
+  THead,
+  TR,
+} from "@/components/ui";
 
 function slugify(input: string): string {
   return input
@@ -31,53 +49,15 @@ function formatDate(value?: string | null): string {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("en-GB", {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-  }).format(date);
-}
-
-function statusBadge(isActive: boolean): string {
-  return isActive
-    ? "inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700"
-    : "inline-flex items-center rounded-full bg-figma-bg-1 px-2 py-0.5 text-xs font-medium text-fg-t7";
-}
-
-function Toggle({
-  checked,
-  onChange,
-  disabled,
-}: {
-  checked: boolean;
-  onChange: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={checked ? "Set page inactive" : "Set page active"}
-      disabled={disabled}
-      onClick={onChange}
-      className={`relative h-6 w-11 rounded-full transition ${
-        checked ? "bg-violet-600" : "bg-slate-300"
-      } ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
-    >
-      <span
-        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ${
-          checked ? "left-[22px]" : "left-0.5"
-        }`}
-      />
-    </button>
-  );
+  return new Intl.DateTimeFormat("en-GB", { year: "numeric", month: "short", day: "2-digit" }).format(date);
 }
 
 function AddPageModal({
+  isOpen,
   onClose,
   onSubmit,
 }: {
+  isOpen: boolean;
   onClose: () => void;
   onSubmit: (pageName: string, pageSlug: string) => Promise<void>;
 }) {
@@ -89,9 +69,17 @@ function AddPageModal({
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!slugTouched) {
-      setPageSlug(slugify(pageName));
+    if (!isOpen) {
+      setPageName("");
+      setPageSlug("");
+      setSlugTouched(false);
+      setErr(null);
+      setSaving(false);
     }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!slugTouched) setPageSlug(slugify(pageName));
   }, [pageName, slugTouched]);
 
   async function submit() {
@@ -114,62 +102,35 @@ function AddPageModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="add-page-modal-title"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div className="w-full max-w-md rounded border border-default bg-white p-5 shadow-xl">
-        <h2 id="add-page-modal-title" className="text-base font-semibold text-fg-t11">
-          {t("admin.pages.modal.title")}
-        </h2>
-        {err ? <p className="mt-2 text-sm text-error-600">{err}</p> : null}
-        <div className="mt-4 space-y-3">
-          <label className="block text-sm text-fg-t7">
-            {t("admin.pages.modal.name_label")}
-            <input
-              value={pageName}
-              onChange={(e) => setPageName(e.target.value)}
-              placeholder="Home Page"
-              className="mt-1 w-full rounded border border-default px-3 py-2 text-sm"
-            />
-          </label>
-          <label className="block text-sm text-fg-t7">
-            {t("admin.pages.modal.slug_label")}
-            <input
-              value={pageSlug}
-              onChange={(e) => {
-                setSlugTouched(true);
-                setPageSlug(slugify(e.target.value));
-              }}
-              placeholder="home-page"
-              className="mt-1 w-full rounded border border-default px-3 py-2 font-mono text-sm"
-            />
-          </label>
-        </div>
-        <div className="mt-5 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded border border-default bg-white px-3 py-1.5 text-sm"
-          >
-            {t("admin.pages.modal.cancel")}
-          </button>
-          <button
-            type="button"
-            disabled={saving}
-            onClick={() => void submit()}
-            className="rounded bg-violet-600 px-3 py-1.5 text-sm text-white disabled:opacity-60"
-          >
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t("admin.pages.modal.title")}
+      footer={
+        <>
+          <Button variant="outline" size="sm" onClick={onClose}>{t("admin.pages.modal.cancel")}</Button>
+          <Button size="sm" disabled={saving} onClick={() => void submit()}>
             {saving ? t("admin.static_pages.editor.saving") : t("admin.pages.modal.create")}
-          </button>
-        </div>
+          </Button>
+        </>
+      }
+    >
+      {err && <div className="mb-3 rounded-zulu border border-error-100 bg-error-50 px-3 py-2 text-sm text-error-700">{err}</div>}
+      <div className="space-y-3">
+        <FormField label={t("admin.pages.modal.name_label")} htmlFor="pg-name">
+          <Input id="pg-name" value={pageName} onChange={(e) => setPageName(e.target.value)} placeholder="Home Page" />
+        </FormField>
+        <FormField label={t("admin.pages.modal.slug_label")} htmlFor="pg-slug">
+          <Input
+            id="pg-slug"
+            value={pageSlug}
+            onChange={(e) => { setSlugTouched(true); setPageSlug(slugify(e.target.value)); }}
+            placeholder="home-page"
+            className="font-mono"
+          />
+        </FormField>
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -211,9 +172,7 @@ export default function AdminPagesListPage() {
     }
   }, [token, allowed, page]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useEffect(() => { void load(); }, [load]);
 
   async function handleAdd(pageName: string, pageSlug: string) {
     if (!token) return;
@@ -226,10 +185,7 @@ export default function AdminPagesListPage() {
     if (!token) return;
     setBusyId(row.id);
     try {
-      await apiPatchAdminPageStatus(token, {
-        page_id: row.id,
-        status: row.status === 1 ? 0 : 1,
-      });
+      await apiPatchAdminPageStatus(token, { page_id: row.id, status: row.status === 1 ? 0 : 1 });
       await load();
     } catch (e) {
       alert(e instanceof ApiRequestError ? e.message : "Failed to update status");
@@ -254,9 +210,9 @@ export default function AdminPagesListPage() {
 
   if (!allowed || forbidden) {
     return (
-      <div>
+      <div className="space-y-4">
         <h1 className="admin-page-title">{t("admin.pages.title")}</h1>
-        <div className="mt-4">
+        <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
       </div>
@@ -264,98 +220,85 @@ export default function AdminPagesListPage() {
   }
 
   return (
-    <div>
-      {showAddModal ? (
-        <AddPageModal onClose={() => setShowAddModal(false)} onSubmit={handleAdd} />
-      ) : null}
+    <div className="space-y-6">
+      <AddPageModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} onSubmit={handleAdd} />
 
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="admin-page-title">{t("admin.pages.title")}</h1>
-        <button
-          type="button"
-          onClick={() => setShowAddModal(true)}
-          className="rounded bg-violet-600 px-3 py-1.5 text-sm font-medium text-white"
-        >
-          {t("admin.pages.add_new")}
-        </button>
-      </div>
+      <PageHeader
+        title={t("admin.pages.title")}
+        actions={
+          <Button size="sm" onClick={() => setShowAddModal(true)}>
+            {t("admin.pages.add_new")}
+          </Button>
+        }
+      />
 
-      {err ? <p className="mt-2 text-sm text-error-600">{err}</p> : null}
+      {err && <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
 
-      <div
-        className={`mt-4 overflow-x-auto rounded border border-default bg-white transition-opacity ${
-          isLoading ? "pointer-events-none opacity-60" : "opacity-100"
-        }`}
-      >
-        <table className="w-full min-w-[960px] text-left text-sm">
-          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
-            <tr>
-              <th className="px-3 py-2">{t("admin.pages.col.sn")}</th>
-              <th className="px-3 py-2">{t("admin.pages.col.name")}</th>
-              <th className="px-3 py-2">{t("admin.pages.col.status")}</th>
-              <th className="px-3 py-2">{t("admin.pages.col.published")}</th>
-              <th className="px-3 py-2">{t("admin.pages.col.created")}</th>
-              <th className="px-3 py-2">{t("admin.pages.col.actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-3 py-8 text-center text-sm text-fg-t6">
-                  {t("admin.pages.empty")}
-                </td>
-              </tr>
-            ) : (
-              rows.map((row, index) => {
-                const isActive = row.status === 1;
-                return (
-                  <tr key={row.id} className="border-b border-default">
-                    <td className="px-3 py-2 tabular-nums">{snStart + index + 1}</td>
-                    <td className="px-3 py-2">
-                      <div className="font-medium text-fg-t11">{row.page_name}</div>
-                      <div className="text-xs text-fg-t6">/{row.page_slug}</div>
-                    </td>
-                    <td className="px-3 py-2">
-                      <span className={statusBadge(isActive)}>{isActive ? t("admin.pages.status.active") : t("admin.pages.status.inactive")}</span>
-                    </td>
-                    <td className="px-3 py-2">
-                      <Toggle
-                        checked={isActive}
+      <div className={`transition-opacity ${isLoading ? "pointer-events-none opacity-60" : "opacity-100"}`}>
+        <Table>
+          <THead>
+            <TR>
+              <TH>{t("admin.pages.col.sn")}</TH>
+              <TH>{t("admin.pages.col.name")}</TH>
+              <TH>{t("admin.pages.col.status")}</TH>
+              <TH>{t("admin.pages.col.published")}</TH>
+              <TH>{t("admin.pages.col.created")}</TH>
+              <TH>{t("admin.pages.col.actions")}</TH>
+            </TR>
+          </THead>
+          <TBody>
+            {rows.length === 0 ? <TEmpty colSpan={6}>{t("admin.pages.empty")}</TEmpty> : null}
+            {rows.map((row, index) => {
+              const isActive = row.status === 1;
+              return (
+                <TR key={row.id}>
+                  <TD className="tabular-nums">{snStart + index + 1}</TD>
+                  <TD>
+                    <div className="font-medium text-fg-t11">{row.page_name}</div>
+                    <div className="text-xs text-fg-t6">/{row.page_slug}</div>
+                  </TD>
+                  <TD>
+                    <StatusPill status={isActive ? "active" : "inactive"}>
+                      {isActive ? t("admin.pages.status.active") : t("admin.pages.status.inactive")}
+                    </StatusPill>
+                  </TD>
+                  <TD>
+                    <Switch
+                      checked={isActive}
+                      onCheckedChange={() => void handleToggleStatus(row)}
+                      disabled={busyId === row.id}
+                      aria-label={isActive ? "Set page inactive" : "Set page active"}
+                    />
+                  </TD>
+                  <TD className="text-xs text-fg-t6">{formatDate(row.created_at)}</TD>
+                  <TD>
+                    <div className="flex items-center gap-3 text-xs">
+                      <Link href={`/pages/${row.id}/edit?mode=view`} className="text-info-700 underline hover:text-info-800">
+                        {t("admin.pages.action.view")}
+                      </Link>
+                      <Link href={`/pages/${row.id}/edit`} className="text-primary-500 underline hover:text-primary-700">
+                        {t("admin.pages.action.edit")}
+                      </Link>
+                      <button
+                        type="button"
                         disabled={busyId === row.id}
-                        onChange={() => void handleToggleStatus(row)}
-                      />
-                    </td>
-                    <td className="px-3 py-2 text-fg-t7">{formatDate(row.created_at)}</td>
-                    <td className="px-3 py-2">
-                      <div className="flex items-center gap-3 text-xs">
-                        <Link
-                          href={`/pages/${row.id}/edit?mode=view`}
-                          className="text-info-700 underline"
-                        >
-                          {t("admin.pages.action.view")}
-                        </Link>
-                        <Link href={`/pages/${row.id}/edit`} className="text-violet-700 underline">
-                          {t("admin.pages.action.edit")}
-                        </Link>
-                        <button
-                          type="button"
-                          disabled={busyId === row.id}
-                          onClick={() => void handleDelete(row)}
-                          className="text-error-700 underline disabled:opacity-40"
-                        >
-                          {t("admin.pages.action.delete")}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                        onClick={() => void handleDelete(row)}
+                        className="text-error-700 underline disabled:opacity-40 hover:text-error-800"
+                      >
+                        {t("admin.pages.action.delete")}
+                      </button>
+                    </div>
+                  </TD>
+                </TR>
+              );
+            })}
+          </TBody>
+        </Table>
       </div>
 
-      {meta ? <PaginationBar meta={meta} onPage={setPage} /> : null}
+      {meta && meta.last_page > 1 ? (
+        <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />
+      ) : null}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
+import { Button, FormField, Input, PageHeader } from "@/components/ui";
 
 /**
  * Platform-admin RBAC oversight (Sprint 66, PART 28).
@@ -101,9 +102,9 @@ export default function PlatformRbacPage() {
 
   if (!allowed || forbidden) {
     return (
-      <div>
+      <div className="space-y-4">
         <h1 className="admin-page-title">{t("admin.rbac.title")}</h1>
-        <div className="mt-4">
+        <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
       </div>
@@ -111,15 +112,14 @@ export default function PlatformRbacPage() {
   }
 
   return (
-    <div>
-      <h1 className="admin-page-title">{t("admin.rbac.title")}</h1>
-      <p className="admin-page-subtitle">{t("admin.rbac.subtitle")}</p>
+    <div className="space-y-6">
+      <PageHeader title={t("admin.rbac.title")} subtitle={t("admin.rbac.subtitle")} />
 
-      {error && <p className="mt-2 text-sm text-error-600">{error}</p>}
-      {loading && <p className="mt-4 text-sm text-fg-t6">{t("common.loading")}</p>}
+      {error && <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{error}</div>}
+      {loading && <p className="text-sm text-fg-t6">{t("common.loading")}</p>}
 
       {stats && (
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard label={t("admin.rbac.stat_roles")} value={stats.total_roles.toLocaleString()} />
           <StatCard label={t("admin.rbac.stat_permissions")} value={stats.total_permissions.toLocaleString()} />
           <StatCard label={t("admin.rbac.stat_memberships")} value={stats.total_memberships.toLocaleString()} />
@@ -131,28 +131,21 @@ export default function PlatformRbacPage() {
         </div>
       )}
 
-      <div className="mt-6 flex items-end gap-2 rounded border border-default bg-white p-4">
-        <label className="flex-1 text-xs text-fg-t6">
-          {t("admin.rbac.filter_permissions")}
-          <input
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            placeholder={t("admin.rbac.filter_placeholder")}
-            className="mt-1 w-full rounded border border-default px-2 py-1 text-sm"
-          />
-        </label>
-        {filter && (
-          <button
-            type="button"
-            onClick={() => setFilter("")}
-            className="rounded border border-default bg-white px-3 py-1.5 text-sm hover:bg-figma-bg-1"
-          >
-            {t("common.reset")}
-          </button>
-        )}
+      <div className="admin-card p-4">
+        <div className="flex items-end gap-2">
+          <FormField label={t("admin.rbac.filter_permissions")} htmlFor="rbac-filter" className="flex-1">
+            <Input
+              id="rbac-filter"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder={t("admin.rbac.filter_placeholder")}
+            />
+          </FormField>
+          {filter && <Button variant="outline" size="sm" onClick={() => setFilter("")}>{t("common.reset")}</Button>}
+        </div>
       </div>
 
-      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
+      <div className="overflow-x-auto rounded-zulu border border-default bg-white">
         <table className="min-w-full text-left text-sm">
           <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7 sticky top-0">
             <tr>
