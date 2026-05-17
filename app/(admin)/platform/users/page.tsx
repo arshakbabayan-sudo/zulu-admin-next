@@ -160,7 +160,7 @@ export default function PlatformUsersPage() {
               <TEmpty colSpan={6}>{t("admin.users.empty")}</TEmpty>
             ) : null}
             {rows.map((r) => (
-              <TR key={r.id}>
+              <TR key={r.id} href={`/platform/users/${r.id}`}>
                 <TD className="tabular-nums">{r.id}</TD>
                 <TD className="font-medium text-fg-t8">{r.name}</TD>
                 <TD>{r.email}</TD>
@@ -189,7 +189,7 @@ export default function PlatformUsersPage() {
                     <span className="text-fg-t6">—</span>
                   )}
                 </TD>
-                <TD align="right">
+                <TD align="right" onClick={(e) => e.stopPropagation()}>
                   <div className="inline-flex items-center gap-2">
                     <Link
                       href={`/platform/users/${r.id}`}
@@ -200,7 +200,10 @@ export default function PlatformUsersPage() {
                     <button
                       type="button"
                       disabled={busyId === r.id || r.status === "inactive"}
-                      onClick={() => deactivate(r.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deactivate(r.id);
+                      }}
                       className="inline-flex h-8 items-center rounded-zulu border border-error-200 bg-white px-3 text-xs font-medium text-error-700 transition hover:bg-error-50 disabled:opacity-40"
                     >
                       {t("admin.users.btn_deactivate")}

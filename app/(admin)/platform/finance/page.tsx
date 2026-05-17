@@ -1,18 +1,46 @@
 "use client";
 
+/**
+ * Phase-2 migration to shared @/components/ui primitives.
+ * 3 tabs (summary / entitlements / settlements) with shared Tabs component,
+ * select-all checkbox, status pills.
+ */
+
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
-import { PaginationBar } from "@/components/PaginationBar";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { useLanguage } from "@/contexts/LanguageContext";
 import {
-  apiFinanceSummary, apiFinanceEntitlements, apiFinanceSettlements,
-  apiMarkEntitlementsPayable, apiUpdateSettlementStatus,
-  type FinanceEntitlementRow, type FinanceSettlementRow, type CompanyFinanceSummary,
+  apiFinanceSummary,
+  apiFinanceEntitlements,
+  apiFinanceSettlements,
+  apiMarkEntitlementsPayable,
+  apiUpdateSettlementStatus,
+  type FinanceEntitlementRow,
+  type FinanceSettlementRow,
+  type CompanyFinanceSummary,
 } from "@/lib/finance-api";
 import { useCallback, useEffect, useState } from "react";
+import {
+  Button,
+  Checkbox,
+  FormField,
+  Input,
+  PageHeader,
+  Pagination,
+  Select,
+  StatusPill,
+  Table,
+  TBody,
+  TD,
+  TEmpty,
+  TH,
+  THead,
+  Tabs,
+  TR,
+} from "@/components/ui";
 
 type Tab = "summary" | "entitlements" | "settlements";
 
@@ -41,8 +69,12 @@ export default function FinancePage() {
 
   const loadSummary = useCallback(async () => {
     if (!token || !allowed || !hasValidCompanyId) return;
-    try { const r = await apiFinanceSummary(token, companyId); setSummary(r.data); }
-    catch (e) { if (e instanceof ApiRequestError && e.status === 403) setForbidden(true); }
+    try {
+      const r = await apiFinanceSummary(token, companyId);
+      setSummary(r.data);
+    } catch (e) {
+      if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
+    }
   }, [token, allowed, hasValidCompanyId, companyId]);
 
   const loadEntitlements = useCallback(async () => {
@@ -50,8 +82,11 @@ export default function FinancePage() {
     setErr(null);
     try {
       const r = await apiFinanceEntitlements(token, { company_id: companyId, page: entPage, per_page: 20 });
-      setEntitlements(r.data); setEntMeta(r.meta);
-    } catch (e) { setErr(e instanceof ApiRequestError ? e.message : t("admin.platform_finance.err_failed")); }
+      setEntitlements(r.data);
+      setEntMeta(r.meta);
+    } catch (e) {
+      setErr(e instanceof ApiRequestError ? e.message : t("admin.platform_finance.err_failed"));
+    }
   }, [token, allowed, hasValidCompanyId, companyId, entPage, t]);
 
   const loadSettlements = useCallback(async () => {
@@ -59,8 +94,11 @@ export default function FinancePage() {
     setErr(null);
     try {
       const r = await apiFinanceSettlements(token, { company_id: companyId, page: setPage2, per_page: 20 });
-      setSettlements(r.data); setSetMeta2(r.meta);
-    } catch (e) { setErr(e instanceof ApiRequestError ? e.message : t("admin.platform_finance.err_failed")); }
+      setSettlements(r.data);
+      setSetMeta2(r.meta);
+    } catch (e) {
+      setErr(e instanceof ApiRequestError ? e.message : t("admin.platform_finance.err_failed"));
+    }
   }, [token, allowed, hasValidCompanyId, companyId, setPage2, t]);
 
   useEffect(() => {
@@ -76,96 +114,114 @@ export default function FinancePage() {
     if (!token || selectedEnt.size === 0 || !hasValidCompanyId) return;
     setBusy(true);
     try {
-      await apiMarkEntitlementsPayable(token, { company_id: companyId, entitlement_ids: Array.from(selectedEnt) });
+      await apiMarkEntitlementsPayable(token, {
+        company_id: companyId,
+        entitlement_ids: Array.from(selectedEnt),
+      });
       setSelectedEnt(new Set());
       await loadEntitlements();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : t("admin.platform_finance.err_failed"));
+    } finally {
+      setBusy(false);
     }
-    catch (e) { alert(e instanceof ApiRequestError ? e.message : t("admin.platform_finance.err_failed")); }
-    finally { setBusy(false); }
   }
 
   async function handleSettlementStatus(id: number, status: string) {
     if (!token || !hasValidCompanyId) return;
     setBusy(true);
-    try { await apiUpdateSettlementStatus(token, id, status); await loadSettlements(); }
-    catch (e) { alert(e instanceof ApiRequestError ? e.message : t("admin.platform_finance.err_failed")); }
-    finally { setBusy(false); }
+    try {
+      await apiUpdateSettlementStatus(token, id, status);
+      await loadSettlements();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : t("admin.platform_finance.err_failed"));
+    } finally {
+      setBusy(false);
+    }
   }
 
   function toggleEntitlement(id: number, checked: boolean) {
-    setSelectedEnt(prev => {
+    setSelectedEnt((prev) => {
       const next = new Set(prev);
-      if (checked) {
-        next.add(id);
-      } else {
-        next.delete(id);
-      }
+      if (checked) next.add(id);
+      else next.delete(id);
       return next;
     });
   }
 
   function toggleAllEntitlements(checked: boolean) {
-    if (checked) {
-      setSelectedEnt(new Set(entitlements.map(r => r.id)));
-    } else {
-      setSelectedEnt(new Set());
-    }
+    setSelectedEnt(checked ? new Set(entitlements.map((r) => r.id)) : new Set());
   }
 
-  if (!allowed || forbidden) return (
-    <div><h1 className="admin-page-title">{t("admin.platform_finance.title")}</h1><div className="mt-4"><ForbiddenNotice /></div></div>
-  );
-
-  const tabCls = (t: Tab) =>
-    `px-4 py-2 text-sm font-medium border-b-2 ${tab === t ? "border-slate-800 text-fg-t11" : "border-transparent text-fg-t7 hover:text-fg-t7"}`;
+  if (!allowed || forbidden) {
+    return (
+      <div className="space-y-4">
+        <h1 className="admin-page-title">{t("admin.platform_finance.title")}</h1>
+        <div className="admin-card p-4">
+          <ForbiddenNotice />
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <h1 className="admin-page-title">{t("admin.platform_finance.title")}</h1>
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <label className="text-sm text-fg-t7" htmlFor="finance-company-id">{t("admin.platform_finance.company")}</label>
-        {companyOptions.length > 0 ? (
-          <select
-            id="finance-company-id"
-            value={companyId ?? ""}
-            onChange={(e) => setCompanyId(e.target.value ? Number(e.target.value) : null)}
-            className="rounded border border-default bg-white px-2 py-1 text-sm"
-          >
-            {companyOptions.map((c) => (
-              <option key={c.id} value={c.id}>{c.name} (#{c.id})</option>
-            ))}
-          </select>
-        ) : (
-          <input
-            id="finance-company-id"
-            type="number"
-            min={1}
-            value={companyId ?? ""}
-            onChange={(e) => setCompanyId(e.target.value ? Number(e.target.value) : null)}
-            placeholder={t("admin.platform_finance.enter_company_id")}
-            className="w-44 rounded border border-default bg-white px-2 py-1 text-sm"
-          />
+    <div className="space-y-6">
+      <PageHeader title={t("admin.platform_finance.title")} />
+
+      <div className="admin-card p-4">
+        <FormField label={t("admin.platform_finance.company")} htmlFor="finance-company-id">
+          {companyOptions.length > 0 ? (
+            <Select
+              id="finance-company-id"
+              value={companyId ?? ""}
+              onChange={(e) => setCompanyId(e.target.value ? Number(e.target.value) : null)}
+              fieldSize="sm"
+            >
+              {companyOptions.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} (#{c.id})
+                </option>
+              ))}
+            </Select>
+          ) : (
+            <Input
+              id="finance-company-id"
+              type="number"
+              min={1}
+              value={companyId ?? ""}
+              onChange={(e) => setCompanyId(e.target.value ? Number(e.target.value) : null)}
+              placeholder={t("admin.platform_finance.enter_company_id")}
+            />
+          )}
+        </FormField>
+        {!hasValidCompanyId && (
+          <p className="mt-2 text-sm text-warning-700">
+            {t("admin.platform_finance.valid_company_id_required")}
+          </p>
         )}
       </div>
-      {!hasValidCompanyId && (
-        <p className="mt-2 text-sm text-warning-700">{t("admin.platform_finance.valid_company_id_required")}</p>
-      )}
 
-      <div className="mt-4 flex gap-0 border-b border-default">
-        <button type="button" className={tabCls("summary")} onClick={() => setTab("summary")}>{t("admin.platform_finance.summary")}</button>
-        <button type="button" className={tabCls("entitlements")} onClick={() => setTab("entitlements")}>{t("admin.platform_finance.entitlements")}</button>
-        <button type="button" className={tabCls("settlements")} onClick={() => setTab("settlements")}>{t("admin.platform_finance.settlements")}</button>
-      </div>
+      <Tabs
+        value={tab}
+        onChange={(v) => setTab(v as Tab)}
+        items={[
+          { id: "summary", label: t("admin.platform_finance.summary") },
+          { id: "entitlements", label: t("admin.platform_finance.entitlements") },
+          { id: "settlements", label: t("admin.platform_finance.settlements") },
+        ]}
+      />
 
-      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
+      {err ? (
+        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
+      ) : null}
 
       {tab === "summary" && summary && (
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {Object.entries(summary).map(([k, v]) => (
             <div key={k} className="rounded-xl border border-default bg-white px-4 py-3 shadow-sm">
               <div className="text-xs font-medium uppercase text-fg-t7">{k.replace(/_/g, " ")}</div>
               <div className="mt-1 text-2xl font-semibold tabular-nums text-fg-t11">
-                {typeof v === "number" ? Number(v).toFixed(2) : String(v ?? "-")}
+                {typeof v === "number" ? Number(v).toFixed(2) : String(v ?? "—")}
               </div>
             </div>
           ))}
@@ -174,113 +230,117 @@ export default function FinancePage() {
 
       {tab === "entitlements" && (
         <>
-          <div className="mt-4 flex items-center gap-3">
-            <button type="button" disabled={busy || selectedEnt.size === 0} onClick={() => void handleMarkPayable()}
-              className="admin-btn-primary">
-              {t("admin.platform_finance.mark_payable")} {selectedEnt.size > 0 ? `(${selectedEnt.size}) ` : ""}
-            </button>
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              disabled={busy || selectedEnt.size === 0}
+              onClick={() => void handleMarkPayable()}
+              size="sm"
+            >
+              {t("admin.platform_finance.mark_payable")}{" "}
+              {selectedEnt.size > 0 ? `(${selectedEnt.size}) ` : ""}
+            </Button>
           </div>
-          <div className="mt-3 overflow-x-auto rounded border border-default bg-white">
-            <table className="w-full min-w-[700px] text-left text-sm">
-              <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
-                <tr>
-                  <th className="px-3 py-2">
-                    <input
-                      type="checkbox"
-                      onChange={(e) => {
-                        toggleAllEntitlements(e.target.checked);
-                      }}
+          <Table>
+            <THead>
+              <TR>
+                <TH>
+                  <Checkbox
+                    checked={entitlements.length > 0 && selectedEnt.size === entitlements.length}
+                    onChange={(e) => toggleAllEntitlements(e.target.checked)}
+                  />
+                </TH>
+                <TH>{t("admin.crud.common.id")}</TH>
+                <TH>{t("admin.platform_finance.amount")}</TH>
+                <TH>{t("admin.platform_finance.status")}</TH>
+                <TH>{t("admin.platform_finance.company")}</TH>
+                <TH>{t("admin.platform_finance.booking_id")}</TH>
+                <TH>{t("admin.platform_finance.payable_at")}</TH>
+              </TR>
+            </THead>
+            <TBody>
+              {entitlements.length === 0 ? (
+                <TEmpty colSpan={7}>{t("admin.platform_finance.no_entitlements")}</TEmpty>
+              ) : null}
+              {entitlements.map((r) => (
+                <TR key={r.id}>
+                  <TD onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={selectedEnt.has(r.id)}
+                      onChange={(e) => toggleEntitlement(r.id, e.target.checked)}
                     />
-                  </th>
-                  <th className="px-3 py-2">{t("admin.crud.common.id")}</th>
-                  <th className="px-3 py-2">{t("admin.platform_finance.amount")}</th>
-                  <th className="px-3 py-2">{t("admin.platform_finance.status")}</th>
-                  <th className="px-3 py-2">{t("admin.platform_finance.company")}</th>
-                  <th className="px-3 py-2">{t("admin.platform_finance.booking_id")}</th>
-                  <th className="px-3 py-2">{t("admin.platform_finance.payable_at")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {entitlements.length === 0 && (
-                  <tr><td colSpan={7} className="px-3 py-6 text-center text-fg-t6">{t("admin.platform_finance.no_entitlements")}</td></tr>
-                )}
-                {entitlements.map((r) => (
-                  <tr key={r.id} className="border-b border-default hover:bg-figma-bg-1">
-                    <td className="px-3 py-2">
-                      <input
-                        type="checkbox"
-                        checked={selectedEnt.has(r.id)}
-                        onChange={(e) => toggleEntitlement(r.id, e.target.checked)}
-                      />
-                    </td>
-                    <td className="px-3 py-2 tabular-nums text-fg-t7">{r.id}</td>
-                    <td className="px-3 py-2 tabular-nums font-medium">{r.currency} {Number(r.net_amount).toFixed(2)}</td>
-                    <td className="px-3 py-2">
-                      <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${
-                        r.status === "payable" ? "bg-success-50 text-success-800" :
-                        r.status === "paid" ? "bg-info-50 text-info-800" :
-                        "bg-warning-50 text-warning-800"
-                      }`}>{r.status}</span>
-                    </td>
-                    <td className="px-3 py-2">{r.company_id}</td>
-                    <td className="px-3 py-2 tabular-nums text-fg-t7">{r.package_order_id ?? "-"}</td>
-                    <td className="px-3 py-2 text-xs text-fg-t7">
-                      {r.payable_at ? new Date(r.payable_at).toLocaleDateString() : "-"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {entMeta && <PaginationBar meta={entMeta} onPage={setEntPage} />}
+                  </TD>
+                  <TD className="tabular-nums">{r.id}</TD>
+                  <TD className="tabular-nums font-medium">
+                    {r.currency} {Number(r.net_amount).toFixed(2)}
+                  </TD>
+                  <TD>
+                    <StatusPill status={r.status} />
+                  </TD>
+                  <TD>{r.company_id}</TD>
+                  <TD className="tabular-nums">{r.package_order_id ?? "—"}</TD>
+                  <TD className="text-xs text-fg-t6">
+                    {r.payable_at ? new Date(r.payable_at).toLocaleDateString() : "—"}
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+          {entMeta && entMeta.last_page > 1 ? (
+            <Pagination page={entMeta.current_page} lastPage={entMeta.last_page} onPage={setEntPage} />
+          ) : null}
         </>
       )}
 
       {tab === "settlements" && (
         <>
-          <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
-            <table className="w-full min-w-[700px] text-left text-sm">
-              <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
-                <tr>
-                  <th className="px-3 py-2">{t("admin.crud.common.id")}</th>
-                  <th className="px-3 py-2">{t("admin.platform_finance.amount")}</th>
-                  <th className="px-3 py-2">{t("admin.platform_finance.status")}</th>
-                  <th className="px-3 py-2">{t("admin.platform_finance.company")}</th>
-                  <th className="px-3 py-2">{t("admin.platform_finance.settled_at")}</th>
-                  <th className="px-3 py-2">{t("admin.platform_finance.actions")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {settlements.length === 0 && (
-                  <tr><td colSpan={6} className="px-3 py-6 text-center text-fg-t6">{t("admin.platform_finance.no_settlements")}</td></tr>
-                )}
-                {settlements.map((r) => (
-                  <tr key={r.id} className="border-b border-default hover:bg-figma-bg-1">
-                    <td className="px-3 py-2 tabular-nums text-fg-t7">{r.id}</td>
-                    <td className="px-3 py-2 tabular-nums font-medium">{r.currency} {Number(r.total_net_amount).toFixed(2)}</td>
-                    <td className="px-3 py-2">
-                      <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${
-                        r.status === "completed" ? "bg-success-50 text-success-800" :
-                        r.status === "pending" ? "bg-warning-50 text-warning-800" :
-                        "bg-figma-bg-1 text-fg-t7"
-                      }`}>{r.status}</span>
-                    </td>
-                    <td className="px-3 py-2">{r.company?.name ?? r.company_id}</td>
-                    <td className="px-3 py-2 text-xs text-fg-t7">
-                      {r.settled_at ? new Date(r.settled_at).toLocaleDateString() : "-"}
-                    </td>
-                    <td className="px-3 py-2">
-                      {r.status === "pending" && (
-                        <button type="button" disabled={busy} onClick={() => void handleSettlementStatus(r.id, "completed")}
-                          className="text-xs text-info-700 underline disabled:opacity-40">{t("admin.platform_finance.mark_completed")}</button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {setMeta2 && <PaginationBar meta={setMeta2} onPage={setSetPage2} />}
+          <Table>
+            <THead>
+              <TR>
+                <TH>{t("admin.crud.common.id")}</TH>
+                <TH>{t("admin.platform_finance.amount")}</TH>
+                <TH>{t("admin.platform_finance.status")}</TH>
+                <TH>{t("admin.platform_finance.company")}</TH>
+                <TH>{t("admin.platform_finance.settled_at")}</TH>
+                <TH>{t("admin.platform_finance.actions")}</TH>
+              </TR>
+            </THead>
+            <TBody>
+              {settlements.length === 0 ? (
+                <TEmpty colSpan={6}>{t("admin.platform_finance.no_settlements")}</TEmpty>
+              ) : null}
+              {settlements.map((r) => (
+                <TR key={r.id}>
+                  <TD className="tabular-nums">{r.id}</TD>
+                  <TD className="tabular-nums font-medium">
+                    {r.currency} {Number(r.total_net_amount).toFixed(2)}
+                  </TD>
+                  <TD>
+                    <StatusPill status={r.status} />
+                  </TD>
+                  <TD>{r.company?.name ?? r.company_id}</TD>
+                  <TD className="text-xs text-fg-t6">
+                    {r.settled_at ? new Date(r.settled_at).toLocaleDateString() : "—"}
+                  </TD>
+                  <TD>
+                    {r.status === "pending" && (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void handleSettlementStatus(r.id, "completed")}
+                        className="text-xs text-info-700 underline disabled:opacity-40"
+                      >
+                        {t("admin.platform_finance.mark_completed")}
+                      </button>
+                    )}
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+          {setMeta2 && setMeta2.last_page > 1 ? (
+            <Pagination page={setMeta2.current_page} lastPage={setMeta2.last_page} onPage={setSetPage2} />
+          ) : null}
         </>
       )}
     </div>

@@ -1,8 +1,11 @@
 "use client";
 
+/**
+ * Phase-2 migration to shared @/components/ui primitives.
+ * Quest CRM ref: Invoices/Payments tab pattern (4803:12969).
+ */
+
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
-import { PaginationBar } from "@/components/PaginationBar";
-import { StatusPill } from "@/components/ui/StatusPill";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
@@ -10,6 +13,20 @@ import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { apiPlatformPayments, type PlatformPaymentRow } from "@/lib/platform-admin-api";
 import { useCallback, useEffect, useState } from "react";
+import {
+  FormField,
+  Input,
+  PageHeader,
+  Pagination,
+  StatusPill,
+  Table,
+  TBody,
+  TD,
+  TEmpty,
+  TH,
+  THead,
+  TR,
+} from "@/components/ui";
 
 export default function PlatformPaymentsPage() {
   const { token, user } = useAdminAuth();
@@ -44,22 +61,11 @@ export default function PlatformPaymentsPage() {
     load();
   }, [load]);
 
-  if (!allowed) {
+  if (!allowed || forbidden) {
     return (
-      <div>
+      <div className="space-y-4">
         <h1 className="admin-page-title">{t("admin.payments.title_short")}</h1>
-        <div className="mt-4">
-          <ForbiddenNotice />
-        </div>
-      </div>
-    );
-  }
-
-  if (forbidden) {
-    return (
-      <div>
-        <h1 className="admin-page-title">{t("admin.payments.title_short")}</h1>
-        <div className="mt-4">
+        <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
       </div>
@@ -67,56 +73,66 @@ export default function PlatformPaymentsPage() {
   }
 
   return (
-    <div>
-      <h1 className="admin-page-title">{t("admin.payments.title")}</h1>
-      <div className="mt-4">
-        <label className="text-sm text-fg-t6">
-          {t("admin.approvals.filter_status")}
-          <input
+    <div className="space-y-6">
+      <PageHeader title={t("admin.payments.title")} />
+
+      <div className="admin-card p-4">
+        <FormField label={t("admin.approvals.filter_status")} htmlFor="status-filter">
+          <Input
+            id="status-filter"
             value={statusFilter}
             onChange={(e) => {
               setPage(1);
               setStatusFilter(e.target.value);
             }}
             placeholder={t("admin.payments.placeholder_status")}
-            className="ml-2 rounded border border-default px-2 py-1 text-sm"
           />
-        </label>
+        </FormField>
       </div>
-      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
-      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
-        <table className="w-full min-w-[800px] text-left text-sm">
-          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
-            <tr>
-              <th className="px-3 py-2">{t("admin.invoices.col_id")}</th>
-              <th className="px-3 py-2">{t("admin.invoices.col_amount")}</th>
-              <th className="px-3 py-2">{t("admin.payments.col_currency")}</th>
-              <th className="px-3 py-2">{t("admin.invoices.col_status")}</th>
-              <th className="px-3 py-2">{t("admin.payments.col_method")}</th>
-              <th className="px-3 py-2">{t("admin.payments.col_paid_at")}</th>
-              <th className="px-3 py-2">{t("admin.payments.col_invoice")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.id} className="border-b border-default">
-                <td className="px-3 py-2 tabular-nums">{r.id}</td>
-                <td className="px-3 py-2 tabular-nums">{r.amount}</td>
-                <td className="px-3 py-2">{r.currency}</td>
-                <td className="px-3 py-2"><StatusPill status={r.status} /></td>
-                <td className="px-3 py-2">{r.payment_method ?? "-"}</td>
-                <td className="px-3 py-2 text-xs text-fg-t6">{r.paid_at ?? "-"}</td>
-                <td className="px-3 py-2 text-xs">
-                  {r.invoice
-                    ? `#${r.invoice.id} ${r.invoice.unique_booking_reference ?? ""}`
-                    : r.invoice_id ?? "-"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {meta && <PaginationBar meta={meta} onPage={setPage} />}
+
+      {err ? (
+        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
+      ) : null}
+
+      <Table>
+        <THead>
+          <TR>
+            <TH>{t("admin.invoices.col_id")}</TH>
+            <TH>{t("admin.invoices.col_amount")}</TH>
+            <TH>{t("admin.payments.col_currency")}</TH>
+            <TH>{t("admin.invoices.col_status")}</TH>
+            <TH>{t("admin.payments.col_method")}</TH>
+            <TH>{t("admin.payments.col_paid_at")}</TH>
+            <TH>{t("admin.payments.col_invoice")}</TH>
+          </TR>
+        </THead>
+        <TBody>
+          {rows.length === 0 ? (
+            <TEmpty colSpan={7}>{t("admin.payments.empty") || "No payments found."}</TEmpty>
+          ) : null}
+          {rows.map((r) => (
+            <TR key={r.id}>
+              <TD className="tabular-nums">{r.id}</TD>
+              <TD className="tabular-nums">{r.amount}</TD>
+              <TD>{r.currency}</TD>
+              <TD>
+                <StatusPill status={r.status} />
+              </TD>
+              <TD>{r.payment_method ?? "—"}</TD>
+              <TD className="text-xs text-fg-t6">{r.paid_at ?? "—"}</TD>
+              <TD className="text-xs">
+                {r.invoice
+                  ? `#${r.invoice.id} ${r.invoice.unique_booking_reference ?? ""}`
+                  : r.invoice_id ?? "—"}
+              </TD>
+            </TR>
+          ))}
+        </TBody>
+      </Table>
+
+      {meta && meta.last_page > 1 ? (
+        <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />
+      ) : null}
     </div>
   );
 }

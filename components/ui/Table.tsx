@@ -45,13 +45,57 @@ export function TBody({ className, children, ...props }: React.HTMLAttributes<HT
   );
 }
 
-export function TR({ className, children, ...props }: React.HTMLAttributes<HTMLTableRowElement>) {
+/**
+ * Clickable row pattern — pass `onClick` (or `href`) and the row becomes
+ * keyboard-accessible, cursor-pointer, hover-elevated. Buttons/links inside
+ * the row should call `e.stopPropagation()` so the row click doesn't fire too.
+ */
+export function TR({
+  className,
+  children,
+  onClick,
+  href,
+  ...props
+}: React.HTMLAttributes<HTMLTableRowElement> & { href?: string }) {
+  const clickable = Boolean(onClick || href);
+  const handleClick = (e: React.MouseEvent<HTMLTableRowElement>) => {
+    if (href && typeof window !== "undefined") {
+      // Honor middle-click / cmd-click for new-tab
+      if (e.metaKey || e.ctrlKey || e.button === 1) {
+        window.open(href, "_blank");
+        return;
+      }
+      window.location.href = href;
+      return;
+    }
+    onClick?.(e);
+  };
   return (
     <tr
       className={cn(
-        "border-b border-default last:border-0 transition-colors hover:bg-figma-bg-1/60",
+        "border-b border-default last:border-0 transition-colors",
+        clickable
+          ? "cursor-pointer hover:bg-figma-bg-1 focus-within:bg-figma-bg-1"
+          : "hover:bg-figma-bg-1/60",
         className
       )}
+      onClick={clickable ? handleClick : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onKeyDown={
+        clickable
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                if (href && typeof window !== "undefined") {
+                  window.location.href = href;
+                } else if (onClick) {
+                  // Synthesize a minimal mouse event for callers
+                  onClick({} as React.MouseEvent<HTMLTableRowElement>);
+                }
+              }
+            }
+          : undefined
+      }
       {...props}
     >
       {children}
