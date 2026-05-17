@@ -1,11 +1,29 @@
 "use client";
 
+/** Phase-2 migration to shared @/components/ui primitives. */
+
 import { useEffect, useMemo, useState } from "react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useLanguage } from "@/contexts/LanguageContext";
+import {
+  Button,
+  FormField,
+  Input,
+  PageHeader,
+  Pagination,
+  Select,
+  StatusPill,
+  Table,
+  TBody,
+  TD,
+  TEmpty,
+  TH,
+  THead,
+  TR,
+} from "@/components/ui";
 
 /**
  * Platform-admin connections oversight (Sprint 57, PART 18).
@@ -199,9 +217,9 @@ export default function PlatformConnectionsPage() {
 
   if (!allowed || forbidden) {
     return (
-      <div>
+      <div className="space-y-4">
         <h1 className="admin-page-title">{t("admin.platform_connections.title")}</h1>
-        <div className="mt-4">
+        <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
       </div>
@@ -209,16 +227,24 @@ export default function PlatformConnectionsPage() {
   }
 
   return (
-    <div>
-      <h1 className="admin-page-title">{t("admin.platform_connections.title")}</h1>
-      <p className="admin-page-subtitle">{t("admin.platform_connections.subtitle")}</p>
+    <div className="space-y-6">
+      <PageHeader
+        title={t("admin.platform_connections.title")}
+        subtitle={t("admin.platform_connections.subtitle")}
+      />
 
-      {error && <p className="mt-2 text-sm text-error-600">{error}</p>}
+      {error && (
+        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
+          {error}
+        </div>
+      )}
 
-      {/* Stats */}
       {stats && (
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label={t("admin.platform_connections.total_connections")} value={stats.total.toLocaleString()} />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard
+            label={t("admin.platform_connections.total_connections")}
+            value={stats.total.toLocaleString()}
+          />
           <StatCard
             label={t("admin.platform_connections.status_active")}
             value={String(stats.by_status?.active ?? 0)}
@@ -237,158 +263,131 @@ export default function PlatformConnectionsPage() {
         </div>
       )}
 
-      {/* Filters */}
-      <div className="mt-6 grid gap-3 rounded border border-default bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
-        <label className="text-xs text-fg-t6">
-          {t("admin.platform_connections.status")}
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="mt-1 w-full rounded border border-default px-2 py-1 text-sm"
+      <div className="admin-card p-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <FormField label={t("admin.platform_connections.status")} htmlFor="c-status">
+            <Select
+              id="c-status"
+              fieldSize="sm"
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+            >
+              <option value="">{t("common.all")}</option>
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {t(`admin.platform_connections.status_${s}`)}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+          <FormField label={t("admin.platform_connections.type")} htmlFor="c-type">
+            <Select
+              id="c-type"
+              fieldSize="sm"
+              value={type}
+              onChange={(e) => setType(e.target.value)}
+            >
+              <option value="">{t("common.all")}</option>
+              {TYPES.map((tt) => (
+                <option key={tt} value={tt}>
+                  {tt}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+          <FormField
+            label={t("admin.platform_connections.seller_company_id")}
+            htmlFor="c-seller"
           >
-            <option value="">{t("common.all")}</option>
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="text-xs text-fg-t6">
-          {t("admin.platform_connections.type")}
-          <select
-            value={type}
-            onChange={(e) => setType(e.target.value)}
-            className="mt-1 w-full rounded border border-default px-2 py-1 text-sm"
-          >
-            <option value="">{t("common.all")}</option>
-            {TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="text-xs text-fg-t6">
-          {t("admin.platform_connections.seller_company_id")}
-          <input
-            value={sellerId}
-            onChange={(e) => setSellerId(e.target.value)}
-            placeholder={t("admin.platform_connections.seller_placeholder")}
-            className="mt-1 w-full rounded border border-default px-2 py-1 text-sm"
-          />
-        </label>
-        <div className="flex items-end justify-end gap-2">
-          <button
-            type="button"
-            onClick={resetFilters}
-            className="rounded border border-default bg-white px-3 py-1.5 text-sm hover:bg-figma-bg-1"
-          >
+            <Input
+              id="c-seller"
+              value={sellerId}
+              onChange={(e) => setSellerId(e.target.value)}
+              placeholder={t("admin.platform_connections.seller_placeholder")}
+            />
+          </FormField>
+        </div>
+        <div className="mt-4 flex justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={resetFilters}>
             {t("common.reset")}
-          </button>
-          <button
-            type="button"
-            onClick={applyFilters}
-            className="rounded bg-primary-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-600"
-          >
+          </Button>
+          <Button size="sm" onClick={applyFilters}>
             {t("common.apply")}
-          </button>
+          </Button>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
-        <table className="w-full min-w-[1100px] text-left text-sm">
-          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
-            <tr>
-              <th className="px-3 py-2">{t("admin.platform_connections.seller_a")}</th>
-              <th className="px-3 py-2">{t("admin.platform_connections.seller_b")}</th>
-              <th className="px-3 py-2">{t("admin.platform_connections.type")}</th>
-              <th className="px-3 py-2">{t("admin.platform_connections.status")}</th>
-              <th className="px-3 py-2">{t("admin.platform_connections.proposed_by")}</th>
-              <th className="px-3 py-2">{t("admin.platform_connections.proposed_at")}</th>
-              <th className="px-3 py-2"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
-              <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-fg-t6">
-                  {t("admin.platform_connections.loading")}
-                </td>
-              </tr>
-            )}
-            {!loading && rows.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-fg-t6">
-                  {t("admin.platform_connections.empty")}
-                </td>
-              </tr>
-            )}
-            {rows.map((r) => (
-              <tr key={r.id} className="border-b border-default hover:bg-figma-bg-1">
-                <td className="px-3 py-2 text-xs">
-                  {r.seller_a?.name ?? `#${r.seller_a_company_id}`}
-                  <div className="text-fg-t6">{r.seller_a?.type ?? ""}</div>
-                </td>
-                <td className="px-3 py-2 text-xs">
-                  {r.seller_b?.name ?? `#${r.seller_b_company_id}`}
-                  <div className="text-fg-t6">{r.seller_b?.type ?? ""}</div>
-                </td>
-                <td className="px-3 py-2 text-xs">{r.type}</td>
-                <td className="px-3 py-2">
-                  <ConnectionStatusBadge status={r.status} />
-                </td>
-                <td className="px-3 py-2 text-xs">{r.proposed_by?.name ?? "—"}</td>
-                <td className="px-3 py-2 text-xs text-fg-t7">
-                  {r.proposed_at ? new Date(r.proposed_at).toLocaleDateString() : "—"}
-                </td>
-                <td className="px-3 py-2 text-right">
-                  <button
-                    type="button"
-                    onClick={() => openDetail(r)}
-                    className="text-xs text-primary-500 hover:underline"
-                  >
-                    {t("admin.platform_connections.details")}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Table>
+        <THead>
+          <TR>
+            <TH>{t("admin.platform_connections.seller_a")}</TH>
+            <TH>{t("admin.platform_connections.seller_b")}</TH>
+            <TH>{t("admin.platform_connections.type")}</TH>
+            <TH>{t("admin.platform_connections.status")}</TH>
+            <TH>{t("admin.platform_connections.proposed_by")}</TH>
+            <TH>{t("admin.platform_connections.proposed_at")}</TH>
+            <TH />
+          </TR>
+        </THead>
+        <TBody>
+          {loading ? (
+            <TEmpty colSpan={7}>{t("admin.platform_connections.loading")}</TEmpty>
+          ) : rows.length === 0 ? (
+            <TEmpty colSpan={7}>{t("admin.platform_connections.empty")}</TEmpty>
+          ) : null}
+          {rows.map((r) => (
+            <TR key={r.id} onClick={() => openDetail(r)}>
+              <TD className="text-xs">
+                {r.seller_a?.name ?? `#${r.seller_a_company_id}`}
+                {r.seller_a?.type && <div className="text-fg-t6">{r.seller_a.type}</div>}
+              </TD>
+              <TD className="text-xs">
+                {r.seller_b?.name ?? `#${r.seller_b_company_id}`}
+                {r.seller_b?.type && <div className="text-fg-t6">{r.seller_b.type}</div>}
+              </TD>
+              <TD className="text-xs">{r.type}</TD>
+              <TD>
+                <StatusPill status={r.status}>
+                  {t(`admin.platform_connections.status_${r.status}`)}
+                </StatusPill>
+              </TD>
+              <TD className="text-xs">{r.proposed_by?.name ?? "—"}</TD>
+              <TD className="text-xs whitespace-nowrap">
+                {r.proposed_at ? new Date(r.proposed_at).toLocaleDateString() : "—"}
+              </TD>
+              <TD align="right" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  onClick={() => openDetail(r)}
+                  className="text-xs text-primary-500 hover:underline"
+                >
+                  {t("admin.platform_connections.details")}
+                </button>
+              </TD>
+            </TR>
+          ))}
+        </TBody>
+      </Table>
 
-      {/* Pagination */}
       {lastPage > 1 && (
-        <div className="mt-3 flex items-center justify-between text-sm">
-          <span className="text-fg-t6">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-xs text-fg-t6">
             {t("admin.platform_connections.pagination")
               .replace("{page}", String(page))
               .replace("{lastPage}", String(lastPage))
               .replace("{total}", total.toLocaleString())}
           </span>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1}
-              className="rounded border border-default bg-white px-3 py-1 disabled:opacity-50"
-            >
-              {t("common.prev")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
-              disabled={page >= lastPage}
-              className="rounded border border-default bg-white px-3 py-1 disabled:opacity-50"
-            >
-              {t("common.next")}
-            </button>
-          </div>
+          <Pagination
+            page={page}
+            lastPage={lastPage}
+            onPage={setPage}
+            prevLabel={t("common.prev")}
+            nextLabel={t("common.next")}
+          />
         </div>
       )}
 
-      {/* Detail drawer */}
+      {/* Detail drawer (kept custom right-side drawer; Drawer primitive will replace later) */}
       {selected && (
         <div
           className="fixed inset-0 z-50 flex justify-end bg-black/30"
@@ -400,14 +399,16 @@ export default function PlatformConnectionsPage() {
           >
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-lg font-semibold">{t("admin.platform_connections.connection")}</h2>
+                <h2 className="text-lg font-semibold">
+                  {t("admin.platform_connections.connection")}
+                </h2>
                 <p className="mt-1 font-mono text-xs text-fg-t6 break-all">{selected.id}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setSelected(null)}
                 className="rounded p-1 text-fg-t6 hover:bg-figma-bg-1"
-                aria-label="Close"
+                aria-label={t("common.close")}
               >
                 ✕
               </button>
@@ -434,7 +435,9 @@ export default function PlatformConnectionsPage() {
               />
               <DetailRow
                 label={t("admin.platform_connections.proposed_at")}
-                value={selected.proposed_at ? new Date(selected.proposed_at).toLocaleString() : "—"}
+                value={
+                  selected.proposed_at ? new Date(selected.proposed_at).toLocaleString() : "—"
+                }
               />
               <DetailRow
                 label={t("admin.platform_connections.responded_by")}
@@ -447,7 +450,9 @@ export default function PlatformConnectionsPage() {
               <DetailRow
                 label={t("admin.platform_connections.responded_at")}
                 value={
-                  selected.responded_at ? new Date(selected.responded_at).toLocaleString() : "—"
+                  selected.responded_at
+                    ? new Date(selected.responded_at).toLocaleString()
+                    : "—"
                 }
               />
               {selected.terminated_at && (
@@ -469,7 +474,7 @@ export default function PlatformConnectionsPage() {
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-fg-t6">
                   {t("admin.platform_connections.partner_agreement")}
                 </h3>
-                <pre className="mt-1 overflow-x-auto rounded bg-figma-bg-1 p-3 font-mono text-xs">
+                <pre className="mt-1 overflow-x-auto rounded-zulu bg-figma-bg-1 p-3 font-mono text-xs">
                   {JSON.stringify(selected.partner_agreement, null, 2)}
                 </pre>
               </div>
@@ -480,16 +485,17 @@ export default function PlatformConnectionsPage() {
                   <h3 className="text-xs font-semibold uppercase tracking-wide text-fg-t6">
                     {t("admin.platform_connections.commission_override")}
                   </h3>
-                  <pre className="mt-1 overflow-x-auto rounded bg-figma-bg-1 p-3 font-mono text-xs">
+                  <pre className="mt-1 overflow-x-auto rounded-zulu bg-figma-bg-1 p-3 font-mono text-xs">
                     {JSON.stringify(selected.commission_override_rule, null, 2)}
                   </pre>
                 </div>
               )}
 
-            {/* Force-terminate action */}
             {!["terminated", "rejected"].includes(selected.status) && (
-              <div className="mt-6 rounded border border-error-300 bg-error-50 p-4">
-                <h3 className="text-sm font-semibold text-error-700">{t("admin.platform_connections.force_terminate")}</h3>
+              <div className="mt-6 rounded-zulu border border-error-200 bg-error-50 p-4">
+                <h3 className="text-sm font-semibold text-error-700">
+                  {t("admin.platform_connections.force_terminate")}
+                </h3>
                 <p className="mt-1 text-xs text-error-600">
                   {t("admin.platform_connections.force_terminate_help")}
                   <code className="ml-1 rounded bg-white px-1 font-mono">ADMIN: …</code>
@@ -498,17 +504,23 @@ export default function PlatformConnectionsPage() {
                   value={terminateReason}
                   onChange={(e) => setTerminateReason(e.target.value)}
                   rows={2}
-                  placeholder={t("admin.platform_connections.force_terminate_reason_placeholder")}
-                  className="mt-2 w-full rounded border border-error-300 px-2 py-1 text-sm"
+                  placeholder={t(
+                    "admin.platform_connections.force_terminate_reason_placeholder"
+                  )}
+                  className="mt-2 w-full rounded-zulu border border-error-300 px-2 py-1 text-sm focus:border-error-500 focus:outline-none"
                 />
-                <button
-                  type="button"
-                  onClick={forceTerminate}
-                  disabled={actionLoading || !terminateReason.trim()}
-                  className="mt-2 rounded bg-error-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-error-700 disabled:opacity-50"
-                >
-                  {actionLoading ? t("admin.platform_connections.terminating") : t("admin.platform_connections.force_terminate")}
-                </button>
+                <div className="mt-2 flex justify-end">
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    onClick={forceTerminate}
+                    disabled={actionLoading || !terminateReason.trim()}
+                  >
+                    {actionLoading
+                      ? t("admin.platform_connections.terminating")
+                      : t("admin.platform_connections.force_terminate")}
+                  </Button>
+                </div>
               </div>
             )}
           </div>
@@ -538,25 +550,6 @@ function StatCard({
       <div className="text-xs font-semibold uppercase tracking-wide text-fg-t6">{label}</div>
       <div className={`mt-2 text-2xl font-bold tabular-nums ${toneClass}`}>{value}</div>
     </div>
-  );
-}
-
-function ConnectionStatusBadge({ status }: { status: string }) {
-  const { t } = useLanguage();
-  const tone =
-    status === "active"
-      ? "bg-success-50 text-success-700"
-      : status === "proposed"
-        ? "bg-warning-50 text-warning-700"
-        : status === "paused"
-          ? "bg-figma-bg-1 text-fg-t7"
-          : status === "terminated" || status === "rejected"
-            ? "bg-error-50 text-error-700"
-            : "bg-figma-bg-1 text-fg-t6";
-  return (
-    <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${tone}`}>
-      {t(`admin.platform_connections.status_${status}`)}
-    </span>
   );
 }
 
