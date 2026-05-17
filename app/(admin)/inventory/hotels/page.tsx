@@ -8,6 +8,7 @@ import {
   hotelLifecycleStatusLabel,
 } from "@/lib/hotel-ui";
 import { InventoryOversightList } from "../_components/InventoryOversightList";
+import { Button } from "@/components/ui";
 import { useMemo, useState } from "react";
 
 function cell(v: unknown): string {
@@ -345,12 +346,12 @@ export default function HotelsInventoryPage() {
               placeholder={t("admin.inventory_hotels.placeholder_to")}
             />
           </label>
-          <button type="button" onClick={applyFilters} className="rounded-zulu bg-primary-500 px-3 py-1 text-sm font-medium text-white hover:bg-purple-dark">
+          <Button size="sm" onClick={applyFilters}>
             {t("admin.inventory_hotels.btn_apply")}
-          </button>
-          <button type="button" onClick={clearFilters} className="rounded border border-default bg-white px-3 py-1 text-sm">
+          </Button>
+          <Button variant="outline" size="sm" onClick={clearFilters}>
             {t("admin.inventory_hotels.btn_clear")}
-          </button>
+          </Button>
         </>
       }
     />
