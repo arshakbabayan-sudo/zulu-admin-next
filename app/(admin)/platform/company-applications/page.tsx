@@ -84,6 +84,8 @@ export default function CompanyApplicationsPage() {
             <tr>
               <th className="px-3 py-2">{t("admin.company_applications.col_id")}</th>
               <th className="px-3 py-2">{t("admin.company_applications.col_company")}</th>
+              <th className="px-3 py-2">Role</th>
+              <th className="px-3 py-2">Applicant</th>
               <th className="px-3 py-2">{t("admin.company_applications.col_email")}</th>
               <th className="px-3 py-2">{t("admin.company_applications.col_status")}</th>
               <th className="px-3 py-2">{t("admin.company_applications.col_submitted")}</th>
@@ -91,23 +93,54 @@ export default function CompanyApplicationsPage() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
-              <tr key={r.id} className="border-b border-default">
-                <td className="px-3 py-2 tabular-nums">{r.id}</td>
-                <td className="px-3 py-2">{r.company_name}</td>
-                <td className="px-3 py-2">{r.business_email}</td>
-                <td className="px-3 py-2"><StatusPill status={r.status} /></td>
-                <td className="px-3 py-2 text-xs text-fg-t6">{r.submitted_at ?? "-"}</td>
-                <td className="px-3 py-2">
-                  <Link
-                    href={`/platform/company-applications/${r.id}`}
-                    className="text-xs text-info-700 underline"
-                  >
-                    {t("admin.company_applications.btn_open")}
-                  </Link>
-                </td>
-              </tr>
-            ))}
+            {rows.map((r) => {
+              // Prefer the intended_role set at /register (Phase-8 onwards).
+              // Falls back to the application's own company_type when the
+              // user pre-registration link is missing (legacy/anonymous
+              // submissions).
+              const role = r.user?.intended_role ?? r.company_type ?? null;
+              const roleLabel = role === "agent" ? "Tour agent" : role === "operator" ? "Tour operator" : "—";
+              const roleClass =
+                role === "agent"
+                  ? "bg-primary-50 text-primary-700 border-primary-200"
+                  : role === "operator"
+                  ? "bg-success-50 text-success-700 border-success-200"
+                  : "bg-figma-bg-1 text-fg-t6 border-default";
+              return (
+                <tr key={r.id} className="border-b border-default">
+                  <td className="px-3 py-2 tabular-nums">{r.id}</td>
+                  <td className="px-3 py-2">{r.company_name}</td>
+                  <td className="px-3 py-2">
+                    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${roleClass}`}>
+                      {roleLabel}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 text-xs">
+                    {r.user ? (
+                      <span>
+                        {r.user.name ?? "—"}
+                        {r.user.email && (
+                          <span className="block text-fg-t6">{r.user.email}</span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="text-fg-t6">— (anonymous)</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2">{r.business_email}</td>
+                  <td className="px-3 py-2"><StatusPill status={r.status} /></td>
+                  <td className="px-3 py-2 text-xs text-fg-t6">{r.submitted_at ?? "-"}</td>
+                  <td className="px-3 py-2">
+                    <Link
+                      href={`/platform/company-applications/${r.id}`}
+                      className="text-xs text-info-700 underline"
+                    >
+                      {t("admin.company_applications.btn_open")}
+                    </Link>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

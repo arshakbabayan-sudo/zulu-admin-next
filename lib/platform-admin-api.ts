@@ -146,7 +146,15 @@ export async function apiSyncFooter(
 /** Company onboarding application row (`CompanyApplicationResource`). */
 export type CompanyApplicationRow = {
   id: number;
+  user_id?: number | null;
+  user?: {
+    id: number;
+    name?: string | null;
+    email?: string | null;
+    intended_role?: "operator" | "agent" | null;
+  } | null;
   company_name: string;
+  company_type?: "agent" | "operator" | null;
   business_email: string;
   legal_address?: string | null;
   actual_address?: string | null;
