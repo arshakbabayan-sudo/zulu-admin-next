@@ -487,6 +487,39 @@ export async function apiDeactivatePlatformUser(
   return apiFetchJson(`${PA}/users/${id}/deactivate`, { method: "PATCH", token, body: {} });
 }
 
+export type PlatformAdminUserDetail = PlatformAdminUserRow & {
+  phone: string | null;
+  preferred_language: string | null;
+  avatar: string | null;
+  birth_date: string | null;
+  nationality: string | null;
+  is_super_admin: boolean;
+};
+
+export async function apiShowPlatformUser(
+  token: string,
+  id: number
+): Promise<ApiSuccessEnvelope<PlatformAdminUserDetail>> {
+  return apiFetchJson(`${PA}/users/${id}`, { method: "GET", token });
+}
+
+export type UpdatePlatformUserInput = {
+  name?: string;
+  phone?: string | null;
+  preferred_language?: string | null;
+  birth_date?: string | null;
+  nationality?: string | null;
+  status?: string;
+};
+
+export async function apiUpdatePlatformUser(
+  token: string,
+  id: number,
+  input: UpdatePlatformUserInput
+): Promise<ApiSuccessEnvelope<PlatformAdminUserDetail>> {
+  return apiFetchJson(`${PA}/users/${id}`, { method: "PATCH", token, body: input });
+}
+
 export type SellerApplicationRow = {
   id: number;
   company_id: number;
