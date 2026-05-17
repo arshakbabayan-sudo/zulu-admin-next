@@ -380,7 +380,7 @@ function Combobox({ items, value, onChange, placeholder, disabled = false, showF
               }}
               onMouseEnter={() => setHighlight(idx)}
               className={`flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm ${
-                idx === highlight ? "bg-violet-50 text-violet-700" : "text-slate-700"
+                idx === highlight ? "bg-primary-50 text-primary-700" : "text-slate-700"
               }`}
             >
               {showFlag && item.flag_emoji && <span className="text-base leading-none">{item.flag_emoji}</span>}

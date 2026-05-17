@@ -42,10 +42,10 @@ export function SourceLanguagePicker({ value, onChange, locked, className }: Pro
       ];
 
   return (
-    <div className={"rounded border border-violet-200 bg-violet-50 p-3 " + (className ?? "")}>
-      <div className="mb-2 text-xs font-medium text-violet-900">
+    <div className={"rounded border border-primary-200 bg-primary-50 p-3 " + (className ?? "")}>
+      <div className="mb-2 text-xs font-medium text-primary-900">
         📝 Որ լեզվով ես ավելացնում այս հյուրանոցը։
-        <span className="text-violet-700 font-normal">
+        <span className="text-primary-700 font-normal">
           {" "}
           AI-ն ավտոմատ կթարգմանի մյուս լեզուներով։
         </span>
@@ -61,8 +61,8 @@ export function SourceLanguagePicker({ value, onChange, locked, className }: Pro
               onClick={() => !locked && onChange(lang.code)}
               className={
                 (isActive
-                  ? "rounded-md border-2 border-violet-500 bg-white px-3 py-1.5 text-xs font-semibold text-violet-900"
-                  : "rounded-md border border-default bg-white px-3 py-1.5 text-xs text-fg-t7 hover:border-violet-300") +
+                  ? "rounded-md border-2 border-primary-500 bg-white px-3 py-1.5 text-xs font-semibold text-primary-900"
+                  : "rounded-md border border-default bg-white px-3 py-1.5 text-xs text-fg-t7 hover:border-primary-300") +
                 (locked ? " opacity-70 cursor-not-allowed" : "")
               }
             >
@@ -73,7 +73,7 @@ export function SourceLanguagePicker({ value, onChange, locked, className }: Pro
         })}
       </div>
       {locked && (
-        <p className="mt-2 text-[10px] text-violet-700">
+        <p className="mt-2 text-[10px] text-primary-700">
           Աղբյուր լեզուն արդեն ընտրված է. Փոփոխությունը կհանգեցնի AI-ի կողմից մյուս լեզուների կրկնակի թարգմանության։
         </p>
       )}

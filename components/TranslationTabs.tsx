@@ -235,8 +235,8 @@ export function TranslationTabs({ entityType, entityId, fields, className }: Pro
                 }
                 className={
                   isActive
-                    ? "rounded-md border border-violet-400 bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700"
-                    : "rounded-md border border-default bg-white px-3 py-1 text-xs font-medium text-fg-t7 hover:border-violet-300"
+                    ? "rounded-md border border-primary-400 bg-primary-100 px-3 py-1 text-xs font-semibold text-primary-700"
+                    : "rounded-md border border-default bg-white px-3 py-1 text-xs font-medium text-fg-t7 hover:border-primary-300"
                 }
               >
                 <span className="mr-1">{flagFor(l.code)}</span>
@@ -252,7 +252,7 @@ export function TranslationTabs({ entityType, entityId, fields, className }: Pro
               type="button"
               onClick={() => void handleRetranslate()}
               disabled={retranslating || loading}
-              className="rounded border border-violet-300 bg-white px-3 py-1.5 text-xs font-medium text-violet-700 hover:bg-violet-50 disabled:opacity-60"
+              className="rounded border border-primary-300 bg-white px-3 py-1.5 text-xs font-medium text-primary-700 hover:bg-primary-50 disabled:opacity-60"
               title={`AI-ն վերցնի ${sourceLang.toUpperCase()}-ից ու թարգմանի ${activeLang.toUpperCase()}-ով`}
             >
               {retranslating ? "..." : `🤖 ${activeLang.toUpperCase()}-ով AI թարգմանել`}
@@ -262,7 +262,7 @@ export function TranslationTabs({ entityType, entityId, fields, className }: Pro
             type="button"
             onClick={() => void handleSave()}
             disabled={saving || loading || !activeLang}
-            className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-700 disabled:opacity-60"
+            className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-600 disabled:opacity-60"
           >
             {saving ? "Պահպանում..." : `Պահպանել ${activeLang.toUpperCase()}`}
           </button>
@@ -270,7 +270,7 @@ export function TranslationTabs({ entityType, entityId, fields, className }: Pro
       </div>
 
       {isActiveSource && (
-        <p className="mt-2 text-xs text-violet-700">
+        <p className="mt-2 text-xs text-primary-700">
           📝 <b>Աղբյուր լեզուն։</b> Փոփոխությունները ավտոմատ AI-ով կտարածվեն մյուս լեզուների վրա (բացի ձեռքով կողպված տողերից)։
         </p>
       )}

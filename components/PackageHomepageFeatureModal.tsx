@@ -133,7 +133,7 @@ export function PackageHomepageFeatureModal({ packageId, packageTitle, onClose }
                     }
                     className="h-4 w-4"
                   />
-                  Show in <span className="text-violet-700">{SECTION_LABELS[slug]}</span>
+                  Show in <span className="text-primary-700">{SECTION_LABELS[slug]}</span>
                 </label>
                 {row.enabled && (
                   <div className="mt-2 flex flex-wrap items-center gap-3">

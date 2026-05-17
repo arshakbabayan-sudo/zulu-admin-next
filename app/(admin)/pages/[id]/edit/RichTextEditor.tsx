@@ -28,7 +28,7 @@ function ToolbarButton({
       onClick={onClick}
       title={title}
       className={`rounded px-2 py-1 text-xs font-medium transition ${
-        active ? "bg-violet-600 text-white" : "bg-white text-fg-t7 hover:bg-figma-bg-1"
+        active ? "bg-primary-500 text-white" : "bg-white text-fg-t7 hover:bg-figma-bg-1"
       }`}
     >
       {label}
@@ -128,13 +128,13 @@ export function RichTextEditor({ value, onChange, placeholder }: Props) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({}),
-      Link.configure({ openOnClick: false, autolink: true, HTMLAttributes: { class: "text-violet-600 underline" } }),
+      Link.configure({ openOnClick: false, autolink: true, HTMLAttributes: { class: "text-primary-500 underline" } }),
     ],
     content: value || "",
     editorProps: {
       attributes: {
         class:
-          "prose prose-zinc max-w-none min-h-[180px] px-3 py-3 text-sm focus:outline-none [&_h1]:text-2xl [&_h2]:text-xl [&_h3]:text-lg [&_h1]:font-bold [&_h2]:font-bold [&_h3]:font-semibold [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-5 [&_ol]:pl-5 [&_blockquote]:border-l-4 [&_blockquote]:border-default [&_blockquote]:pl-3 [&_blockquote]:italic [&_a]:text-violet-600 [&_a]:underline",
+          "prose prose-zinc max-w-none min-h-[180px] px-3 py-3 text-sm focus:outline-none [&_h1]:text-2xl [&_h2]:text-xl [&_h3]:text-lg [&_h1]:font-bold [&_h2]:font-bold [&_h3]:font-semibold [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-5 [&_ol]:pl-5 [&_blockquote]:border-l-4 [&_blockquote]:border-default [&_blockquote]:pl-3 [&_blockquote]:italic [&_a]:text-primary-500 [&_a]:underline",
         "data-placeholder": placeholder ?? "",
       },
     },
