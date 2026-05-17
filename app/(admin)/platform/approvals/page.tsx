@@ -1,9 +1,8 @@
 "use client";
 
+/** Phase-2 migration to shared @/components/ui primitives. */
+
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
-import { PaginationBar } from "@/components/PaginationBar";
-import { Button } from "@/components/ui/Button";
-import { StatusPill } from "@/components/ui/StatusPill";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
@@ -16,6 +15,22 @@ import {
   type GenericApprovalRow,
 } from "@/lib/platform-admin-api";
 import { useCallback, useEffect, useState } from "react";
+import {
+  Button,
+  FormField,
+  Input,
+  PageHeader,
+  Pagination,
+  Select,
+  StatusPill,
+  Table,
+  TBody,
+  TD,
+  TEmpty,
+  TH,
+  THead,
+  TR,
+} from "@/components/ui";
 
 function canActOnApproval(status: string): boolean {
   return status === "pending" || status === "under_review";
@@ -54,9 +69,7 @@ export default function GenericApprovalsPage() {
     }
   }, [token, allowed, page, statusFilter, entityType, t]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useEffect(() => { load(); }, [load]);
 
   async function approve(id: number) {
     if (!token) return;
@@ -88,9 +101,9 @@ export default function GenericApprovalsPage() {
 
   if (!allowed || forbidden) {
     return (
-      <div>
+      <div className="space-y-4">
         <h1 className="admin-page-title">{t("admin.approvals.title_short")}</h1>
-        <div className="mt-4">
+        <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
       </div>
@@ -98,117 +111,116 @@ export default function GenericApprovalsPage() {
   }
 
   return (
-    <div>
-      <h1 className="admin-page-title">{t("admin.approvals.title")}</h1>
-      <div className="mt-4 flex flex-wrap items-end gap-3">
-        <label className="text-sm text-fg-t6">
-          {t("admin.approvals.filter_status")}
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setPage(1);
-              setStatusFilter(e.target.value);
-            }}
-            className="ml-2 rounded border border-default px-2 py-1 text-sm"
+    <div className="space-y-6">
+      <PageHeader title={t("admin.approvals.title")} />
+
+      <div className="admin-card p-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <FormField label={t("admin.approvals.filter_status")} htmlFor="ap-status" className="min-w-[180px]">
+            <Select
+              id="ap-status"
+              fieldSize="sm"
+              value={statusFilter}
+              onChange={(e) => { setPage(1); setStatusFilter(e.target.value); }}
+            >
+              <option value="">{t("admin.approvals.status_any")}</option>
+              <option value="pending">{t("admin.approvals.status_pending")}</option>
+              <option value="under_review">{t("admin.approvals.status_under_review")}</option>
+              <option value="approved">{t("admin.approvals.status_approved")}</option>
+              <option value="rejected">{t("admin.approvals.status_rejected")}</option>
+            </Select>
+          </FormField>
+          <FormField label={t("admin.approvals.filter_entity_type")} htmlFor="ap-ent" className="min-w-[200px]">
+            <Input
+              id="ap-ent"
+              value={entityTypeDraft}
+              onChange={(e) => setEntityTypeDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  setPage(1);
+                  setEntityType(entityTypeDraft.trim());
+                }
+              }}
+              placeholder={t("admin.approvals.placeholder_entity_type")}
+            />
+          </FormField>
+          <Button
+            size="sm"
+            onClick={() => { setPage(1); setEntityType(entityTypeDraft.trim()); }}
           >
-            <option value="">{t("admin.approvals.status_any")}</option>
-            <option value="pending">{t("admin.approvals.status_pending")}</option>
-            <option value="under_review">{t("admin.approvals.status_under_review")}</option>
-            <option value="approved">{t("admin.approvals.status_approved")}</option>
-            <option value="rejected">{t("admin.approvals.status_rejected")}</option>
-          </select>
-        </label>
-        <label className="text-sm text-fg-t6">
-          {t("admin.approvals.filter_entity_type")}
-          <input
-            value={entityTypeDraft}
-            onChange={(e) => setEntityTypeDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                setPage(1);
-                setEntityType(entityTypeDraft.trim());
-              }
-            }}
-            className="ml-2 rounded border border-default px-2 py-1 text-sm"
-            placeholder={t("admin.approvals.placeholder_entity_type")}
-          />
-        </label>
-        <Button
-          type="button"
-          size="sm"
-          onClick={() => {
-            setPage(1);
-            setEntityType(entityTypeDraft.trim());
-          }}
-        >
-          {t("admin.approvals.btn_apply_filter")}
-        </Button>
+            {t("admin.approvals.btn_apply_filter")}
+          </Button>
+        </div>
       </div>
-      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
-      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
-        <table className="w-full min-w-[900px] text-left text-sm">
-          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
-            <tr>
-              <th className="px-3 py-2">{t("admin.approvals.col_id")}</th>
-              <th className="px-3 py-2">{t("admin.approvals.col_entity")}</th>
-              <th className="px-3 py-2">{t("admin.approvals.col_status")}</th>
-              <th className="px-3 py-2">{t("admin.approvals.col_priority")}</th>
-              <th className="px-3 py-2">{t("admin.approvals.col_requested_by")}</th>
-              <th className="px-3 py-2">{t("admin.approvals.col_created")}</th>
-              <th className="px-3 py-2">{t("admin.approvals.col_actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.id} className="border-b border-default">
-                <td className="px-3 py-2 tabular-nums">{r.id}</td>
-                <td className="px-3 py-2">
-                  <span className="font-mono text-xs">{r.entity_type}</span> #{r.entity_id}
-                </td>
-                <td className="px-3 py-2"><StatusPill status={r.status} /></td>
-                <td className="px-3 py-2">{r.priority ?? "-"}</td>
-                <td className="px-3 py-2 text-xs">
-                  {r.requested_by ? (
-                    <>
-                      {r.requested_by.name}
-                      <br />
-                      <span className="text-fg-t7">{r.requested_by.email}</span>
-                    </>
-                  ) : (
-                    "-"
-                  )}
-                </td>
-                <td className="px-3 py-2 text-xs text-fg-t6">{r.created_at ?? "-"}</td>
-                <td className="space-x-2 px-3 py-2">
-                  {canActOnApproval(r.status) ? (
-                    <>
-                      <button
-                        type="button"
-                        disabled={busyId === r.id}
-                        onClick={() => approve(r.id)}
-                        className="text-xs text-emerald-700 underline disabled:opacity-40"
-                      >
-                        {t("admin.approvals.btn_approve")}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busyId === r.id}
-                        onClick={() => reject(r.id)}
-                        className="text-xs text-error-700 underline disabled:opacity-40"
-                      >
-                        {t("admin.approvals.btn_reject")}
-                      </button>
-                    </>
-                  ) : (
-                    <span className="text-xs text-fg-t6">-</span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {meta && <PaginationBar meta={meta} onPage={setPage} />}
+
+      {err && <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
+
+      <Table>
+        <THead>
+          <TR>
+            <TH>{t("admin.approvals.col_id")}</TH>
+            <TH>{t("admin.approvals.col_entity")}</TH>
+            <TH>{t("admin.approvals.col_status")}</TH>
+            <TH>{t("admin.approvals.col_priority")}</TH>
+            <TH>{t("admin.approvals.col_requested_by")}</TH>
+            <TH>{t("admin.approvals.col_created")}</TH>
+            <TH>{t("admin.approvals.col_actions")}</TH>
+          </TR>
+        </THead>
+        <TBody>
+          {rows.length === 0 ? <TEmpty colSpan={7}>{t("admin.approvals.empty") || "No approvals."}</TEmpty> : null}
+          {rows.map((r) => (
+            <TR key={r.id}>
+              <TD className="tabular-nums">{r.id}</TD>
+              <TD>
+                <span className="font-mono text-xs">{r.entity_type}</span> #{r.entity_id}
+              </TD>
+              <TD><StatusPill status={r.status} /></TD>
+              <TD>{r.priority ?? "—"}</TD>
+              <TD className="text-xs">
+                {r.requested_by ? (
+                  <>
+                    {r.requested_by.name}
+                    <br />
+                    <span className="text-fg-t6">{r.requested_by.email}</span>
+                  </>
+                ) : (
+                  "—"
+                )}
+              </TD>
+              <TD className="text-xs text-fg-t6">{r.created_at ?? "—"}</TD>
+              <TD className="space-x-2">
+                {canActOnApproval(r.status) ? (
+                  <>
+                    <button
+                      type="button"
+                      disabled={busyId === r.id}
+                      onClick={() => approve(r.id)}
+                      className="text-xs text-success-700 underline disabled:opacity-40 hover:text-success-800"
+                    >
+                      {t("admin.approvals.btn_approve")}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busyId === r.id}
+                      onClick={() => reject(r.id)}
+                      className="text-xs text-error-700 underline disabled:opacity-40 hover:text-error-800"
+                    >
+                      {t("admin.approvals.btn_reject")}
+                    </button>
+                  </>
+                ) : (
+                  <span className="text-xs text-fg-t6">—</span>
+                )}
+              </TD>
+            </TR>
+          ))}
+        </TBody>
+      </Table>
+
+      {meta && meta.last_page > 1 ? (
+        <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />
+      ) : null}
     </div>
   );
 }

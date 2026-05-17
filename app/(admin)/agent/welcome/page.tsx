@@ -14,8 +14,10 @@
  * page for users with the `agent` role and no operator/platform role.
  */
 
+import { ExternalLink } from "lucide-react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { Button, PageHeader } from "@/components/ui";
 
 export default function AgentWelcomePage() {
   const { user } = useAdminAuth();
@@ -26,14 +28,16 @@ export default function AgentWelcomePage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 py-8">
-      <header>
-        <h1 className="admin-page-title">{t("admin.agent.welcome.title")}</h1>
-        {companyName && (
-          <p className="mt-1 text-sm text-fg-t6">
-            {t("admin.agent.welcome.subtitle_prefix")} <strong>{companyName}</strong>
-          </p>
-        )}
-      </header>
+      <PageHeader
+        title={t("admin.agent.welcome.title")}
+        subtitle={
+          companyName ? (
+            <span>
+              {t("admin.agent.welcome.subtitle_prefix")} <strong>{companyName}</strong>
+            </span>
+          ) : undefined
+        }
+      />
 
       <section className="admin-card space-y-4 p-6">
         <p className="text-ds-body-2 text-fg-t11">{t("admin.agent.welcome.intro")}</p>
@@ -49,18 +53,11 @@ export default function AgentWelcomePage() {
           <li>• {t("admin.agent.welcome.tool_book")}</li>
           <li>• {t("admin.agent.welcome.tool_commissions")}</li>
         </ul>
-        <a
-          href={customerSiteUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-4 inline-flex items-center gap-2 rounded-zulu px-4 py-2 text-sm font-medium text-white"
-          style={{ backgroundColor: "var(--admin-primary)" }}
-        >
-          {t("admin.agent.welcome.cta_open_customer_site")}
-          <svg viewBox="0 0 20 20" className="h-4 w-4 fill-current" aria-hidden>
-            <path d="M11 3a1 1 0 100 2h2.586l-7.293 7.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
-            <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
-          </svg>
+        <a href={customerSiteUrl} target="_blank" rel="noopener noreferrer" className="inline-block mt-2">
+          <Button size="sm">
+            {t("admin.agent.welcome.cta_open_customer_site")}
+            <ExternalLink className="h-4 w-4" aria-hidden />
+          </Button>
         </a>
       </section>
 
