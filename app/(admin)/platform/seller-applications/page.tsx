@@ -1,7 +1,8 @@
 "use client";
 
+/** Phase-2 migration to shared @/components/ui primitives. */
+
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
-import { PaginationBar } from "@/components/PaginationBar";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
@@ -14,6 +15,20 @@ import {
   type SellerApplicationRow,
 } from "@/lib/platform-admin-api";
 import { useCallback, useEffect, useState } from "react";
+import {
+  FormField,
+  PageHeader,
+  Pagination,
+  Select,
+  StatusPill,
+  Table,
+  TBody,
+  TD,
+  TEmpty,
+  TH,
+  THead,
+  TR,
+} from "@/components/ui";
 
 export default function SellerApplicationsPage() {
   const { token, user } = useAdminAuth();
@@ -22,7 +37,6 @@ export default function SellerApplicationsPage() {
   const [rows, setRows] = useState<SellerApplicationRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
   const [page, setPage] = useState(1);
-  /** Empty = backend default (pending + under_review). Set to explicit status or "__all__" for no filter - backend needs status for all; we use common statuses */
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
@@ -46,9 +60,7 @@ export default function SellerApplicationsPage() {
     }
   }, [token, allowed, page, statusFilter, t]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useEffect(() => { load(); }, [load]);
 
   async function approve(id: number) {
     if (!token) return;
@@ -82,22 +94,11 @@ export default function SellerApplicationsPage() {
     }
   }
 
-  if (!allowed) {
+  if (!allowed || forbidden) {
     return (
-      <div>
+      <div className="space-y-4">
         <h1 className="admin-page-title">{t("admin.seller_applications.title")}</h1>
-        <div className="mt-4">
-          <ForbiddenNotice />
-        </div>
-      </div>
-    );
-  }
-
-  if (forbidden) {
-    return (
-      <div>
-        <h1 className="admin-page-title">{t("admin.seller_applications.title")}</h1>
-        <div className="mt-4">
+        <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
       </div>
@@ -105,72 +106,78 @@ export default function SellerApplicationsPage() {
   }
 
   return (
-    <div>
-      <h1 className="admin-page-title">{t("admin.seller_applications.title")}</h1>
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <label className="text-sm text-fg-t6">
-          {t("admin.seller_applications.filter_status")}
-          <select
+    <div className="space-y-6">
+      <PageHeader title={t("admin.seller_applications.title")} />
+
+      <div className="admin-card p-4">
+        <FormField
+          label={t("admin.seller_applications.filter_status")}
+          htmlFor="sa-status"
+          className="max-w-xs"
+        >
+          <Select
+            id="sa-status"
+            fieldSize="sm"
             value={statusFilter}
-            onChange={(e) => {
-              setPage(1);
-              setStatusFilter(e.target.value);
-            }}
-            className="ml-2 rounded border border-default px-2 py-1 text-sm"
+            onChange={(e) => { setPage(1); setStatusFilter(e.target.value); }}
           >
             <option value="">{t("admin.seller_applications.filter_default_queue")}</option>
             <option value="pending">{t("admin.seller_applications.status_pending")}</option>
             <option value="under_review">{t("admin.seller_applications.status_under_review")}</option>
             <option value="approved">{t("admin.seller_applications.status_approved")}</option>
             <option value="rejected">{t("admin.seller_applications.status_rejected")}</option>
-          </select>
-        </label>
+          </Select>
+        </FormField>
       </div>
-      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
-      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
-        <table className="w-full min-w-[800px] text-left text-sm">
-          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
-            <tr>
-              <th className="px-3 py-2">{t("admin.seller_applications.col_id")}</th>
-              <th className="px-3 py-2">{t("admin.seller_applications.col_company")}</th>
-              <th className="px-3 py-2">{t("admin.seller_applications.col_service")}</th>
-              <th className="px-3 py-2">{t("admin.seller_applications.col_status")}</th>
-              <th className="px-3 py-2">{t("admin.seller_applications.col_applied")}</th>
-              <th className="px-3 py-2">{t("admin.seller_applications.col_actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.id} className="border-b border-default">
-                <td className="px-3 py-2 tabular-nums">{r.id}</td>
-                <td className="px-3 py-2">{r.company_name ?? r.company_id}</td>
-                <td className="px-3 py-2">{r.service_type}</td>
-                <td className="px-3 py-2">{r.status}</td>
-                <td className="px-3 py-2 text-xs text-fg-t6">{r.applied_at ?? "-"}</td>
-                <td className="space-x-2 px-3 py-2">
-                  <button
-                    type="button"
-                    disabled={busyId === r.id}
-                    onClick={() => approve(r.id)}
-                    className="text-xs text-emerald-700 underline disabled:opacity-40"
-                  >
-                    {t("admin.seller_applications.btn_approve")}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busyId === r.id}
-                    onClick={() => reject(r.id)}
-                    className="text-xs text-error-700 underline disabled:opacity-40"
-                  >
-                    {t("admin.seller_applications.btn_reject")}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {meta && <PaginationBar meta={meta} onPage={setPage} />}
+
+      {err && <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
+
+      <Table>
+        <THead>
+          <TR>
+            <TH>{t("admin.seller_applications.col_id")}</TH>
+            <TH>{t("admin.seller_applications.col_company")}</TH>
+            <TH>{t("admin.seller_applications.col_service")}</TH>
+            <TH>{t("admin.seller_applications.col_status")}</TH>
+            <TH>{t("admin.seller_applications.col_applied")}</TH>
+            <TH>{t("admin.seller_applications.col_actions")}</TH>
+          </TR>
+        </THead>
+        <TBody>
+          {rows.length === 0 ? <TEmpty colSpan={6}>{t("admin.seller_applications.empty") || "No applications."}</TEmpty> : null}
+          {rows.map((r) => (
+            <TR key={r.id}>
+              <TD className="tabular-nums">{r.id}</TD>
+              <TD>{r.company_name ?? r.company_id}</TD>
+              <TD>{r.service_type}</TD>
+              <TD><StatusPill status={r.status} /></TD>
+              <TD className="text-xs text-fg-t6">{r.applied_at ?? "—"}</TD>
+              <TD className="space-x-2">
+                <button
+                  type="button"
+                  disabled={busyId === r.id}
+                  onClick={() => approve(r.id)}
+                  className="text-xs text-success-700 underline disabled:opacity-40 hover:text-success-800"
+                >
+                  {t("admin.seller_applications.btn_approve")}
+                </button>
+                <button
+                  type="button"
+                  disabled={busyId === r.id}
+                  onClick={() => reject(r.id)}
+                  className="text-xs text-error-700 underline disabled:opacity-40 hover:text-error-800"
+                >
+                  {t("admin.seller_applications.btn_reject")}
+                </button>
+              </TD>
+            </TR>
+          ))}
+        </TBody>
+      </Table>
+
+      {meta && meta.last_page > 1 ? (
+        <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />
+      ) : null}
     </div>
   );
 }

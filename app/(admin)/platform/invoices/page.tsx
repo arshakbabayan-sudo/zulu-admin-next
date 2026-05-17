@@ -1,7 +1,8 @@
 "use client";
 
+/** Phase-2 migration to shared @/components/ui primitives. */
+
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
-import { PaginationBar } from "@/components/PaginationBar";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
@@ -9,18 +10,23 @@ import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { apiInvoices, apiIssueInvoice, apiCancelInvoice, type InvoiceRow } from "@/lib/invoices-api";
 import { useCallback, useEffect, useState } from "react";
+import {
+  Button,
+  FormField,
+  PageHeader,
+  Pagination,
+  Select,
+  StatusPill,
+  Table,
+  TBody,
+  TD,
+  TEmpty,
+  TH,
+  THead,
+  TR,
+} from "@/components/ui";
 
 const STATUSES = ["", "draft", "issued", "paid", "cancelled", "overdue"];
-
-function StatusBadge({ status }: { status: string }) {
-  const cls =
-    status === "paid"      ? "bg-success-50 text-success-800" :
-    status === "cancelled" ? "bg-error-50 text-error-800" :
-    status === "issued"    ? "bg-info-50 text-info-800" :
-    status === "overdue"   ? "bg-orange-100 text-orange-800" :
-    "bg-figma-bg-1 text-fg-t7";
-  return <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${cls}`}>{status}</span>;
-}
 
 export default function PlatformInvoicesPage() {
   const { token, user } = useAdminAuth();
@@ -36,10 +42,12 @@ export default function PlatformInvoicesPage() {
 
   const load = useCallback(async () => {
     if (!token || !allowed) return;
-    setErr(null); setForbidden(false);
+    setErr(null);
+    setForbidden(false);
     try {
       const res = await apiInvoices(token, { page, per_page: 20, status: statusFilter || undefined });
-      setRows(res.data); setMeta(res.meta);
+      setRows(res.data);
+      setMeta(res.meta);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
       else setErr(e instanceof ApiRequestError ? e.message : t("admin.invoices.err_load"));
@@ -64,78 +72,93 @@ export default function PlatformInvoicesPage() {
     finally { setBusyId(null); }
   }
 
-  if (!allowed || forbidden) return (
-    <div><h1 className="admin-page-title">{t("admin.invoices.title")}</h1><div className="mt-4"><ForbiddenNotice /></div></div>
-  );
+  if (!allowed || forbidden) {
+    return (
+      <div className="space-y-4">
+        <h1 className="admin-page-title">{t("admin.invoices.title")}</h1>
+        <div className="admin-card p-4">
+          <ForbiddenNotice />
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <h1 className="admin-page-title">{t("admin.invoices.title")}</h1>
+    <div className="space-y-6">
+      <PageHeader title={t("admin.invoices.title")} />
 
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        <label className="text-sm text-fg-t6">
-          {t("admin.approvals.filter_status")}
-          <select value={statusFilter} onChange={(e) => { setPage(1); setStatusFilter(e.target.value); }}
-            className="ml-2 rounded border border-default px-2 py-1 text-sm">
-            {STATUSES.map((s) => <option key={s} value={s}>{s || t("common.all")}</option>)}
-          </select>
-        </label>
-        <button type="button" onClick={load} className="rounded border border-default bg-white px-3 py-1 text-sm">{t("admin.finance_summary.btn_refresh")}</button>
+      <div className="admin-card p-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <FormField label={t("admin.approvals.filter_status")} htmlFor="inv-status" className="max-w-xs">
+            <Select
+              id="inv-status"
+              fieldSize="sm"
+              value={statusFilter}
+              onChange={(e) => { setPage(1); setStatusFilter(e.target.value); }}
+            >
+              {STATUSES.map((s) => <option key={s} value={s}>{s || t("common.all")}</option>)}
+            </Select>
+          </FormField>
+          <Button variant="outline" size="sm" onClick={load}>{t("admin.finance_summary.btn_refresh")}</Button>
+        </div>
       </div>
 
-      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
+      {err && <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
 
-      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
-        <table className="w-full min-w-[860px] text-left text-sm">
-          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
-            <tr>
-              <th className="px-3 py-2">{t("admin.invoices.col_id")}</th>
-              <th className="px-3 py-2">{t("admin.invoices.col_invoice_number")}</th>
-              <th className="px-3 py-2">{t("admin.invoices.col_status")}</th>
-              <th className="px-3 py-2">{t("admin.invoices.col_amount")}</th>
-              <th className="px-3 py-2">{t("admin.invoices.col_company")}</th>
-              <th className="px-3 py-2">{t("admin.invoices.col_issued")}</th>
-              <th className="px-3 py-2">{t("admin.invoices.col_due")}</th>
-              <th className="px-3 py-2">{t("admin.invoices.col_actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && (
-              <tr><td colSpan={8} className="px-3 py-6 text-center text-fg-t6">{t("admin.invoices.empty")}</td></tr>
-            )}
-            {rows.map((r) => (
-              <tr key={r.id} className="border-b border-default hover:bg-figma-bg-1">
-                <td className="px-3 py-2 tabular-nums text-fg-t7">{r.id}</td>
-                <td className="px-3 py-2 font-mono text-xs">{r.invoice_number ?? "-"}</td>
-                <td className="px-3 py-2"><StatusBadge status={r.status} /></td>
-                <td className="px-3 py-2 tabular-nums font-medium">
-                  {r.currency} {Number(r.total_amount).toFixed(2)}
-                </td>
-                <td className="px-3 py-2">{r.company?.name ?? "-"}</td>
-                <td className="px-3 py-2 text-xs text-fg-t7">
-                  {r.issued_at ? new Date(r.issued_at).toLocaleDateString() : "-"}
-                </td>
-                <td className="px-3 py-2 text-xs text-fg-t7">
-                  {r.due_date ? new Date(r.due_date).toLocaleDateString() : "-"}
-                </td>
-                <td className="px-3 py-2">
-                  <div className="flex flex-col gap-1">
-                    {r.status === "draft" && (
-                      <button type="button" disabled={busyId === r.id} onClick={() => void handleIssue(r.id)}
-                        className="text-left text-xs text-info-700 underline disabled:opacity-40">{t("admin.invoices.btn_issue")}</button>
-                    )}
-                    {(r.status === "draft" || r.status === "issued") && (
-                      <button type="button" disabled={busyId === r.id} onClick={() => void handleCancel(r.id)}
-                        className="text-left text-xs text-error-600 underline disabled:opacity-40">{t("common.cancel")}</button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {meta && <PaginationBar meta={meta} onPage={setPage} />}
+      <Table>
+        <THead>
+          <TR>
+            <TH>{t("admin.invoices.col_id")}</TH>
+            <TH>{t("admin.invoices.col_invoice_number")}</TH>
+            <TH>{t("admin.invoices.col_status")}</TH>
+            <TH>{t("admin.invoices.col_amount")}</TH>
+            <TH>{t("admin.invoices.col_company")}</TH>
+            <TH>{t("admin.invoices.col_issued")}</TH>
+            <TH>{t("admin.invoices.col_due")}</TH>
+            <TH>{t("admin.invoices.col_actions")}</TH>
+          </TR>
+        </THead>
+        <TBody>
+          {rows.length === 0 ? <TEmpty colSpan={8}>{t("admin.invoices.empty")}</TEmpty> : null}
+          {rows.map((r) => (
+            <TR key={r.id}>
+              <TD className="tabular-nums">{r.id}</TD>
+              <TD className="font-mono text-xs">{r.invoice_number ?? "—"}</TD>
+              <TD><StatusPill status={r.status} /></TD>
+              <TD className="tabular-nums font-medium">
+                {r.currency} {Number(r.total_amount).toFixed(2)}
+              </TD>
+              <TD>{r.company?.name ?? "—"}</TD>
+              <TD className="text-xs text-fg-t6">
+                {r.issued_at ? new Date(r.issued_at).toLocaleDateString() : "—"}
+              </TD>
+              <TD className="text-xs text-fg-t6">
+                {r.due_date ? new Date(r.due_date).toLocaleDateString() : "—"}
+              </TD>
+              <TD>
+                <div className="flex flex-col gap-1">
+                  {r.status === "draft" && (
+                    <button type="button" disabled={busyId === r.id} onClick={() => void handleIssue(r.id)}
+                      className="text-left text-xs text-info-700 underline disabled:opacity-40 hover:text-info-800">
+                      {t("admin.invoices.btn_issue")}
+                    </button>
+                  )}
+                  {(r.status === "draft" || r.status === "issued") && (
+                    <button type="button" disabled={busyId === r.id} onClick={() => void handleCancel(r.id)}
+                      className="text-left text-xs text-error-600 underline disabled:opacity-40 hover:text-error-800">
+                      {t("common.cancel")}
+                    </button>
+                  )}
+                </div>
+              </TD>
+            </TR>
+          ))}
+        </TBody>
+      </Table>
+
+      {meta && meta.last_page > 1 ? (
+        <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />
+      ) : null}
     </div>
   );
 }
