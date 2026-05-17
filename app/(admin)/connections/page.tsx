@@ -1,5 +1,7 @@
 "use client";
 
+/** Phase-2 migration to shared @/components/ui primitives. */
+
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { PaginationBar } from "@/components/PaginationBar";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
@@ -20,6 +22,22 @@ import {
   type ConnectionRow,
 } from "@/lib/connections-api";
 import { useLanguage } from "@/contexts/LanguageContext";
+import {
+  Button,
+  Checkbox,
+  FormField,
+  Input,
+  PageHeader,
+  Select,
+  StatusPill,
+  Table,
+  TBody,
+  TD,
+  TEmpty,
+  TH,
+  THead,
+  TR,
+} from "@/components/ui";
 import { useCallback, useEffect, useState } from "react";
 
 function companyLabel(c: ConnectionRow): string {
@@ -36,8 +54,7 @@ export default function ConnectionsPage() {
   const { t } = useLanguage();
   const allowed = canAccessConnectionsNav(user);
   const isSuper = user?.is_super_admin === true;
-  const canCreate =
-    (user?.companies?.length ?? 0) > 0;
+  const canCreate = (user?.companies?.length ?? 0) > 0;
 
   const [rows, setRows] = useState<ConnectionRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -98,7 +115,7 @@ export default function ConnectionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, allowed, page, statusFilter, sourceTypeFilter, targetTypeFilter, companyIdParam]);
+  }, [token, allowed, page, statusFilter, sourceTypeFilter, targetTypeFilter, companyIdParam, t]);
 
   useEffect(() => {
     load();
@@ -116,7 +133,7 @@ export default function ConnectionsPage() {
         );
       })
       .finally(() => setClientsBusy(false));
-  }, [token, createOpen, actorCompanyId]);
+  }, [token, createOpen, actorCompanyId, t]);
 
   const onAction = async (id: number, action: "accept" | "reject" | "cancel") => {
     if (!token) return;
@@ -138,9 +155,13 @@ export default function ConnectionsPage() {
         try {
           await apiConnectionCancel(token, id, notes);
         } catch (e) {
-          // If API requires notes for cancel (feature/config), re-prompt once.
-          if (e instanceof ApiRequestError && e.status === 422 && e.message.toLowerCase().includes("notes")) {
-            const retry = window.prompt(t("admin.connections.prompt_notes_required_cancel"), "") ?? null;
+          if (
+            e instanceof ApiRequestError &&
+            e.status === 422 &&
+            e.message.toLowerCase().includes("notes")
+          ) {
+            const retry =
+              window.prompt(t("admin.connections.prompt_notes_required_cancel"), "") ?? null;
             const retryNotes = retry?.trim() ? retry.trim() : null;
             if (!retryNotes) {
               setErr(t("admin.connections.err_notes_required_cancel"));
@@ -203,63 +224,57 @@ export default function ConnectionsPage() {
     }
   };
 
-  if (!allowed) {
+  if (!allowed || forbidden) {
     return (
-      <div>
+      <div className="space-y-4">
         <h1 className="admin-page-title">{t("admin.connections.title")}</h1>
-        <div className="mt-4">
+        <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
       </div>
     );
   }
 
-  if (forbidden) {
-    return (
-      <div>
-        <h1 className="admin-page-title">{t("admin.connections.title")}</h1>
-        <div className="mt-4">
-          <ForbiddenNotice />
-        </div>
-      </div>
-    );
-  }
+  const statusOptions = ["", "pending", "accepted", "rejected", "canceled"] as const;
 
   return (
-    <div>
-      <h1 className="admin-page-title">{t("admin.connections.title")}</h1>
+    <div className="space-y-6">
+      <PageHeader title={t("admin.connections.title")} />
 
       {canCreate && (
-        <div className="mt-4 rounded border border-default bg-white p-4">
-          <button
-            type="button"
+        <section className="admin-card p-4">
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setCreateOpen((o) => !o)}
-            className="text-sm font-medium text-fg-t11 underline"
           >
-            {createOpen ? t("admin.connections.hide_create_form") : t("admin.connections.create_connection")}
-          </button>
+            {createOpen
+              ? t("admin.connections.hide_create_form")
+              : t("admin.connections.create_connection")}
+          </Button>
+
           {createOpen && (
             <form onSubmit={onCreate} className="mt-3 grid max-w-xl gap-3 text-sm">
-              <div className="grid grid-cols-2 gap-2">
-                <label className="text-fg-t6">
-                  {t("admin.connections.source_type")}
-                  <select
+              <div className="grid grid-cols-2 gap-3">
+                <FormField label={t("admin.connections.source_type")} htmlFor="conn-st">
+                  <Select
+                    id="conn-st"
+                    fieldSize="sm"
                     value={createForm.source_type}
                     onChange={(e) =>
                       setCreateForm((f) => ({ ...f, source_type: e.target.value }))
                     }
-                    className="mt-1 w-full rounded border border-default px-2 py-1"
                   >
-                    {CONNECTION_SOURCE_TYPES.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
+                    {CONNECTION_SOURCE_TYPES.map((tt) => (
+                      <option key={tt} value={tt}>
+                        {tt}
                       </option>
                     ))}
-                  </select>
-                </label>
-                <label className="text-fg-t6">
-                  {t("admin.connections.source_id")}
-                  <input
+                  </Select>
+                </FormField>
+                <FormField label={t("admin.connections.source_id")} htmlFor="conn-sid">
+                  <Input
+                    id="conn-sid"
                     type="number"
                     required
                     min={1}
@@ -267,30 +282,29 @@ export default function ConnectionsPage() {
                     onChange={(e) =>
                       setCreateForm((f) => ({ ...f, source_id: Number(e.target.value) }))
                     }
-                    className="mt-1 w-full rounded border border-default px-2 py-1"
                   />
-                </label>
+                </FormField>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <label className="text-fg-t6">
-                  {t("admin.connections.target_type")}
-                  <select
+              <div className="grid grid-cols-2 gap-3">
+                <FormField label={t("admin.connections.target_type")} htmlFor="conn-tt">
+                  <Select
+                    id="conn-tt"
+                    fieldSize="sm"
                     value={createForm.target_type}
                     onChange={(e) =>
                       setCreateForm((f) => ({ ...f, target_type: e.target.value }))
                     }
-                    className="mt-1 w-full rounded border border-default px-2 py-1"
                   >
-                    {CONNECTION_TARGET_TYPES.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
+                    {CONNECTION_TARGET_TYPES.map((tt) => (
+                      <option key={tt} value={tt}>
+                        {tt}
                       </option>
                     ))}
-                  </select>
-                </label>
-                <label className="text-fg-t6">
-                  {t("admin.connections.target_id")}
-                  <input
+                  </Select>
+                </FormField>
+                <FormField label={t("admin.connections.target_id")} htmlFor="conn-tid">
+                  <Input
+                    id="conn-tid"
                     type="number"
                     required
                     min={1}
@@ -298,30 +312,31 @@ export default function ConnectionsPage() {
                     onChange={(e) =>
                       setCreateForm((f) => ({ ...f, target_id: Number(e.target.value) }))
                     }
-                    className="mt-1 w-full rounded border border-default px-2 py-1"
                   />
-                </label>
+                </FormField>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <label className="text-fg-t6">
-                  {t("admin.connections.connection_type")}
-                  <select
+              <div className="grid grid-cols-2 gap-3">
+                <FormField label={t("admin.connections.connection_type")} htmlFor="conn-ct">
+                  <Select
+                    id="conn-ct"
+                    fieldSize="sm"
                     value={createForm.connection_type}
                     onChange={(e) =>
                       setCreateForm((f) => ({
                         ...f,
-                        connection_type: e.target.value as ConnectionCreateBody["connection_type"],
+                        connection_type: e.target
+                          .value as ConnectionCreateBody["connection_type"],
                       }))
                     }
-                    className="mt-1 w-full rounded border border-default px-2 py-1"
                   >
                     <option value="only">{t("admin.connections.connection_type_only")}</option>
                     <option value="both">{t("admin.connections.connection_type_both")}</option>
-                  </select>
-                </label>
-                <label className="text-fg-t6">
-                  {t("admin.connections.client_targeting")}
-                  <select
+                  </Select>
+                </FormField>
+                <FormField label={t("admin.connections.client_targeting")} htmlFor="conn-tg">
+                  <Select
+                    id="conn-tg"
+                    fieldSize="sm"
                     value={createForm.client_targeting ?? "all"}
                     onChange={(e) =>
                       setCreateForm((f) => ({
@@ -331,39 +346,44 @@ export default function ConnectionsPage() {
                           e.target.value === "selected" ? f.selected_client_ids ?? [] : [],
                       }))
                     }
-                    className="mt-1 w-full rounded border border-default px-2 py-1"
                   >
                     <option value="all">{t("admin.connections.targeting_all")}</option>
                     <option value="selected">{t("admin.connections.targeting_selected")}</option>
-                  </select>
-                </label>
+                  </Select>
+                </FormField>
               </div>
               {createForm.client_targeting === "selected" && (
-                <div className="rounded border border-default p-3">
+                <div className="rounded-zulu border border-default p-3">
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <p className="text-fg-t7">{t("admin.connections.selected_clients")}</p>
-                    <input
-                      type="text"
+                    <p className="text-xs text-fg-t7">
+                      {t("admin.connections.selected_clients")}
+                    </p>
+                    <Input
                       placeholder={t("admin.connections.search_clients_placeholder")}
                       value={clientQuery}
                       onChange={(e) => setClientQuery(e.target.value)}
-                      className="w-56 rounded border border-default px-2 py-1 text-xs"
+                      className="w-56"
                     />
                   </div>
                   {clientsBusy ? (
-                    <p className="text-xs text-fg-t6">{t("admin.connections.loading_clients")}</p>
+                    <p className="text-xs text-fg-t6">
+                      {t("admin.connections.loading_clients")}
+                    </p>
                   ) : clientLoadError ? (
                     <p className="text-xs text-error-600">{clientLoadError}</p>
                   ) : clientOptions.length === 0 ? (
-                    <p className="text-xs text-fg-t6">{t("admin.connections.empty_company_clients")}</p>
+                    <p className="text-xs text-fg-t6">
+                      {t("admin.connections.empty_company_clients")}
+                    </p>
                   ) : (
-                    <div className="max-h-48 overflow-y-auto rounded border border-default p-2">
+                    <div className="max-h-48 overflow-y-auto rounded-zulu border border-default p-2">
                       {clientOptions
                         .filter((c) => {
                           const q = clientQuery.trim().toLowerCase();
                           if (!q) return true;
                           return (
-                            c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q)
+                            c.name.toLowerCase().includes(q) ||
+                            c.email.toLowerCase().includes(q)
                           );
                         })
                         .map((c) => {
@@ -376,8 +396,7 @@ export default function ConnectionsPage() {
                               <span className="truncate text-fg-t7">
                                 {c.name} ({c.email})
                               </span>
-                              <input
-                                type="checkbox"
+                              <Checkbox
                                 checked={checked}
                                 onChange={(e) =>
                                   setCreateForm((f) => {
@@ -395,222 +414,200 @@ export default function ConnectionsPage() {
                   )}
                 </div>
               )}
-              <label className="text-fg-t6">
-                {t("admin.connections.notes_optional")}
-                <input
-                  type="text"
+              <FormField label={t("admin.connections.notes_optional")} htmlFor="conn-notes">
+                <Input
+                  id="conn-notes"
                   value={createForm.notes ?? ""}
                   onChange={(e) => setCreateForm((f) => ({ ...f, notes: e.target.value }))}
-                  className="mt-1 w-full rounded border border-default px-2 py-1"
                 />
-              </label>
+              </FormField>
               <div>
-                <button
-                  type="submit"
-                  disabled={createBusy}
-                  className="admin-btn-primary"
-                >
-                  {createBusy ? t("admin.connections.creating") : t("admin.connections.submit")}
-                </button>
+                <Button type="submit" size="sm" disabled={createBusy}>
+                  {createBusy
+                    ? t("admin.connections.creating")
+                    : t("admin.connections.submit")}
+                </Button>
               </div>
             </form>
           )}
-        </div>
+        </section>
       )}
 
-      <div className="mt-4 flex flex-wrap items-end gap-3 text-sm">
-        <div className="flex flex-wrap gap-2">
-          {(["", "pending", "accepted", "rejected", "canceled"] as const).map((s) => (
-            <button
+      <div className="admin-card p-4 space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          {statusOptions.map((s) => (
+            <Button
               key={s || "all"}
-              type="button"
+              size="sm"
+              variant={statusFilter === s ? "primary" : "outline"}
               onClick={() => {
                 setPage(1);
                 setStatusFilter(s);
               }}
-              className={
-                "rounded border px-2 py-1 " +
-                (statusFilter === s ? "border-primary bg-primary text-white" : "border-default bg-white")
-              }
             >
               {s === "" ? t("common.all") : t(`admin.connections.status_${s}`)}
-            </button>
+            </Button>
           ))}
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setPage(1);
+              setStatusFilter("");
+              setSourceTypeFilter("");
+              setTargetTypeFilter("");
+              setCompanyIdFilter("");
+            }}
+          >
+            {t("admin.connections.reset_filters")}
+          </Button>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            setPage(1);
-            setStatusFilter("");
-            setSourceTypeFilter("");
-            setTargetTypeFilter("");
-            setCompanyIdFilter("");
-          }}
-          className="rounded border border-default bg-white px-2 py-1"
-        >
-          {t("admin.connections.reset_filters")}
-        </button>
-      </div>
 
-      <div className="mt-3 flex flex-wrap gap-4 text-sm">
-        <label className="text-fg-t6">
-          {t("admin.connections.source_type")}
-          <select
-            value={sourceTypeFilter}
-            onChange={(e) => {
-              setPage(1);
-              setSourceTypeFilter(e.target.value);
-            }}
-            className="ml-2 rounded border border-default px-2 py-1"
-          >
-            <option value="">{t("common.all")}</option>
-            {CONNECTION_SOURCE_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="text-fg-t6">
-          {t("admin.connections.target_type")}
-          <select
-            value={targetTypeFilter}
-            onChange={(e) => {
-              setPage(1);
-              setTargetTypeFilter(e.target.value);
-            }}
-            className="ml-2 rounded border border-default px-2 py-1"
-          >
-            <option value="">{t("common.all")}</option>
-            {CONNECTION_TARGET_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </label>
-        {isSuper && (
-          <label className="text-fg-t6">
-            {t("admin.connections.company_id")}
-            <input
-              type="number"
-              min={1}
-              placeholder={t("admin.connections.optional")}
-              value={companyIdFilter}
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <FormField label={t("admin.connections.source_type")} htmlFor="conn-fst">
+            <Select
+              id="conn-fst"
+              fieldSize="sm"
+              value={sourceTypeFilter}
               onChange={(e) => {
                 setPage(1);
-                setCompanyIdFilter(e.target.value);
+                setSourceTypeFilter(e.target.value);
               }}
-              className="ml-2 w-28 rounded border border-default px-2 py-1"
-            />
-          </label>
-        )}
+            >
+              <option value="">{t("common.all")}</option>
+              {CONNECTION_SOURCE_TYPES.map((tt) => (
+                <option key={tt} value={tt}>
+                  {tt}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+          <FormField label={t("admin.connections.target_type")} htmlFor="conn-ftt">
+            <Select
+              id="conn-ftt"
+              fieldSize="sm"
+              value={targetTypeFilter}
+              onChange={(e) => {
+                setPage(1);
+                setTargetTypeFilter(e.target.value);
+              }}
+            >
+              <option value="">{t("common.all")}</option>
+              {CONNECTION_TARGET_TYPES.map((tt) => (
+                <option key={tt} value={tt}>
+                  {tt}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+          {isSuper && (
+            <FormField label={t("admin.connections.company_id")} htmlFor="conn-fco">
+              <Input
+                id="conn-fco"
+                type="number"
+                min={1}
+                placeholder={t("admin.connections.optional")}
+                value={companyIdFilter}
+                onChange={(e) => {
+                  setPage(1);
+                  setCompanyIdFilter(e.target.value);
+                }}
+              />
+            </FormField>
+          )}
+        </div>
       </div>
 
-      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
+      {err && (
+        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
+          {err}
+        </div>
+      )}
 
-      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
-        <table className="w-full min-w-[900px] text-left text-sm">
-          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
-            <tr>
-              <th className="px-3 py-2">{t("admin.crud.common.id")}</th>
-              <th className="px-3 py-2">{t("admin.connections.source")}</th>
-              <th className="px-3 py-2">{t("admin.connections.target")}</th>
-              <th className="px-3 py-2">{t("admin.connections.type")}</th>
-              <th className="px-3 py-2">{t("admin.connections.status")}</th>
-              <th className="px-3 py-2">{t("admin.connections.company")}</th>
-              <th className="px-3 py-2">{t("admin.connections.client_targeting")}</th>
-              <th className="px-3 py-2">{t("admin.connections.created")}</th>
-              <th className="px-3 py-2">{t("admin.connections.actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={9} className="px-3 py-8 text-center text-fg-t7">
-                  {t("admin.connections.loading")}
-                </td>
-              </tr>
-            ) : rows.length === 0 ? (
-              <tr>
-                <td colSpan={9} className="px-3 py-8 text-center text-fg-t7">
-                  {t("admin.connections.empty")}
-                </td>
-              </tr>
-            ) : (
-              rows.map((c) => (
-                <tr key={c.id} className="border-b border-default">
-                  <td className="px-3 py-2 tabular-nums font-medium">{c.id}</td>
-                  <td className="px-3 py-2">{entityLabel(c.source_type, c.source_id)}</td>
-                  <td className="px-3 py-2">{entityLabel(c.target_type, c.target_id)}</td>
-                  <td className="px-3 py-2">{c.connection_type ?? "-"}</td>
-                  <td className="px-3 py-2">
-                    <span
-                      className={
-                        "rounded px-1.5 py-0.5 text-xs " +
-                        (c.status === "pending"
-                          ? "bg-warning-50 text-amber-900"
-                          : c.status === "accepted"
-                            ? "bg-emerald-100 text-emerald-900"
-                            : c.status === "rejected"
-                              ? "bg-error-50 text-error-800"
-                              : "bg-figma-bg-1 text-fg-t7")
-                      }
-                    >
-                      {c.status ?? "-"}
-                    </span>
-                  </td>
-                  <td className="max-w-[160px] truncate px-3 py-2">{companyLabel(c)}</td>
-                  <td className="px-3 py-2">{c.client_targeting === "selected" ? t("admin.connections.targeting_selected") : t("admin.connections.targeting_all")}</td>
-                  <td className="whitespace-nowrap px-3 py-2 text-xs text-fg-t7">
-                    {c.created_at ? String(c.created_at).slice(0, 10) : "-"}
-                  </td>
-                  <td className="px-3 py-2">
-                    <div className="flex flex-wrap gap-1">
-                      {c.status === "pending" && (
-                        <>
-                          <button
-                            type="button"
-                            disabled={busyId === c.id}
-                            onClick={() => onAction(c.id, "accept")}
-                            className="rounded border border-emerald-600 px-2 py-0.5 text-emerald-800 disabled:opacity-40"
-                          >
-                            {t("admin.connections.accept")}
-                          </button>
-                          <button
-                            type="button"
-                            disabled={busyId === c.id}
-                            onClick={() => onAction(c.id, "reject")}
-                            className="rounded border border-red-500 px-2 py-0.5 text-error-700 disabled:opacity-40"
-                          >
-                            {t("admin.connections.reject")}
-                          </button>
-                        </>
-                      )}
-                      {(c.status === "pending" || c.status === "accepted") && (
-                        <button
-                          type="button"
+      <Table>
+        <THead>
+          <TR>
+            <TH>{t("admin.crud.common.id")}</TH>
+            <TH>{t("admin.connections.source")}</TH>
+            <TH>{t("admin.connections.target")}</TH>
+            <TH>{t("admin.connections.type")}</TH>
+            <TH>{t("admin.connections.status")}</TH>
+            <TH>{t("admin.connections.company")}</TH>
+            <TH>{t("admin.connections.client_targeting")}</TH>
+            <TH>{t("admin.connections.created")}</TH>
+            <TH>{t("admin.connections.actions")}</TH>
+          </TR>
+        </THead>
+        <TBody>
+          {loading ? (
+            <TEmpty colSpan={9}>{t("admin.connections.loading")}</TEmpty>
+          ) : rows.length === 0 ? (
+            <TEmpty colSpan={9}>{t("admin.connections.empty")}</TEmpty>
+          ) : (
+            rows.map((c) => (
+              <TR key={c.id}>
+                <TD className="tabular-nums font-medium">{c.id}</TD>
+                <TD>{entityLabel(c.source_type, c.source_id)}</TD>
+                <TD>{entityLabel(c.target_type, c.target_id)}</TD>
+                <TD>{c.connection_type ?? "-"}</TD>
+                <TD>
+                  <StatusPill status={c.status ?? ""}>{c.status ?? "-"}</StatusPill>
+                </TD>
+                <TD className="max-w-[160px] truncate">{companyLabel(c)}</TD>
+                <TD className="text-xs">
+                  {c.client_targeting === "selected"
+                    ? t("admin.connections.targeting_selected")
+                    : t("admin.connections.targeting_all")}
+                </TD>
+                <TD className="text-xs whitespace-nowrap">
+                  {c.created_at ? String(c.created_at).slice(0, 10) : "-"}
+                </TD>
+                <TD>
+                  <div className="flex flex-wrap gap-1">
+                    {c.status === "pending" && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           disabled={busyId === c.id}
-                          onClick={() => onAction(c.id, "cancel")}
-                          className="rounded border border-default px-2 py-0.5 text-fg-t7 disabled:opacity-40"
+                          onClick={() => onAction(c.id, "accept")}
                         >
-                          {t("admin.connections.cancel")}
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+                          {t("admin.connections.accept")}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          disabled={busyId === c.id}
+                          onClick={() => onAction(c.id, "reject")}
+                        >
+                          {t("admin.connections.reject")}
+                        </Button>
+                      </>
+                    )}
+                    {(c.status === "pending" || c.status === "accepted") && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={busyId === c.id}
+                        onClick={() => onAction(c.id, "cancel")}
+                      >
+                        {t("admin.connections.cancel")}
+                      </Button>
+                    )}
+                  </div>
+                </TD>
+              </TR>
+            ))
+          )}
+        </TBody>
+      </Table>
 
       {meta && !loading && <PaginationBar meta={meta} onPage={setPage} />}
 
-      <p className="mt-3 text-xs text-fg-t7">
+      <p className="text-xs text-fg-t7">
         {t("admin.connections.footer_help_prefix")}{" "}
-        <code className="text-[11px]">company_id</code>. {t("admin.connections.footer_help_suffix")}{" "}
+        <code className="text-[11px]">company_id</code>.{" "}
+        {t("admin.connections.footer_help_suffix")}{" "}
         (<code className="text-[11px]">POST /api/connections</code>).
       </p>
     </div>
