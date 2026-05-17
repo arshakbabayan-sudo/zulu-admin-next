@@ -1,5 +1,7 @@
 "use client";
 
+/** Phase-2 migration to shared @/components/ui primitives. */
+
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -14,6 +16,20 @@ import {
   type PlatformBannerRow,
 } from "@/lib/platform-admin-api";
 import { useCallback, useEffect, useState } from "react";
+import {
+  Button,
+  FormField,
+  Input,
+  PageHeader,
+  StatusPill,
+  Table,
+  TBody,
+  TD,
+  TEmpty,
+  TH,
+  THead,
+  TR,
+} from "@/components/ui";
 
 function resolveBannerImageSrc(row: PlatformBannerRow): string | null {
   const u = row.image_url;
@@ -60,9 +76,7 @@ export default function PlatformBannersPage() {
     }
   }, [token, allowed, t]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useEffect(() => { load(); }, [load]);
 
   function openEdit(row: PlatformBannerRow) {
     setEditing(row);
@@ -141,9 +155,9 @@ export default function PlatformBannersPage() {
 
   if (!allowed || forbidden) {
     return (
-      <div>
+      <div className="space-y-4">
         <h1 className="admin-page-title">{t("admin.banners.title")}</h1>
-        <div className="mt-4">
+        <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
       </div>
@@ -151,215 +165,150 @@ export default function PlatformBannersPage() {
   }
 
   return (
-    <div>
-      <h1 className="admin-page-title">{t("admin.banners.title_long")}</h1>
-      <p className="mt-1 text-sm text-fg-t7">{t("admin.banners.subtitle")}</p>
-      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
+    <div className="space-y-6">
+      <PageHeader title={t("admin.banners.title_long")} subtitle={t("admin.banners.subtitle")} />
 
-      <section className="mt-6 rounded border border-default bg-white p-4">
-        <h2 className="text-sm font-semibold">{t("admin.banners.create_title")}</h2>
-        <div className="mt-3 grid max-w-xl gap-2 text-sm">
-          <label className="block">
-            {t("admin.banners.field_image_required")}
+      {err && <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
+
+      <section className="admin-card p-4 space-y-3">
+        <h2 className="text-sm font-semibold text-fg-t8">{t("admin.banners.create_title")}</h2>
+        <div className="grid max-w-xl gap-3">
+          <FormField label={t("admin.banners.field_image_required")} htmlFor="b-img">
             <input
+              id="b-img"
               type="file"
               accept="image/jpeg,image/png,image/jpg,image/webp"
               onChange={(e) => setCreateFile(e.target.files?.[0] ?? null)}
-              className="mt-1 block w-full text-xs"
+              className="block w-full text-xs file:mr-3 file:rounded-zulu file:border file:border-default file:bg-white file:px-3 file:py-1.5 file:text-sm file:text-fg-t7 hover:file:bg-figma-bg-1"
             />
-          </label>
-          <label>
-            {t("admin.banners.field_title_en")}
-            <input
-              value={createTitleEn}
-              onChange={(e) => setCreateTitleEn(e.target.value)}
-              className="ml-2 w-full max-w-md rounded border border-default px-2 py-1"
-            />
-          </label>
-          <label>
-            {t("admin.banners.field_title_ru")}
-            <input
-              value={createTitleRu}
-              onChange={(e) => setCreateTitleRu(e.target.value)}
-              className="ml-2 w-full max-w-md rounded border border-default px-2 py-1"
-            />
-          </label>
-          <label>
-            {t("admin.banners.field_title_hy")}
-            <input
-              value={createTitleHy}
-              onChange={(e) => setCreateTitleHy(e.target.value)}
-              className="ml-2 w-full max-w-md rounded border border-default px-2 py-1"
-            />
-          </label>
-          <label>
-            {t("admin.banners.field_link")}
-            <input
-              value={createLink}
-              onChange={(e) => setCreateLink(e.target.value)}
-              className="ml-2 w-full max-w-md rounded border border-default px-2 py-1"
-            />
-          </label>
-          <label>
-            {t("admin.banners.field_sort")}
-            <input
-              value={createSort}
-              onChange={(e) => setCreateSort(e.target.value)}
-              className="ml-2 w-24 rounded border border-default px-2 py-1 tabular-nums"
-            />
-          </label>
-          <button
-            type="button"
-            disabled={busyId !== null}
-            onClick={() => submitCreate()}
-            className="w-fit rounded border border-default bg-figma-bg-1 px-3 py-1 text-sm disabled:opacity-40"
-          >
+          </FormField>
+          <FormField label={t("admin.banners.field_title_en")} htmlFor="b-ten">
+            <Input id="b-ten" value={createTitleEn} onChange={(e) => setCreateTitleEn(e.target.value)} />
+          </FormField>
+          <FormField label={t("admin.banners.field_title_ru")} htmlFor="b-tru">
+            <Input id="b-tru" value={createTitleRu} onChange={(e) => setCreateTitleRu(e.target.value)} />
+          </FormField>
+          <FormField label={t("admin.banners.field_title_hy")} htmlFor="b-thy">
+            <Input id="b-thy" value={createTitleHy} onChange={(e) => setCreateTitleHy(e.target.value)} />
+          </FormField>
+          <FormField label={t("admin.banners.field_link")} htmlFor="b-link">
+            <Input id="b-link" value={createLink} onChange={(e) => setCreateLink(e.target.value)} />
+          </FormField>
+          <FormField label={t("admin.banners.field_sort")} htmlFor="b-sort" className="max-w-[120px]">
+            <Input id="b-sort" value={createSort} onChange={(e) => setCreateSort(e.target.value)} className="tabular-nums" />
+          </FormField>
+          <Button size="sm" disabled={busyId !== null} onClick={() => submitCreate()} className="w-fit">
             {t("admin.banners.btn_create")}
-          </button>
+          </Button>
         </div>
       </section>
 
       {editing && (
-        <section className="mt-6 rounded border border-amber-200 bg-amber-50/50 p-4">
-          <h2 className="text-sm font-semibold">
+        <section className="admin-card border-warning-200 bg-warning-50/30 p-4 space-y-3">
+          <h2 className="text-sm font-semibold text-fg-t8">
             {t("admin.banners.edit_title").replace("{id}", String(editing.id))}
           </h2>
-          <div className="mt-3 grid max-w-xl gap-2 text-sm">
-            <label className="block">
-              {t("admin.banners.field_new_image_optional")}
+          <div className="grid max-w-xl gap-3">
+            <FormField label={t("admin.banners.field_new_image_optional")} htmlFor="be-img">
               <input
+                id="be-img"
                 type="file"
                 accept="image/jpeg,image/png,image/jpg,image/webp"
                 onChange={(e) => setEditFile(e.target.files?.[0] ?? null)}
-                className="mt-1 block w-full text-xs"
+                className="block w-full text-xs file:mr-3 file:rounded-zulu file:border file:border-default file:bg-white file:px-3 file:py-1.5 file:text-sm file:text-fg-t7 hover:file:bg-figma-bg-1"
               />
-            </label>
-            <label>
-              {t("admin.banners.field_title_en")}
-              <input
-                value={editTitleEn}
-                onChange={(e) => setEditTitleEn(e.target.value)}
-                className="ml-2 w-full max-w-md rounded border border-default px-2 py-1"
-              />
-            </label>
-            <label>
-              {t("admin.banners.field_title_ru")}
-              <input
-                value={editTitleRu}
-                onChange={(e) => setEditTitleRu(e.target.value)}
-                className="ml-2 w-full max-w-md rounded border border-default px-2 py-1"
-              />
-            </label>
-            <label>
-              {t("admin.banners.field_title_hy")}
-              <input
-                value={editTitleHy}
-                onChange={(e) => setEditTitleHy(e.target.value)}
-                className="ml-2 w-full max-w-md rounded border border-default px-2 py-1"
-              />
-            </label>
-            <label>
-              {t("admin.banners.field_link")}
-              <input
-                value={editLink}
-                onChange={(e) => setEditLink(e.target.value)}
-                className="ml-2 w-full max-w-md rounded border border-default px-2 py-1"
-              />
-            </label>
-            <label>
-              {t("admin.banners.field_sort")}
-              <input
-                value={editSort}
-                onChange={(e) => setEditSort(e.target.value)}
-                className="ml-2 w-24 rounded border border-default px-2 py-1 tabular-nums"
-              />
-            </label>
+            </FormField>
+            <FormField label={t("admin.banners.field_title_en")} htmlFor="be-ten">
+              <Input id="be-ten" value={editTitleEn} onChange={(e) => setEditTitleEn(e.target.value)} />
+            </FormField>
+            <FormField label={t("admin.banners.field_title_ru")} htmlFor="be-tru">
+              <Input id="be-tru" value={editTitleRu} onChange={(e) => setEditTitleRu(e.target.value)} />
+            </FormField>
+            <FormField label={t("admin.banners.field_title_hy")} htmlFor="be-thy">
+              <Input id="be-thy" value={editTitleHy} onChange={(e) => setEditTitleHy(e.target.value)} />
+            </FormField>
+            <FormField label={t("admin.banners.field_link")} htmlFor="be-link">
+              <Input id="be-link" value={editLink} onChange={(e) => setEditLink(e.target.value)} />
+            </FormField>
+            <FormField label={t("admin.banners.field_sort")} htmlFor="be-sort" className="max-w-[120px]">
+              <Input id="be-sort" value={editSort} onChange={(e) => setEditSort(e.target.value)} className="tabular-nums" />
+            </FormField>
             <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={busyId !== null}
-                onClick={() => submitEdit()}
-                className="rounded border border-default bg-white px-3 py-1 text-sm disabled:opacity-40"
-              >
+              <Button size="sm" disabled={busyId !== null} onClick={() => submitEdit()}>
                 {t("admin.banners.btn_save")}
-              </button>
-              <button
-                type="button"
-                onClick={() => setEditing(null)}
-                className="rounded border border-default bg-white px-3 py-1 text-sm"
-              >
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setEditing(null)}>
                 {t("common.cancel")}
-              </button>
+              </Button>
             </div>
           </div>
         </section>
       )}
 
-      <div className="mt-6 overflow-x-auto rounded border border-default bg-white">
-        <table className="w-full min-w-[720px] text-left text-sm">
-          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
-            <tr>
-              <th className="px-3 py-2">{t("admin.banners.col_id")}</th>
-              <th className="px-3 py-2">{t("admin.banners.col_preview")}</th>
-              <th className="px-3 py-2">{t("admin.banners.col_titles")}</th>
-              <th className="px-3 py-2">{t("admin.banners.col_link")}</th>
-              <th className="px-3 py-2">{t("admin.banners.col_sort")}</th>
-              <th className="px-3 py-2">{t("admin.banners.col_active")}</th>
-              <th className="px-3 py-2">{t("admin.banners.col_actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => {
-              const src = resolveBannerImageSrc(r);
-              return (
-                <tr key={r.id} className="border-b border-default align-top">
-                  <td className="px-3 py-2 tabular-nums">{r.id}</td>
-                  <td className="px-3 py-2">
-                    {src ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={src} alt="" className="h-14 w-28 object-cover" />
-                    ) : (
-                      "-"
-                    )}
-                  </td>
-                  <td className="max-w-xs px-3 py-2 text-xs text-fg-t7">
-                    en: {r.title_en ?? "-"}
-                    <br />
-                    ru: {r.title_ru ?? "-"}
-                    <br />
-                    hy: {r.title_hy ?? "-"}
-                  </td>
-                  <td className="max-w-[140px] truncate px-3 py-2 text-xs">
-                    {r.link_url ?? "-"}
-                  </td>
-                  <td className="px-3 py-2 tabular-nums">{r.sort_order}</td>
-                  <td className="px-3 py-2">{r.is_active ? t("admin.banners.yes") : t("admin.banners.no")}</td>
-                  <td className="px-3 py-2">
-                    <div className="flex flex-col gap-1">
-                      <button
-                        type="button"
-                        disabled={busyId !== null}
-                        onClick={() => openEdit(r)}
-                        className="text-left text-xs text-fg-t7 underline disabled:opacity-40"
-                      >
-                        {t("admin.banners.btn_edit")}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busyId === r.id}
-                        onClick={() => remove(r.id)}
-                        className="text-left text-xs text-error-700 underline disabled:opacity-40"
-                      >
-                        {t("admin.banners.btn_delete")}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <Table>
+        <THead>
+          <TR>
+            <TH>{t("admin.banners.col_id")}</TH>
+            <TH>{t("admin.banners.col_preview")}</TH>
+            <TH>{t("admin.banners.col_titles")}</TH>
+            <TH>{t("admin.banners.col_link")}</TH>
+            <TH>{t("admin.banners.col_sort")}</TH>
+            <TH>{t("admin.banners.col_active")}</TH>
+            <TH>{t("admin.banners.col_actions")}</TH>
+          </TR>
+        </THead>
+        <TBody>
+          {rows.length === 0 ? <TEmpty colSpan={7}>{t("admin.banners.empty") || "No banners."}</TEmpty> : null}
+          {rows.map((r) => {
+            const src = resolveBannerImageSrc(r);
+            return (
+              <TR key={r.id}>
+                <TD className="tabular-nums">{r.id}</TD>
+                <TD>
+                  {src ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={src} alt="" className="h-14 w-28 rounded object-cover" />
+                  ) : (
+                    "—"
+                  )}
+                </TD>
+                <TD className="max-w-xs text-xs text-fg-t7">
+                  en: {r.title_en ?? "—"}<br />
+                  ru: {r.title_ru ?? "—"}<br />
+                  hy: {r.title_hy ?? "—"}
+                </TD>
+                <TD className="max-w-[140px] truncate text-xs">{r.link_url ?? "—"}</TD>
+                <TD className="tabular-nums">{r.sort_order}</TD>
+                <TD>
+                  <StatusPill status={r.is_active ? "active" : "inactive"}>
+                    {r.is_active ? t("admin.banners.yes") : t("admin.banners.no")}
+                  </StatusPill>
+                </TD>
+                <TD>
+                  <div className="flex flex-col gap-1">
+                    <button
+                      type="button"
+                      disabled={busyId !== null}
+                      onClick={() => openEdit(r)}
+                      className="text-left text-xs text-primary-500 underline disabled:opacity-40 hover:text-primary-700"
+                    >
+                      {t("admin.banners.btn_edit")}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busyId === r.id}
+                      onClick={() => remove(r.id)}
+                      className="text-left text-xs text-error-700 underline disabled:opacity-40 hover:text-error-800"
+                    >
+                      {t("admin.banners.btn_delete")}
+                    </button>
+                  </div>
+                </TD>
+              </TR>
+            );
+          })}
+        </TBody>
+      </Table>
     </div>
   );
 }
