@@ -1,7 +1,8 @@
 "use client";
 
+/** Phase-2 migration to shared @/components/ui primitives. */
+
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
-import { PaginationBar } from "@/components/PaginationBar";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
@@ -9,6 +10,20 @@ import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { apiModerateReview, apiPlatformReviews, type PlatformReviewRow } from "@/lib/platform-admin-api";
 import { useCallback, useEffect, useState } from "react";
+import {
+  FormField,
+  PageHeader,
+  Pagination,
+  Select,
+  StatusPill,
+  Table,
+  TBody,
+  TD,
+  TEmpty,
+  TH,
+  THead,
+  TR,
+} from "@/components/ui";
 
 const MOD_STATUSES = ["published", "hidden", "rejected"] as const;
 
@@ -65,9 +80,9 @@ export default function PlatformReviewsPage() {
 
   if (!allowed || forbidden) {
     return (
-      <div>
+      <div className="space-y-4">
         <h1 className="admin-page-title">{t("admin.reviews.title_short")}</h1>
-        <div className="mt-4">
+        <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
       </div>
@@ -75,76 +90,87 @@ export default function PlatformReviewsPage() {
   }
 
   return (
-    <div>
-      <h1 className="admin-page-title">{t("admin.reviews.title")}</h1>
-      <div className="mt-4">
-        <label className="text-sm text-fg-t6">
-          {t("admin.reviews.filter_status")}
-          <select
+    <div className="space-y-6">
+      <PageHeader title={t("admin.reviews.title")} />
+
+      <div className="admin-card p-4">
+        <FormField label={t("admin.reviews.filter_status")} htmlFor="r-status" className="max-w-xs">
+          <Select
+            id="r-status"
+            fieldSize="sm"
             value={statusFilter}
             onChange={(e) => {
               setPage(1);
               setStatusFilter(e.target.value);
             }}
-            className="ml-2 rounded border border-default px-2 py-1 text-sm"
           >
             <option value="">{t("common.all")}</option>
             <option value="pending">{t("admin.approvals.status_pending")}</option>
             <option value="published">{t("admin.reviews.status_published")}</option>
             <option value="hidden">{t("admin.reviews.status_hidden")}</option>
             <option value="rejected">{t("admin.approvals.status_rejected")}</option>
-          </select>
-        </label>
+          </Select>
+        </FormField>
       </div>
-      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
-      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
-        <table className="w-full min-w-[720px] text-left text-sm">
-          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
-            <tr>
-              <th className="px-3 py-2">{t("admin.invoices.col_id")}</th>
-              <th className="px-3 py-2">{t("admin.reviews.col_rating")}</th>
-              <th className="px-3 py-2">{t("admin.reviews.col_text")}</th>
-              <th className="px-3 py-2">{t("admin.invoices.col_status")}</th>
-              <th className="px-3 py-2">{t("admin.reviews.col_target")}</th>
-              <th className="px-3 py-2">{t("admin.reviews.col_user")}</th>
-              <th className="px-3 py-2">{t("admin.reviews.col_moderate")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.id} className="border-b border-default align-top">
-                <td className="px-3 py-2 tabular-nums">{r.id}</td>
-                <td className="px-3 py-2">{r.rating}</td>
-                <td className="max-w-xs px-3 py-2 text-xs text-fg-t7">
-                  {(r.review_text ?? "").slice(0, 200)}
-                  {(r.review_text?.length ?? 0) > 200 ? "..." : ""}
-                </td>
-                <td className="px-3 py-2">{r.status}</td>
-                <td className="px-3 py-2 text-xs">
-                  {r.target_entity_type} #{r.target_entity_id}
-                </td>
-                <td className="px-3 py-2 text-xs">{r.user?.name ?? "-"}</td>
-                <td className="px-3 py-2">
-                  <div className="flex flex-col gap-1">
-                    {MOD_STATUSES.map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        disabled={busyId === r.id}
-                        onClick={() => moderate(r.id, s)}
-                        className="text-left text-xs text-fg-t7 underline disabled:opacity-40"
-                      >
-                        {t("admin.reviews.btn_set").replace("{status}", s)}
-                      </button>
-                    ))}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {meta && <PaginationBar meta={meta} onPage={setPage} />}
+
+      {err ? (
+        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
+      ) : null}
+
+      <Table>
+        <THead>
+          <TR>
+            <TH>{t("admin.invoices.col_id")}</TH>
+            <TH>{t("admin.reviews.col_rating")}</TH>
+            <TH>{t("admin.reviews.col_text")}</TH>
+            <TH>{t("admin.invoices.col_status")}</TH>
+            <TH>{t("admin.reviews.col_target")}</TH>
+            <TH>{t("admin.reviews.col_user")}</TH>
+            <TH>{t("admin.reviews.col_moderate")}</TH>
+          </TR>
+        </THead>
+        <TBody>
+          {rows.length === 0 ? (
+            <TEmpty colSpan={7}>{t("admin.reviews.empty") || "No reviews."}</TEmpty>
+          ) : null}
+          {rows.map((r) => (
+            <TR key={r.id}>
+              <TD className="tabular-nums">{r.id}</TD>
+              <TD>{r.rating}</TD>
+              <TD className="max-w-xs text-xs">
+                {(r.review_text ?? "").slice(0, 200)}
+                {(r.review_text?.length ?? 0) > 200 ? "…" : ""}
+              </TD>
+              <TD>
+                <StatusPill status={r.status} />
+              </TD>
+              <TD className="text-xs">
+                {r.target_entity_type} #{r.target_entity_id}
+              </TD>
+              <TD className="text-xs">{r.user?.name ?? "—"}</TD>
+              <TD>
+                <div className="flex flex-col gap-1">
+                  {MOD_STATUSES.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      disabled={busyId === r.id}
+                      onClick={() => moderate(r.id, s)}
+                      className="text-left text-xs text-primary-500 underline disabled:opacity-40 hover:text-primary-700"
+                    >
+                      {t("admin.reviews.btn_set").replace("{status}", s)}
+                    </button>
+                  ))}
+                </div>
+              </TD>
+            </TR>
+          ))}
+        </TBody>
+      </Table>
+
+      {meta && meta.last_page > 1 ? (
+        <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />
+      ) : null}
     </div>
   );
 }

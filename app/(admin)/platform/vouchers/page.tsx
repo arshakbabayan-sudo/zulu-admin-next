@@ -6,6 +6,21 @@ import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useLanguage } from "@/contexts/LanguageContext";
+import {
+  Button,
+  FormField,
+  Input,
+  PageHeader,
+  Pagination,
+  Select,
+  Table,
+  TBody,
+  TD,
+  TEmpty,
+  TH,
+  THead,
+  TR,
+} from "@/components/ui";
 
 /**
  * Platform-admin voucher viewer (Sprint 56, PART 09).
@@ -227,9 +242,9 @@ export default function PlatformVouchersPage() {
 
   if (!allowed || forbidden) {
     return (
-      <div>
+      <div className="space-y-4">
         <h1 className="admin-page-title">{t("admin.platform_vouchers.title")}</h1>
-        <div className="mt-4">
+        <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
       </div>
@@ -237,161 +252,109 @@ export default function PlatformVouchersPage() {
   }
 
   return (
-    <div>
-      <h1 className="admin-page-title">{t("admin.platform_vouchers.title")}</h1>
-      <p className="admin-page-subtitle">{t("admin.platform_vouchers.subtitle")}</p>
+    <div className="space-y-6">
+      <PageHeader
+        title={t("admin.platform_vouchers.title")}
+        subtitle={t("admin.platform_vouchers.subtitle")}
+      />
 
-      {error && <p className="mt-2 text-sm text-error-600">{error}</p>}
+      {error && (
+        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{error}</div>
+      )}
 
       {/* Filters */}
-      <div className="mt-6 grid gap-3 rounded border border-default bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
-        <label className="text-xs text-fg-t6">
-          {t("admin.platform_vouchers.status")}
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="mt-1 w-full rounded border border-default px-2 py-1 text-sm"
-          >
-            <option value="">{t("common.all")}</option>
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="text-xs text-fg-t6">
-          {t("admin.platform_vouchers.service_type")}
-          <select
-            value={serviceType}
-            onChange={(e) => setServiceType(e.target.value)}
-            className="mt-1 w-full rounded border border-default px-2 py-1 text-sm"
-          >
-            <option value="">{t("common.all")}</option>
-            {SERVICE_TYPES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="text-xs text-fg-t6 sm:col-span-2">
-          {t("common.search")}
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder={t("admin.platform_vouchers.search_placeholder")}
-            className="mt-1 w-full rounded border border-default px-2 py-1 text-sm"
-          />
-        </label>
-        <div className="sm:col-span-2 lg:col-span-4 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={resetFilters}
-            className="rounded border border-default bg-white px-3 py-1.5 text-sm hover:bg-figma-bg-1"
-          >
-            {t("common.reset")}
-          </button>
-          <button
-            type="button"
-            onClick={applyFilters}
-            className="rounded bg-primary-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-600"
-          >
-            {t("common.apply")}
-          </button>
+      <div className="admin-card p-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <FormField label={t("admin.platform_vouchers.status")} htmlFor="v-status">
+            <Select
+              id="v-status"
+              fieldSize="sm"
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+            >
+              <option value="">{t("common.all")}</option>
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </Select>
+          </FormField>
+          <FormField label={t("admin.platform_vouchers.service_type")} htmlFor="v-svc">
+            <Select
+              id="v-svc"
+              fieldSize="sm"
+              value={serviceType}
+              onChange={(e) => setServiceType(e.target.value)}
+            >
+              <option value="">{t("common.all")}</option>
+              {SERVICE_TYPES.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </Select>
+          </FormField>
+          <FormField label={t("common.search")} htmlFor="v-q" className="sm:col-span-2">
+            <Input
+              id="v-q"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder={t("admin.platform_vouchers.search_placeholder")}
+            />
+          </FormField>
+          <div className="sm:col-span-2 lg:col-span-4 flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={resetFilters}>{t("common.reset")}</Button>
+            <Button size="sm" onClick={applyFilters}>{t("common.apply")}</Button>
+          </div>
         </div>
       </div>
 
       {/* Table */}
-      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
-        <table className="w-full min-w-[1000px] text-left text-sm">
-          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
-            <tr>
-              <th className="px-3 py-2">{t("admin.platform_vouchers.number")}</th>
-              <th className="px-3 py-2">{t("admin.platform_vouchers.service")}</th>
-              <th className="px-3 py-2">{t("admin.platform_vouchers.holder")}</th>
-              <th className="px-3 py-2">{t("admin.platform_vouchers.status")}</th>
-              <th className="px-3 py-2">{t("admin.platform_vouchers.valid")}</th>
-              <th className="px-3 py-2">{t("admin.platform_vouchers.scans")}</th>
-              <th className="px-3 py-2">{t("admin.platform_vouchers.created")}</th>
-              <th className="px-3 py-2"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
-              <tr>
-                <td colSpan={8} className="px-3 py-6 text-center text-fg-t6">
-                  {t("admin.platform_vouchers.loading")}
-                </td>
-              </tr>
-            )}
-            {!loading && rows.length === 0 && (
-              <tr>
-                <td colSpan={8} className="px-3 py-6 text-center text-fg-t6">
-                  {t("admin.platform_vouchers.empty")}
-                </td>
-              </tr>
-            )}
-            {rows.map((r) => (
-              <tr key={r.id} className="border-b border-default hover:bg-figma-bg-1">
-                <td className="px-3 py-2 font-mono text-xs">{r.voucher_number}</td>
-                <td className="px-3 py-2 text-xs">{r.service_type}</td>
-                <td className="px-3 py-2 text-xs">{r.holder_name}</td>
-                <td className="px-3 py-2">
-                  <VoucherStatusBadge status={r.status} />
-                </td>
-                <td className="px-3 py-2 text-xs text-fg-t7">
-                  {r.valid_from ? new Date(r.valid_from).toLocaleDateString() : "—"}
-                  {r.valid_to ? ` → ${new Date(r.valid_to).toLocaleDateString()}` : ""}
-                </td>
-                <td className="px-3 py-2 tabular-nums text-xs">{r.verification_count}</td>
-                <td className="px-3 py-2 text-xs text-fg-t7">
-                  {new Date(r.created_at).toLocaleDateString()}
-                </td>
-                <td className="px-3 py-2 text-right">
-                  <button
-                    type="button"
-                    onClick={() => openDetail(r)}
-                    className="text-xs text-primary-500 hover:underline"
-                  >
-                    {t("admin.platform_vouchers.details")}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Table>
+        <THead>
+          <TR>
+            <TH>{t("admin.platform_vouchers.number")}</TH>
+            <TH>{t("admin.platform_vouchers.service")}</TH>
+            <TH>{t("admin.platform_vouchers.holder")}</TH>
+            <TH>{t("admin.platform_vouchers.status")}</TH>
+            <TH>{t("admin.platform_vouchers.valid")}</TH>
+            <TH>{t("admin.platform_vouchers.scans")}</TH>
+            <TH>{t("admin.platform_vouchers.created")}</TH>
+            <TH />
+          </TR>
+        </THead>
+        <TBody>
+          {loading ? (
+            <TEmpty colSpan={8}>{t("admin.platform_vouchers.loading")}</TEmpty>
+          ) : rows.length === 0 ? (
+            <TEmpty colSpan={8}>{t("admin.platform_vouchers.empty")}</TEmpty>
+          ) : null}
+          {rows.map((r) => (
+            <TR key={r.id} onClick={() => openDetail(r)}>
+              <TD className="font-mono text-xs">{r.voucher_number}</TD>
+              <TD className="text-xs">{r.service_type}</TD>
+              <TD className="text-xs">{r.holder_name}</TD>
+              <TD><VoucherStatusBadge status={r.status} /></TD>
+              <TD className="text-xs">
+                {r.valid_from ? new Date(r.valid_from).toLocaleDateString() : "—"}
+                {r.valid_to ? ` → ${new Date(r.valid_to).toLocaleDateString()}` : ""}
+              </TD>
+              <TD className="tabular-nums text-xs">{r.verification_count}</TD>
+              <TD className="text-xs text-fg-t6">{new Date(r.created_at).toLocaleDateString()}</TD>
+              <TD align="right" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  onClick={() => openDetail(r)}
+                  className="text-xs text-primary-500 hover:underline"
+                >
+                  {t("admin.platform_vouchers.details")}
+                </button>
+              </TD>
+            </TR>
+          ))}
+        </TBody>
+      </Table>
 
-      {/* Pagination */}
-      {meta && meta.last_page > 1 && (
-        <div className="mt-3 flex items-center justify-between text-sm">
-          <span className="text-fg-t6">
-            {t("admin.platform_vouchers.pagination")
-              .replace("{page}", String(meta.current_page))
-              .replace("{lastPage}", String(meta.last_page))
-              .replace("{total}", meta.total.toLocaleString())}
-          </span>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1}
-              className="rounded border border-default bg-white px-3 py-1 disabled:opacity-50"
-            >
-              {t("common.prev")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.min(meta.last_page, p + 1))}
-              disabled={page >= meta.last_page}
-              className="rounded border border-default bg-white px-3 py-1 disabled:opacity-50"
-            >
-              {t("common.next")}
-            </button>
-          </div>
-        </div>
-      )}
+      {meta && meta.last_page > 1 ? (
+        <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />
+      ) : null}
 
       {/* Detail drawer */}
       {selected && (

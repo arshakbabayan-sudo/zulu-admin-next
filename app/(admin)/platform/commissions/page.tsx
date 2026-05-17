@@ -1,17 +1,34 @@
 "use client";
 
+/** Phase-2 migration to shared @/components/ui primitives. */
+
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
-import { PaginationBar } from "@/components/PaginationBar";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { useLanguage } from "@/contexts/LanguageContext";
 import {
-  apiCommissions, apiCommissionRecords, apiDeactivateCommission,
-  type CommissionPolicyRow, type CommissionRecordRow,
+  apiCommissions,
+  apiCommissionRecords,
+  apiDeactivateCommission,
+  type CommissionPolicyRow,
+  type CommissionRecordRow,
 } from "@/lib/commissions-api";
 import { useCallback, useEffect, useState } from "react";
+import {
+  PageHeader,
+  Pagination,
+  StatusPill,
+  Table,
+  TBody,
+  TD,
+  TEmpty,
+  TH,
+  THead,
+  Tabs,
+  TR,
+} from "@/components/ui";
 
 type Tab = "policies" | "records";
 
@@ -35,10 +52,12 @@ export default function CommissionsPage() {
 
   const loadPolicies = useCallback(async () => {
     if (!token || !allowed) return;
-    setErr(null); setForbidden(false);
+    setErr(null);
+    setForbidden(false);
     try {
       const res = await apiCommissions(token, { page: policiesPage, per_page: 20 });
-      setPolicies(res.data); setPoliciesMeta(res.meta);
+      setPolicies(res.data);
+      setPoliciesMeta(res.meta);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
       else setErr(e instanceof ApiRequestError ? e.message : t("admin.platform_commissions.err_failed"));
@@ -47,10 +66,12 @@ export default function CommissionsPage() {
 
   const loadRecords = useCallback(async () => {
     if (!token || !allowed) return;
-    setErr(null); setForbidden(false);
+    setErr(null);
+    setForbidden(false);
     try {
       const res = await apiCommissionRecords(token, { page: recordsPage, per_page: 20 });
-      setRecords(res.data); setRecordsMeta(res.meta);
+      setRecords(res.data);
+      setRecordsMeta(res.meta);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
       else setErr(e instanceof ApiRequestError ? e.message : t("admin.platform_commissions.err_failed"));
@@ -63,115 +84,132 @@ export default function CommissionsPage() {
   async function handleDeactivate(id: number) {
     if (!token || !window.confirm(t("admin.platform_commissions.confirm_deactivate"))) return;
     setBusyId(id);
-    try { await apiDeactivateCommission(token, id); await loadPolicies(); }
-    catch (e) { alert(e instanceof ApiRequestError ? e.message : t("admin.platform_commissions.err_failed")); }
-    finally { setBusyId(null); }
+    try {
+      await apiDeactivateCommission(token, id);
+      await loadPolicies();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : t("admin.platform_commissions.err_failed"));
+    } finally {
+      setBusyId(null);
+    }
   }
 
-  if (!allowed || forbidden) return (
-    <div><h1 className="admin-page-title">{t("admin.platform_commissions.title")}</h1><div className="mt-4"><ForbiddenNotice /></div></div>
-  );
-
-  const tabCls = (t: Tab) =>
-    `px-4 py-2 text-sm font-medium border-b-2 ${tab === t ? "border-slate-800 text-fg-t11" : "border-transparent text-fg-t7 hover:text-fg-t7"}`;
+  if (!allowed || forbidden) {
+    return (
+      <div className="space-y-4">
+        <h1 className="admin-page-title">{t("admin.platform_commissions.title")}</h1>
+        <div className="admin-card p-4">
+          <ForbiddenNotice />
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <h1 className="admin-page-title">{t("admin.platform_commissions.title")}</h1>
+    <div className="space-y-6">
+      <PageHeader title={t("admin.platform_commissions.title")} />
 
-      <div className="mt-4 flex gap-0 border-b border-default">
-        <button type="button" className={tabCls("policies")} onClick={() => setTab("policies")}>{t("admin.platform_commissions.policies")}</button>
-        <button type="button" className={tabCls("records")} onClick={() => setTab("records")}>{t("admin.platform_commissions.records")}</button>
-      </div>
+      <Tabs
+        value={tab}
+        onChange={(v) => setTab(v as Tab)}
+        items={[
+          { id: "policies", label: t("admin.platform_commissions.policies") },
+          { id: "records", label: t("admin.platform_commissions.records") },
+        ]}
+      />
 
-      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
+      {err ? (
+        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
+      ) : null}
 
       {tab === "policies" && (
         <>
-          <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
-            <table className="w-full min-w-[700px] text-left text-sm">
-              <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
-                <tr>
-                  <th className="px-3 py-2">{t("admin.crud.common.id")}</th>
-                  <th className="px-3 py-2">{t("admin.platform_commissions.name")}</th>
-                  <th className="px-3 py-2">{t("admin.platform_commissions.type")}</th>
-                  <th className="px-3 py-2">{t("admin.platform_commissions.rate")}</th>
-                  <th className="px-3 py-2">{t("admin.platform_commissions.service")}</th>
-                  <th className="px-3 py-2">{t("admin.platform_commissions.status")}</th>
-                  <th className="px-3 py-2">{t("admin.platform_commissions.actions")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {policies.length === 0 && (
-                  <tr><td colSpan={7} className="px-3 py-6 text-center text-fg-t6">{t("admin.platform_commissions.no_policies")}</td></tr>
-                )}
-                {policies.map((r) => (
-                  <tr key={r.id} className="border-b border-default hover:bg-figma-bg-1">
-                    <td className="px-3 py-2 tabular-nums text-fg-t7">{r.id}</td>
-                    <td className="px-3 py-2">{r.name ?? "-"}</td>
-                    <td className="px-3 py-2">{r.type}</td>
-                    <td className="px-3 py-2 tabular-nums">{r.rate}%</td>
-                    <td className="px-3 py-2">{r.service_type ?? t("common.all")}</td>
-                    <td className="px-3 py-2">
-                      <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${
-                        r.status === "active" ? "bg-success-50 text-success-800" : "bg-figma-bg-1 text-fg-t6"
-                      }`}>{r.status}</span>
-                    </td>
-                    <td className="px-3 py-2">
-                      {r.status === "active" && (
-                        <button type="button" disabled={busyId === r.id} onClick={() => void handleDeactivate(r.id)}
-                          className="text-xs text-error-600 underline disabled:opacity-40">{t("admin.platform_commissions.deactivate")}</button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {policiesMeta && <PaginationBar meta={policiesMeta} onPage={setPoliciesPage} />}
+          <Table>
+            <THead>
+              <TR>
+                <TH>{t("admin.crud.common.id")}</TH>
+                <TH>{t("admin.platform_commissions.name")}</TH>
+                <TH>{t("admin.platform_commissions.type")}</TH>
+                <TH>{t("admin.platform_commissions.rate")}</TH>
+                <TH>{t("admin.platform_commissions.service")}</TH>
+                <TH>{t("admin.platform_commissions.status")}</TH>
+                <TH>{t("admin.platform_commissions.actions")}</TH>
+              </TR>
+            </THead>
+            <TBody>
+              {policies.length === 0 ? (
+                <TEmpty colSpan={7}>{t("admin.platform_commissions.no_policies")}</TEmpty>
+              ) : null}
+              {policies.map((r) => (
+                <TR key={r.id}>
+                  <TD className="tabular-nums">{r.id}</TD>
+                  <TD>{r.name ?? "—"}</TD>
+                  <TD>{r.type}</TD>
+                  <TD className="tabular-nums">{r.rate}%</TD>
+                  <TD>{r.service_type ?? t("common.all")}</TD>
+                  <TD>
+                    <StatusPill status={r.status} />
+                  </TD>
+                  <TD>
+                    {r.status === "active" && (
+                      <button
+                        type="button"
+                        disabled={busyId === r.id}
+                        onClick={() => void handleDeactivate(r.id)}
+                        className="text-xs text-error-600 underline disabled:opacity-40"
+                      >
+                        {t("admin.platform_commissions.deactivate")}
+                      </button>
+                    )}
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+          {policiesMeta && policiesMeta.last_page > 1 ? (
+            <Pagination page={policiesMeta.current_page} lastPage={policiesMeta.last_page} onPage={setPoliciesPage} />
+          ) : null}
         </>
       )}
 
       {tab === "records" && (
         <>
-          <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
-            <table className="w-full min-w-[600px] text-left text-sm">
-              <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
-                <tr>
-                  <th className="px-3 py-2">{t("admin.crud.common.id")}</th>
-                  <th className="px-3 py-2">{t("admin.platform_commissions.amount")}</th>
-                  <th className="px-3 py-2">{t("admin.platform_commissions.status")}</th>
-                  <th className="px-3 py-2">{t("admin.platform_commissions.company")}</th>
-                  <th className="px-3 py-2">{t("admin.platform_commissions.booking_id")}</th>
-                  <th className="px-3 py-2">{t("admin.platform_commissions.created")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {records.length === 0 && (
-                  <tr><td colSpan={6} className="px-3 py-6 text-center text-fg-t6">{t("admin.platform_commissions.no_records")}</td></tr>
-                )}
-                {records.map((r) => (
-                  <tr key={r.id} className="border-b border-default hover:bg-figma-bg-1">
-                    <td className="px-3 py-2 tabular-nums text-fg-t7">{r.id}</td>
-                    <td className="px-3 py-2 tabular-nums font-medium">{r.currency} {Number(r.amount).toFixed(2)}</td>
-                    <td className="px-3 py-2">
-                      <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${
-                        r.status === "paid" ? "bg-success-50 text-success-800" :
-                        r.status === "pending" ? "bg-warning-50 text-warning-800" :
-                        "bg-figma-bg-1 text-fg-t7"
-                      }`}>{r.status}</span>
-                    </td>
-                    <td className="px-3 py-2">{r.company?.name ?? r.company_id ?? "-"}</td>
-                    <td className="px-3 py-2 tabular-nums text-fg-t7">{r.booking_id ?? "-"}</td>
-                    <td className="px-3 py-2 text-xs text-fg-t7">
-                      {r.created_at ? new Date(r.created_at).toLocaleDateString() : "-"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {recordsMeta && <PaginationBar meta={recordsMeta} onPage={setRecordsPage} />}
+          <Table>
+            <THead>
+              <TR>
+                <TH>{t("admin.crud.common.id")}</TH>
+                <TH>{t("admin.platform_commissions.amount")}</TH>
+                <TH>{t("admin.platform_commissions.status")}</TH>
+                <TH>{t("admin.platform_commissions.company")}</TH>
+                <TH>{t("admin.platform_commissions.booking_id")}</TH>
+                <TH>{t("admin.platform_commissions.created")}</TH>
+              </TR>
+            </THead>
+            <TBody>
+              {records.length === 0 ? (
+                <TEmpty colSpan={6}>{t("admin.platform_commissions.no_records")}</TEmpty>
+              ) : null}
+              {records.map((r) => (
+                <TR key={r.id}>
+                  <TD className="tabular-nums">{r.id}</TD>
+                  <TD className="tabular-nums font-medium">
+                    {r.currency} {Number(r.amount).toFixed(2)}
+                  </TD>
+                  <TD>
+                    <StatusPill status={r.status} />
+                  </TD>
+                  <TD>{r.company?.name ?? r.company_id ?? "—"}</TD>
+                  <TD className="tabular-nums">{r.booking_id ?? "—"}</TD>
+                  <TD className="text-xs text-fg-t6">
+                    {r.created_at ? new Date(r.created_at).toLocaleDateString() : "—"}
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+          {recordsMeta && recordsMeta.last_page > 1 ? (
+            <Pagination page={recordsMeta.current_page} lastPage={recordsMeta.last_page} onPage={setRecordsPage} />
+          ) : null}
         </>
       )}
     </div>
