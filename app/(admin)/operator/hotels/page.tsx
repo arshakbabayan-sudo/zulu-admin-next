@@ -1123,14 +1123,18 @@ export default function OperatorHotelsPage() {
           {editId !== null && (
             <div className="mt-6 rounded border border-default bg-figma-bg-1 p-3">
               <h3 className="mb-2 text-sm font-medium text-fg-t6">
-                Translations <span className="text-fg-t7 font-normal">(EN-ից բացի՝ RU / HY)</span>
+                Բովանդակություն բոլոր լեզուներով{" "}
+                <span className="text-fg-t7 font-normal">(բոլոր լեզուները հավասար են — ընտրիր դրոշակը)</span>
               </h3>
               <TranslationTabs
                 entityType="hotel"
                 entityId={editId}
                 fields={[
-                  { name: "hotel_name", label: "Hotel name" },
-                  { name: "short_description", label: "Short description", multiline: true },
+                  { name: "hotel_name", label: "Հյուրանոցի անունը" },
+                  { name: "short_description", label: "Կարճ նկարագրություն", multiline: true },
+                  { name: "full_address", label: "Ամբողջական հասցե" },
+                  { name: "district_or_area", label: "Շրջան / տարածք" },
+                  { name: "review_label", label: "Գնահատման պիտակ" },
                 ]}
               />
             </div>

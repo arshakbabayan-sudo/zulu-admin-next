@@ -16,8 +16,8 @@ export type TranslatableEntityType =
   | "company";
 
 /**
- * Backend TRANSLATABLE_FIELDS. Returned via `available_fields` in the GET
- * response (Phase 2 Step 2.3) — keep the local type-level list aligned.
+ * Backend TRANSLATABLE_FIELDS — keep in sync with
+ * `App\Models\ContentTranslation::TRANSLATABLE_FIELDS`.
  */
 export type TranslatableField =
   | "title"
@@ -29,13 +29,45 @@ export type TranslatableField =
   | "short_description"
   | "highlights"
   | "included_summary"
-  | "notes";
+  | "notes"
+  | "full_address"
+  | "district_or_area"
+  | "review_label"
+  | "tour_name"
+  | "overview"
+  | "meeting_pickup"
+  | "additional_info"
+  | "cancellation_policy"
+  | "transfer_title"
+  | "pickup_point_name"
+  | "dropoff_point_name"
+  | "tagline"
+  | "body"
+  | "name"
+  | "address";
 
 export type TranslationsPayload = {
   entity_type: TranslatableEntityType;
   entity_id: number;
   language_code: string;
   translations: Partial<Record<TranslatableField, string | null>>;
+  available_fields: TranslatableField[];
+};
+
+export type TranslationRow = {
+  value: string;
+  is_manually_edited: boolean;
+  /** 'manual' | 'ai_pending' | 'ai_completed' | 'ai_failed' */
+  translation_status: string;
+};
+
+export type AllLanguagesPayload = {
+  entity_type: TranslatableEntityType;
+  entity_id: number;
+  /** The language the operator first entered the record in. Null if not set yet. */
+  source_lang: string | null;
+  /** Outer key = language code; inner key = field name. */
+  languages: Record<string, Record<string, TranslationRow>>;
   available_fields: TranslatableField[];
 };
 
@@ -55,14 +87,29 @@ export async function fetchTranslations(
   return json.data;
 }
 
+export async function fetchAllLanguages(
+  token: string,
+  entity_type: TranslatableEntityType,
+  entity_id: number
+): Promise<AllLanguagesPayload> {
+  const json = await apiFetchJson<{ success: boolean; data: AllLanguagesPayload }>(
+    `/localization/content-translations/${entity_type}/${entity_id}`,
+    { token }
+  );
+  return json.data;
+}
+
 export async function saveTranslations(
   token: string,
   entity_type: TranslatableEntityType,
   entity_id: number,
   language_code: string,
   translations: Partial<Record<TranslatableField, string>>
-): Promise<void> {
-  await apiFetchJson(`/localization/translations`, {
+): Promise<{ ai_translation_dispatched: boolean; source_language: string | null }> {
+  const json = await apiFetchJson<{
+    success: boolean;
+    data: { ai_translation_dispatched: boolean; source_language: string | null };
+  }>(`/localization/translations`, {
     method: "POST",
     token,
     body: {
@@ -72,4 +119,22 @@ export async function saveTranslations(
       translations,
     },
   });
+  return json.data;
+}
+
+export async function retranslateEntity(
+  token: string,
+  entity_type: TranslatableEntityType,
+  entity_id: number,
+  options?: { target_locales?: string[]; fields?: TranslatableField[] }
+): Promise<{ queued: boolean; source_lang: string; target_locales: string[] | null }> {
+  const json = await apiFetchJson<{
+    success: boolean;
+    data: { queued: boolean; source_lang: string; target_locales: string[] | null };
+  }>(`/localization/content-translations/${entity_type}/${entity_id}/retranslate`, {
+    method: "POST",
+    token,
+    body: options ?? {},
+  });
+  return json.data;
 }
