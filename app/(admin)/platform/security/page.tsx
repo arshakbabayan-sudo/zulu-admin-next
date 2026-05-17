@@ -1,21 +1,27 @@
 "use client";
 
+/** Phase-2 migration to shared @/components/ui primitives. */
+
 import { useEffect, useMemo, useState } from "react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
-
-/**
- * Platform-admin security oversight (Sprint 62, PART 29).
- *
- * Wires to backend:
- *   GET  /api/platform-admin/security/two-factor
- *   GET  /api/platform-admin/security/stats
- *   POST /api/platform-admin/security/users/{userId}/force-disable-2fa
- *   POST /api/platform-admin/security/users/{userId}/force-logout
- */
+import {
+  Button,
+  FormField,
+  Input,
+  PageHeader,
+  Pagination,
+  Table,
+  TBody,
+  TD,
+  TEmpty,
+  TH,
+  THead,
+  TR,
+} from "@/components/ui";
 
 type TwoFactorRow = {
   id: number;
@@ -23,28 +29,11 @@ type TwoFactorRow = {
   enabled_at: string | null;
   confirmed_at: string | null;
   last_verified_at: string | null;
-  user?: {
-    id: number;
-    name: string;
-    email: string;
-    role: string;
-    is_super_admin: boolean;
-  };
+  user?: { id: number; name: string; email: string; role: string; is_super_admin: boolean };
 };
 
-type Meta = {
-  total: number;
-  per_page: number;
-  current_page: number;
-  last_page: number;
-};
-
-type Stats = {
-  total_users: number;
-  two_factor_confirmed: number;
-  two_factor_pending: number;
-  two_factor_coverage_pct: number;
-};
+type Meta = { total: number; per_page: number; current_page: number; last_page: number };
+type Stats = { total_users: number; two_factor_confirmed: number; two_factor_pending: number; two_factor_coverage_pct: number };
 
 export default function PlatformSecurityPage() {
   const { token, user } = useAdminAuth();
@@ -66,10 +55,7 @@ export default function PlatformSecurityPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [forceLogoutUserId, setForceLogoutUserId] = useState("");
 
-  const baseURL = useMemo(
-    () => process.env.NEXT_PUBLIC_API_URL || "https://api.zulu.am",
-    []
-  );
+  const baseURL = useMemo(() => process.env.NEXT_PUBLIC_API_URL || "https://api.zulu.am", []);
 
   useEffect(() => {
     if (!allowed || !token) return;
@@ -88,9 +74,7 @@ export default function PlatformSecurityPage() {
 
         const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" };
         const [listRes, statsRes] = await Promise.all([
-          fetch(`${baseURL}/api/platform-admin/security/two-factor?${params.toString()}`, {
-            headers,
-          }),
+          fetch(`${baseURL}/api/platform-admin/security/two-factor?${params.toString()}`, { headers }),
           fetch(`${baseURL}/api/platform-admin/security/stats`, { headers }),
         ]);
 
@@ -109,107 +93,72 @@ export default function PlatformSecurityPage() {
         } else {
           setError(listJson?.message ?? t("admin.security.err_load"));
         }
-        if (statsJson?.success) {
-          setStats(statsJson.data);
-        }
+        if (statsJson?.success) setStats(statsJson.data);
       } catch (e) {
         if (cancelled) return;
-        if (e instanceof ApiRequestError && e.status === 403) {
-          setForbidden(true);
-        } else {
-          setError(e instanceof Error ? e.message : t("admin.security.err_load"));
-        }
+        if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
+        else setError(e instanceof Error ? e.message : t("admin.security.err_load"));
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [token, allowed, baseURL, page, appliedFilters, t]);
 
-  const applyFilters = () => {
-    setPage(1);
-    setAppliedFilters((n) => n + 1);
-  };
+  const applyFilters = () => { setPage(1); setAppliedFilters((n) => n + 1); };
 
   const forceDisable = async (row: TwoFactorRow) => {
     const target = row.user?.name ?? `user #${row.user_id}`;
     if (!confirm(t("admin.security.confirm_force_disable_2fa").replace("{target}", target))) return;
-
     setActionLoading(`disable-${row.user_id}`);
     setError(null);
     setSuccess(null);
     try {
-      const res = await fetch(
-        `${baseURL}/api/platform-admin/security/users/${row.user_id}/force-disable-2fa`,
-        {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-        }
-      );
+      const res = await fetch(`${baseURL}/api/platform-admin/security/users/${row.user_id}/force-disable-2fa`, {
+        method: "POST", headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      });
       const json = await res.json();
       if (json?.success) {
         setSuccess(t("admin.security.success_2fa_disabled").replace("{id}", String(row.user_id)));
         setAppliedFilters((n) => n + 1);
-      } else {
-        setError(json?.message ?? t("admin.security.err_force_disable"));
-      }
+      } else setError(json?.message ?? t("admin.security.err_force_disable"));
     } catch (e) {
       setError(e instanceof Error ? e.message : t("admin.security.err_force_disable"));
-    } finally {
-      setActionLoading(null);
-    }
+    } finally { setActionLoading(null); }
   };
 
   const forceLogoutById = async (userId: number, userName?: string) => {
     const target = userName ?? `user #${userId}`;
     if (!confirm(t("admin.security.confirm_force_logout").replace("{target}", target))) return;
-
     setActionLoading(`logout-${userId}`);
     setError(null);
     setSuccess(null);
     try {
-      const res = await fetch(
-        `${baseURL}/api/platform-admin/security/users/${userId}/force-logout`,
-        {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-        }
-      );
+      const res = await fetch(`${baseURL}/api/platform-admin/security/users/${userId}/force-logout`, {
+        method: "POST", headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      });
       const json = await res.json();
       if (json?.success) {
-        setSuccess(
-          t("admin.security.success_force_logout")
-            .replace("{count}", String(json.data.tokens_revoked))
-            .replace("{id}", String(userId))
-        );
-      } else {
-        setError(json?.message ?? t("admin.security.err_force_logout"));
-      }
+        setSuccess(t("admin.security.success_force_logout").replace("{count}", String(json.data.tokens_revoked)).replace("{id}", String(userId)));
+      } else setError(json?.message ?? t("admin.security.err_force_logout"));
     } catch (e) {
       setError(e instanceof Error ? e.message : t("admin.security.err_force_logout"));
-    } finally {
-      setActionLoading(null);
-    }
+    } finally { setActionLoading(null); }
   };
 
   const submitForceLogout = async () => {
     const id = parseInt(forceLogoutUserId.trim(), 10);
-    if (isNaN(id) || id <= 0) {
-      setError(t("admin.security.err_invalid_user_id"));
-      return;
-    }
+    if (isNaN(id) || id <= 0) { setError(t("admin.security.err_invalid_user_id")); return; }
     await forceLogoutById(id);
     setForceLogoutUserId("");
   };
 
   if (!allowed || forbidden) {
     return (
-      <div>
+      <div className="space-y-4">
         <h1 className="admin-page-title">{t("admin.security.title")}</h1>
-        <div className="mt-4">
+        <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
       </div>
@@ -217,214 +166,123 @@ export default function PlatformSecurityPage() {
   }
 
   return (
-    <div>
-      <h1 className="admin-page-title">{t("admin.security.title")}</h1>
-      <p className="admin-page-subtitle">{t("admin.security.subtitle")}</p>
+    <div className="space-y-6">
+      <PageHeader title={t("admin.security.title")} subtitle={t("admin.security.subtitle")} />
 
-      {error && <p className="mt-2 text-sm text-error-600">{error}</p>}
-      {success && <p className="mt-2 text-sm text-success-700">{success}</p>}
+      {error && <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{error}</div>}
+      {success && <div className="rounded-zulu border border-success-100 bg-success-50 px-4 py-2 text-sm text-success-700">{success}</div>}
 
-      {/* Stats */}
       {stats && (
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard label={t("admin.security.stat_total_users")} value={stats.total_users.toLocaleString()} />
-          <StatCard
-            label={t("admin.security.stat_2fa_enabled")}
-            value={stats.two_factor_confirmed.toLocaleString()}
-            tone="good"
-          />
-          <StatCard
-            label={t("admin.security.stat_2fa_pending")}
-            value={stats.two_factor_pending.toLocaleString()}
-            tone={stats.two_factor_pending > 0 ? "warn" : "neutral"}
-          />
-          <StatCard
-            label={t("admin.security.stat_coverage")}
-            value={`${stats.two_factor_coverage_pct}%`}
-            tone={stats.two_factor_coverage_pct >= 50 ? "good" : "warn"}
-          />
+          <StatCard label={t("admin.security.stat_2fa_enabled")} value={stats.two_factor_confirmed.toLocaleString()} tone="good" />
+          <StatCard label={t("admin.security.stat_2fa_pending")} value={stats.two_factor_pending.toLocaleString()} tone={stats.two_factor_pending > 0 ? "warn" : "neutral"} />
+          <StatCard label={t("admin.security.stat_coverage")} value={`${stats.two_factor_coverage_pct}%`} tone={stats.two_factor_coverage_pct >= 50 ? "good" : "warn"} />
         </div>
       )}
 
-      {/* Force-logout by ID */}
-      <div className="mt-6 rounded border border-error-300 bg-error-50 p-4">
+      {/* Force-logout incident block */}
+      <section className="rounded-zulu border border-error-200 bg-error-50/50 p-4">
         <h2 className="text-sm font-semibold text-error-700">{t("admin.security.incident_title")}</h2>
         <p className="mt-1 text-xs text-error-600">{t("admin.security.incident_help")}</p>
-        <div className="mt-3 flex gap-2">
-          <input
-            value={forceLogoutUserId}
-            onChange={(e) => setForceLogoutUserId(e.target.value)}
-            placeholder={t("admin.security.placeholder_user_id")}
-            className="rounded border border-default px-2 py-1 text-sm"
-          />
-          <button
-            type="button"
+        <div className="mt-3 flex items-end gap-2">
+          <FormField label="" htmlFor="sec-uid" className="max-w-xs">
+            <Input
+              id="sec-uid"
+              value={forceLogoutUserId}
+              onChange={(e) => setForceLogoutUserId(e.target.value)}
+              placeholder={t("admin.security.placeholder_user_id")}
+            />
+          </FormField>
+          <Button
+            variant="danger"
+            size="sm"
             onClick={submitForceLogout}
             disabled={!forceLogoutUserId.trim() || actionLoading !== null}
-            className="rounded bg-error-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-error-700 disabled:opacity-50"
           >
             {t("admin.security.btn_force_logout")}
-          </button>
+          </Button>
+        </div>
+      </section>
+
+      <div className="admin-card p-4">
+        <div className="flex items-end gap-2">
+          <FormField label={t("admin.security.search_label")} htmlFor="sec-q" className="flex-1">
+            <Input
+              id="sec-q"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") applyFilters(); }}
+            />
+          </FormField>
+          <Button size="sm" onClick={applyFilters}>{t("admin.security.btn_apply")}</Button>
+          {q && <Button variant="outline" size="sm" onClick={() => { setQ(""); setPage(1); setAppliedFilters((n) => n + 1); }}>{t("common.reset")}</Button>}
         </div>
       </div>
 
-      {/* Search */}
-      <div className="mt-6 flex flex-wrap items-end gap-2 rounded border border-default bg-white p-4">
-        <label className="flex-1 text-xs text-fg-t6">
-          {t("admin.security.search_label")}
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") applyFilters();
-            }}
-            className="mt-1 w-full rounded border border-default px-2 py-1 text-sm"
-          />
-        </label>
-        <button
-          type="button"
-          onClick={applyFilters}
-          className="rounded bg-primary-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-600"
-        >
-          {t("admin.security.btn_apply")}
-        </button>
-        {q && (
-          <button
-            type="button"
-            onClick={() => {
-              setQ("");
-              setPage(1);
-              setAppliedFilters((n) => n + 1);
-            }}
-            className="rounded border border-default bg-white px-3 py-1.5 text-sm hover:bg-figma-bg-1"
-          >
-            {t("common.reset")}
-          </button>
-        )}
-      </div>
+      <Table>
+        <THead>
+          <TR>
+            <TH>{t("admin.security.col_user")}</TH>
+            <TH>{t("admin.security.col_role")}</TH>
+            <TH>{t("admin.security.col_confirmed_at")}</TH>
+            <TH>{t("admin.security.col_last_verified")}</TH>
+            <TH align="right">{t("admin.security.col_actions")}</TH>
+          </TR>
+        </THead>
+        <TBody>
+          {loading ? <TEmpty colSpan={5}>{t("common.loading")}</TEmpty>
+            : rows.length === 0 ? <TEmpty colSpan={5}>{t("admin.security.empty")}</TEmpty>
+            : null}
+          {rows.map((r) => (
+            <TR key={r.id}>
+              <TD className="text-xs">
+                {r.user?.name ?? `#${r.user_id}`}
+                {r.user?.email && <div className="text-fg-t6">{r.user.email}</div>}
+              </TD>
+              <TD className="text-xs">
+                {r.user?.is_super_admin ? (
+                  <span className="rounded bg-warning-50 px-2 py-0.5 text-warning-700">{t("admin.security.role_super_admin")}</span>
+                ) : (
+                  <span className="text-fg-t7">{r.user?.role ?? "—"}</span>
+                )}
+              </TD>
+              <TD className="text-xs text-fg-t6">{r.confirmed_at ? new Date(r.confirmed_at).toLocaleString() : "—"}</TD>
+              <TD className="text-xs text-fg-t6">{r.last_verified_at ? new Date(r.last_verified_at).toLocaleString() : t("admin.security.never")}</TD>
+              <TD align="right">
+                <div className="inline-flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => forceLogoutById(r.user_id, r.user?.name)}
+                    disabled={actionLoading !== null}
+                    className="text-xs text-warning-700 hover:underline disabled:opacity-40"
+                  >
+                    {actionLoading === `logout-${r.user_id}` ? "…" : t("admin.security.btn_force_logout")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => forceDisable(r)}
+                    disabled={actionLoading !== null}
+                    className="text-xs text-error-700 hover:underline disabled:opacity-40"
+                  >
+                    {actionLoading === `disable-${r.user_id}` ? "…" : t("admin.security.btn_disable_2fa")}
+                  </button>
+                </div>
+              </TD>
+            </TR>
+          ))}
+        </TBody>
+      </Table>
 
-      {/* Table */}
-      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
-        <table className="w-full min-w-[1000px] text-left text-sm">
-          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
-            <tr>
-              <th className="px-3 py-2">{t("admin.security.col_user")}</th>
-              <th className="px-3 py-2">{t("admin.security.col_role")}</th>
-              <th className="px-3 py-2">{t("admin.security.col_confirmed_at")}</th>
-              <th className="px-3 py-2">{t("admin.security.col_last_verified")}</th>
-              <th className="px-3 py-2 text-right">{t("admin.security.col_actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
-              <tr>
-                <td colSpan={5} className="px-3 py-6 text-center text-fg-t6">
-                  {t("common.loading")}
-                </td>
-              </tr>
-            )}
-            {!loading && rows.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-3 py-6 text-center text-fg-t6">
-                  {t("admin.security.empty")}
-                </td>
-              </tr>
-            )}
-            {rows.map((r) => (
-              <tr key={r.id} className="border-b border-default hover:bg-figma-bg-1">
-                <td className="px-3 py-2 text-xs">
-                  {r.user?.name ?? `#${r.user_id}`}
-                  {r.user?.email && <div className="text-fg-t6">{r.user.email}</div>}
-                </td>
-                <td className="px-3 py-2 text-xs">
-                  {r.user?.is_super_admin ? (
-                    <span className="rounded bg-warning-50 px-2 py-0.5 text-warning-700">
-                      {t("admin.security.role_super_admin")}
-                    </span>
-                  ) : (
-                    <span className="text-fg-t7">{r.user?.role ?? "—"}</span>
-                  )}
-                </td>
-                <td className="px-3 py-2 text-xs text-fg-t7">
-                  {r.confirmed_at ? new Date(r.confirmed_at).toLocaleString() : "—"}
-                </td>
-                <td className="px-3 py-2 text-xs text-fg-t7">
-                  {r.last_verified_at ? new Date(r.last_verified_at).toLocaleString() : t("admin.security.never")}
-                </td>
-                <td className="px-3 py-2 text-right">
-                  <div className="inline-flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => forceLogoutById(r.user_id, r.user?.name)}
-                      disabled={actionLoading !== null}
-                      className="text-xs text-warning-700 hover:underline disabled:opacity-40"
-                    >
-                      {actionLoading === `logout-${r.user_id}` ? "…" : t("admin.security.btn_force_logout")}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => forceDisable(r)}
-                      disabled={actionLoading !== null}
-                      className="text-xs text-error-700 hover:underline disabled:opacity-40"
-                    >
-                      {actionLoading === `disable-${r.user_id}` ? "…" : t("admin.security.btn_disable_2fa")}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pagination */}
-      {meta && meta.last_page > 1 && (
-        <div className="mt-3 flex items-center justify-between text-sm">
-          <span className="text-fg-t6">
-            {t("admin.security.pagination_summary")
-              .replace("{current}", String(meta.current_page))
-              .replace("{last}", String(meta.last_page))
-              .replace("{total}", meta.total.toLocaleString())}
-          </span>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1}
-              className="rounded border border-default bg-white px-3 py-1 disabled:opacity-50"
-            >
-              {t("admin.security.btn_prev")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.min(meta.last_page, p + 1))}
-              disabled={page >= meta.last_page}
-              className="rounded border border-default bg-white px-3 py-1 disabled:opacity-50"
-            >
-              {t("admin.security.btn_next")}
-            </button>
-          </div>
-        </div>
-      )}
+      {meta && meta.last_page > 1 ? (
+        <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />
+      ) : null}
     </div>
   );
 }
 
-function StatCard({
-  label,
-  value,
-  tone = "neutral",
-}: {
-  label: string;
-  value: string;
-  tone?: "good" | "warn" | "neutral";
-}) {
-  const toneClass =
-    tone === "good"
-      ? "text-success-600"
-      : tone === "warn"
-        ? "text-warning-600"
-        : "text-fg-t11";
+function StatCard({ label, value, tone = "neutral" }: { label: string; value: string; tone?: "good" | "warn" | "neutral" }) {
+  const toneClass = tone === "good" ? "text-success-600" : tone === "warn" ? "text-warning-600" : "text-fg-t11";
   return (
     <div className="admin-card p-4">
       <div className="text-xs font-semibold uppercase tracking-wide text-fg-t6">{label}</div>
