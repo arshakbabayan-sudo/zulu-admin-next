@@ -965,6 +965,8 @@ export type HotelAccommodationType = (typeof HOTEL_ACCOMMODATION_TYPES)[number];
 export type HotelFormPayload = {
   offer_id: number | "";
   location_id: number | "";
+  /** The language the operator typed THIS record's source text in. AI translates from here. Defaults to 'en'. */
+  source_lang?: string;
   hotel_name: string;
   property_type: string;
   hotel_type: string;
@@ -1162,6 +1164,7 @@ export function hotelFormFromDetail(row: HotelRow): HotelFormPayload {
       (row as { location_id?: number | null }).location_id != null
         ? Number((row as { location_id?: number | null }).location_id)
         : "",
+    source_lang: (row as { source_lang?: string | null }).source_lang ?? "en",
     hotel_name: row.hotel_name ?? "",
     property_type: row.property_type ?? "hotel",
     hotel_type: row.hotel_type ?? "resort",
@@ -1338,6 +1341,7 @@ export function roomsPayloadFromForm(
 export type HotelCreateApiBody = {
   offer_id: number;
   location_id: number | null;
+  source_lang: string;
   hotel_name: string;
   property_type: string;
   hotel_type: string;
@@ -1389,6 +1393,7 @@ function hotelSharedBodyFromForm(form: HotelFormPayload): Omit<HotelCreateApiBod
   const lng = parseCoord(form.longitude);
   return {
     location_id: form.location_id === "" ? null : Number(form.location_id),
+    source_lang: (form.source_lang ?? "en").trim() || "en",
     hotel_name: form.hotel_name.trim(),
     property_type: form.property_type.trim(),
     hotel_type: form.hotel_type.trim(),

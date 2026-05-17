@@ -14,6 +14,8 @@ export type ExcursionWizardState = {
   offer_id: number | "";
   company_id: number | "";
   location_id: number | "";
+  /** The language the operator typed source text in; AI translates from here. Defaults to 'en'. */
+  source_lang?: string;
   country: string;
   city: string;
   general_category: string;
@@ -50,6 +52,7 @@ export type ExcursionWizardState = {
 export function emptyExcursionWizardTail(): Omit<ExcursionWizardState, "offer_id" | "company_id"> {
   return {
     location_id: "",
+    source_lang: "en",
     country: "",
     city: "",
     general_category: "",

@@ -8,6 +8,7 @@ import { ImportExportButtons } from "@/components/ImportExportButtons";
 import { OfferStatusBadge, isSubmittableStatus } from "@/components/OfferStatusBadge";
 import { PaginationBar } from "@/components/PaginationBar";
 import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
+import { SourceLanguagePicker } from "@/components/SourceLanguagePicker";
 import { TranslationTabs } from "@/components/TranslationTabs";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { ApiRequestError } from "@/lib/api-client";
@@ -58,6 +59,7 @@ import { useCallback, useEffect, useState } from "react";
 const EMPTY: HotelFormPayload = {
   offer_id: "",
   location_id: "",
+  source_lang: "en",
   hotel_name: "",
   property_type: "hotel",
   hotel_type: "resort",
@@ -299,6 +301,12 @@ export default function OperatorHotelsPage() {
       {form && (
         <div className="mt-4 rounded border border-default bg-white p-4">
           <h2 className="mb-3 text-base font-medium">{editId ? t("admin.crud.hotels.form_edit") : t("admin.crud.hotels.form_new")}</h2>
+          <SourceLanguagePicker
+            value={form.source_lang ?? "en"}
+            onChange={(next) => setForm((p) => (p ? { ...p, source_lang: next } : p))}
+            locked={editId != null}
+            className="mb-4"
+          />
           <div className="grid gap-3 sm:grid-cols-2">
             {editId == null && (
               <label className="flex flex-col gap-1 text-sm">
