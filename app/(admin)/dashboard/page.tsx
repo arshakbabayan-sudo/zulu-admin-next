@@ -24,6 +24,7 @@ import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import { apiPlatformStats, type PlatformStats } from "@/lib/platform-admin-api";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { PageHeader } from "@/components/ui";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
@@ -605,10 +606,7 @@ export default function DashboardPage() {
   if (!stats) {
     return (
       <div className="space-y-6">
-        <header>
-          <h1 className="admin-page-title">{greeting}</h1>
-          <p className="mt-1 text-sm text-fg-t6">{t("admin.dashboard.loading_stats")}</p>
-        </header>
+        <PageHeader title={greeting} subtitle={t("admin.dashboard.loading_stats")} />
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="rounded-2xl border border-default bg-white p-6">
@@ -626,10 +624,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-5">
-      <header>
-        <h1 className="admin-page-title">{greeting}</h1>
-        <p className="mt-1 text-sm text-fg-t6">{t("admin.dashboard.platform_overview")}</p>
-      </header>
+      <PageHeader title={greeting} subtitle={t("admin.dashboard.platform_overview")} />
 
       {/* Row 1 — three hero stat cards */}
       <div className="grid gap-5 lg:grid-cols-3">
