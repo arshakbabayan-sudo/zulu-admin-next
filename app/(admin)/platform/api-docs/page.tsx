@@ -5,6 +5,7 @@ import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
+import { PageHeader } from "@/components/ui";
 
 /**
  * Platform-admin API documentation viewer (Sprint 74, PART 30).
@@ -71,9 +72,9 @@ export default function PlatformApiDocsPage() {
 
   if (!allowed) {
     return (
-      <div>
+      <div className="space-y-4">
         <h1 className="admin-page-title">{t("admin.api_docs.title")}</h1>
-        <div className="mt-4">
+        <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
       </div>
@@ -81,11 +82,10 @@ export default function PlatformApiDocsPage() {
   }
 
   return (
-    <div>
-      <h1 className="admin-page-title">API documentation</h1>
-      <p className="admin-page-subtitle">{t("admin.api_docs.subtitle")}</p>
+    <div className="space-y-6">
+      <PageHeader title="API documentation" subtitle={t("admin.api_docs.subtitle")} />
 
-      <div className="mt-6 rounded border border-default bg-white p-4 text-sm text-fg-t7">
+      <div className="admin-card p-4 text-sm text-fg-t7">
         <p>
           {t("admin.api_docs.spec_source_prefix")} <code className="font-mono">storage/app/openapi.json</code> {t("admin.api_docs.spec_source_suffix")} (
           <code className="font-mono">api:generate-openapi</code> {t("admin.api_docs.spec_scheduler")}).
@@ -96,7 +96,7 @@ export default function PlatformApiDocsPage() {
         </p>
       </div>
 
-      <div id="swagger-ui-root" className="mt-6 rounded border border-default bg-white" />
+      <div id="swagger-ui-root" className="rounded-zulu border border-default bg-white" />
     </div>
   );
 }

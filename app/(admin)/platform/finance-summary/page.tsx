@@ -1,28 +1,20 @@
 "use client";
 
+/** Phase-2 migration to shared @/components/ui primitives. */
+
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
-import {
-  apiPlatformFinanceSummary,
-  type PlatformFinanceSummary,
-} from "@/lib/platform-admin-api";
+import { apiPlatformFinanceSummary, type PlatformFinanceSummary } from "@/lib/platform-admin-api";
 import { useCallback, useEffect, useState } from "react";
+import { Button, PageHeader } from "@/components/ui";
 
-function SummaryCard({
-  label,
-  value,
-  sub,
-}: {
-  label: string;
-  value: string;
-  sub?: string;
-}) {
+function SummaryCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="admin-card p-4">
-      <div className="text-xs font-medium uppercase tracking-wide text-fg-t7">{label}</div>
+      <div className="text-xs font-medium uppercase tracking-wide text-fg-t6">{label}</div>
       <div className="mt-1 text-2xl font-semibold tabular-nums text-fg-t11">{value}</div>
       {sub && <div className="mt-1 text-xs text-fg-t7">{sub}</div>}
     </div>
@@ -50,26 +42,13 @@ export default function PlatformFinanceSummaryPage() {
     }
   }, [token, allowed, t]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useEffect(() => { load(); }, [load]);
 
-  if (!allowed) {
+  if (!allowed || forbidden) {
     return (
-      <div>
+      <div className="space-y-4">
         <h1 className="admin-page-title">{t("admin.finance_summary.title_short")}</h1>
-        <div className="mt-4">
-          <ForbiddenNotice />
-        </div>
-      </div>
-    );
-  }
-
-  if (forbidden) {
-    return (
-      <div>
-        <h1 className="admin-page-title">{t("admin.finance_summary.title_short")}</h1>
-        <div className="mt-4">
+        <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
       </div>
@@ -77,39 +56,34 @@ export default function PlatformFinanceSummaryPage() {
   }
 
   return (
-    <div>
-      <h1 className="admin-page-title">{t("admin.finance_summary.title")}</h1>
-      <button
-        type="button"
-        onClick={() => load()}
-        className="mt-4 rounded border border-default bg-white px-3 py-1.5 text-sm hover:bg-figma-bg-1"
-      >
-        {t("admin.finance_summary.btn_refresh")}
-      </button>
-      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
+    <div className="space-y-6">
+      <PageHeader
+        title={t("admin.finance_summary.title")}
+        actions={
+          <Button variant="outline" size="sm" onClick={() => load()}>
+            {t("admin.finance_summary.btn_refresh")}
+          </Button>
+        }
+      />
+
+      {err && (
+        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
+      )}
+
       {data && (
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <SummaryCard
             label={t("admin.finance_summary.card_total_payments")}
-            value={data.total_payments_paid.toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
+            value={data.total_payments_paid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             sub={t("admin.finance_summary.sub_paid_payments").replace("{n}", String(data.payments_count_paid))}
           />
           <SummaryCard
             label={t("admin.finance_summary.card_commission_accrued")}
-            value={data.total_commission_accrued.toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
+            value={data.total_commission_accrued.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           />
           <SummaryCard
             label={t("admin.finance_summary.card_commission_pending")}
-            value={data.total_commission_pending.toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
+            value={data.total_commission_pending.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             sub={t("admin.finance_summary.sub_commission_records").replace("{n}", String(data.commission_records_count))}
           />
         </div>

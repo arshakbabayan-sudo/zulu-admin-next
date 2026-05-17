@@ -27,6 +27,7 @@ import { canAccessOperatorStatisticsNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { apiOperatorStatistics } from "@/lib/platform-admin-api";
 import { useCallback, useEffect, useState } from "react";
+import { Button, FormField, Input, PageHeader } from "@/components/ui";
 
 export default function OperatorStatisticsPage() {
   const { token, user } = useAdminAuth();
@@ -74,9 +75,9 @@ export default function OperatorStatisticsPage() {
 
   if (!allowed) {
     return (
-      <div>
+      <div className="space-y-4">
         <h1 className="admin-page-title">{t("admin.operator_statistics.title")}</h1>
-        <div className="mt-4">
+        <div className="admin-card p-4">
           <ForbiddenNotice messageKey="admin.forbidden.statistics_scope" />
         </div>
       </div>
@@ -84,40 +85,39 @@ export default function OperatorStatisticsPage() {
   }
 
   return (
-    <div>
-      <h1 className="admin-page-title">Operator statistics</h1>
+    <div className="space-y-6">
+      <PageHeader title="Operator statistics" />
+
       {isSuper && (
-        <div className="mt-4 flex flex-wrap items-end gap-2">
-          <label className="text-sm">
-            {t("admin.inventory_hotels.filter_company_id")}
-            <input
-              type="number"
-              min={1}
-              value={companyIdInput}
-              onChange={(e) => setCompanyIdInput(e.target.value)}
-              placeholder={t("admin.operator_statistics.placeholder_company_required")}
-              className="ml-2 rounded border border-default px-2 py-1 text-sm"
-            />
-          </label>
-          <button
-            type="button"
-            onClick={() => load()}
-            disabled={loading}
-            className="admin-btn-primary"
-          >
-            {t("admin.content_translations.btn_load")}
-          </button>
+        <div className="admin-card p-4">
+          <div className="flex flex-wrap items-end gap-3">
+            <FormField label={t("admin.inventory_hotels.filter_company_id")} htmlFor="stats-co" className="max-w-xs">
+              <Input
+                id="stats-co"
+                type="number"
+                min={1}
+                value={companyIdInput}
+                onChange={(e) => setCompanyIdInput(e.target.value)}
+                placeholder={t("admin.operator_statistics.placeholder_company_required")}
+              />
+            </FormField>
+            <Button size="sm" onClick={() => load()} disabled={loading}>
+              {t("admin.content_translations.btn_load")}
+            </Button>
+          </div>
         </div>
       )}
+
       {!isSuper && defaultCompanyId && (
-        <p className="mt-2 text-xs text-fg-t7">
+        <p className="text-xs text-fg-t7">
           {t("admin.operator_statistics.context_active_company").replace("{id}", String(defaultCompanyId))}
         </p>
       )}
-      {err && <p className="mt-4 text-sm text-error-600">{err}</p>}
-      {loading && <p className="mt-4 text-sm text-fg-t7">{t("common.loading")}</p>}
+
+      {err && <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
+      {loading && <p className="text-sm text-fg-t7">{t("common.loading")}</p>}
       {payload !== null && !loading && (
-        <pre className="mt-4 max-h-[70vh] overflow-auto rounded border border-default bg-slate-800 p-4 text-xs text-slate-100">
+        <pre className="max-h-[70vh] overflow-auto rounded-zulu border border-default bg-slate-800 p-4 text-xs text-slate-100">
           {JSON.stringify(payload, null, 2)}
         </pre>
       )}
