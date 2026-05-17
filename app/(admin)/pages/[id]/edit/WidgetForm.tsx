@@ -660,7 +660,7 @@ function SliderWidgetForm({
           type="button"
           disabled={saving}
           onClick={() => void onSave()}
-          className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+          className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
         >
           {saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}
         </button>
@@ -687,7 +687,7 @@ function SwitchField({
         aria-checked={checked}
         onClick={() => onChange(!checked)}
         className={`relative h-6 w-11 rounded-full transition ${
-          checked ? "bg-violet-600" : "bg-slate-300"
+          checked ? "bg-primary-500" : "bg-slate-300"
         }`}
       >
         <span
@@ -757,7 +757,7 @@ function SearchWidgetForm({
           type="button"
           disabled={saving}
           onClick={() => void onSave()}
-          className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+          className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
         >
           {saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}
         </button>
@@ -963,7 +963,7 @@ function AboutUsWidgetForm({
           type="button"
           disabled={saving}
           onClick={() => void onSave()}
-          className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+          className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
         >
           {saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}
         </button>
@@ -1018,7 +1018,7 @@ function FeaturesWidgetForm({
         ))}
       </div>
       <div className="mt-3 flex justify-end">
-        <button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button>
+        <button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button>
       </div>
     </div>
   );
@@ -1065,7 +1065,7 @@ function FunFactsWidgetForm({
           </div>
         ))}
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
+      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1104,7 +1104,7 @@ function FaqWidgetForm({
           </div>
         ))}
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
+      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1171,7 +1171,7 @@ function TestimonialsWidgetForm({
           </div>
         ))}
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
+      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1201,7 +1201,7 @@ function LatestOffersWidgetForm({
           <input value={value.category_filter} onChange={(e) => onChange({ ...value, category_filter: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
         </label>
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
+      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1258,7 +1258,7 @@ function ContactUsWidgetForm({
           </div>
         </div>
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
+      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1308,7 +1308,7 @@ function CtaWidgetForm({
           {value.background_image ? <span className="mt-1 block text-[11px] text-fg-t6">{t("admin.widget_form.saved_file")}: {value.background_image}</span> : null}
         </label>
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
+      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1364,7 +1364,7 @@ function HomeHeroWidgetForm({
           {uploadErr ? <span className="mt-1 block text-xs text-error-600">{uploadErr}</span> : null}
         </label>
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
+      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1399,7 +1399,7 @@ function HomeSpecialOffersWidgetForm({
           The legacy items[] editor was removed.
         </p>
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
+      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1429,7 +1429,7 @@ function HomePopularDestinationsWidgetForm({
           The legacy items[] editor was removed.
         </p>
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
+      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1454,7 +1454,7 @@ function HomePartnersWidgetForm({
           The legacy items[] editor was removed.
         </p>
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
+      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1507,7 +1507,7 @@ function HomeNewsletterWidgetForm({
           {uploadErr ? <span className="mt-1 block text-xs text-error-600">{uploadErr}</span> : null}
         </label>
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
+      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1724,7 +1724,7 @@ export function WidgetForm({ widget, activeLanguage, saving = false, onSave }: P
             type="button"
             disabled={saving}
             onClick={() => void handleSaveTextEditor()}
-            className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+            className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
           >
             {saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}
           </button>
@@ -1925,7 +1925,7 @@ export function WidgetForm({ widget, activeLanguage, saving = false, onSave }: P
             type="button"
             disabled={saving}
             onClick={() => void handleSaveCodeEditor()}
-            className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+            className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
           >
             {saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}
           </button>
@@ -1963,7 +1963,7 @@ export function WidgetForm({ widget, activeLanguage, saving = false, onSave }: P
           type="button"
           disabled={saving}
           onClick={() => void handleSaveFallbackJson()}
-          className="rounded bg-violet-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+          className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
         >
           {saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}
         </button>
