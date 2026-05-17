@@ -1,7 +1,8 @@
 "use client";
 
+/** Phase-2 migration to shared @/components/ui primitives. */
+
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
-import { PaginationBar } from "@/components/PaginationBar";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessNotificationsNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
@@ -15,6 +16,19 @@ import {
 } from "@/lib/notifications-api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useCallback, useEffect, useState } from "react";
+import {
+  Button,
+  PageHeader,
+  Pagination,
+  StatusPill,
+  Table,
+  TBody,
+  TD,
+  TEmpty,
+  TH,
+  THead,
+  TR,
+} from "@/components/ui";
 
 export default function NotificationsPage() {
   const { token, user } = useAdminAuth();
@@ -29,7 +43,6 @@ export default function NotificationsPage() {
   const [busyAll, setBusyAll] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
 
-  // Single mount call — fetch paginated list and unread count in parallel.
   const load = useCallback(async () => {
     if (!token || !allowed) return;
     setErr(null);
@@ -91,22 +104,11 @@ export default function NotificationsPage() {
     }
   };
 
-  if (!allowed) {
+  if (!allowed || forbidden) {
     return (
-      <div>
+      <div className="space-y-4">
         <h1 className="admin-page-title">{t("admin.notifications.title")}</h1>
-        <div className="mt-4">
-          <ForbiddenNotice />
-        </div>
-      </div>
-    );
-  }
-
-  if (forbidden) {
-    return (
-      <div>
-        <h1 className="admin-page-title">{t("admin.notifications.title")}</h1>
-        <div className="mt-4">
+        <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
       </div>
@@ -114,75 +116,74 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div>
-      <h1 className="admin-page-title">{t("admin.notifications.title")}</h1>
-      <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
-        {unreadCount !== null && (
-          <span className="rounded border border-default bg-white px-2 py-1 tabular-nums text-fg-t7">
-            {t("admin.notifications.unread")}: {unreadCount}
-          </span>
-        )}
-        <button
-          type="button"
-          disabled={busyAll || (unreadCount !== null && unreadCount === 0)}
-          onClick={() => onMarkAllRead()}
-          className="rounded border border-default bg-white px-3 py-1 disabled:opacity-40"
-        >
-          {busyAll ? t("admin.notifications.marking") : t("admin.notifications.mark_all_read")}
-        </button>
-      </div>
-      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
-      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
-        <table className="w-full min-w-[720px] text-left text-sm">
-          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
-            <tr>
-              <th className="px-3 py-2">{t("admin.crud.common.id")}</th>
-              <th className="px-3 py-2">{t("admin.notifications.status")}</th>
-              <th className="px-3 py-2">{t("admin.notifications.priority")}</th>
-              <th className="px-3 py-2">{t("admin.notifications.event")}</th>
-              <th className="px-3 py-2">{t("admin.notifications.col_title")}</th>
-              <th className="px-3 py-2">{t("admin.notifications.message")}</th>
-              <th className="px-3 py-2">{t("admin.notifications.company")}</th>
-              <th className="px-3 py-2">{t("admin.notifications.created")}</th>
-              <th className="px-3 py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.id} className="border-b border-default">
-                <td className="px-3 py-2 tabular-nums">{r.id}</td>
-                <td className="px-3 py-2">{r.status}</td>
-                <td className="px-3 py-2">{r.priority ?? "-"}</td>
-                <td className="max-w-[140px] truncate px-3 py-2 text-xs">{r.event_type}</td>
-                <td className="max-w-xs px-3 py-2">{r.title}</td>
-                <td className="max-w-md truncate px-3 py-2 text-xs text-fg-t6">{r.message}</td>
-                <td className="px-3 py-2 tabular-nums">{r.related_company_id ?? "-"}</td>
-                <td className="whitespace-nowrap px-3 py-2 text-xs text-fg-t7">
-                  {r.created_at ?? "-"}
-                </td>
-                <td className="px-3 py-2">
-                  {r.status === "unread" ? (
-                    <button
-                      type="button"
-                      disabled={busyId === r.id}
-                      onClick={() => onMarkRead(r.id)}
-                      className="text-fg-t7 underline disabled:opacity-40"
-                    >
-                      {busyId === r.id ? "..." : t("admin.notifications.mark_read")}
-                    </button>
-                  ) : (
-                    <span className="text-fg-t6">-</span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {meta && <PaginationBar meta={meta} onPage={setPage} />}
-      <p className="mt-3 text-xs text-fg-t7">
-        {t("admin.notifications.footer_help")}
-      </p>
+    <div className="space-y-6">
+      <PageHeader
+        title={t("admin.notifications.title")}
+        subtitle={unreadCount !== null ? `${t("admin.notifications.unread")}: ${unreadCount}` : undefined}
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={busyAll || (unreadCount !== null && unreadCount === 0)}
+            onClick={() => onMarkAllRead()}
+          >
+            {busyAll ? t("admin.notifications.marking") : t("admin.notifications.mark_all_read")}
+          </Button>
+        }
+      />
+
+      {err && <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
+
+      <Table>
+        <THead>
+          <TR>
+            <TH>{t("admin.crud.common.id")}</TH>
+            <TH>{t("admin.notifications.status")}</TH>
+            <TH>{t("admin.notifications.priority")}</TH>
+            <TH>{t("admin.notifications.event")}</TH>
+            <TH>{t("admin.notifications.col_title")}</TH>
+            <TH>{t("admin.notifications.message")}</TH>
+            <TH>{t("admin.notifications.company")}</TH>
+            <TH>{t("admin.notifications.created")}</TH>
+            <TH />
+          </TR>
+        </THead>
+        <TBody>
+          {rows.length === 0 ? <TEmpty colSpan={9}>{t("admin.notifications.empty") || "No notifications."}</TEmpty> : null}
+          {rows.map((r) => (
+            <TR key={r.id}>
+              <TD className="tabular-nums">{r.id}</TD>
+              <TD><StatusPill status={r.status} /></TD>
+              <TD>{r.priority ?? "—"}</TD>
+              <TD className="max-w-[140px] truncate text-xs">{r.event_type}</TD>
+              <TD className="max-w-xs">{r.title}</TD>
+              <TD className="max-w-md truncate text-xs text-fg-t6">{r.message}</TD>
+              <TD className="tabular-nums">{r.related_company_id ?? "—"}</TD>
+              <TD className="whitespace-nowrap text-xs text-fg-t6">{r.created_at ?? "—"}</TD>
+              <TD>
+                {r.status === "unread" ? (
+                  <button
+                    type="button"
+                    disabled={busyId === r.id}
+                    onClick={() => onMarkRead(r.id)}
+                    className="text-primary-500 underline text-xs disabled:opacity-40 hover:text-primary-700"
+                  >
+                    {busyId === r.id ? "…" : t("admin.notifications.mark_read")}
+                  </button>
+                ) : (
+                  <span className="text-fg-t6 text-xs">—</span>
+                )}
+              </TD>
+            </TR>
+          ))}
+        </TBody>
+      </Table>
+
+      {meta && meta.last_page > 1 ? (
+        <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />
+      ) : null}
+
+      <p className="text-xs text-fg-t7">{t("admin.notifications.footer_help")}</p>
     </div>
   );
 }
