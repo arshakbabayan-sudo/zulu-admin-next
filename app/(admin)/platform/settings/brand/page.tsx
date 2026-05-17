@@ -1,13 +1,10 @@
 "use client";
 
 /**
- * Figma layout reference: Quest CRM Copy template — Settings shell + form patterns
+ * Figma layout reference: Quest CRM Copy template
  *   - Settings/My Profile (shell): 9706:23441
  *   - Settings/Company Profile (form pattern): 9719:16259
- * Brand tokens: ZULU purple primary (--admin-primary).
- * Mobile: stacked single-column layout, same field order as desktop.
- *
- * Sprint 1 Step 1.3 of the ZULU CMS roadmap. Reads/writes /api/brand-settings.
+ * Phase-2 migration to shared @/components/ui primitives.
  */
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
@@ -23,6 +20,7 @@ import {
   type BrandSettings,
 } from "@/lib/platform-admin-api";
 import { useCallback, useEffect, useState } from "react";
+import { Button, FormField, Input, PageHeader, Select } from "@/components/ui";
 
 const CUSTOM_TYPES: BrandCustomField["type"][] = ["text", "url", "email", "phone", "image", "tel"];
 
@@ -52,9 +50,7 @@ export default function PlatformBrandSettingsPage() {
     }
   }, [allowed]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useEffect(() => { void load(); }, [load]);
 
   async function handleSave() {
     if (!token || !data) return;
@@ -78,45 +74,30 @@ export default function PlatformBrandSettingsPage() {
   function updateSocial(platformKey: string, value: string) {
     setData((prev) =>
       prev
-        ? {
-            ...prev,
-            social_links: {
-              ...prev.social_links,
-              [platformKey]: value === "" ? null : value,
-            },
-          }
+        ? { ...prev, social_links: { ...prev.social_links, [platformKey]: value === "" ? null : value } }
         : prev
     );
   }
 
   function updateCustomField(index: number, patch: Partial<BrandCustomField>) {
     setData((prev) =>
-      prev
-        ? {
-            ...prev,
-            custom_fields: prev.custom_fields.map((f, i) => (i === index ? { ...f, ...patch } : f)),
-          }
-        : prev
+      prev ? { ...prev, custom_fields: prev.custom_fields.map((f, i) => (i === index ? { ...f, ...patch } : f)) } : prev
     );
   }
 
   function addCustomField() {
-    setData((prev) =>
-      prev ? { ...prev, custom_fields: [...prev.custom_fields, emptyCustomField()] } : prev
-    );
+    setData((prev) => (prev ? { ...prev, custom_fields: [...prev.custom_fields, emptyCustomField()] } : prev));
   }
 
   function removeCustomField(index: number) {
-    setData((prev) =>
-      prev ? { ...prev, custom_fields: prev.custom_fields.filter((_, i) => i !== index) } : prev
-    );
+    setData((prev) => (prev ? { ...prev, custom_fields: prev.custom_fields.filter((_, i) => i !== index) } : prev));
   }
 
   if (!allowed || forbidden) {
     return (
-      <div>
+      <div className="space-y-4">
         <h1 className="admin-page-title">Brand settings</h1>
-        <div className="mt-4">
+        <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
       </div>
@@ -125,31 +106,26 @@ export default function PlatformBrandSettingsPage() {
 
   if (!data) {
     return (
-      <div>
+      <div className="space-y-4">
         <h1 className="admin-page-title">Brand settings</h1>
-        <p className="mt-4 text-sm text-fg-t7">Loading…</p>
+        <p className="text-sm text-fg-t7">Loading…</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-3xl">
-      <div className="flex items-baseline justify-between gap-4">
-        <h1 className="admin-page-title">Brand settings</h1>
-        <p className="text-xs text-fg-t7">
-          Կայքի logo, contact և social link-ները խմբագրելու համար
-        </p>
-      </div>
+    <div className="max-w-3xl space-y-6">
+      <PageHeader
+        title="Brand settings"
+        subtitle="Կայքի logo, contact և social link-ները խմբագրելու համար"
+      />
 
-      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
-      {savedAt && <p className="mt-2 text-sm text-emerald-700">Saved.</p>}
+      {err && <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
+      {savedAt && <div className="rounded-zulu border border-success-100 bg-success-50 px-4 py-2 text-sm text-success-700">Saved.</div>}
 
-      {/* ─────────────────────  Imagery  ───────────────────── */}
-      <section className="mt-6 rounded-lg border border-default bg-white p-4">
+      <section className="admin-card p-4">
         <h2 className="text-base font-semibold text-fg-t11">Brand imagery</h2>
-        <p className="mb-3 text-xs text-fg-t7">
-          Logo / emblem / favicon (browser tab-ի icon)
-        </p>
+        <p className="mt-1 mb-3 text-xs text-fg-t7">Logo / emblem / favicon (browser tab-ի icon)</p>
         <div className="grid gap-4 md:grid-cols-2">
           <ImageUploadField
             value={data.logo_url ?? ""}
@@ -175,155 +151,126 @@ export default function PlatformBrandSettingsPage() {
         </div>
       </section>
 
-      {/* ─────────────────────  Contact  ───────────────────── */}
-      <section className="mt-4 rounded-lg border border-default bg-white p-4">
+      <section className="admin-card p-4">
         <h2 className="text-base font-semibold text-fg-t11">Contact info</h2>
         <div className="mt-3 grid gap-3 md:grid-cols-2">
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-fg-t6">Phone</span>
-            <input
+          <FormField label="Phone" htmlFor="br-phone">
+            <Input
+              id="br-phone"
               value={data.phone ?? ""}
               onChange={(e) => updateField("phone", e.target.value === "" ? null : e.target.value)}
               placeholder="+374 11 123 456"
-              className="rounded border border-default px-3 py-2 text-sm"
             />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-fg-t6">Email</span>
-            <input
+          </FormField>
+          <FormField label="Email" htmlFor="br-email">
+            <Input
+              id="br-email"
               type="email"
               value={data.email ?? ""}
               onChange={(e) => updateField("email", e.target.value === "" ? null : e.target.value)}
               placeholder="info@zulu.am"
-              className="rounded border border-default px-3 py-2 text-sm"
             />
-          </label>
-          <label className="flex flex-col gap-1 text-sm md:col-span-2">
-            <span className="font-medium text-fg-t6">Address (street + building)</span>
-            <input
+          </FormField>
+          <FormField label="Address (street + building)" htmlFor="br-addr" className="md:col-span-2">
+            <Input
+              id="br-addr"
               value={data.address ?? ""}
               onChange={(e) => updateField("address", e.target.value === "" ? null : e.target.value)}
               placeholder="Mashtots Ave 1"
-              className="rounded border border-default px-3 py-2 text-sm"
             />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-fg-t6">City</span>
-            <input
+          </FormField>
+          <FormField label="City" htmlFor="br-city">
+            <Input
+              id="br-city"
               value={data.address_city ?? ""}
               onChange={(e) => updateField("address_city", e.target.value === "" ? null : e.target.value)}
-              className="rounded border border-default px-3 py-2 text-sm"
             />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-fg-t6">Country</span>
-            <input
+          </FormField>
+          <FormField label="Country" htmlFor="br-country">
+            <Input
+              id="br-country"
               value={data.address_country ?? ""}
-              onChange={(e) =>
-                updateField("address_country", e.target.value === "" ? null : e.target.value)
-              }
-              className="rounded border border-default px-3 py-2 text-sm"
+              onChange={(e) => updateField("address_country", e.target.value === "" ? null : e.target.value)}
             />
-          </label>
+          </FormField>
         </div>
       </section>
 
-      {/* ─────────────────────  Social links  ───────────────────── */}
-      <section className="mt-4 rounded-lg border border-default bg-white p-4">
+      <section className="admin-card p-4">
         <h2 className="text-base font-semibold text-fg-t11">Social links</h2>
-        <p className="mb-3 text-xs text-fg-t7">
-          Դատարկ թողնելու դեպքում` footer-ում չի երևա
-        </p>
+        <p className="mt-1 mb-3 text-xs text-fg-t7">Դատարկ թողնելու դեպքում` footer-ում չի երևա</p>
         <div className="grid gap-3 md:grid-cols-2">
           {BRAND_SOCIAL_PLATFORMS.map((p) => (
-            <label key={p.key} className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-fg-t6">{p.label}</span>
-              <input
+            <FormField key={p.key} label={p.label} htmlFor={`br-soc-${p.key}`}>
+              <Input
+                id={`br-soc-${p.key}`}
                 type="url"
                 value={data.social_links?.[p.key] ?? ""}
                 onChange={(e) => updateSocial(p.key, e.target.value)}
                 placeholder="https://…"
-                className="rounded border border-default px-3 py-2 text-sm"
               />
-            </label>
+            </FormField>
           ))}
         </div>
       </section>
 
-      {/* ─────────────────────  Custom fields  ───────────────────── */}
-      <section className="mt-4 rounded-lg border border-default bg-white p-4">
+      <section className="admin-card p-4">
         <div className="flex items-baseline justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-fg-t11">Custom fields</h2>
-            <p className="text-xs text-fg-t7">
-              Հատուկ դաշտեր (օրինակ` Office hours, Telegram URL, ևն)
-            </p>
+            <p className="text-xs text-fg-t7">Հատուկ դաշտեր (օրինակ` Office hours, Telegram URL, ևն)</p>
           </div>
-          <button
-            type="button"
-            onClick={addCustomField}
-            className="rounded border border-default bg-white px-3 py-1 text-xs hover:bg-figma-bg-1"
-          >
-            + Add field
-          </button>
+          <Button variant="outline" size="sm" onClick={addCustomField}>+ Add field</Button>
         </div>
         {data.custom_fields.length === 0 ? (
           <p className="mt-3 text-xs text-fg-t6">No custom fields yet.</p>
         ) : (
           <div className="mt-3 flex flex-col gap-3">
             {data.custom_fields.map((f, i) => (
-              <div key={i} className="rounded border border-default bg-figma-bg-1 p-3">
+              <div key={i} className="rounded-zulu border border-default bg-figma-bg-1 p-3">
                 <div className="grid gap-2 md:grid-cols-4">
-                  <label className="flex flex-col gap-1 text-xs">
-                    <span className="text-fg-t6">Key (no spaces)</span>
-                    <input
+                  <FormField label="Key (no spaces)" htmlFor={`cf-key-${i}`}>
+                    <Input
+                      id={`cf-key-${i}`}
                       value={f.key}
                       onChange={(e) =>
                         updateCustomField(i, { key: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_") })
                       }
                       placeholder="office_hours"
-                      className="rounded border border-default px-2 py-1.5 text-sm font-mono"
+                      className="font-mono"
                     />
-                  </label>
-                  <label className="flex flex-col gap-1 text-xs">
-                    <span className="text-fg-t6">Label (display name)</span>
-                    <input
+                  </FormField>
+                  <FormField label="Label (display name)" htmlFor={`cf-lab-${i}`}>
+                    <Input
+                      id={`cf-lab-${i}`}
                       value={f.label}
                       onChange={(e) => updateCustomField(i, { label: e.target.value })}
                       placeholder="Office hours"
-                      className="rounded border border-default px-2 py-1.5 text-sm"
                     />
-                  </label>
-                  <label className="flex flex-col gap-1 text-xs">
-                    <span className="text-fg-t6">Type</span>
-                    <select
+                  </FormField>
+                  <FormField label="Type" htmlFor={`cf-type-${i}`}>
+                    <Select
+                      id={`cf-type-${i}`}
+                      fieldSize="sm"
                       value={f.type}
-                      onChange={(e) =>
-                        updateCustomField(i, { type: e.target.value as BrandCustomField["type"] })
-                      }
-                      className="rounded border border-default px-2 py-1.5 text-sm"
+                      onChange={(e) => updateCustomField(i, { type: e.target.value as BrandCustomField["type"] })}
                     >
-                      {CUSTOM_TYPES.map((t) => (
-                        <option key={t} value={t}>
-                          {t}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="flex flex-col gap-1 text-xs">
-                    <span className="text-fg-t6">Value</span>
-                    <input
+                      {CUSTOM_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                    </Select>
+                  </FormField>
+                  <FormField label="Value" htmlFor={`cf-val-${i}`}>
+                    <Input
+                      id={`cf-val-${i}`}
                       value={f.value ?? ""}
                       onChange={(e) => updateCustomField(i, { value: e.target.value })}
-                      className="rounded border border-default px-2 py-1.5 text-sm"
                     />
-                  </label>
+                  </FormField>
                 </div>
                 <div className="mt-2 flex justify-end">
                   <button
                     type="button"
                     onClick={() => removeCustomField(i)}
-                    className="text-xs text-error-600 underline"
+                    className="text-xs text-error-600 underline hover:text-error-800"
                   >
                     Remove
                   </button>
@@ -334,15 +281,10 @@ export default function PlatformBrandSettingsPage() {
         )}
       </section>
 
-      <div className="sticky bottom-0 mt-6 flex justify-end gap-2 border-t border-default bg-white py-3">
-        <button
-          type="button"
-          disabled={saving}
-          onClick={() => void handleSave()}
-          className="admin-btn-primary"
-        >
+      <div className="sticky bottom-0 flex justify-end gap-2 border-t border-default bg-white py-3 -mx-4 px-4">
+        <Button size="sm" disabled={saving} onClick={() => void handleSave()}>
           {saving ? "Saving…" : "Save changes"}
-        </button>
+        </Button>
       </div>
     </div>
   );
