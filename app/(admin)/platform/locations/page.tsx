@@ -1,5 +1,7 @@
 "use client";
 
+/** Phase-2 migration to shared @/components/ui primitives. */
+
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -22,6 +24,19 @@ import {
   type LocationCountryRow,
   type LocationRegionRow,
 } from "@/lib/locations-api";
+import {
+  Button,
+  FormField,
+  Input,
+  PageHeader,
+  Table,
+  TBody,
+  TD,
+  TEmpty,
+  TH,
+  THead,
+  TR,
+} from "@/components/ui";
 import { useCallback, useEffect, useState } from "react";
 
 export default function PlatformLocationsPage() {
@@ -60,7 +75,10 @@ export default function PlatformLocationsPage() {
       setCountries(res.data);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else setErr(e instanceof ApiRequestError ? e.message : t("admin.locations.err_load_countries"));
+      else
+        setErr(
+          e instanceof ApiRequestError ? e.message : t("admin.locations.err_load_countries")
+        );
     }
   }, [token, allowed, t]);
 
@@ -307,9 +325,9 @@ export default function PlatformLocationsPage() {
 
   if (!allowed || forbidden) {
     return (
-      <div>
+      <div className="space-y-4">
         <h1 className="admin-page-title">{t("admin.locations.title")}</h1>
-        <div className="mt-4">
+        <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
       </div>
@@ -317,294 +335,283 @@ export default function PlatformLocationsPage() {
   }
 
   return (
-    <div>
-      <h1 className="admin-page-title">{t("admin.locations.title_long")}</h1>
-      <p className="mt-1 text-sm text-fg-t7">{t("admin.locations.subtitle")}</p>
-      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
+    <div className="space-y-6">
+      <PageHeader
+        title={t("admin.locations.title_long")}
+        subtitle={t("admin.locations.subtitle")}
+      />
 
-      <section className="mt-6 rounded border border-default bg-white p-4">
+      {err && (
+        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
+          {err}
+        </div>
+      )}
+
+      {/* Countries */}
+      <section className="admin-card p-4">
         <h2 className="text-sm font-semibold">{t("admin.locations.section_countries")}</h2>
-        <div className="mt-3 flex flex-wrap items-end gap-2 text-sm">
-          <label>
-            {t("admin.locations.field_name")}
-            <input
-              value={cName}
-              onChange={(e) => setCName(e.target.value)}
-              className="ml-1 rounded border border-default px-2 py-1"
-            />
-          </label>
-          <label>
-            {t("admin.locations.field_code")}
-            <input
+        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+          <FormField label={t("admin.locations.field_name")} htmlFor="loc-cname">
+            <Input id="loc-cname" value={cName} onChange={(e) => setCName(e.target.value)} />
+          </FormField>
+          <FormField label={t("admin.locations.field_code")} htmlFor="loc-ccode">
+            <Input
+              id="loc-ccode"
               value={cCode}
               onChange={(e) => setCCode(e.target.value.toUpperCase())}
               maxLength={2}
-              className="ml-1 w-14 rounded border border-default px-2 py-1 uppercase"
+              className="uppercase"
             />
-          </label>
-          <label>
-            {t("admin.locations.field_flag")}
-            <input
-              value={cFlag}
-              onChange={(e) => setCFlag(e.target.value)}
-              className="ml-1 w-16 rounded border border-default px-2 py-1"
-            />
-          </label>
-          <label>
-            {t("admin.locations.field_sort")}
-            <input
+          </FormField>
+          <FormField label={t("admin.locations.field_flag")} htmlFor="loc-cflag">
+            <Input id="loc-cflag" value={cFlag} onChange={(e) => setCFlag(e.target.value)} />
+          </FormField>
+          <FormField label={t("admin.locations.field_sort")} htmlFor="loc-csort">
+            <Input
+              id="loc-csort"
               value={cSort}
               onChange={(e) => setCSort(e.target.value)}
-              className="ml-1 w-16 rounded border border-default px-2 py-1 tabular-nums"
+              className="tabular-nums"
             />
-          </label>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => addCountry()}
-            className="rounded border border-default bg-figma-bg-1 px-3 py-1 disabled:opacity-40"
-          >
-            {t("admin.locations.btn_add_country")}
-          </button>
-        </div>
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[520px] text-left text-sm">
-            <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
-              <tr>
-                <th className="px-2 py-2">{t("admin.locations.col_id")}</th>
-                <th className="px-2 py-2">{t("admin.locations.col_name")}</th>
-                <th className="px-2 py-2">{t("admin.locations.col_code")}</th>
-                <th className="px-2 py-2">{t("admin.locations.col_regions_cities")}</th>
-                <th className="px-2 py-2">{t("admin.locations.col_actions")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {countries.map((c) => (
-                <tr
-                  key={c.id}
-                  className={
-                    "border-b border-default " +
-                    (selectedCountryId === c.id ? "bg-figma-bg-1" : "")
-                  }
-                >
-                  <td className="px-2 py-2 tabular-nums">{c.id}</td>
-                  <td className="px-2 py-2">{c.name}</td>
-                  <td className="px-2 py-2">{c.code}</td>
-                  <td className="px-2 py-2 text-xs text-fg-t6">
-                    {c.regions_count ?? "-"} / {c.cities_count ?? "-"}
-                  </td>
-                  <td className="px-2 py-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedCountryId(c.id);
-                        setSelectedRegionId(null);
-                      }}
-                      className="mr-2 text-xs text-fg-t7 underline"
-                    >
-                      {t("admin.locations.btn_select")}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => updCountry(c)}
-                      className="mr-2 text-xs text-fg-t7 underline disabled:opacity-40"
-                    >
-                      {t("admin.locations.btn_edit")}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => delCountry(c.id)}
-                      className="text-xs text-error-700 underline disabled:opacity-40"
-                    >
-                      {t("admin.locations.btn_delete")}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      {selectedCountryId != null && (
-        <section className="mt-6 rounded border border-default bg-white p-4">
-          <h2 className="text-sm font-semibold">
-            {t("admin.locations.section_regions").replace("{id}", String(selectedCountryId))}
-          </h2>
-          <div className="mt-3 flex flex-wrap items-end gap-2 text-sm">
-            <label>
-              {t("admin.locations.field_name")}
-              <input
-                value={rName}
-                onChange={(e) => setRName(e.target.value)}
-                className="ml-1 rounded border border-default px-2 py-1"
-              />
-            </label>
-            <label>
-              {t("admin.locations.field_code")}
-              <input
-                value={rCode}
-                onChange={(e) => setRCode(e.target.value)}
-                className="ml-1 rounded border border-default px-2 py-1"
-              />
-            </label>
-            <label>
-              {t("admin.locations.field_sort")}
-              <input
-                value={rSort}
-                onChange={(e) => setRSort(e.target.value)}
-                className="ml-1 w-16 rounded border border-default px-2 py-1 tabular-nums"
-              />
-            </label>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => addRegion()}
-              className="rounded border border-default bg-figma-bg-1 px-3 py-1 disabled:opacity-40"
-            >
-              {t("admin.locations.btn_add_region")}
-            </button>
+          </FormField>
+          <div className="flex items-end">
+            <Button size="sm" disabled={busy} onClick={addCountry}>
+              {t("admin.locations.btn_add_country")}
+            </Button>
           </div>
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[480px] text-left text-sm">
-              <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
-                <tr>
-                  <th className="px-2 py-2">{t("admin.locations.col_id")}</th>
-                  <th className="px-2 py-2">{t("admin.locations.col_name")}</th>
-                  <th className="px-2 py-2">{t("admin.locations.col_cities")}</th>
-                  <th className="px-2 py-2">{t("admin.locations.col_actions")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {regions.map((r) => (
-                  <tr
-                    key={r.id}
-                    className={
-                      "border-b border-default " +
-                      (selectedRegionId === r.id ? "bg-figma-bg-1" : "")
-                    }
-                  >
-                    <td className="px-2 py-2 tabular-nums">{r.id}</td>
-                    <td className="px-2 py-2">{r.name}</td>
-                    <td className="px-2 py-2 tabular-nums">{r.cities_count ?? "-"}</td>
-                    <td className="px-2 py-2">
+        </div>
+        <div className="mt-4">
+          <Table>
+            <THead>
+              <TR>
+                <TH>{t("admin.locations.col_id")}</TH>
+                <TH>{t("admin.locations.col_name")}</TH>
+                <TH>{t("admin.locations.col_code")}</TH>
+                <TH>{t("admin.locations.col_regions_cities")}</TH>
+                <TH>{t("admin.locations.col_actions")}</TH>
+              </TR>
+            </THead>
+            <TBody>
+              {countries.length === 0 ? (
+                <TEmpty colSpan={5}>{t("admin.locations.empty_countries")}</TEmpty>
+              ) : null}
+              {countries.map((c) => (
+                <TR
+                  key={c.id}
+                  className={selectedCountryId === c.id ? "bg-figma-bg-1" : undefined}
+                >
+                  <TD className="tabular-nums">{c.id}</TD>
+                  <TD>{c.name}</TD>
+                  <TD>{c.code}</TD>
+                  <TD className="text-xs text-fg-t6">
+                    {c.regions_count ?? "-"} / {c.cities_count ?? "-"}
+                  </TD>
+                  <TD>
+                    <div className="flex items-center gap-3">
                       <button
                         type="button"
-                        onClick={() => setSelectedRegionId(r.id)}
-                        className="mr-2 text-xs text-fg-t7 underline"
+                        onClick={() => {
+                          setSelectedCountryId(c.id);
+                          setSelectedRegionId(null);
+                        }}
+                        className="text-xs text-primary-500 hover:underline"
                       >
                         {t("admin.locations.btn_select")}
                       </button>
                       <button
                         type="button"
                         disabled={busy}
-                        onClick={() => updRegion(r)}
-                        className="mr-2 text-xs text-fg-t7 underline disabled:opacity-40"
+                        onClick={() => updCountry(c)}
+                        className="text-xs text-fg-t7 hover:underline disabled:opacity-40"
                       >
                         {t("admin.locations.btn_edit")}
                       </button>
                       <button
                         type="button"
                         disabled={busy}
-                        onClick={() => delRegion(r.id)}
-                        className="text-xs text-error-700 underline disabled:opacity-40"
+                        onClick={() => delCountry(c.id)}
+                        className="text-xs text-error-700 hover:underline disabled:opacity-40"
                       >
                         {t("admin.locations.btn_delete")}
                       </button>
-                    </td>
-                  </tr>
+                    </div>
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+        </div>
+      </section>
+
+      {/* Regions */}
+      {selectedCountryId != null && (
+        <section className="admin-card p-4">
+          <h2 className="text-sm font-semibold">
+            {t("admin.locations.section_regions").replace("{id}", String(selectedCountryId))}
+          </h2>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <FormField label={t("admin.locations.field_name")} htmlFor="loc-rname">
+              <Input id="loc-rname" value={rName} onChange={(e) => setRName(e.target.value)} />
+            </FormField>
+            <FormField label={t("admin.locations.field_code")} htmlFor="loc-rcode">
+              <Input id="loc-rcode" value={rCode} onChange={(e) => setRCode(e.target.value)} />
+            </FormField>
+            <FormField label={t("admin.locations.field_sort")} htmlFor="loc-rsort">
+              <Input
+                id="loc-rsort"
+                value={rSort}
+                onChange={(e) => setRSort(e.target.value)}
+                className="tabular-nums"
+              />
+            </FormField>
+            <div className="flex items-end">
+              <Button size="sm" disabled={busy} onClick={addRegion}>
+                {t("admin.locations.btn_add_region")}
+              </Button>
+            </div>
+          </div>
+          <div className="mt-4">
+            <Table>
+              <THead>
+                <TR>
+                  <TH>{t("admin.locations.col_id")}</TH>
+                  <TH>{t("admin.locations.col_name")}</TH>
+                  <TH>{t("admin.locations.col_cities")}</TH>
+                  <TH>{t("admin.locations.col_actions")}</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {regions.length === 0 ? (
+                  <TEmpty colSpan={4}>{t("admin.locations.empty_regions")}</TEmpty>
+                ) : null}
+                {regions.map((r) => (
+                  <TR
+                    key={r.id}
+                    className={selectedRegionId === r.id ? "bg-figma-bg-1" : undefined}
+                  >
+                    <TD className="tabular-nums">{r.id}</TD>
+                    <TD>{r.name}</TD>
+                    <TD className="tabular-nums">{r.cities_count ?? "-"}</TD>
+                    <TD>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedRegionId(r.id)}
+                          className="text-xs text-primary-500 hover:underline"
+                        >
+                          {t("admin.locations.btn_select")}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => updRegion(r)}
+                          className="text-xs text-fg-t7 hover:underline disabled:opacity-40"
+                        >
+                          {t("admin.locations.btn_edit")}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => delRegion(r.id)}
+                          className="text-xs text-error-700 hover:underline disabled:opacity-40"
+                        >
+                          {t("admin.locations.btn_delete")}
+                        </button>
+                      </div>
+                    </TD>
+                  </TR>
                 ))}
-              </tbody>
-            </table>
+              </TBody>
+            </Table>
           </div>
         </section>
       )}
 
+      {/* Cities */}
       {selectedRegionId != null && (
-        <section className="mt-6 rounded border border-default bg-white p-4">
+        <section className="admin-card p-4">
           <h2 className="text-sm font-semibold">
             {t("admin.locations.section_cities").replace("{id}", String(selectedRegionId))}
           </h2>
-          <div className="mt-3 flex flex-wrap items-end gap-2 text-sm">
-            <label>
-              {t("admin.locations.field_name")}
-              <input
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+            <FormField label={t("admin.locations.field_name")} htmlFor="loc-ciname">
+              <Input
+                id="loc-ciname"
                 value={ciName}
                 onChange={(e) => setCiName(e.target.value)}
-                className="ml-1 rounded border border-default px-2 py-1"
               />
-            </label>
-            <label>
-              {t("admin.locations.field_sort")}
-              <input
+            </FormField>
+            <FormField label={t("admin.locations.field_sort")} htmlFor="loc-cisort">
+              <Input
+                id="loc-cisort"
                 value={ciSort}
                 onChange={(e) => setCiSort(e.target.value)}
-                className="ml-1 w-16 rounded border border-default px-2 py-1 tabular-nums"
+                className="tabular-nums"
               />
-            </label>
-            <label>
-              {t("admin.locations.field_lat")}
-              <input
+            </FormField>
+            <FormField label={t("admin.locations.field_lat")} htmlFor="loc-cilat">
+              <Input
+                id="loc-cilat"
                 value={ciLat}
                 onChange={(e) => setCiLat(e.target.value)}
-                className="ml-1 w-24 rounded border border-default px-2 py-1 tabular-nums"
+                className="tabular-nums"
               />
-            </label>
-            <label>
-              {t("admin.locations.field_lng")}
-              <input
+            </FormField>
+            <FormField label={t("admin.locations.field_lng")} htmlFor="loc-cilng">
+              <Input
+                id="loc-cilng"
                 value={ciLng}
                 onChange={(e) => setCiLng(e.target.value)}
-                className="ml-1 w-24 rounded border border-default px-2 py-1 tabular-nums"
+                className="tabular-nums"
               />
-            </label>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => addCity()}
-              className="rounded border border-default bg-figma-bg-1 px-3 py-1 disabled:opacity-40"
-            >
-              {t("admin.locations.btn_add_city")}
-            </button>
+            </FormField>
+            <div className="flex items-end">
+              <Button size="sm" disabled={busy} onClick={addCity}>
+                {t("admin.locations.btn_add_city")}
+              </Button>
+            </div>
           </div>
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[400px] text-left text-sm">
-              <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
-                <tr>
-                  <th className="px-2 py-2">{t("admin.locations.col_id")}</th>
-                  <th className="px-2 py-2">{t("admin.locations.col_name")}</th>
-                  <th className="px-2 py-2">{t("admin.locations.col_actions")}</th>
-                </tr>
-              </thead>
-              <tbody>
+          <div className="mt-4">
+            <Table>
+              <THead>
+                <TR>
+                  <TH>{t("admin.locations.col_id")}</TH>
+                  <TH>{t("admin.locations.col_name")}</TH>
+                  <TH>{t("admin.locations.col_actions")}</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {cities.length === 0 ? (
+                  <TEmpty colSpan={3}>{t("admin.locations.empty_cities")}</TEmpty>
+                ) : null}
                 {cities.map((x) => (
-                  <tr key={x.id} className="border-b border-default">
-                    <td className="px-2 py-2 tabular-nums">{x.id}</td>
-                    <td className="px-2 py-2">{x.name}</td>
-                    <td className="px-2 py-2">
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => updCity(x)}
-                        className="mr-2 text-xs text-fg-t7 underline disabled:opacity-40"
-                      >
-                        {t("admin.locations.btn_edit")}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => delCity(x.id)}
-                        className="text-xs text-error-700 underline disabled:opacity-40"
-                      >
-                        {t("admin.locations.btn_delete")}
-                      </button>
-                    </td>
-                  </tr>
+                  <TR key={x.id}>
+                    <TD className="tabular-nums">{x.id}</TD>
+                    <TD>{x.name}</TD>
+                    <TD>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => updCity(x)}
+                          className="text-xs text-fg-t7 hover:underline disabled:opacity-40"
+                        >
+                          {t("admin.locations.btn_edit")}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => delCity(x.id)}
+                          className="text-xs text-error-700 hover:underline disabled:opacity-40"
+                        >
+                          {t("admin.locations.btn_delete")}
+                        </button>
+                      </div>
+                    </TD>
+                  </TR>
                 ))}
-              </tbody>
-            </table>
+              </TBody>
+            </Table>
           </div>
         </section>
       )}
