@@ -1,11 +1,28 @@
 "use client";
 
+/** Phase-2 migration to shared @/components/ui primitives. */
+
 import { useEffect, useMemo, useState } from "react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useLanguage } from "@/contexts/LanguageContext";
+import {
+  Button,
+  FormField,
+  Input,
+  PageHeader,
+  Pagination,
+  Select,
+  Table,
+  TBody,
+  TD,
+  TEmpty,
+  TH,
+  THead,
+  TR,
+} from "@/components/ui";
 
 /**
  * Platform-admin audit log viewer (Sprint 53, PART 26).
@@ -129,7 +146,6 @@ export default function PlatformAuditLogsPage() {
           setRows(json.data ?? []);
           setMeta(json.meta ?? null);
         } else if (res.status === 404 || json?.message === "Not found") {
-          // Treat backend "Not found" as empty list, not as an error
           setRows([]);
           setMeta(null);
         } else {
@@ -189,7 +205,9 @@ export default function PlatformAuditLogsPage() {
         setError(json?.message ?? t("admin.platform_audit_logs.err_integrity_check"));
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("admin.platform_audit_logs.err_integrity_check"));
+      setError(
+        e instanceof Error ? e.message : t("admin.platform_audit_logs.err_integrity_check")
+      );
     } finally {
       setVerifying(false);
     }
@@ -243,9 +261,9 @@ export default function PlatformAuditLogsPage() {
 
   if (!allowed || forbidden) {
     return (
-      <div>
+      <div className="space-y-4">
         <h1 className="admin-page-title">{t("admin.platform_audit_logs.title")}</h1>
-        <div className="mt-4">
+        <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
       </div>
@@ -253,251 +271,215 @@ export default function PlatformAuditLogsPage() {
   }
 
   return (
-    <div>
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="admin-page-title">{t("admin.platform_audit_logs.title")}</h1>
-          <p className="admin-page-subtitle">
-            {t("admin.platform_audit_logs.subtitle")}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={verifyIntegrity}
-            disabled={verifying}
-            className="rounded border border-default bg-white px-3 py-1.5 text-sm hover:bg-figma-bg-1 disabled:opacity-50"
-          >
-            {verifying ? t("admin.platform_audit_logs.verifying") : t("admin.platform_audit_logs.verify_integrity")}
-          </button>
-          <button
-            type="button"
-            onClick={exportCsv}
-            disabled={rows.length === 0}
-            className="rounded border border-default bg-white px-3 py-1.5 text-sm hover:bg-figma-bg-1 disabled:opacity-50"
-          >
-            {t("admin.platform_audit_logs.export_csv_page")}
-          </button>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title={t("admin.platform_audit_logs.title")}
+        subtitle={t("admin.platform_audit_logs.subtitle")}
+        actions={
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={verifyIntegrity}
+              disabled={verifying}
+            >
+              {verifying
+                ? t("admin.platform_audit_logs.verifying")
+                : t("admin.platform_audit_logs.verify_integrity")}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportCsv}
+              disabled={rows.length === 0}
+            >
+              {t("admin.platform_audit_logs.export_csv_page")}
+            </Button>
+          </>
+        }
+      />
 
-      {error && <p className="mt-2 text-sm text-error-600">{error}</p>}
-
-      {integrity && (
-        <div
-          className={`mt-4 rounded border px-3 py-2 text-sm ${
-            integrity.is_intact
-              ? "border-success-300 bg-success-50 text-success-700"
-              : "border-error-300 bg-error-50 text-error-700"
-          }`}
-        >
-          {integrity.is_intact ? (
-            <>{t("admin.platform_audit_logs.hash_chain_intact").replace("{limit}", String(integrity.limit_checked))}</>
-          ) : (
-            <>
-              {t("admin.platform_audit_logs.tampered_detected")
-                .replace("{count}", String(integrity.corrupted_log_ids.length))
-                .replace("{limit}", String(integrity.limit_checked))}
-            </>
-          )}
+      {error && (
+        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
+          {error}
         </div>
       )}
 
-      {/* Filters */}
-      <div className="mt-6 grid gap-3 rounded border border-default bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
-        <label className="text-xs text-fg-t6">
-          {t("admin.platform_audit_logs.category")}
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="mt-1 w-full rounded border border-default px-2 py-1 text-sm"
-          >
-            <option value="">{t("common.all")}</option>
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="text-xs text-fg-t6">
-          {t("admin.platform_audit_logs.action")}
-          <input
-            value={action}
-            onChange={(e) => setAction(e.target.value)}
-            placeholder="user.login"
-            className="mt-1 w-full rounded border border-default px-2 py-1 text-sm"
-          />
-        </label>
-        <label className="text-xs text-fg-t6">
-          {t("admin.platform_audit_logs.subject_type")}
-          <input
-            value={subjectType}
-            onChange={(e) => setSubjectType(e.target.value)}
-            placeholder="App\Models\Order"
-            className="mt-1 w-full rounded border border-default px-2 py-1 text-sm"
-          />
-        </label>
-        <label className="text-xs text-fg-t6">
-          {t("admin.platform_audit_logs.subject_id")}
-          <input
-            value={subjectId}
-            onChange={(e) => setSubjectId(e.target.value)}
-            className="mt-1 w-full rounded border border-default px-2 py-1 text-sm"
-          />
-        </label>
-        <label className="text-xs text-fg-t6">
-          {t("admin.platform_audit_logs.actor_id")}
-          <input
-            value={actorId}
-            onChange={(e) => setActorId(e.target.value)}
-            className="mt-1 w-full rounded border border-default px-2 py-1 text-sm"
-          />
-        </label>
-        <label className="text-xs text-fg-t6">
-          {t("admin.platform_audit_logs.from")}
-          <input
-            type="datetime-local"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-            className="mt-1 w-full rounded border border-default px-2 py-1 text-sm"
-          />
-        </label>
-        <label className="text-xs text-fg-t6">
-          {t("admin.platform_audit_logs.to")}
-          <input
-            type="datetime-local"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            className="mt-1 w-full rounded border border-default px-2 py-1 text-sm"
-          />
-        </label>
-        <label className="text-xs text-fg-t6">
-          {t("common.search")}
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="action, subject, actor name"
-            className="mt-1 w-full rounded border border-default px-2 py-1 text-sm"
-          />
-        </label>
-        <div className="sm:col-span-2 lg:col-span-4 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={resetFilters}
-            className="rounded border border-default bg-white px-3 py-1.5 text-sm hover:bg-figma-bg-1"
-          >
+      {integrity && (
+        <div
+          className={`rounded-zulu border px-4 py-2 text-sm ${
+            integrity.is_intact
+              ? "border-success-200 bg-success-50 text-success-700"
+              : "border-error-200 bg-error-50 text-error-700"
+          }`}
+        >
+          {integrity.is_intact
+            ? t("admin.platform_audit_logs.hash_chain_intact").replace(
+                "{limit}",
+                String(integrity.limit_checked)
+              )
+            : t("admin.platform_audit_logs.tampered_detected")
+                .replace("{count}", String(integrity.corrupted_log_ids.length))
+                .replace("{limit}", String(integrity.limit_checked))}
+        </div>
+      )}
+
+      <div className="admin-card p-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <FormField label={t("admin.platform_audit_logs.category")} htmlFor="al-cat">
+            <Select
+              id="al-cat"
+              fieldSize="sm"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+            >
+              <option value="">{t("common.all")}</option>
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+          <FormField label={t("admin.platform_audit_logs.action")} htmlFor="al-action">
+            <Input
+              id="al-action"
+              value={action}
+              onChange={(e) => setAction(e.target.value)}
+              placeholder="user.login"
+            />
+          </FormField>
+          <FormField label={t("admin.platform_audit_logs.subject_type")} htmlFor="al-stype">
+            <Input
+              id="al-stype"
+              value={subjectType}
+              onChange={(e) => setSubjectType(e.target.value)}
+              placeholder="App\\Models\\Order"
+            />
+          </FormField>
+          <FormField label={t("admin.platform_audit_logs.subject_id")} htmlFor="al-sid">
+            <Input
+              id="al-sid"
+              value={subjectId}
+              onChange={(e) => setSubjectId(e.target.value)}
+            />
+          </FormField>
+          <FormField label={t("admin.platform_audit_logs.actor_id")} htmlFor="al-aid">
+            <Input
+              id="al-aid"
+              value={actorId}
+              onChange={(e) => setActorId(e.target.value)}
+            />
+          </FormField>
+          <FormField label={t("admin.platform_audit_logs.from")} htmlFor="al-from">
+            <Input
+              id="al-from"
+              type="datetime-local"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+            />
+          </FormField>
+          <FormField label={t("admin.platform_audit_logs.to")} htmlFor="al-to">
+            <Input
+              id="al-to"
+              type="datetime-local"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+            />
+          </FormField>
+          <FormField label={t("common.search")} htmlFor="al-q">
+            <Input
+              id="al-q"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="action, subject, actor name"
+            />
+          </FormField>
+        </div>
+        <div className="mt-4 flex justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={resetFilters}>
             {t("common.reset")}
-          </button>
-          <button
-            type="button"
-            onClick={applyFilters}
-            className="rounded bg-primary-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-600"
-          >
+          </Button>
+          <Button size="sm" onClick={applyFilters}>
             {t("common.apply")}
-          </button>
+          </Button>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
-        <table className="w-full min-w-[1100px] text-left text-sm">
-          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
-            <tr>
-              <th className="px-3 py-2">{t("admin.platform_audit_logs.time")}</th>
-              <th className="px-3 py-2">{t("admin.platform_audit_logs.category")}</th>
-              <th className="px-3 py-2">{t("admin.platform_audit_logs.action")}</th>
-              <th className="px-3 py-2">{t("admin.platform_audit_logs.actor")}</th>
-              <th className="px-3 py-2">{t("admin.platform_audit_logs.subject")}</th>
-              <th className="px-3 py-2">{t("admin.platform_audit_logs.ip")}</th>
-              <th className="px-3 py-2"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
-              <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-fg-t6">
-                  {t("admin.platform_audit_logs.loading")}
-                </td>
-              </tr>
-            )}
-            {!loading && rows.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-fg-t6">
-                  {t("admin.platform_audit_logs.empty")}
-                </td>
-              </tr>
-            )}
-            {rows.map((r) => (
-              <tr key={r.id} className="border-b border-default hover:bg-figma-bg-1">
-                <td className="px-3 py-2 text-xs text-fg-t7 whitespace-nowrap">
-                  {new Date(r.created_at).toLocaleString()}
-                </td>
-                <td className="px-3 py-2">
-                  <CategoryBadge category={r.category} />
-                </td>
-                <td className="px-3 py-2 font-mono text-xs">{r.action}</td>
-                <td className="px-3 py-2 text-xs">
-                  {r.actor_name_snapshot ?? r.actor_type}
-                  {r.actor_id ? <span className="text-fg-t6"> #{r.actor_id}</span> : null}
-                </td>
-                <td className="px-3 py-2 text-xs">
-                  {r.subject_type ? (
-                    <>
-                      <span className="text-fg-t6">{shortType(r.subject_type)}</span>
-                      {r.subject_id ? <span> #{r.subject_id}</span> : null}
-                    </>
-                  ) : (
-                    "—"
-                  )}
-                </td>
-                <td className="px-3 py-2 text-xs text-fg-t7">{r.ip_address ?? "—"}</td>
-                <td className="px-3 py-2 text-right">
-                  <button
-                    type="button"
-                    onClick={() => setSelected(r)}
-                    className="text-xs text-primary-500 hover:underline"
-                  >
-                    {t("admin.platform_audit_logs.details")}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Table>
+        <THead>
+          <TR>
+            <TH>{t("admin.platform_audit_logs.time")}</TH>
+            <TH>{t("admin.platform_audit_logs.category")}</TH>
+            <TH>{t("admin.platform_audit_logs.action")}</TH>
+            <TH>{t("admin.platform_audit_logs.actor")}</TH>
+            <TH>{t("admin.platform_audit_logs.subject")}</TH>
+            <TH>{t("admin.platform_audit_logs.ip")}</TH>
+            <TH />
+          </TR>
+        </THead>
+        <TBody>
+          {loading ? (
+            <TEmpty colSpan={7}>{t("admin.platform_audit_logs.loading")}</TEmpty>
+          ) : rows.length === 0 ? (
+            <TEmpty colSpan={7}>{t("admin.platform_audit_logs.empty")}</TEmpty>
+          ) : null}
+          {rows.map((r) => (
+            <TR key={r.id} onClick={() => setSelected(r)}>
+              <TD className="text-xs whitespace-nowrap">
+                {new Date(r.created_at).toLocaleString()}
+              </TD>
+              <TD>
+                <CategoryBadge category={r.category} />
+              </TD>
+              <TD className="font-mono text-xs">{r.action}</TD>
+              <TD className="text-xs">
+                {r.actor_name_snapshot ?? r.actor_type}
+                {r.actor_id ? <span className="text-fg-t6"> #{r.actor_id}</span> : null}
+              </TD>
+              <TD className="text-xs">
+                {r.subject_type ? (
+                  <>
+                    <span className="text-fg-t6">{shortType(r.subject_type)}</span>
+                    {r.subject_id ? <span> #{r.subject_id}</span> : null}
+                  </>
+                ) : (
+                  "—"
+                )}
+              </TD>
+              <TD className="text-xs">{r.ip_address ?? "—"}</TD>
+              <TD align="right" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  onClick={() => setSelected(r)}
+                  className="text-xs text-primary-500 hover:underline"
+                >
+                  {t("admin.platform_audit_logs.details")}
+                </button>
+              </TD>
+            </TR>
+          ))}
+        </TBody>
+      </Table>
 
-      {/* Pagination */}
       {meta && meta.last_page > 1 && (
-        <div className="mt-3 flex items-center justify-between text-sm">
-          <span className="text-fg-t6">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-xs text-fg-t6">
             {t("admin.platform_audit_logs.pagination")
               .replace("{page}", String(meta.current_page))
               .replace("{lastPage}", String(meta.last_page))
               .replace("{total}", meta.total.toLocaleString())}
           </span>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1}
-              className="rounded border border-default bg-white px-3 py-1 disabled:opacity-50"
-            >
-              {t("common.prev")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.min(meta.last_page, p + 1))}
-              disabled={page >= meta.last_page}
-              className="rounded border border-default bg-white px-3 py-1 disabled:opacity-50"
-            >
-              {t("common.next")}
-            </button>
-          </div>
+          <Pagination
+            page={meta.current_page}
+            lastPage={meta.last_page}
+            onPage={setPage}
+            prevLabel={t("common.prev")}
+            nextLabel={t("common.next")}
+          />
         </div>
       )}
 
-      {/* Detail drawer */}
       {selected && (
         <div
           className="fixed inset-0 z-50 flex justify-end bg-black/30"
@@ -509,7 +491,9 @@ export default function PlatformAuditLogsPage() {
           >
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-lg font-semibold">{t("admin.platform_audit_logs.entry")}</h2>
+                <h2 className="text-lg font-semibold">
+                  {t("admin.platform_audit_logs.entry")}
+                </h2>
                 <p className="mt-1 font-mono text-xs text-fg-t6 break-all">{selected.id}</p>
               </div>
               <button
@@ -522,9 +506,18 @@ export default function PlatformAuditLogsPage() {
               </button>
             </div>
             <dl className="mt-4 space-y-2 text-sm">
-              <DetailRow label={t("admin.platform_audit_logs.time")} value={new Date(selected.created_at).toLocaleString()} />
-              <DetailRow label={t("admin.platform_audit_logs.category")} value={selected.category} />
-              <DetailRow label={t("admin.platform_audit_logs.action")} value={selected.action} />
+              <DetailRow
+                label={t("admin.platform_audit_logs.time")}
+                value={new Date(selected.created_at).toLocaleString()}
+              />
+              <DetailRow
+                label={t("admin.platform_audit_logs.category")}
+                value={selected.category}
+              />
+              <DetailRow
+                label={t("admin.platform_audit_logs.action")}
+                value={selected.action}
+              />
               <DetailRow
                 label={t("admin.platform_audit_logs.actor")}
                 value={
@@ -539,18 +532,31 @@ export default function PlatformAuditLogsPage() {
                 label={t("admin.platform_audit_logs.subject")}
                 value={
                   selected.subject_type
-                    ? `${selected.subject_type}${selected.subject_id ? " #" + selected.subject_id : ""}`
+                    ? `${selected.subject_type}${
+                        selected.subject_id ? " #" + selected.subject_id : ""
+                      }`
                     : "—"
                 }
               />
-              <DetailRow label={t("admin.platform_audit_logs.ip")} value={selected.ip_address ?? "—"} />
-              <DetailRow label={t("admin.platform_audit_logs.request_id")} value={selected.request_id ?? "—"} />
+              <DetailRow
+                label={t("admin.platform_audit_logs.ip")}
+                value={selected.ip_address ?? "—"}
+              />
+              <DetailRow
+                label={t("admin.platform_audit_logs.request_id")}
+                value={selected.request_id ?? "—"}
+              />
               <DetailRow
                 label={t("admin.platform_audit_logs.user_agent")}
                 value={selected.user_agent ?? "—"}
                 mono
               />
-              <DetailRow label={t("admin.platform_audit_logs.hash")} value={selected.hash} mono small />
+              <DetailRow
+                label={t("admin.platform_audit_logs.hash")}
+                value={selected.hash}
+                mono
+                small
+              />
               <DetailRow
                 label={t("admin.platform_audit_logs.previous_hash")}
                 value={selected.previous_log_hash ?? "—"}
@@ -563,7 +569,7 @@ export default function PlatformAuditLogsPage() {
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-fg-t6">
                   {t("admin.platform_audit_logs.changes")}
                 </h3>
-                <pre className="mt-1 overflow-x-auto rounded bg-figma-bg-1 p-3 font-mono text-xs">
+                <pre className="mt-1 overflow-x-auto rounded-zulu bg-figma-bg-1 p-3 font-mono text-xs">
                   {JSON.stringify(selected.changes, null, 2)}
                 </pre>
               </div>
@@ -573,7 +579,7 @@ export default function PlatformAuditLogsPage() {
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-fg-t6">
                   {t("admin.platform_audit_logs.context")}
                 </h3>
-                <pre className="mt-1 overflow-x-auto rounded bg-figma-bg-1 p-3 font-mono text-xs">
+                <pre className="mt-1 overflow-x-auto rounded-zulu bg-figma-bg-1 p-3 font-mono text-xs">
                   {JSON.stringify(selected.context, null, 2)}
                 </pre>
               </div>
