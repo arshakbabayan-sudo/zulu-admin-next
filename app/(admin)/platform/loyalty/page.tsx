@@ -1,11 +1,28 @@
 "use client";
 
+/** Phase-2 migration to shared @/components/ui primitives. */
+
 import { useEffect, useMemo, useState } from "react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useLanguage } from "@/contexts/LanguageContext";
+import {
+  Button,
+  FormField,
+  Input,
+  PageHeader,
+  Pagination,
+  Select,
+  Table,
+  TBody,
+  TD,
+  TEmpty,
+  TH,
+  THead,
+  TR,
+} from "@/components/ui";
 
 /**
  * Platform-admin loyalty oversight (Sprint 58, PART 27).
@@ -185,7 +202,6 @@ export default function PlatformLoyaltyPage() {
       );
       const json = await res.json();
       if (json?.success) {
-        // Refresh detail
         await openDetail(selected);
         setAppliedFilters((n) => n + 1);
       } else {
@@ -200,9 +216,9 @@ export default function PlatformLoyaltyPage() {
 
   if (!allowed || forbidden) {
     return (
-      <div>
+      <div className="space-y-4">
         <h1 className="admin-page-title">{t("admin.platform_loyalty.title")}</h1>
-        <div className="mt-4">
+        <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
       </div>
@@ -210,16 +226,24 @@ export default function PlatformLoyaltyPage() {
   }
 
   return (
-    <div>
-      <h1 className="admin-page-title">{t("admin.platform_loyalty.title")}</h1>
-      <p className="admin-page-subtitle">{t("admin.platform_loyalty.subtitle")}</p>
+    <div className="space-y-6">
+      <PageHeader
+        title={t("admin.platform_loyalty.title")}
+        subtitle={t("admin.platform_loyalty.subtitle")}
+      />
 
-      {error && <p className="mt-2 text-sm text-error-600">{error}</p>}
+      {error && (
+        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
+          {error}
+        </div>
+      )}
 
-      {/* Stats */}
       {stats && (
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label={t("admin.platform_loyalty.accounts")} value={stats.total_accounts.toLocaleString()} />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard
+            label={t("admin.platform_loyalty.accounts")}
+            value={stats.total_accounts.toLocaleString()}
+          />
           <StatCard
             label={t("admin.platform_loyalty.points_outstanding")}
             value={stats.total_points_outstanding.toLocaleString()}
@@ -230,162 +254,135 @@ export default function PlatformLoyaltyPage() {
           />
           <StatCard
             label={t("admin.platform_loyalty.gold_plus_platinum")}
-            value={String(
-              (stats.by_tier?.gold ?? 0) + (stats.by_tier?.platinum ?? 0)
-            )}
+            value={String((stats.by_tier?.gold ?? 0) + (stats.by_tier?.platinum ?? 0))}
             tone="good"
           />
         </div>
       )}
 
-      {/* Tier distribution */}
       {stats && (
-        <div className="mt-4 grid gap-2 sm:grid-cols-4">
-          {TIERS.map((t) => (
-            <div key={t} className="rounded border border-default bg-white p-3">
+        <div className="grid gap-2 sm:grid-cols-4">
+          {TIERS.map((tn) => (
+            <div key={tn} className="admin-card p-3">
               <div className="text-xs font-semibold uppercase tracking-wide text-fg-t6">
-                {t}
+                {t(`admin.platform_loyalty.tier_${tn}`)}
               </div>
               <div className="mt-1 text-lg font-bold tabular-nums">
-                {(stats.by_tier?.[t] ?? 0).toLocaleString()}
+                {(stats.by_tier?.[tn] ?? 0).toLocaleString()}
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Filters */}
-      <div className="mt-6 flex flex-wrap items-end gap-3 rounded border border-default bg-white p-4">
-        <label className="text-xs text-fg-t6">
-          {t("admin.platform_loyalty.tier")}
-          <select
-            value={tier}
-            onChange={(e) => setTier(e.target.value)}
-            className="mt-1 block rounded border border-default px-2 py-1 text-sm"
-          >
-            <option value="">{t("common.all")}</option>
-            {TIERS.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button
-          type="button"
-          onClick={() => {
-            setPage(1);
-            setAppliedFilters((n) => n + 1);
-          }}
-          className="rounded bg-primary-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-600"
-        >
-          {t("common.apply")}
-        </button>
-        {tier && (
-          <button
-            type="button"
+      <div className="admin-card p-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <FormField label={t("admin.platform_loyalty.tier")} htmlFor="l-tier">
+            <Select
+              id="l-tier"
+              fieldSize="sm"
+              value={tier}
+              onChange={(e) => setTier(e.target.value)}
+            >
+              <option value="">{t("common.all")}</option>
+              {TIERS.map((tn) => (
+                <option key={tn} value={tn}>
+                  {t(`admin.platform_loyalty.tier_${tn}`)}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+        </div>
+        <div className="mt-4 flex justify-end gap-2">
+          {tier && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setTier("");
+                setPage(1);
+                setAppliedFilters((n) => n + 1);
+              }}
+            >
+              {t("common.reset")}
+            </Button>
+          )}
+          <Button
+            size="sm"
             onClick={() => {
-              setTier("");
               setPage(1);
               setAppliedFilters((n) => n + 1);
             }}
-            className="rounded border border-default bg-white px-3 py-1.5 text-sm hover:bg-figma-bg-1"
           >
-            {t("common.reset")}
-          </button>
-        )}
+            {t("common.apply")}
+          </Button>
+        </div>
       </div>
 
-      {/* Table */}
-      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
-        <table className="w-full min-w-[900px] text-left text-sm">
-          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
-            <tr>
-              <th className="px-3 py-2">{t("admin.platform_loyalty.user")}</th>
-              <th className="px-3 py-2">{t("admin.platform_loyalty.tier")}</th>
-              <th className="px-3 py-2 text-right">{t("admin.platform_loyalty.points_balance")}</th>
-              <th className="px-3 py-2 text-right">{t("admin.platform_loyalty.lifetime_points")}</th>
-              <th className="px-3 py-2"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
-              <tr>
-                <td colSpan={5} className="px-3 py-6 text-center text-fg-t6">
-                  {t("admin.platform_loyalty.loading")}
-                </td>
-              </tr>
-            )}
-            {!loading && accounts.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-3 py-6 text-center text-fg-t6">
-                  {t("admin.platform_loyalty.empty")}
-                </td>
-              </tr>
-            )}
-            {accounts.map((a) => (
-              <tr key={a.id} className="border-b border-default hover:bg-figma-bg-1">
-                <td className="px-3 py-2 text-xs">
-                  {a.user?.name ?? `#${a.user_id}`}
-                  {a.user?.email && (
-                    <div className="text-fg-t6">{a.user.email}</div>
-                  )}
-                </td>
-                <td className="px-3 py-2">
-                  <TierBadge tier={a.tier} />
-                </td>
-                <td className="px-3 py-2 text-right tabular-nums">
-                  {a.points_balance.toLocaleString()}
-                </td>
-                <td className="px-3 py-2 text-right tabular-nums text-fg-t7">
-                  {a.lifetime_points.toLocaleString()}
-                </td>
-                <td className="px-3 py-2 text-right">
-                  <button
-                    type="button"
-                    onClick={() => openDetail(a)}
-                    className="text-xs text-primary-500 hover:underline"
-                  >
-                    {t("admin.platform_loyalty.manage")}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Table>
+        <THead>
+          <TR>
+            <TH>{t("admin.platform_loyalty.user")}</TH>
+            <TH>{t("admin.platform_loyalty.tier")}</TH>
+            <TH align="right">{t("admin.platform_loyalty.points_balance")}</TH>
+            <TH align="right">{t("admin.platform_loyalty.lifetime_points")}</TH>
+            <TH />
+          </TR>
+        </THead>
+        <TBody>
+          {loading ? (
+            <TEmpty colSpan={5}>{t("admin.platform_loyalty.loading")}</TEmpty>
+          ) : accounts.length === 0 ? (
+            <TEmpty colSpan={5}>{t("admin.platform_loyalty.empty")}</TEmpty>
+          ) : null}
+          {accounts.map((a) => (
+            <TR key={a.id} onClick={() => openDetail(a)}>
+              <TD className="text-xs">
+                {a.user?.name ?? `#${a.user_id}`}
+                {a.user?.email && <div className="text-fg-t6">{a.user.email}</div>}
+              </TD>
+              <TD>
+                <TierBadge tier={a.tier} />
+              </TD>
+              <TD align="right" className="tabular-nums">
+                {a.points_balance.toLocaleString()}
+              </TD>
+              <TD align="right" className="tabular-nums">
+                {a.lifetime_points.toLocaleString()}
+              </TD>
+              <TD align="right" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  onClick={() => openDetail(a)}
+                  className="text-xs text-primary-500 hover:underline"
+                >
+                  {t("admin.platform_loyalty.manage")}
+                </button>
+              </TD>
+            </TR>
+          ))}
+        </TBody>
+      </Table>
 
-      {/* Pagination */}
       {lastPage > 1 && (
-        <div className="mt-3 flex items-center justify-between text-sm">
-          <span className="text-fg-t6">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-xs text-fg-t6">
             {t("admin.platform_loyalty.pagination")
               .replace("{page}", String(page))
               .replace("{lastPage}", String(lastPage))
               .replace("{total}", total.toLocaleString())}
           </span>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1}
-              className="rounded border border-default bg-white px-3 py-1 disabled:opacity-50"
-            >
-              {t("common.prev")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
-              disabled={page >= lastPage}
-              className="rounded border border-default bg-white px-3 py-1 disabled:opacity-50"
-            >
-              {t("common.next")}
-            </button>
-          </div>
+          <Pagination
+            page={page}
+            lastPage={lastPage}
+            onPage={setPage}
+            prevLabel={t("common.prev")}
+            nextLabel={t("common.next")}
+          />
         </div>
       )}
 
-      {/* Detail drawer */}
+      {/* Detail drawer (kept custom right-side drawer; Drawer primitive will replace later) */}
       {selected && (
         <div
           className="fixed inset-0 z-50 flex justify-end bg-black/30"
@@ -415,96 +412,118 @@ export default function PlatformLoyaltyPage() {
             </div>
 
             <div className="mt-4 grid grid-cols-3 gap-3">
-              <div className="rounded border border-default p-3">
-                <div className="text-xs text-fg-t6">{t("admin.platform_loyalty.tier")}</div>
+              <div className="admin-card p-3">
+                <div className="text-xs text-fg-t6">
+                  {t("admin.platform_loyalty.tier")}
+                </div>
                 <div className="mt-1">
                   <TierBadge tier={selected.tier} />
                 </div>
               </div>
-              <div className="rounded border border-default p-3">
-                <div className="text-xs text-fg-t6">{t("admin.platform_loyalty.balance")}</div>
+              <div className="admin-card p-3">
+                <div className="text-xs text-fg-t6">
+                  {t("admin.platform_loyalty.balance")}
+                </div>
                 <div className="mt-1 text-lg font-bold tabular-nums">
                   {selected.points_balance.toLocaleString()}
                 </div>
               </div>
-              <div className="rounded border border-default p-3">
-                <div className="text-xs text-fg-t6">{t("admin.platform_loyalty.lifetime")}</div>
+              <div className="admin-card p-3">
+                <div className="text-xs text-fg-t6">
+                  {t("admin.platform_loyalty.lifetime")}
+                </div>
                 <div className="mt-1 text-lg font-bold tabular-nums">
                   {selected.lifetime_points.toLocaleString()}
                 </div>
               </div>
             </div>
 
-            {/* Manual adjust */}
-            <div className="mt-6 rounded border border-default bg-figma-bg-1 p-4">
-              <h3 className="text-sm font-semibold">{t("admin.platform_loyalty.manual_adjust")}</h3>
+            <div className="mt-6 rounded-zulu border border-default bg-figma-bg-1 p-4">
+              <h3 className="text-sm font-semibold">
+                {t("admin.platform_loyalty.manual_adjust")}
+              </h3>
               <p className="mt-1 text-xs text-fg-t6">
                 {t("admin.platform_loyalty.manual_adjust_help")}
               </p>
-              <div className="mt-3 grid grid-cols-3 gap-2">
-                <input
-                  type="number"
-                  value={adjustPoints}
-                  onChange={(e) => setAdjustPoints(e.target.value)}
-                  placeholder={t("admin.platform_loyalty.points_placeholder")}
-                  className="rounded border border-default px-2 py-1 text-sm"
-                />
-                <input
-                  value={adjustReason}
-                  onChange={(e) => setAdjustReason(e.target.value)}
-                  placeholder={t("admin.platform_loyalty.reason")}
-                  className="col-span-2 rounded border border-default px-2 py-1 text-sm"
-                />
+              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                <FormField
+                  label={t("admin.platform_loyalty.points_placeholder")}
+                  htmlFor="l-points"
+                >
+                  <Input
+                    id="l-points"
+                    type="number"
+                    value={adjustPoints}
+                    onChange={(e) => setAdjustPoints(e.target.value)}
+                  />
+                </FormField>
+                <FormField
+                  label={t("admin.platform_loyalty.reason")}
+                  htmlFor="l-reason"
+                  className="sm:col-span-2"
+                >
+                  <Input
+                    id="l-reason"
+                    value={adjustReason}
+                    onChange={(e) => setAdjustReason(e.target.value)}
+                  />
+                </FormField>
               </div>
-              <button
-                type="button"
-                onClick={submitAdjust}
-                disabled={actionLoading || !adjustPoints || !adjustReason.trim()}
-                className="mt-3 rounded bg-primary-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-600 disabled:opacity-50"
-              >
-                {actionLoading ? t("admin.platform_loyalty.applying") : t("admin.platform_loyalty.apply_adjustment")}
-              </button>
+              <div className="mt-3 flex justify-end">
+                <Button
+                  size="sm"
+                  onClick={submitAdjust}
+                  disabled={actionLoading || !adjustPoints || !adjustReason.trim()}
+                >
+                  {actionLoading
+                    ? t("admin.platform_loyalty.applying")
+                    : t("admin.platform_loyalty.apply_adjustment")}
+                </Button>
+              </div>
             </div>
 
-            {/* Transactions */}
             <div className="mt-6">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-fg-t6">
-                {t("admin.platform_loyalty.transactions")} {selected.transactions && `(${selected.transactions.length})`}
+                {t("admin.platform_loyalty.transactions")}{" "}
+                {selected.transactions && `(${selected.transactions.length})`}
               </h3>
               {(!selected.transactions || selected.transactions.length === 0) && (
-                <p className="mt-2 text-xs text-fg-t6">{t("admin.platform_loyalty.no_transactions")}</p>
+                <p className="mt-2 text-xs text-fg-t6">
+                  {t("admin.platform_loyalty.no_transactions")}
+                </p>
               )}
               {selected.transactions && selected.transactions.length > 0 && (
-                <div className="mt-2 max-h-96 overflow-y-auto rounded border border-default">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-figma-bg-1 text-fg-t7">
-                      <tr>
-                        <th className="px-2 py-1">{t("admin.platform_loyalty.when")}</th>
-                        <th className="px-2 py-1">{t("admin.platform_loyalty.type")}</th>
-                        <th className="px-2 py-1 text-right">{t("admin.platform_loyalty.points")}</th>
-                        <th className="px-2 py-1">{t("admin.platform_loyalty.reason")}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selected.transactions.map((t) => (
-                        <tr key={t.id} className="border-t border-default">
-                          <td className="px-2 py-1">
-                            {new Date(t.created_at).toLocaleString()}
-                          </td>
-                          <td className="px-2 py-1">{t.type}</td>
-                          <td
-                            className={`px-2 py-1 text-right tabular-nums font-mono ${
-                              t.points > 0 ? "text-success-700" : "text-error-700"
+                <div className="mt-2 max-h-96 overflow-y-auto">
+                  <Table className="min-w-0">
+                    <THead>
+                      <TR>
+                        <TH>{t("admin.platform_loyalty.when")}</TH>
+                        <TH>{t("admin.platform_loyalty.type")}</TH>
+                        <TH align="right">{t("admin.platform_loyalty.points")}</TH>
+                        <TH>{t("admin.platform_loyalty.reason")}</TH>
+                      </TR>
+                    </THead>
+                    <TBody>
+                      {selected.transactions.map((tx) => (
+                        <TR key={tx.id}>
+                          <TD className="text-xs whitespace-nowrap">
+                            {new Date(tx.created_at).toLocaleString()}
+                          </TD>
+                          <TD className="text-xs">{tx.type}</TD>
+                          <TD
+                            align="right"
+                            className={`tabular-nums font-mono text-xs ${
+                              tx.points > 0 ? "text-success-700" : "text-error-700"
                             }`}
                           >
-                            {t.points > 0 ? "+" : ""}
-                            {t.points.toLocaleString()}
-                          </td>
-                          <td className="px-2 py-1">{t.reason ?? "—"}</td>
-                        </tr>
+                            {tx.points > 0 ? "+" : ""}
+                            {tx.points.toLocaleString()}
+                          </TD>
+                          <TD className="text-xs">{tx.reason ?? "—"}</TD>
+                        </TR>
                       ))}
-                    </tbody>
-                  </table>
+                    </TBody>
+                  </Table>
                 </div>
               )}
             </div>
@@ -532,8 +551,12 @@ function StatCard({
         : "text-fg-t11";
   return (
     <div className="admin-card p-4">
-      <div className="text-xs font-semibold uppercase tracking-wide text-fg-t6">{label}</div>
-      <div className={`mt-2 text-2xl font-bold tabular-nums ${toneClass}`}>{value}</div>
+      <div className="text-xs font-semibold uppercase tracking-wide text-fg-t6">
+        {label}
+      </div>
+      <div className={`mt-2 text-2xl font-bold tabular-nums ${toneClass}`}>
+        {value}
+      </div>
     </div>
   );
 }
@@ -549,7 +572,9 @@ function TierBadge({ tier }: { tier: string }) {
           ? "bg-figma-bg-1 text-fg-t11"
           : "bg-figma-bg-1 text-fg-t7";
   return (
-    <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium uppercase ${tone}`}>
+    <span
+      className={`inline-block rounded px-2 py-0.5 text-xs font-medium uppercase ${tone}`}
+    >
       {t(`admin.platform_loyalty.tier_${tier}`)}
     </span>
   );
