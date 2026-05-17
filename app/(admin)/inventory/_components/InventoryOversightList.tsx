@@ -1,7 +1,11 @@
 "use client";
 
+/**
+ * Phase-2 migration to shared @/components/ui primitives. Single migration
+ * here cascades to all 5 inventory pages (hotels/flights/cars/excursions/transfers).
+ */
+
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
-import { PaginationBar } from "@/components/PaginationBar";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { userHasPermission } from "@/lib/access";
 import type { ApiListMeta } from "@/lib/api-envelope";
@@ -9,6 +13,17 @@ import { ApiRequestError } from "@/lib/api-client";
 import type { OperatorInventorySegment } from "@/lib/operator-inventory-api";
 import { apiOperatorInventoryList } from "@/lib/operator-inventory-api";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  PageHeader,
+  Pagination,
+  Table,
+  TBody,
+  TD,
+  TEmpty,
+  TH,
+  THead,
+  TR,
+} from "@/components/ui";
 
 export type InventoryColumn = {
   header: string;
@@ -61,7 +76,6 @@ export function InventoryOversightList({
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
       else if (e instanceof ApiRequestError && (e.status === 404 || e.message === "Not found")) {
-        // Treat backend "Not found" as empty list, not as an error
         setRows([]);
         setMeta(null);
       } else {
@@ -91,16 +105,10 @@ export function InventoryOversightList({
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="admin-page-title">{title}</h1>
-          {meta && (
-            <p className="mt-1 text-sm text-fg-t6">
-              {meta.total} total · page {meta.current_page} of {meta.last_page}
-            </p>
-          )}
-        </div>
-      </header>
+      <PageHeader
+        title={title}
+        subtitle={meta ? `${meta.total} total · page ${meta.current_page} of ${meta.last_page}` : undefined}
+      />
 
       {filterBar ? (
         <div className="admin-card p-4">
@@ -108,49 +116,42 @@ export function InventoryOversightList({
         </div>
       ) : null}
 
-      {err && (
-        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
-          {err}
-        </div>
-      )}
+      {err ? (
+        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
+      ) : null}
 
-      <div className={`admin-card overflow-hidden transition-opacity ${isLoading ? "opacity-50 pointer-events-none" : "opacity-100"}`}>
-        <div className="overflow-x-auto">
-        <table className="w-full min-w-[720px] text-left text-sm">
-          <thead className="border-b border-default bg-figma-bg-1 text-xs font-medium uppercase tracking-wide text-fg-t6">
-            <tr>
+      <div className={`transition-opacity ${isLoading ? "opacity-50 pointer-events-none" : "opacity-100"}`}>
+        <Table>
+          <THead>
+            <TR>
               {columns.map((c, idx) => (
-                <th key={`h-${idx}-${c.header}`} className="px-4 py-3">
-                  {c.header}
-                </th>
+                <TH key={`h-${idx}-${c.header}`}>{c.header}</TH>
               ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && !isLoading && (
-              <tr>
-                <td colSpan={columns.length} className="px-4 py-12 text-center text-sm text-fg-t6">
-                  No items found.
-                </td>
-              </tr>
-            )}
+            </TR>
+          </THead>
+          <TBody>
+            {rows.length === 0 && !isLoading ? (
+              <TEmpty colSpan={columns.length}>No items found.</TEmpty>
+            ) : null}
             {rows.map((r, i) => {
               const key = typeof r.id === "number" || typeof r.id === "string" ? String(r.id) : `row-${i}`;
               return (
-                <tr key={key} className="border-b border-default last:border-0 hover:bg-figma-bg-1">
+                <TR key={key}>
                   {columns.map((c, ci) => (
-                    <td key={`c-${key}-${ci}`} className="max-w-[280px] truncate px-4 py-3">
+                    <TD key={`c-${key}-${ci}`} className="max-w-[280px] truncate">
                       {c.getCell(r)}
-                    </td>
+                    </TD>
                   ))}
-                </tr>
+                </TR>
               );
             })}
-          </tbody>
-        </table>
-        </div>
+          </TBody>
+        </Table>
       </div>
-      {meta && <PaginationBar meta={meta} onPage={setPage} />}
+
+      {meta && meta.last_page > 1 ? (
+        <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />
+      ) : null}
     </div>
   );
 }
