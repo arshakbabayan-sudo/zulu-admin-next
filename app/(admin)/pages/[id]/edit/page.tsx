@@ -1,5 +1,12 @@
 "use client";
 
+/**
+ * Phase-2 migration to shared @/components/ui primitives + brand cleanup.
+ *
+ * Replaces the violet-* Triprex palette this file inherited with ZULU primary
+ * tokens via Button / Switch / Checkbox / FormField primitives.
+ */
+
 import Link from "next/link";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
@@ -17,6 +24,16 @@ import {
   type AdminWidgetContentRow,
 } from "@/lib/pages-api";
 import { apiAdminLanguages, type LocalizationLanguageRow } from "@/lib/localization-api";
+import {
+  Button,
+  Checkbox,
+  FormField,
+  Input,
+  PageHeader,
+  StatusPill,
+  Switch,
+} from "@/components/ui";
+import { ArrowLeft } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { WidgetForm } from "./WidgetForm";
@@ -59,9 +76,14 @@ function getPageTranslation(page: AdminPageDetailRow | null, lang: string) {
   return (page.translations ?? []).find((row) => normalizeLangCode(row.lang) === code) ?? null;
 }
 
-function getWidgetTranslatedContent(widget: AdminWidgetContentRow, lang: string): Record<string, unknown> | null {
+function getWidgetTranslatedContent(
+  widget: AdminWidgetContentRow,
+  lang: string
+): Record<string, unknown> | null {
   const code = normalizeLangCode(lang);
-  const match = (widget.translations ?? []).find((row) => normalizeLangCode(row.lang) === code);
+  const match = (widget.translations ?? []).find(
+    (row) => normalizeLangCode(row.lang) === code
+  );
   return match?.widget_content ?? null;
 }
 
@@ -73,41 +95,6 @@ function isValidWidgetContentPayload(value: unknown): value is Record<string, un
   } catch {
     return false;
   }
-}
-
-function statusBadge(active: boolean): string {
-  return active
-    ? "inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700"
-    : "inline-flex items-center rounded-full bg-figma-bg-1 px-2 py-0.5 text-xs font-medium text-fg-t7";
-}
-
-function Toggle({
-  checked,
-  onChange,
-  disabled,
-}: {
-  checked: boolean;
-  onChange: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      disabled={disabled}
-      onClick={onChange}
-      className={`relative h-6 w-11 rounded-full transition ${
-        checked ? "bg-violet-600" : "bg-slate-300"
-      } ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
-    >
-      <span
-        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ${
-          checked ? "left-[22px]" : "left-0.5"
-        }`}
-      />
-    </button>
-  );
 }
 
 export default function AdminPageEditorLayoutPage() {
@@ -164,16 +151,19 @@ export default function AdminPageEditorLayoutPage() {
       setPage(pageRes.data);
       const enabledLanguages = (langRes.data ?? [])
         .filter((lang) => lang.is_enabled !== false)
-        .sort((a, b) => Number(b.is_default) - Number(a.is_default) || a.sort_order - b.sort_order);
+        .sort(
+          (a, b) =>
+            Number(b.is_default) - Number(a.is_default) || a.sort_order - b.sort_order
+        );
       setLanguages(enabledLanguages);
       const defaultLangCode = normalizeLangCode(
-        enabledLanguages.find((lang) => lang.is_default)?.code ?? "en",
+        enabledLanguages.find((lang) => lang.is_default)?.code ?? "en"
       );
       setDefaultLanguage(defaultLangCode);
       setActiveLanguage((prev) => {
         const normalizedPrev = normalizeLangCode(prev);
         const exists = enabledLanguages.some(
-          (lang) => normalizeLangCode(lang.code) === normalizedPrev,
+          (lang) => normalizeLangCode(lang.code) === normalizedPrev
         );
         return exists ? normalizedPrev : defaultLangCode;
       });
@@ -194,15 +184,19 @@ export default function AdminPageEditorLayoutPage() {
 
   useEffect(() => {
     if (!page) return;
-    const isDefault = normalizeLangCode(activeLanguage) === normalizeLangCode(defaultLanguage);
+    const isDefault =
+      normalizeLangCode(activeLanguage) === normalizeLangCode(defaultLanguage);
     const translated = isDefault ? null : getPageTranslation(page, activeLanguage);
     setMenuName(translated?.page_name ?? (isDefault ? page.page_name ?? "" : ""));
     setSlugName(translated?.page_slug ?? (isDefault ? page.page_slug ?? "" : ""));
     setMetaTitle(translated?.meta_title ?? (isDefault ? page.meta_title ?? "" : ""));
     setMetaKeywords(
-      (translated?.meta_keywords ?? (isDefault ? page.meta_keywords : []))?.join(", ") ?? "",
+      (translated?.meta_keywords ?? (isDefault ? page.meta_keywords : []))?.join(", ") ??
+        ""
     );
-    setMetaDescription(translated?.meta_description ?? (isDefault ? page.meta_description ?? "" : ""));
+    setMetaDescription(
+      translated?.meta_description ?? (isDefault ? page.meta_description ?? "" : "")
+    );
   }, [page, activeLanguage, defaultLanguage]);
 
   async function saveHeaderPatch(
@@ -245,9 +239,10 @@ export default function AdminPageEditorLayoutPage() {
           ? {
               ...prev,
               ...res.data,
-              translations: (res.data as AdminPageDetailRow).translations ?? prev.translations,
+              translations:
+                (res.data as AdminPageDetailRow).translations ?? prev.translations,
             }
-          : prev,
+          : prev
       );
       setMenuName(payload.page_name ?? "");
       setSlugName(payload.page_slug ?? "");
@@ -275,7 +270,9 @@ export default function AdminPageEditorLayoutPage() {
       });
       setPage((prev) => (prev ? { ...prev, status: res.data.status } : prev));
     } catch (e) {
-      setErr(e instanceof ApiRequestError ? e.message : "Failed to update published status");
+      setErr(
+        e instanceof ApiRequestError ? e.message : "Failed to update published status"
+      );
     } finally {
       setBusyAction(null);
     }
@@ -320,7 +317,9 @@ export default function AdminPageEditorLayoutPage() {
         return { ...prev, widget_contents: next };
       });
     } catch (e) {
-      setErr(e instanceof ApiRequestError ? e.message : "Failed to update widget status");
+      setErr(
+        e instanceof ApiRequestError ? e.message : "Failed to update widget status"
+      );
     } finally {
       setBusyAction(null);
     }
@@ -337,7 +336,9 @@ export default function AdminPageEditorLayoutPage() {
         if (!prev) return prev;
         return {
           ...prev,
-          widget_contents: (prev.widget_contents ?? []).filter((w) => w.id !== widget.id),
+          widget_contents: (prev.widget_contents ?? []).filter(
+            (w) => w.id !== widget.id
+          ),
         };
       });
       setOpenWidgetId((prev) => (prev === widget.id ? null : prev));
@@ -386,13 +387,16 @@ export default function AdminPageEditorLayoutPage() {
         return { ...prev, widget_contents: next };
       });
     } catch (e) {
-      setErr(e instanceof ApiRequestError ? e.message : "Failed to save widget content");
+      setErr(
+        e instanceof ApiRequestError ? e.message : "Failed to save widget content"
+      );
     } finally {
       setSavingWidgetId(null);
     }
   }
 
-  const isDefaultLanguage = normalizeLangCode(activeLanguage) === normalizeLangCode(defaultLanguage);
+  const isDefaultLanguage =
+    normalizeLangCode(activeLanguage) === normalizeLangCode(defaultLanguage);
   const hasPageTranslation = !!getPageTranslation(page, activeLanguage);
 
   function copyPageFieldsFromDefault() {
@@ -411,14 +415,22 @@ export default function AdminPageEditorLayoutPage() {
     void saveWidgetContent(widgetId, source.widget_content ?? {});
   }
 
+  const backLink = (
+    <Link
+      href="/pages"
+      className="inline-flex items-center gap-1 text-xs text-primary-500 hover:underline"
+    >
+      <ArrowLeft className="h-3 w-3" />
+      {t("admin.pages.back_to_pages")}
+    </Link>
+  );
+
   if (!allowed || forbidden) {
     return (
-      <div>
-        <Link href="/pages" className="mb-2 inline-flex items-center gap-1 text-xs text-violet-700 hover:underline">
-          {t("admin.pages.back_to_pages")}
-        </Link>
+      <div className="space-y-4">
+        {backLink}
         <h1 className="admin-page-title">{t("admin.pages.editor.title")}</h1>
-        <div className="mt-4">
+        <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
       </div>
@@ -427,26 +439,51 @@ export default function AdminPageEditorLayoutPage() {
 
   if (!Number.isFinite(pageId) || pageId <= 0) {
     return (
-      <div>
-        <Link href="/pages" className="mb-2 inline-flex items-center gap-1 text-xs text-violet-700 hover:underline">
-          {t("admin.pages.back_to_pages")}
-        </Link>
+      <div className="space-y-3">
+        {backLink}
         <p className="text-sm text-error-600">Invalid page id.</p>
       </div>
     );
   }
 
   return (
-    <div>
-      <Link href="/pages" className="mb-2 inline-flex items-center gap-1 text-xs text-violet-700 hover:underline">
-        {t("admin.pages.back_to_pages")}
-      </Link>
-      <h1 className="admin-page-title">{t("admin.pages.editor.title")}</h1>
-      <div className="mt-3 rounded border border-default bg-white p-3">
+    <div className="space-y-5">
+      <div className="space-y-2">
+        {backLink}
+        <PageHeader
+          title={t("admin.pages.editor.title")}
+          actions={
+            <>
+              <Button
+                size="sm"
+                onClick={() => void togglePublished()}
+                disabled={busyAction === "published" || page == null}
+              >
+                {page?.status === 1
+                  ? t("admin.pages.editor.published_btn")
+                  : t("admin.pages.editor.draft_btn")}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!slugName}
+                onClick={() =>
+                  window.open(`/${slugName}`, "_blank", "noopener,noreferrer")
+                }
+              >
+                {t("admin.pages.editor.view_page")}
+              </Button>
+            </>
+          }
+        />
+      </div>
+
+      <div className="admin-card p-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
             {languages.map((lang) => {
-              const isActive = normalizeLangCode(lang.code) === normalizeLangCode(activeLanguage);
+              const isActive =
+                normalizeLangCode(lang.code) === normalizeLangCode(activeLanguage);
               return (
                 <button
                   key={lang.code}
@@ -454,8 +491,8 @@ export default function AdminPageEditorLayoutPage() {
                   onClick={() => setActiveLanguage(lang.code)}
                   className={
                     isActive
-                      ? "rounded-full border border-violet-300 bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700"
-                      : "rounded-full border border-default bg-white px-3 py-1 text-xs font-medium text-fg-t7 hover:border-violet-300"
+                      ? "rounded-full border border-primary-200 bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-600"
+                      : "rounded-full border border-default bg-white px-3 py-1 text-xs font-medium text-fg-t7 hover:border-primary-200"
                   }
                 >
                   {lang.code.toUpperCase()}
@@ -468,55 +505,62 @@ export default function AdminPageEditorLayoutPage() {
               {t("admin.pages.editor.editing")}: {activeLanguage.toUpperCase()}
             </span>
             {!isDefaultLanguage && !hasPageTranslation ? (
-              <button
-                type="button"
-                onClick={copyPageFieldsFromDefault}
-                className="rounded border border-violet-300 bg-violet-50 px-2 py-1 text-violet-700"
-              >
+              <Button variant="outline" size="sm" onClick={copyPageFieldsFromDefault}>
                 {t("admin.pages.editor.copy_default")}
-              </button>
+              </Button>
             ) : null}
           </div>
         </div>
       </div>
-      {err ? <p className="mt-2 text-sm text-error-600">{err}</p> : null}
+
+      {err && (
+        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
+          {err}
+        </div>
+      )}
 
       <section
-        className={`mt-4 rounded border border-default bg-white p-4 transition-opacity ${
+        className={`admin-card p-4 transition-opacity ${
           loading ? "pointer-events-none opacity-60" : "opacity-100"
         }`}
       >
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <label className="text-sm text-fg-t7">
-            {t("admin.pages.editor.menu_name")}
-            <input
+          <FormField label={t("admin.pages.editor.menu_name")} htmlFor="pe-menu">
+            <Input
+              id="pe-menu"
               value={menuName}
               onChange={(e) => setMenuName(e.target.value)}
               onBlur={() => void saveHeaderPatch({ page_name: menuName })}
-              className="mt-1 w-full rounded border border-default px-3 py-2 text-sm"
             />
-          </label>
-          <label className="text-sm text-fg-t7">
-            {t("admin.pages.editor.slug_name")}
-            <input
+          </FormField>
+          <FormField label={t("admin.pages.editor.slug_name")} htmlFor="pe-slug">
+            <Input
+              id="pe-slug"
               value={slugName}
               onChange={(e) => setSlugName(e.target.value)}
               onBlur={() => void saveHeaderPatch({ page_slug: slugName })}
-              className="mt-1 w-full rounded border border-default px-3 py-2 text-sm font-mono"
+              className="font-mono"
             />
-          </label>
-          <label className="text-sm text-fg-t7 md:col-span-2">
-            {t("admin.pages.editor.meta_title")}
-            <input
+          </FormField>
+          <FormField
+            label={t("admin.pages.editor.meta_title")}
+            htmlFor="pe-mt"
+            className="md:col-span-2"
+          >
+            <Input
+              id="pe-mt"
               value={metaTitle}
               onChange={(e) => setMetaTitle(e.target.value)}
               onBlur={() => void saveHeaderPatch({ meta_title: metaTitle })}
-              className="mt-1 w-full rounded border border-default px-3 py-2 text-sm"
             />
-          </label>
-          <label className="text-sm text-fg-t7 md:col-span-2">
-            {t("admin.pages.editor.meta_keywords")}
-            <input
+          </FormField>
+          <FormField
+            label={t("admin.pages.editor.meta_keywords")}
+            htmlFor="pe-mk"
+            className="md:col-span-2"
+          >
+            <Input
+              id="pe-mk"
               value={metaKeywords}
               onChange={(e) => setMetaKeywords(e.target.value)}
               onBlur={() =>
@@ -527,74 +571,56 @@ export default function AdminPageEditorLayoutPage() {
                     .filter((part) => part !== ""),
                 })
               }
-              className="mt-1 w-full rounded border border-default px-3 py-2 text-sm"
             />
-          </label>
-          <label className="text-sm text-fg-t7 md:col-span-2">
-            {t("admin.pages.editor.meta_description")}
-            <textarea
+          </FormField>
+          <FormField
+            label={t("admin.pages.editor.meta_description")}
+            htmlFor="pe-md"
+            className="md:col-span-2"
+          >
+            <Input
+              id="pe-md"
+              as="textarea"
+              rows={3}
               value={metaDescription}
               onChange={(e) => setMetaDescription(e.target.value)}
               onBlur={() => void saveHeaderPatch({ meta_description: metaDescription })}
-              rows={3}
-              className="mt-1 w-full rounded border border-default px-3 py-2 text-sm"
             />
-          </label>
+          </FormField>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-5">
-            <label className="inline-flex items-center gap-2 text-sm text-fg-t7">
-              <input
-                type="checkbox"
-                checked={enableSeo}
-                onChange={(e) => {
-                  const checked = e.target.checked;
-                  setEnableSeo(checked);
-                  void saveHeaderPatch({ enable_seo: checked });
-                }}
-              />
-              {t("admin.pages.editor.allow_seo")}
-            </label>
-            <label className="inline-flex items-center gap-2 text-sm text-fg-t7">
-              <input
-                type="checkbox"
-                checked={breadCrumb}
-                onChange={(e) => {
-                  const checked = e.target.checked;
-                  setBreadCrumb(checked);
-                  void saveHeaderPatch({ is_bread_crumb: checked });
-                }}
-              />
-              {t("admin.pages.editor.breadcrumb")}
-            </label>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => void togglePublished()}
-              disabled={busyAction === "published" || page == null}
-              className="rounded bg-violet-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
-            >
-              {page?.status === 1 ? t("admin.pages.editor.published_btn") : t("admin.pages.editor.draft_btn")}
-            </button>
-            <button
-              type="button"
-              disabled={!slugName}
-              onClick={() => window.open(`/${slugName}`, "_blank", "noopener,noreferrer")}
-              className="rounded border border-default bg-white px-3 py-1.5 text-sm disabled:opacity-40"
-            >
-              {t("admin.pages.editor.view_page")}
-            </button>
-          </div>
+        <div className="mt-4 flex flex-wrap items-center gap-5">
+          <label className="inline-flex items-center gap-2 text-sm text-fg-t7">
+            <Checkbox
+              checked={enableSeo}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setEnableSeo(checked);
+                void saveHeaderPatch({ enable_seo: checked });
+              }}
+            />
+            {t("admin.pages.editor.allow_seo")}
+          </label>
+          <label className="inline-flex items-center gap-2 text-sm text-fg-t7">
+            <Checkbox
+              checked={breadCrumb}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setBreadCrumb(checked);
+                void saveHeaderPatch({ is_bread_crumb: checked });
+              }}
+            />
+            {t("admin.pages.editor.breadcrumb")}
+          </label>
         </div>
       </section>
 
-      <section className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <aside className="rounded border border-default bg-white p-4 lg:col-span-1">
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <aside className="admin-card p-4 lg:col-span-1">
           <h2 className="text-base font-semibold text-fg-t11">Widgets</h2>
-          <p className="mt-1 text-xs text-fg-t6">Click a widget to add it to the canvas.</p>
+          <p className="mt-1 text-xs text-fg-t6">
+            Click a widget to add it to the canvas.
+          </p>
 
           <div className="mt-4 grid grid-cols-2 gap-2">
             {AVAILABLE_WIDGETS.map((widget) => (
@@ -603,10 +629,10 @@ export default function AdminPageEditorLayoutPage() {
                 type="button"
                 disabled={busyAction === `add:${widget.slug}`}
                 onClick={() => void addWidget(widget.slug)}
-                className="rounded border border-default bg-figma-bg-1 p-2 text-left hover:border-violet-300 hover:bg-violet-50 disabled:opacity-50"
+                className="rounded-zulu border border-default bg-figma-bg-1 p-2 text-left transition-colors hover:border-primary-200 hover:bg-primary-50 disabled:opacity-50"
               >
                 <span className="flex items-center gap-2">
-                  <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-violet-100 text-[10px] font-semibold text-violet-700">
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-primary-50 text-[10px] font-semibold text-primary-600">
                     {widget.icon}
                   </span>
                   <span className="text-xs font-medium text-fg-t11">{widget.name}</span>
@@ -616,7 +642,7 @@ export default function AdminPageEditorLayoutPage() {
           </div>
         </aside>
 
-        <div className="rounded border border-default bg-white p-4 lg:col-span-2">
+        <div className="admin-card p-4 lg:col-span-2">
           <h2 className="text-base font-semibold text-fg-t11">Canvas</h2>
           <p className="mt-1 text-xs text-fg-t6">
             Added widgets appear here in page order. Edit details in Step 4.2.
@@ -624,16 +650,22 @@ export default function AdminPageEditorLayoutPage() {
 
           <div className="mt-4 space-y-3">
             {widgets.length === 0 ? (
-              <div className="rounded border border-dashed border-default p-6 text-center text-sm text-fg-t6">
+              <div className="rounded-zulu border border-dashed border-default p-6 text-center text-sm text-fg-t6">
                 No widgets added yet.
               </div>
             ) : (
               widgets.map((widget) => {
                 const active = widget.status === 1;
                 const isOpen = openWidgetId === widget.id;
-                const hasWidgetTranslation = !!getWidgetTranslatedContent(widget, activeLanguage);
+                const hasWidgetTranslation = !!getWidgetTranslatedContent(
+                  widget,
+                  activeLanguage
+                );
                 return (
-                  <div key={widget.id} className="rounded border border-default bg-white p-3">
+                  <div
+                    key={widget.id}
+                    className="rounded-zulu border border-default bg-white p-3"
+                  >
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <div className="text-sm font-semibold text-fg-t11">
@@ -645,7 +677,7 @@ export default function AdminPageEditorLayoutPage() {
                         {!isDefaultLanguage ? (
                           <div className="mt-1 text-[11px]">
                             {hasWidgetTranslation ? (
-                              <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-emerald-700">
+                              <span className="rounded bg-success-50 px-1.5 py-0.5 text-success-700">
                                 {activeLanguage.toUpperCase()} translation
                               </span>
                             ) : (
@@ -656,40 +688,43 @@ export default function AdminPageEditorLayoutPage() {
                           </div>
                         ) : null}
                       </div>
-                      <span className={statusBadge(active)}>{active ? "Active" : "Inactive"}</span>
+                      <StatusPill status={active ? "active" : "inactive"}>
+                        {active ? "Active" : "Inactive"}
+                      </StatusPill>
                     </div>
 
                     <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <Toggle
+                      <Switch
                         checked={active}
                         disabled={busyAction === `widget-status:${widget.id}`}
-                        onChange={() => void toggleWidgetStatus(widget)}
+                        onCheckedChange={() => void toggleWidgetStatus(widget)}
+                        aria-label="Toggle widget status"
                       />
-                      <button
-                        type="button"
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() =>
                           setOpenWidgetId((prev) => (prev === widget.id ? null : widget.id))
                         }
-                        className="rounded border border-default bg-white px-3 py-1 text-xs"
                       >
                         {isOpen ? "Close" : "Edit"}
-                      </button>
-                      <button
-                        type="button"
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
                         disabled={busyAction === `widget-delete:${widget.id}`}
                         onClick={() => void deleteWidget(widget)}
-                        className="rounded border border-red-300 bg-red-50 px-3 py-1 text-xs text-error-700 disabled:opacity-60"
                       >
                         Delete
-                      </button>
+                      </Button>
                       {!isDefaultLanguage ? (
-                        <button
-                          type="button"
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={() => copyWidgetFromDefault(widget.id)}
-                          className="rounded border border-violet-300 bg-violet-50 px-3 py-1 text-xs text-violet-700"
                         >
                           Copy from default
-                        </button>
+                        </Button>
                       ) : null}
                     </div>
 
