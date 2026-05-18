@@ -11,6 +11,13 @@ export type AdminUserContext = {
   active_company_id: number | null;
   /** Service types granted to the active company via super-admin "Seller service types" dialog. */
   active_seller_service_types?: SellerServiceType[];
+  /**
+   * Phase 6A — sparse map of module_key → allowed for the active company.
+   * Default-allow: modules absent from the map are visible. Sidebar in
+   * AdminShell hides a tab when its `moduleKey` appears here with value
+   * `false`. Empty/missing for super admins (they're never restricted).
+   */
+  module_permissions?: Record<string, boolean>;
   is_super_admin: boolean;
   is_platform_admin?: boolean;
   operator_statistics_platform_scope: boolean;

@@ -34,6 +34,12 @@ export type AdminNavTab = {
   superAdminOnly?: boolean;
   perm?: string;
   serviceType?: SellerServiceType;
+  /**
+   * Phase 6A — admin module key (e.g. "inventory.hotels", "ops.bookings").
+   * When set, the tab is hidden if the user's active company has an explicit
+   * is_allowed=false row for this module. Super admins are never restricted.
+   */
+  moduleKey?: string;
 };
 
 export type AdminNavGroup = {
@@ -73,8 +79,8 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/platform/company-applications", labelKey: "admin.nav.tab.applications" },
       { href: "/platform/seller-applications", labelKey: "admin.nav.tab.seller_applications" },
       { href: "/platform/users", labelKey: "admin.nav.tab.users" },
-      { href: "/platform/contracts", labelKey: "admin.nav.tab.contracts" },
-      { href: "/platform/contract-templates", labelKey: "admin.nav.tab.contract_templates" },
+      { href: "/platform/contracts", labelKey: "admin.nav.tab.contracts", moduleKey: "ops.contracts" },
+      { href: "/platform/contract-templates", labelKey: "admin.nav.tab.contract_templates", moduleKey: "ops.contracts" },
     ],
     visibility: "platform_admin",
   },
@@ -109,15 +115,15 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     icon: "/icons/menu/hotel.svg",
     defaultHref: "/operator/hotels",
     tabs: [
-      { href: "/operator/hotels", labelKey: "admin.nav.tab.hotels", serviceType: "hotel" },
-      { href: "/operator/flights", labelKey: "admin.nav.tab.flights", serviceType: "flight" },
-      { href: "/operator/transfers", labelKey: "admin.nav.tab.transfers", serviceType: "transfer" },
-      { href: "/operator/cars", labelKey: "admin.nav.tab.cars", serviceType: "car" },
-      { href: "/operator/excursions", labelKey: "admin.nav.tab.excursions", serviceType: "excursion" },
-      { href: "/operator/visas", labelKey: "admin.nav.tab.visas", serviceType: "visa" },
-      { href: "/operator/packages", labelKey: "admin.nav.tab.packages", serviceType: "package" },
-      { href: "/operator/offers", labelKey: "admin.nav.tab.offers" },
-      { href: "/operator/contracts", labelKey: "admin.nav.tab.contracts" },
+      { href: "/operator/hotels", labelKey: "admin.nav.tab.hotels", serviceType: "hotel", moduleKey: "inventory.hotels" },
+      { href: "/operator/flights", labelKey: "admin.nav.tab.flights", serviceType: "flight", moduleKey: "inventory.flights" },
+      { href: "/operator/transfers", labelKey: "admin.nav.tab.transfers", serviceType: "transfer", moduleKey: "inventory.transfers" },
+      { href: "/operator/cars", labelKey: "admin.nav.tab.cars", serviceType: "car", moduleKey: "inventory.cars" },
+      { href: "/operator/excursions", labelKey: "admin.nav.tab.excursions", serviceType: "excursion", moduleKey: "inventory.excursions" },
+      { href: "/operator/visas", labelKey: "admin.nav.tab.visas", serviceType: "visa", moduleKey: "inventory.visas" },
+      { href: "/operator/packages", labelKey: "admin.nav.tab.packages", serviceType: "package", moduleKey: "inventory.packages" },
+      { href: "/operator/offers", labelKey: "admin.nav.tab.offers", moduleKey: "inventory.offers" },
+      { href: "/operator/contracts", labelKey: "admin.nav.tab.contracts", moduleKey: "ops.contracts" },
     ],
     visibility: "operator_tools",
   },
@@ -127,8 +133,8 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     icon: "/icons/menu/booking.svg",
     defaultHref: "/platform/bookings",
     tabs: [
-      { href: "/platform/bookings", labelKey: "admin.nav.tab.all_bookings" },
-      { href: "/platform/package-orders", labelKey: "admin.nav.tab.package_orders" },
+      { href: "/platform/bookings", labelKey: "admin.nav.tab.all_bookings", moduleKey: "ops.bookings" },
+      { href: "/platform/package-orders", labelKey: "admin.nav.tab.package_orders", moduleKey: "ops.bookings" },
     ],
     visibility: "platform_admin",
   },
@@ -138,11 +144,11 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     icon: "/icons/menu/finance.svg",
     defaultHref: "/platform/finance-summary",
     tabs: [
-      { href: "/platform/finance-summary", labelKey: "admin.nav.tab.finance_summary" },
-      { href: "/platform/invoices", labelKey: "admin.nav.tab.invoices" },
-      { href: "/platform/payments", labelKey: "admin.nav.tab.payments" },
-      { href: "/platform/commissions", labelKey: "admin.nav.tab.commissions" },
-      { href: "/platform/finance", labelKey: "admin.nav.tab.transactions" },
+      { href: "/platform/finance-summary", labelKey: "admin.nav.tab.finance_summary", moduleKey: "ops.finance" },
+      { href: "/platform/invoices", labelKey: "admin.nav.tab.invoices", moduleKey: "ops.finance" },
+      { href: "/platform/payments", labelKey: "admin.nav.tab.payments", moduleKey: "ops.finance" },
+      { href: "/platform/commissions", labelKey: "admin.nav.tab.commissions", moduleKey: "ops.finance" },
+      { href: "/platform/finance", labelKey: "admin.nav.tab.transactions", moduleKey: "ops.finance" },
     ],
     visibility: "platform_admin",
   },
@@ -155,7 +161,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/platform/banners", labelKey: "admin.nav.tab.banners", superAdminOnly: true },
       { href: "/pages", labelKey: "admin.nav.tab.cms_pages" },
       { href: "/platform/notifications", labelKey: "admin.nav.tab.system_notifications" },
-      { href: "/platform/newsletter", labelKey: "admin.nav.tab.newsletter" },
+      { href: "/platform/newsletter", labelKey: "admin.nav.tab.newsletter", moduleKey: "ops.newsletter" },
       { href: "/localization/templates", labelKey: "admin.nav.tab.email_templates" },
     ],
     visibility: "platform_admin",
@@ -178,10 +184,10 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     icon: "/icons/menu/connection.svg",
     defaultHref: "/connections",
     tabs: [
-      { href: "/connections", labelKey: "admin.nav.tab.connections" },
+      { href: "/connections", labelKey: "admin.nav.tab.connections", moduleKey: "ops.connections" },
       { href: "/support/tickets", labelKey: "admin.nav.tab.support" },
-      { href: "/platform/reviews", labelKey: "admin.nav.tab.reviews" },
-      { href: "/statistics", labelKey: "admin.nav.tab.statistics" },
+      { href: "/platform/reviews", labelKey: "admin.nav.tab.reviews", moduleKey: "ops.reviews" },
+      { href: "/statistics", labelKey: "admin.nav.tab.statistics", moduleKey: "ops.statistics" },
     ],
     visibility: "platform_admin",
   },
@@ -191,7 +197,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     icon: "/icons/menu/loyalty.svg",
     defaultHref: "/platform/loyalty",
     tabs: [
-      { href: "/platform/loyalty", labelKey: "admin.nav.tab.loyalty_programs" },
+      { href: "/platform/loyalty", labelKey: "admin.nav.tab.loyalty_programs", moduleKey: "ops.loyalty" },
     ],
     visibility: "platform_admin",
   },

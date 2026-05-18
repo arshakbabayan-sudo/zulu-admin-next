@@ -62,6 +62,22 @@ export function userHasSellerServiceType(user: AdminUser | null, type: SellerSer
   return enabled.includes(type);
 }
 
+/**
+ * Phase 6A — whether a given admin module is visible to this user.
+ * Default-allow: returns true unless the user's active company has an
+ * explicit `is_allowed=false` row for the module. Super admins are never
+ * restricted.
+ */
+export function userHasModuleAccess(user: AdminUser | null, moduleKey: string | undefined): boolean {
+  if (!moduleKey) return true;
+  if (!user) return false;
+  if (user.is_super_admin) return true;
+  const map = user.context?.module_permissions;
+  if (!map) return true;
+  // Explicit false denies; missing / true allows.
+  return map[moduleKey] !== false;
+}
+
 /** Nav: cross-platform inventory oversight is for super/platform admin only.
  * Operators view their own inventory through the Operator Tools CRUD pages,
  * so this section would be redundant (and confusing) in their sidebar.

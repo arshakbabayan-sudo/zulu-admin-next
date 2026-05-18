@@ -26,6 +26,7 @@ import {
   canAccessOperatorToolsNav,
   canAccessPlatformAdminNav,
   canAccessSuperAdminOnlyPlatformNav,
+  userHasModuleAccess,
   userHasPermission,
   userHasSellerServiceType,
 } from "@/lib/access";
@@ -638,11 +639,18 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             };
 
             const isTabVisible = (
-              tab: { superAdminOnly?: boolean; perm?: string; serviceType?: import("@/lib/auth-types").SellerServiceType },
+              tab: {
+                superAdminOnly?: boolean;
+                perm?: string;
+                serviceType?: import("@/lib/auth-types").SellerServiceType;
+                moduleKey?: string;
+              },
             ): boolean => {
               if (tab.superAdminOnly && !showSuperAdminOnlyPlatform && !user?.is_super_admin) return false;
               if (tab.perm && !userHasPermission(user, tab.perm)) return false;
               if (tab.serviceType && !userHasSellerServiceType(user, tab.serviceType)) return false;
+              // Phase 6A — per-company admin module visibility (default-allow).
+              if (tab.moduleKey && !userHasModuleAccess(user, tab.moduleKey)) return false;
               return true;
             };
 
