@@ -125,6 +125,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/operator/offers", labelKey: "admin.nav.tab.offers", moduleKey: "inventory.offers" },
       { href: "/operator/contracts", labelKey: "admin.nav.tab.contracts", moduleKey: "ops.contracts" },
       { href: "/operator/commission-settings", labelKey: "admin.nav.tab.commission_settings", moduleKey: "ops.finance" },
+      { href: "/operator/external-api", labelKey: "admin.nav.tab.external_api" },
     ],
     visibility: "operator_tools",
   },
