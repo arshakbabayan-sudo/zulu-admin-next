@@ -1,5 +1,7 @@
 "use client";
 
+/** Phase-2 migration to shared @/components/ui primitives. */
+
 import { ContentLanguagePill } from "@/components/ContentLanguagePill";
 import { CsvImportModal } from "@/components/CsvImportModal";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
@@ -9,6 +11,20 @@ import { PaginationBar } from "@/components/PaginationBar";
 import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
 import { MainImageDescriptionFields } from "@/components/MainImageDescriptionFields";
 import { TranslationTabs } from "@/components/TranslationTabs";
+import {
+  Button,
+  FormField,
+  Input,
+  PageHeader,
+  Select,
+  Table,
+  TBody,
+  TD,
+  TEmpty,
+  TH,
+  THead,
+  TR,
+} from "@/components/ui";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ApiRequestError } from "@/lib/api-client";
@@ -294,25 +310,30 @@ export default function OperatorTransfersPage() {
   const fieldByKey = new Map<keyof TransferFormValues, TransferField>(FIELDS.map((f) => [f.key, f]));
   const currentStepIndex = TRANSFER_OPERATOR_WIZARD_STEPS.findIndex((s) => s.key === wizardStep);
 
-  const hasFieldErr = (key: string) => Boolean(fieldErrs && Array.isArray(fieldErrs[key]) && fieldErrs[key].length > 0);
   const fieldMsgs = (key: string) => (fieldErrs && Array.isArray(fieldErrs[key]) ? fieldErrs[key] : []);
-  const inputClass = (key: string) =>
-    `rounded border px-2 py-1.5 text-sm ${
-      hasFieldErr(key) ? "border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200" : "border-default"
-    }`;
+  const fieldError = (key: string): string | null => {
+    const msgs = fieldMsgs(key);
+    return msgs.length > 0 ? msgs.join(" ") : null;
+  };
 
   function renderTransferField(field: TransferField) {
     if (!form) return null;
     const disabledOffer = field.key === "offer_id" && editId != null;
+    const keyStr = String(field.key);
+    const inputId = `transfer-${keyStr}`;
+    const labelText = t(`admin.crud.transfers.field.${keyStr}`);
 
     if (field.type === "select" && field.options) {
       return (
-        <label key={String(field.key)} className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-fg-t6">
-            {t(`admin.crud.transfers.field.${String(field.key)}`)}
-            {field.required ? " *" : ""}
-          </span>
-          <select
+        <FormField
+          key={keyStr}
+          label={labelText}
+          htmlFor={inputId}
+          required={field.required}
+          error={fieldError(keyStr)}
+        >
+          <Select
+            id={inputId}
             value={
               field.key === "private_or_shared"
                 ? String(form.private_or_shared ?? "")
@@ -323,7 +344,6 @@ export default function OperatorTransfersPage() {
               const v = e.target.value;
               setForm((p) => (p ? { ...p, [field.key]: v as never } : p));
             }}
-            className={inputClass(String(field.key)) + (disabledOffer ? " bg-figma-bg-1 text-fg-t6" : "")}
           >
             {field.key === "private_or_shared" && <option value="">(optional)</option>}
             {field.options
@@ -333,39 +353,31 @@ export default function OperatorTransfersPage() {
                   {opt || "(optional)"}
                 </option>
               ))}
-          </select>
-          {fieldMsgs(String(field.key)).map((m, i) => (
-            <span key={i} className="text-xs text-error-700">
-              {m}
-            </span>
-          ))}
-        </label>
+          </Select>
+        </FormField>
       );
     }
 
     if (field.type === "boolean") {
       return (
-        <label key={String(field.key)} className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-fg-t6">
-            {t(`admin.crud.transfers.field.${String(field.key)}`)}
-            {field.required ? " *" : ""}
-          </span>
-          <select
+        <FormField
+          key={keyStr}
+          label={labelText}
+          htmlFor={inputId}
+          required={field.required}
+          error={fieldError(keyStr)}
+        >
+          <Select
+            id={inputId}
             value={String(Boolean(form[field.key]))}
             onChange={(e) =>
               setForm((p) => (p ? { ...p, [field.key]: e.target.value === "true" } : p))
             }
-            className={inputClass(String(field.key))}
           >
             <option value="true">true</option>
             <option value="false">false</option>
-          </select>
-          {fieldMsgs(String(field.key)).map((m, i) => (
-            <span key={i} className="text-xs text-error-700">
-              {m}
-            </span>
-          ))}
-        </label>
+          </Select>
+        </FormField>
       );
     }
 
@@ -373,58 +385,55 @@ export default function OperatorTransfersPage() {
       const raw = String(form.pickup_time ?? "09:00:00");
       const hm = raw.slice(0, 5);
       return (
-        <label key={String(field.key)} className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-fg-t6">
-            {t(`admin.crud.transfers.field.${String(field.key)}`)}
-            {field.required ? " *" : ""}
-          </span>
-          <input
+        <FormField
+          key={keyStr}
+          label={labelText}
+          htmlFor={inputId}
+          required={field.required}
+          error={fieldError(keyStr)}
+        >
+          <Input
+            id={inputId}
             type="time"
             value={hm}
             onChange={(e) => {
               const v = e.target.value;
               setForm((p) => (p ? { ...p, pickup_time: v ? `${v}:00` : "09:00:00" } : p));
             }}
-            className={inputClass(String(field.key))}
           />
-          {fieldMsgs(String(field.key)).map((m, i) => (
-            <span key={i} className="text-xs text-error-700">
-              {m}
-            </span>
-          ))}
-        </label>
+        </FormField>
       );
     }
 
     if (field.type === "date") {
       return (
-        <label key={String(field.key)} className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-fg-t6">
-            {t(`admin.crud.transfers.field.${String(field.key)}`)}
-            {field.required ? " *" : ""}
-          </span>
-          <input
+        <FormField
+          key={keyStr}
+          label={labelText}
+          htmlFor={inputId}
+          required={field.required}
+          error={fieldError(keyStr)}
+        >
+          <Input
+            id={inputId}
             type="date"
             value={String(form[field.key] ?? "")}
             onChange={(e) => setForm((p) => (p ? { ...p, [field.key]: e.target.value } : p))}
-            className={inputClass(String(field.key))}
           />
-          {fieldMsgs(String(field.key)).map((m, i) => (
-            <span key={i} className="text-xs text-error-700">
-              {m}
-            </span>
-          ))}
-        </label>
+        </FormField>
       );
     }
 
     return (
-      <label key={String(field.key)} className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-fg-t6">
-          {t(`admin.crud.transfers.field.${String(field.key)}`)}
-          {field.required ? " *" : ""}
-        </span>
-        <input
+      <FormField
+        key={keyStr}
+        label={labelText}
+        htmlFor={inputId}
+        required={field.required}
+        error={fieldError(keyStr)}
+      >
+        <Input
+          id={inputId}
           value={
             field.key === "offer_id"
               ? form.offer_id == null
@@ -454,14 +463,8 @@ export default function OperatorTransfersPage() {
             });
           }}
           type={field.type === "number" ? "number" : field.type === "datetime-local" ? "datetime-local" : "text"}
-          className={inputClass(String(field.key)) + (disabledOffer ? " bg-figma-bg-1 text-fg-t6" : "")}
         />
-        {fieldMsgs(String(field.key)).map((m, i) => (
-          <span key={i} className="text-xs text-error-700">
-            {m}
-          </span>
-        ))}
-      </label>
+      </FormField>
     );
   }
 
@@ -539,9 +542,9 @@ export default function OperatorTransfersPage() {
 
   if (forbidden) {
     return (
-      <div>
+      <div className="space-y-4">
         <h1 className="admin-page-title">{t("admin.crud.transfers.title")}</h1>
-        <div className="mt-4">
+        <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
       </div>
@@ -552,41 +555,40 @@ export default function OperatorTransfersPage() {
   const apiErrLines = fieldErrs ? formatTransferApiValidationErrors(fieldErrs) : [];
 
   return (
-    <div>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-3">
-          <h1 className="admin-page-title">{t("admin.crud.transfers.title")}</h1>
-          {form === null && <ContentLanguagePill />}
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <ImportExportButtons
-            busy={busy || exportBusy}
-            exportDisabled={!token}
-            onTemplate={() => downloadCsvFile("transfers-template.csv", transferTemplateCsv())}
-            onExport={async () => {
-              if (!token) return;
-              setExportBusy(true);
-              try {
-                const csv = await exportTransfersCsv(token);
-                downloadCsvFile(csvExportFilename("transfers"), csv);
-              } catch (e) {
-                alert(e instanceof ApiRequestError ? e.message : "Export failed");
-              } finally {
-                setExportBusy(false);
-              }
-            }}
-            onImport={() => setImportOpen(true)}
-          />
-          <button
-            type="button"
-            onClick={openCreate}
-            disabled={busy}
-            className="admin-btn-primary"
-          >
-            {t("admin.crud.transfers.new_btn")}
-          </button>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title={
+          <span className="inline-flex items-center gap-3">
+            {t("admin.crud.transfers.title")}
+            {form === null && <ContentLanguagePill />}
+          </span>
+        }
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <ImportExportButtons
+              busy={busy || exportBusy}
+              exportDisabled={!token}
+              onTemplate={() => downloadCsvFile("transfers-template.csv", transferTemplateCsv())}
+              onExport={async () => {
+                if (!token) return;
+                setExportBusy(true);
+                try {
+                  const csv = await exportTransfersCsv(token);
+                  downloadCsvFile(csvExportFilename("transfers"), csv);
+                } catch (e) {
+                  alert(e instanceof ApiRequestError ? e.message : "Export failed");
+                } finally {
+                  setExportBusy(false);
+                }
+              }}
+              onImport={() => setImportOpen(true)}
+            />
+            <Button size="sm" disabled={busy} onClick={openCreate}>
+              {t("admin.crud.transfers.new_btn")}
+            </Button>
+          </div>
+        }
+      />
 
       <CsvImportModal
         open={importOpen}
@@ -606,14 +608,18 @@ export default function OperatorTransfersPage() {
         }}
       />
 
-      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
+      {err && (
+        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
+          {err}
+        </div>
+      )}
 
       {form && (
-        <div className="mt-4 rounded border border-default bg-white p-4">
-          <h2 className="mb-3 text-base font-medium">{editId ? t("admin.crud.transfers.form_edit") : t("admin.crud.transfers.form_new")}</h2>
+        <section className="admin-card p-4">
+          <h2 className="mb-3 text-base font-semibold">{editId ? t("admin.crud.transfers.form_edit") : t("admin.crud.transfers.form_new")}</h2>
 
           {fieldSummary && (
-            <div className="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-error-800">
+            <div className="mb-3 rounded-zulu border border-error-100 bg-error-50 px-3 py-2 text-sm text-error-700">
               <div className="font-medium">{fieldSummary.title}</div>
               <ul className="mt-1 list-disc pl-5">
                 {fieldSummary.items.slice(0, 8).map((it, idx) => (
@@ -626,7 +632,7 @@ export default function OperatorTransfersPage() {
           )}
 
           {apiErrLines.length > 0 && (
-            <div className="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-error-800">
+            <div className="mb-3 rounded-zulu border border-error-100 bg-error-50 px-3 py-2 text-sm text-error-700">
               <div className="font-medium">API validation</div>
               <ul className="mt-1 list-disc pl-5">
                 {apiErrLines.slice(0, 10).map((line, i) => (
@@ -637,14 +643,14 @@ export default function OperatorTransfersPage() {
           )}
 
           <div className="mb-3 grid gap-3 sm:grid-cols-2">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-fg-t6">Currency (offer)</span>
-              <input
+            <FormField label="Currency (offer)" htmlFor="transfer-currency">
+              <Input
+                id="transfer-currency"
                 value={form.currency ?? ""}
                 readOnly
-                className="rounded border border-default bg-figma-bg-1 px-2 py-1.5 text-sm text-fg-t6"
+                className="bg-figma-bg-1 text-fg-t6"
               />
-            </label>
+            </FormField>
             <MainImageDescriptionFields
               mainImage={form.main_image}
               shortDescription={form.short_description}
@@ -658,11 +664,11 @@ export default function OperatorTransfersPage() {
           <div className="mb-3 flex flex-wrap gap-2">
             {TRANSFER_OPERATOR_WIZARD_STEPS.map((step, idx) => {
               const isActive = step.key === wizardStep;
-              const isComplete = idx < currentStepIndex;
               return (
-                <button
+                <Button
                   key={step.key}
-                  type="button"
+                  size="sm"
+                  variant={isActive ? "primary" : "outline"}
                   onClick={() => {
                     if (!form) return;
                     if (idx <= currentStepIndex) {
@@ -670,16 +676,10 @@ export default function OperatorTransfersPage() {
                       setStepErrors([]);
                     }
                   }}
-                  className={`rounded border px-2 py-1 text-xs ${
-                    isActive
-                      ? "border-primary bg-primary text-white"
-                      : isComplete
-                        ? "border-default bg-figma-bg-1 text-fg-t7"
-                        : "border-default bg-white text-fg-t6"
-                  }`}
+                  disabled={idx > currentStepIndex}
                 >
                   {t(TRANSFER_STEP_LABEL_KEYS[step.key] ?? step.key)}
-                </button>
+                </Button>
               );
             })}
           </div>
@@ -741,12 +741,12 @@ export default function OperatorTransfersPage() {
             </>
           ) : (
             <div className="grid gap-2 sm:grid-cols-2">
-              <div className="rounded border border-default px-3 py-2 text-sm">
+              <div className="rounded-zulu border border-default px-3 py-2 text-sm">
                 <div className="text-xs text-fg-t6">{TRANSFER_FIELD_LABELS.currency}</div>
                 <div className="font-medium text-fg-t11">{form.currency ?? "—"}</div>
               </div>
               {FIELDS.map((field) => (
-                <div key={String(field.key)} className="rounded border border-default px-3 py-2 text-sm">
+                <div key={String(field.key)} className="rounded-zulu border border-default px-3 py-2 text-sm">
                   <div className="text-xs text-fg-t6">{t(`admin.crud.transfers.field.${String(field.key)}`)}</div>
                   <div className="font-medium text-fg-t11">
                     {field.type === "boolean"
@@ -759,12 +759,12 @@ export default function OperatorTransfersPage() {
           )}
 
           {stepErrors.length > 0 && (
-            <p className="mt-2 text-sm text-error-600">{stepErrors.slice(0, 4).join(" ")}</p>
+            <p className="mt-2 text-sm text-error-700">{stepErrors.slice(0, 4).join(" ")}</p>
           )}
-          {formErr && <p className="mt-2 text-sm text-error-600">{formErr}</p>}
+          {formErr && <p className="mt-2 text-sm text-error-700">{formErr}</p>}
 
           {editId !== null && (
-            <div className="mt-6 rounded border border-default bg-figma-bg-1 p-3">
+            <div className="mt-6 rounded-zulu border border-default bg-figma-bg-1 p-3">
               <h3 className="mb-2 text-sm font-medium text-fg-t6">
                 Translations <span className="text-fg-t7 font-normal">(EN-ից բացի՝ RU / HY)</span>
               </h3>
@@ -780,107 +780,92 @@ export default function OperatorTransfersPage() {
           )}
 
           <div className="mt-4 flex gap-2">
-            <button
-              type="button"
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handlePreviousStep}
               disabled={currentStepIndex === 0 || busy}
-              className="rounded border border-default px-4 py-1.5 text-sm disabled:opacity-40"
             >
               {t("common.prev")}
-            </button>
+            </Button>
             {wizardStep === "review" ? (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void handleSubmit()}
-                className="admin-btn-primary"
-              >
+              <Button size="sm" disabled={busy} onClick={() => void handleSubmit()}>
                 {busy ? t("admin.crud.common.saving") : t("admin.crud.transfers.submit")}
-              </button>
+              </Button>
             ) : (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={handleNextStep}
-                className="admin-btn-primary"
-              >
+              <Button size="sm" disabled={busy} onClick={handleNextStep}>
                 {t("common.next")}
-              </button>
+              </Button>
             )}
-            <button type="button" onClick={closeForm} className="rounded border border-default px-4 py-1.5 text-sm">
+            <Button variant="outline" size="sm" onClick={closeForm}>
               {t("common.cancel")}
-            </button>
+            </Button>
           </div>
-        </div>
+        </section>
       )}
 
-      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
-        <table className="w-full min-w-[800px] text-left text-sm">
-          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
-            <tr>
-              <th className="px-3 py-2">{t("admin.crud.common.id")}</th>
-              <th className="px-3 py-2">{t("admin.crud.transfers.col.title")}</th>
-              <th className="px-3 py-2">{t("admin.crud.transfers.col.vehicle")}</th>
-              <th className="px-3 py-2">{t("admin.crud.transfers.col.route")}</th>
-              <th className="px-3 py-2">{t("admin.crud.transfers.col.price")}</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">{t("admin.crud.common.actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-fg-t6">
-                  {t("admin.crud.transfers.empty")}
-                </td>
-              </tr>
-            )}
-            {rows.map((r) => (
-              <tr key={r.id} className="border-b border-default hover:bg-figma-bg-1">
-                <td className="px-3 py-2 tabular-nums text-fg-t7">{r.id}</td>
-                <td className="px-3 py-2 font-medium">{r.transfer_title ?? "—"}</td>
-                <td className="px-3 py-2">{r.vehicle_category ?? "-"}</td>
-                <td className="px-3 py-2">
-                  {r.pickup_city ?? "-"} {" -> "} {r.dropoff_city ?? "-"}
-                </td>
-                <td className="px-3 py-2 tabular-nums">
-                  {r.base_price != null ? `${r.offer?.currency ?? ""} ${Number(r.base_price).toFixed(2)}` : "-"}
-                </td>
-                <td className="px-3 py-2">
-                  <OfferStatusBadge status={r.offer?.status ?? null} />
-                </td>
-                <td className="px-3 py-2">
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => void openEdit(r)}
-                      className="text-xs text-info-700 underline"
+      <Table>
+        <THead>
+          <TR>
+            <TH>{t("admin.crud.common.id")}</TH>
+            <TH>{t("admin.crud.transfers.col.title")}</TH>
+            <TH>{t("admin.crud.transfers.col.vehicle")}</TH>
+            <TH>{t("admin.crud.transfers.col.route")}</TH>
+            <TH>{t("admin.crud.transfers.col.price")}</TH>
+            <TH>Status</TH>
+            <TH>{t("admin.crud.common.actions")}</TH>
+          </TR>
+        </THead>
+        <TBody>
+          {rows.length === 0 ? (
+            <TEmpty colSpan={7}>{t("admin.crud.transfers.empty")}</TEmpty>
+          ) : null}
+          {rows.map((r) => (
+            <TR key={r.id}>
+              <TD className="tabular-nums text-fg-t7">{r.id}</TD>
+              <TD className="font-medium">{r.transfer_title ?? "—"}</TD>
+              <TD>{r.vehicle_category ?? "-"}</TD>
+              <TD>
+                {r.pickup_city ?? "-"} {" -> "} {r.dropoff_city ?? "-"}
+              </TD>
+              <TD className="tabular-nums">
+                {r.base_price != null ? `${r.offer?.currency ?? ""} ${Number(r.base_price).toFixed(2)}` : "-"}
+              </TD>
+              <TD>
+                <OfferStatusBadge status={r.offer?.status ?? null} />
+              </TD>
+              <TD>
+                <div className="flex flex-col gap-1">
+                  <button
+                    type="button"
+                    onClick={() => void openEdit(r)}
+                    className="text-left text-xs text-info-700 hover:underline"
+                  >
+                    {t("admin.crud.common.edit")}
+                  </button>
+                  {r.offer?.id && isSubmittableStatus(r.offer.status) && (
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      onClick={() => void handleSubmitForReview(r.offer!.id!)}
+                      className="self-start"
                     >
-                      {t("admin.crud.common.edit")}
-                    </button>
-                    {r.offer?.id && isSubmittableStatus(r.offer.status) && (
-                      <button
-                        type="button"
-                        onClick={() => void handleSubmitForReview(r.offer!.id!)}
-                        className="rounded bg-primary px-2 py-0.5 text-xs font-medium text-white"
-                      >
-                        Submit for review
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => void handleDelete(r.id)}
-                      className="text-xs text-error-600 underline"
-                    >
-                      {t("admin.crud.common.delete")}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                      Submit for review
+                    </Button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => void handleDelete(r.id)}
+                    className="text-left text-xs text-error-600 hover:underline"
+                  >
+                    {t("admin.crud.common.delete")}
+                  </button>
+                </div>
+              </TD>
+            </TR>
+          ))}
+        </TBody>
+      </Table>
       {meta && <PaginationBar meta={meta} onPage={setPage} />}
     </div>
   );
