@@ -12,6 +12,13 @@
  * Last synced: 2026-05-11
  */
 
+/** Phase-2 migration: page chrome (header / list table / action buttons /
+ * error banners / section card framing) on design-system primitives; the
+ * dense in-form fields keep their local Field/inputCls dense layout because
+ * the 8-section collapsible form intentionally renders tighter than the
+ * 48px Input primitive would allow. Same pattern as the inner pricing rows
+ * in /operator/hotels. */
+
 import { ContentLanguagePill } from "@/components/ContentLanguagePill";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { ImageUploadField } from "@/components/ImageUploadField";
@@ -21,6 +28,17 @@ import { OfferStatusBadge, isSubmittableStatus } from "@/components/OfferStatusB
 import { PaginationBar } from "@/components/PaginationBar";
 import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
 import { TranslationTabs } from "@/components/TranslationTabs";
+import {
+  Button,
+  PageHeader,
+  Table,
+  TBody,
+  TD,
+  TEmpty,
+  TH,
+  THead,
+  TR,
+} from "@/components/ui";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ApiRequestError } from "@/lib/api-client";
@@ -148,11 +166,11 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mt-4 rounded border border-default bg-white">
+    <div className="mt-4 rounded-zulu border border-default bg-white">
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center justify-between px-4 py-2.5 text-left"
+        className="flex w-full items-center justify-between px-4 py-2.5 text-left hover:bg-figma-bg-1/40"
       >
         <span className="text-sm font-semibold text-fg-t11">{SECTION_LABELS[sectionKey]}</span>
         <svg
@@ -427,9 +445,9 @@ export default function OperatorFlightsPage() {
 
   if (forbidden) {
     return (
-      <div>
+      <div className="space-y-4">
         <h1 className="admin-page-title">{t("admin.crud.flights.title")}</h1>
-        <div className="mt-4">
+        <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
       </div>
@@ -440,58 +458,58 @@ export default function OperatorFlightsPage() {
     setOpenSection((s) => ({ ...s, [k]: !s[k] }));
 
   return (
-    <div>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-3">
-          <h1 className="admin-page-title">{t("admin.crud.flights.title")}</h1>
-          {form === null && <ContentLanguagePill />}
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <ImportExportButtons
-            busy={busy || exportBusy}
-            exportDisabled={!token}
-            onTemplate={() => downloadCsvFile("flights-template.csv", flightTemplateCsv())}
-            onExport={async () => {
-              if (!token) return;
-              setExportBusy(true);
-              try {
-                const csv = await exportFlightsCsv(token);
-                downloadCsvFile(csvExportFilename("flights"), csv);
-              } catch (e) {
-                alert(e instanceof ApiRequestError ? e.message : "Export failed");
-              } finally {
-                setExportBusy(false);
-              }
-            }}
-            onImport={() => setImportOpen(true)}
-          />
-          <button type="button" onClick={openCreate} className="admin-btn-primary">
-            {t("admin.crud.flights.new_btn")}
-          </button>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title={
+          <span className="inline-flex items-center gap-3">
+            {t("admin.crud.flights.title")}
+            {form === null && <ContentLanguagePill />}
+          </span>
+        }
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <ImportExportButtons
+              busy={busy || exportBusy}
+              exportDisabled={!token}
+              onTemplate={() => downloadCsvFile("flights-template.csv", flightTemplateCsv())}
+              onExport={async () => {
+                if (!token) return;
+                setExportBusy(true);
+                try {
+                  const csv = await exportFlightsCsv(token);
+                  downloadCsvFile(csvExportFilename("flights"), csv);
+                } catch (e) {
+                  alert(e instanceof ApiRequestError ? e.message : "Export failed");
+                } finally {
+                  setExportBusy(false);
+                }
+              }}
+              onImport={() => setImportOpen(true)}
+            />
+            <Button size="sm" onClick={openCreate}>
+              {t("admin.crud.flights.new_btn")}
+            </Button>
+          </div>
+        }
+      />
 
-      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
+      {err && (
+        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
+      )}
 
       {formLoading && editId != null && !form && (
-        <div className="mt-4 rounded border border-default bg-white p-4 text-sm text-fg-t6">
-          Loading flight…
-        </div>
+        <div className="admin-card p-4 text-sm text-fg-t6">Loading flight…</div>
       )}
 
       {form && (
-        <div className="mt-4 rounded border border-default bg-white p-4">
+        <section className="admin-card p-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-medium">
+            <h2 className="text-base font-semibold">
               {editId ? "Edit flight" : "New flight"}
             </h2>
-            <button
-              type="button"
-              onClick={closeForm}
-              className="rounded border border-default px-3 py-1 text-xs hover:bg-figma-bg-1"
-            >
+            <Button variant="outline" size="sm" onClick={closeForm}>
               Cancel
-            </button>
+            </Button>
           </div>
 
           {/* 1 — GENERAL */}
@@ -1157,7 +1175,7 @@ export default function OperatorFlightsPage() {
           )}
 
           {editId !== null && (
-            <div className="mt-6 rounded border border-default bg-figma-bg-1 p-3">
+            <div className="mt-6 rounded-zulu border border-default bg-figma-bg-1 p-3">
               <h3 className="mb-2 text-sm font-medium text-fg-t6">
                 Translations <span className="text-fg-t7 font-normal">(EN-ից բացի՝ RU / HY)</span>
               </h3>
@@ -1173,96 +1191,82 @@ export default function OperatorFlightsPage() {
           )}
 
           <div className="mt-4 flex gap-2">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void handleSubmit()}
-              className="admin-btn-primary"
-            >
+            <Button size="sm" disabled={busy} onClick={() => void handleSubmit()}>
               {busy ? "Saving…" : "Save"}
-            </button>
-            <button
-              type="button"
-              onClick={closeForm}
-              className="rounded border border-default px-4 py-1.5 text-sm"
-            >
+            </Button>
+            <Button variant="outline" size="sm" onClick={closeForm}>
               Cancel
-            </button>
+            </Button>
           </div>
-        </div>
+        </section>
       )}
 
       {/* List of flights */}
-      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
-        <table className="w-full min-w-[900px] text-left text-sm">
-          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
-            <tr>
-              <th className="px-3 py-2">ID</th>
-              <th className="px-3 py-2">Code</th>
-              <th className="px-3 py-2">Route</th>
-              <th className="px-3 py-2">Departure</th>
-              <th className="px-3 py-2">Review</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-fg-t6">
-                  No flights yet.
-                </td>
-              </tr>
-            ) : null}
-            {rows.map((r) => (
-              <tr key={r.id} className="border-b border-default hover:bg-figma-bg-1">
-                <td className="px-3 py-2 tabular-nums text-fg-t7">{r.id}</td>
-                <td className="px-3 py-2 font-medium">{r.flight_code_internal ?? "—"}</td>
-                <td className="px-3 py-2 text-xs">
-                  {r.departure_airport_code ?? r.departure_city ?? "?"} →{" "}
-                  {r.arrival_airport_code ?? r.arrival_city ?? "?"}
-                </td>
-                <td className="px-3 py-2 text-xs">
-                  {r.departure_at ? new Date(r.departure_at).toLocaleString("en-US") : "—"}
-                </td>
-                <td className="px-3 py-2">
-                  <OfferStatusBadge status={r.offer?.status ?? null} />
-                </td>
-                <td className="px-3 py-2 text-xs">{r.status ?? "—"}</td>
-                <td className="px-3 py-2">
-                  <div className="flex flex-col gap-1">
-                    <button
-                      type="button"
-                      onClick={() => void openEdit(r)}
-                      className="text-left text-xs text-info-700 underline"
-                    >
-                      Edit
-                    </button>
-                    {r.offer?.id && isSubmittableStatus(r.offer.status) && (
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => void handleSubmitForReview(r.offer!.id!)}
-                        className="self-start rounded bg-primary px-2 py-0.5 text-xs font-medium text-white disabled:opacity-40"
-                      >
-                        Submit for review
-                      </button>
-                    )}
-                    <button
-                      type="button"
+      <Table>
+        <THead>
+          <TR>
+            <TH>ID</TH>
+            <TH>Code</TH>
+            <TH>Route</TH>
+            <TH>Departure</TH>
+            <TH>Review</TH>
+            <TH>Status</TH>
+            <TH>Actions</TH>
+          </TR>
+        </THead>
+        <TBody>
+          {rows.length === 0 ? (
+            <TEmpty colSpan={7}>No flights yet.</TEmpty>
+          ) : null}
+          {rows.map((r) => (
+            <TR key={r.id}>
+              <TD className="tabular-nums text-fg-t7">{r.id}</TD>
+              <TD className="font-medium">{r.flight_code_internal ?? "—"}</TD>
+              <TD className="text-xs">
+                {r.departure_airport_code ?? r.departure_city ?? "?"} →{" "}
+                {r.arrival_airport_code ?? r.arrival_city ?? "?"}
+              </TD>
+              <TD className="text-xs">
+                {r.departure_at ? new Date(r.departure_at).toLocaleString("en-US") : "—"}
+              </TD>
+              <TD>
+                <OfferStatusBadge status={r.offer?.status ?? null} />
+              </TD>
+              <TD className="text-xs">{r.status ?? "—"}</TD>
+              <TD>
+                <div className="flex flex-col gap-1">
+                  <button
+                    type="button"
+                    onClick={() => void openEdit(r)}
+                    className="text-left text-xs text-info-700 hover:underline"
+                  >
+                    Edit
+                  </button>
+                  {r.offer?.id && isSubmittableStatus(r.offer.status) && (
+                    <Button
+                      size="sm"
+                      variant="primary"
                       disabled={busy}
-                      onClick={() => void handleDelete(r.id)}
-                      className="text-left text-xs text-error-600 underline disabled:opacity-40"
+                      onClick={() => void handleSubmitForReview(r.offer!.id!)}
+                      className="self-start"
                     >
-                      Delete
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                      Submit for review
+                    </Button>
+                  )}
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void handleDelete(r.id)}
+                    className="text-left text-xs text-error-600 hover:underline disabled:opacity-40"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </TD>
+            </TR>
+          ))}
+        </TBody>
+      </Table>
       {meta && <PaginationBar meta={meta} onPage={setPage} />}
       <CsvImportModal
         open={importOpen}
