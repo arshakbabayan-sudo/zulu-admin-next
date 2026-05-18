@@ -1,5 +1,7 @@
 "use client";
 
+/** Phase-2 migration to shared @/components/ui primitives. */
+
 import { ContentLanguagePill } from "@/components/ContentLanguagePill";
 import { CsvImportModal } from "@/components/CsvImportModal";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
@@ -8,6 +10,19 @@ import { OfferStatusBadge, isSubmittableStatus } from "@/components/OfferStatusB
 import { PaginationBar } from "@/components/PaginationBar";
 import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
 import { TranslationTabs } from "@/components/TranslationTabs";
+import {
+  Button,
+  FormField,
+  Input,
+  PageHeader,
+  Table,
+  TBody,
+  TD,
+  TEmpty,
+  TH,
+  THead,
+  TR,
+} from "@/components/ui";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessOperatorToolsNav, userHasSellerServiceType } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
@@ -369,14 +384,11 @@ export default function OperatorVisasPage() {
   const [importOpen, setImportOpen] = useState(false);
 
   const errFields = useMemo(() => fieldKeysFromFormErrLines(formErrLines), [formErrLines]);
-  const inputClass = (fieldKey: string) =>
-    `rounded border px-2 py-1.5 text-sm ${
-      errFields.has(fieldKey)
-        ? "border-red-400 focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200"
-        : "border-default focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-    }`;
-  const labelTextClass = "text-sm font-medium text-fg-t7";
-  const hintClass = "text-xs leading-snug text-fg-t6";
+  const fieldErrorFor = (fieldKey: string): string | null => {
+    if (!errFields.has(fieldKey)) return null;
+    const match = formErrLines.find((line) => line.startsWith(`${fieldKey}:`));
+    return match ?? "Invalid value";
+  };
   const sectionTitleClass = "mb-3 text-xs font-semibold uppercase tracking-wide text-fg-t6";
 
   const load = useCallback(async () => {
@@ -499,50 +511,49 @@ export default function OperatorVisasPage() {
 
   if (!allowed || forbidden)
     return (
-      <div>
+      <div className="space-y-4">
         <h1 className="admin-page-title">{t("admin.crud.visas.title")}</h1>
-        <div className="mt-4">
+        <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
       </div>
     );
 
   return (
-    <div>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-3">
-          <h1 className="admin-page-title">{t("admin.crud.visas.title")}</h1>
-          {form === null && <ContentLanguagePill />}
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <ImportExportButtons
-            busy={busy || exportBusy}
-            exportDisabled={!token}
-            onTemplate={() => downloadCsvFile("visas-template.csv", visaTemplateCsv())}
-            onExport={async () => {
-              if (!token) return;
-              setExportBusy(true);
-              try {
-                const csv = await exportAllVisasCsv(token);
-                downloadCsvFile(csvExportFilename("visas"), csv);
-              } catch (e) {
-                alert(e instanceof ApiRequestError ? e.message : "Export failed");
-              } finally {
-                setExportBusy(false);
-              }
-            }}
-            onImport={() => setImportOpen(true)}
-          />
-          <button
-            type="button"
-            onClick={openCreate}
-            disabled={busy}
-            className="admin-btn-primary"
-          >
-            {t("admin.crud.visas.new_btn")}
-          </button>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title={
+          <span className="inline-flex items-center gap-3">
+            {t("admin.crud.visas.title")}
+            {form === null && <ContentLanguagePill />}
+          </span>
+        }
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <ImportExportButtons
+              busy={busy || exportBusy}
+              exportDisabled={!token}
+              onTemplate={() => downloadCsvFile("visas-template.csv", visaTemplateCsv())}
+              onExport={async () => {
+                if (!token) return;
+                setExportBusy(true);
+                try {
+                  const csv = await exportAllVisasCsv(token);
+                  downloadCsvFile(csvExportFilename("visas"), csv);
+                } catch (e) {
+                  alert(e instanceof ApiRequestError ? e.message : "Export failed");
+                } finally {
+                  setExportBusy(false);
+                }
+              }}
+              onImport={() => setImportOpen(true)}
+            />
+            <Button size="sm" disabled={busy} onClick={openCreate}>
+              {t("admin.crud.visas.new_btn")}
+            </Button>
+          </div>
+        }
+      />
 
       <CsvImportModal
         open={importOpen}
@@ -562,179 +573,215 @@ export default function OperatorVisasPage() {
         }}
       />
 
-      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
+      {err && (
+        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
+          {err}
+        </div>
+      )}
       {formLoading && editId != null && !form && (
-        <div className="mt-4 rounded border border-default bg-white p-4 text-sm text-fg-t6">{t("admin.crud.visas.loading")}</div>
+        <div className="admin-card p-4 text-sm text-fg-t6">{t("admin.crud.visas.loading")}</div>
       )}
       {form && (
-        <div className="mt-4 rounded border border-default bg-white p-5">
-          <h2 className="mb-4 text-base font-medium">{editId ? t("admin.crud.visas.form_edit") : t("admin.crud.visas.form_new")}</h2>
+        <section className="admin-card p-5">
+          <h2 className="mb-4 text-base font-semibold">{editId ? t("admin.crud.visas.form_edit") : t("admin.crud.visas.form_new")}</h2>
 
           <div className="space-y-6">
-          <div>
-          <h3 className={sectionTitleClass}>{t("admin.crud.visas.section.general")}</h3>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <LocationCascadeSelect
-              token={token}
-              value={form.location_id === "" || form.location_id == null ? null : Number(form.location_id)}
-              label="Location (select country/region/city)"
-              onChange={(locationId, meta) =>
-                setForm((p) =>
-                  p
-                    ? {
-                        ...p,
-                        location_id: locationId ?? "",
-                        country: meta.country?.name ?? p.country,
-                      }
-                    : p
-                )
-              }
-            />
-            {editId == null && (
-              <label className="flex flex-col gap-1.5 text-sm sm:col-span-2">
-                <span className={labelTextClass}>
-                  {t("admin.crud.visas.field.offer_id")} <span className="text-red-500">*</span>
-                </span>
-                <input
-                  type="number"
-                  placeholder={t("admin.crud.visas.hint.offer_id")}
-                  value={form.offer_id != null && Number.isFinite(Number(form.offer_id)) ? form.offer_id : ""}
-                  onChange={(e) =>
+            <div>
+              <h3 className={sectionTitleClass}>{t("admin.crud.visas.section.general")}</h3>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <LocationCascadeSelect
+                  token={token}
+                  value={form.location_id === "" || form.location_id == null ? null : Number(form.location_id)}
+                  label="Location (select country/region/city)"
+                  onChange={(locationId, meta) =>
                     setForm((p) =>
-                      p ? { ...p, offer_id: e.target.value ? Number(e.target.value) : undefined } : p
+                      p
+                        ? {
+                            ...p,
+                            location_id: locationId ?? "",
+                            country: meta.country?.name ?? p.country,
+                          }
+                        : p
                     )
                   }
-                  className={inputClass("offer_id")}
                 />
-              </label>
-            )}
-            {editId != null && (
-              <div className="flex flex-col gap-1.5 text-sm sm:col-span-2">
-                <span className={labelTextClass}>{t("admin.crud.visas.field.offer_status")}</span>
-                <p className="rounded border border-default bg-figma-bg-1 px-2 py-1.5 text-fg-t11">
-                  {(form.offer_status ?? "").trim() || "—"}
-                </p>
-                <p className={hintClass}>{t("admin.crud.visas.hint.offer_status")}</p>
+                {editId == null && (
+                  <FormField
+                    label={t("admin.crud.visas.field.offer_id")}
+                    htmlFor="visa-offer-id"
+                    required
+                    error={fieldErrorFor("offer_id")}
+                    className="sm:col-span-2"
+                  >
+                    <Input
+                      id="visa-offer-id"
+                      type="number"
+                      placeholder={t("admin.crud.visas.hint.offer_id")}
+                      value={form.offer_id != null && Number.isFinite(Number(form.offer_id)) ? form.offer_id : ""}
+                      onChange={(e) =>
+                        setForm((p) =>
+                          p ? { ...p, offer_id: e.target.value ? Number(e.target.value) : undefined } : p
+                        )
+                      }
+                    />
+                  </FormField>
+                )}
+                {editId != null && (
+                  <FormField
+                    label={t("admin.crud.visas.field.offer_status")}
+                    helperText={t("admin.crud.visas.hint.offer_status")}
+                    className="sm:col-span-2"
+                  >
+                    <Input value={(form.offer_status ?? "").trim() || "—"} readOnly className="bg-figma-bg-1 text-fg-t11" />
+                  </FormField>
+                )}
+                {/* country_id + country auto-derived from LocationCascadeSelect above. */}
+                <FormField
+                  label={t("admin.crud.visas.field.visa_type")}
+                  htmlFor="visa-visa-type"
+                  required
+                  error={fieldErrorFor("visa_type")}
+                >
+                  <Input
+                    id="visa-visa-type"
+                    value={form.visa_type ?? ""}
+                    onChange={(e) => setForm((p) => (p ? { ...p, visa_type: e.target.value } : p))}
+                  />
+                </FormField>
+                <FormField
+                  label={t("admin.crud.visas.field.name")}
+                  htmlFor="visa-name"
+                  error={fieldErrorFor("name")}
+                  className="sm:col-span-2"
+                >
+                  <Input
+                    id="visa-name"
+                    value={form.name ?? ""}
+                    onChange={(e) => setForm((p) => (p ? { ...p, name: e.target.value } : p))}
+                  />
+                </FormField>
               </div>
-            )}
-            {/* country_id + country auto-derived from LocationCascadeSelect above. */}
-            <label className="flex flex-col gap-1.5 text-sm">
-              <span className={labelTextClass}>
-                {t("admin.crud.visas.field.visa_type")} <span className="text-red-500">*</span>
-              </span>
-              <input
-                value={form.visa_type ?? ""}
-                onChange={(e) => setForm((p) => (p ? { ...p, visa_type: e.target.value } : p))}
-                className={inputClass("visa_type")}
-              />
-            </label>
-            <label className="flex flex-col gap-1.5 text-sm sm:col-span-2">
-              <span className={labelTextClass}>{t("admin.crud.visas.field.name")}</span>
-              <input
-                value={form.name ?? ""}
-                onChange={(e) => setForm((p) => (p ? { ...p, name: e.target.value } : p))}
-                className={inputClass("name")}
-              />
-            </label>
-          </div>
-          </div>
-
-          <div>
-          <h3 className={sectionTitleClass}>{t("admin.crud.visas.section.processing")}</h3>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="flex flex-col gap-1.5 text-sm">
-              <span className={labelTextClass}>{t("admin.crud.visas.field.processing_days")}</span>
-              <input
-                type="number"
-                min={0}
-                value={form.processing_days != null && !Number.isNaN(Number(form.processing_days)) ? form.processing_days : ""}
-                onChange={(e) =>
-                  setForm((p) =>
-                    p ? { ...p, processing_days: e.target.value ? Number(e.target.value) : undefined } : p
-                  )
-                }
-                className={inputClass("processing_days")}
-              />
-            </label>
-          </div>
-          </div>
-
-          <div>
-          <h3 className={sectionTitleClass}>{t("admin.crud.visas.section.pricing")}</h3>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="flex flex-col gap-1.5 text-sm">
-              <span className={labelTextClass}>{t("admin.crud.visas.field.visa_price")}</span>
-              <input
-                type="number"
-                min={0}
-                step="0.01"
-                value={form.visa_price != null && !Number.isNaN(Number(form.visa_price)) ? form.visa_price : ""}
-                onChange={(e) =>
-                  setForm((p) =>
-                    p ? { ...p, visa_price: e.target.value === "" ? undefined : Number(e.target.value) } : p
-                  )
-                }
-                className={inputClass("visa_price")}
-              />
-              <p className={hintClass}>Visa-level price you edit here. Offer price is separate and read-only.</p>
-            </label>
-            {editId != null && (
-              <div className="flex flex-col gap-1.5 text-sm">
-                <span className={labelTextClass}>{t("admin.crud.visas.field.offer_price")}</span>
-                <p className="rounded border border-default bg-figma-bg-1 px-2 py-1.5 tabular-nums text-fg-t11">
-                  {form.offer_price != null && !Number.isNaN(Number(form.offer_price))
-                    ? visaMoneyCell(form.offer_price, form.currency)
-                    : "—"}
-                </p>
-                <p className={hintClass}>From the linked offer; not editable on this form.</p>
-              </div>
-            )}
-            <div className="flex flex-col gap-1.5 text-sm sm:col-span-2">
-              <span className={labelTextClass}>{t("admin.crud.visas.field.currency")}</span>
-              <p className="rounded border border-default bg-figma-bg-1 px-2 py-1.5 uppercase text-fg-t11">
-                {(form.currency ?? "").trim() || "—"}
-              </p>
-              <p className={hintClass}>From the linked offer when present; not saved from this screen.</p>
             </div>
-          </div>
-          </div>
 
-          <div>
-          <h3 className={sectionTitleClass}>{t("admin.crud.visas.section.content")}</h3>
-          <div className="grid gap-4 sm:grid-cols-1">
-            <label className="flex flex-col gap-1.5 text-sm">
-              <span className={labelTextClass}>{t("admin.crud.visas.field.description")}</span>
-              <textarea
-                rows={4}
-                value={form.description ?? ""}
-                onChange={(e) => setForm((p) => (p ? { ...p, description: e.target.value } : p))}
-                className={inputClass("description")}
-              />
-            </label>
-            <label className="flex flex-col gap-1.5 text-sm">
-              <span className={labelTextClass}>{t("admin.crud.visas.field.required_documents")}</span>
-              <textarea
-                rows={5}
-                placeholder="e.g. Passport copy"
-                value={form.required_documents_text ?? ""}
-                onChange={(e) => setForm((p) => (p ? { ...p, required_documents_text: e.target.value } : p))}
-                className={inputClass("required_documents_text")}
-              />
-              <p className={hintClass}>{t("admin.crud.visas.hint.required_documents")}</p>
-            </label>
-          </div>
-          </div>
+            <div>
+              <h3 className={sectionTitleClass}>{t("admin.crud.visas.section.processing")}</h3>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  label={t("admin.crud.visas.field.processing_days")}
+                  htmlFor="visa-processing-days"
+                  error={fieldErrorFor("processing_days")}
+                >
+                  <Input
+                    id="visa-processing-days"
+                    type="number"
+                    min={0}
+                    value={form.processing_days != null && !Number.isNaN(Number(form.processing_days)) ? form.processing_days : ""}
+                    onChange={(e) =>
+                      setForm((p) =>
+                        p ? { ...p, processing_days: e.target.value ? Number(e.target.value) : undefined } : p
+                      )
+                    }
+                  />
+                </FormField>
+              </div>
+            </div>
+
+            <div>
+              <h3 className={sectionTitleClass}>{t("admin.crud.visas.section.pricing")}</h3>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  label={t("admin.crud.visas.field.visa_price")}
+                  htmlFor="visa-visa-price"
+                  error={fieldErrorFor("visa_price")}
+                  helperText="Visa-level price you edit here. Offer price is separate and read-only."
+                >
+                  <Input
+                    id="visa-visa-price"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={form.visa_price != null && !Number.isNaN(Number(form.visa_price)) ? form.visa_price : ""}
+                    onChange={(e) =>
+                      setForm((p) =>
+                        p ? { ...p, visa_price: e.target.value === "" ? undefined : Number(e.target.value) } : p
+                      )
+                    }
+                  />
+                </FormField>
+                {editId != null && (
+                  <FormField
+                    label={t("admin.crud.visas.field.offer_price")}
+                    helperText="From the linked offer; not editable on this form."
+                  >
+                    <Input
+                      value={
+                        form.offer_price != null && !Number.isNaN(Number(form.offer_price))
+                          ? visaMoneyCell(form.offer_price, form.currency)
+                          : "—"
+                      }
+                      readOnly
+                      className="bg-figma-bg-1 tabular-nums text-fg-t11"
+                    />
+                  </FormField>
+                )}
+                <FormField
+                  label={t("admin.crud.visas.field.currency")}
+                  helperText="From the linked offer when present; not saved from this screen."
+                  className="sm:col-span-2"
+                >
+                  <Input
+                    value={(form.currency ?? "").trim() || "—"}
+                    readOnly
+                    className="bg-figma-bg-1 uppercase text-fg-t11"
+                  />
+                </FormField>
+              </div>
+            </div>
+
+            <div>
+              <h3 className={sectionTitleClass}>{t("admin.crud.visas.section.content")}</h3>
+              <div className="grid gap-4 sm:grid-cols-1">
+                <FormField
+                  label={t("admin.crud.visas.field.description")}
+                  htmlFor="visa-description"
+                  error={fieldErrorFor("description")}
+                >
+                  <Input
+                    as="textarea"
+                    id="visa-description"
+                    rows={4}
+                    value={form.description ?? ""}
+                    onChange={(e) => setForm((p) => (p ? { ...p, description: e.target.value } : p))}
+                  />
+                </FormField>
+                <FormField
+                  label={t("admin.crud.visas.field.required_documents")}
+                  htmlFor="visa-required-documents"
+                  error={fieldErrorFor("required_documents_text")}
+                  helperText={t("admin.crud.visas.hint.required_documents")}
+                >
+                  <Input
+                    as="textarea"
+                    id="visa-required-documents"
+                    rows={5}
+                    placeholder="e.g. Passport copy"
+                    value={form.required_documents_text ?? ""}
+                    onChange={(e) => setForm((p) => (p ? { ...p, required_documents_text: e.target.value } : p))}
+                  />
+                </FormField>
+              </div>
+            </div>
           </div>
 
           {formErrLines.length > 0 && (
-            <ul className="mt-4 list-inside list-disc text-sm text-error-600">
+            <ul className="mt-4 list-inside list-disc text-sm text-error-700">
               {formErrLines.map((line, i) => (
                 <li key={i}>{line}</li>
               ))}
             </ul>
           )}
           {editId !== null && (
-            <div className="mt-6 rounded border border-default bg-figma-bg-1 p-3">
+            <div className="mt-6 rounded-zulu border border-default bg-figma-bg-1 p-3">
               <h3 className="mb-2 text-sm font-medium text-fg-t6">
                 Translations <span className="text-fg-t7 font-normal">(EN-ից բացի՝ RU / HY)</span>
               </h3>
@@ -750,100 +797,86 @@ export default function OperatorVisasPage() {
             </div>
           )}
           <div className="mt-6 flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void handleSubmit()}
-              className="admin-btn-primary"
-            >
+            <Button size="sm" disabled={busy} onClick={() => void handleSubmit()}>
               {busy ? t("admin.crud.common.saving") : t("common.save")}
-            </button>
-            <button
-              type="button"
-              onClick={closeForm}
-              className="rounded border border-default bg-white px-4 py-1.5 text-sm text-fg-t11 hover:bg-figma-bg-1"
-            >
+            </Button>
+            <Button variant="outline" size="sm" onClick={closeForm}>
               {t("common.cancel")}
-            </button>
+            </Button>
           </div>
-        </div>
+        </section>
       )}
-      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
-        <table className="w-full min-w-[880px] text-left text-sm">
-          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
-            <tr>
-              <th className="px-3 py-2">{t("admin.crud.common.id")}</th>
-              <th className="px-3 py-2">{t("admin.crud.visas.col.country")}</th>
-              <th className="px-3 py-2">{t("admin.crud.visas.col.type")}</th>
-              <th className="px-3 py-2 font-semibold text-fg-t11">{t("admin.crud.visas.col.visa_price")}</th>
-              <th className="px-3 py-2 font-normal text-fg-t6">{t("admin.crud.visas.col.offer_price")}</th>
-              <th className="px-3 py-2">{t("admin.crud.visas.col.processing")}</th>
-              <th className="px-3 py-2">{t("admin.crud.common.status")}</th>
-              <th className="px-3 py-2">{t("admin.crud.common.actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && (
-              <tr>
-                <td colSpan={8} className="px-3 py-6 text-center text-fg-t6">
-                  {t("admin.crud.visas.empty")}
-                </td>
-              </tr>
-            )}
-            {rows.map((r) => (
-              <tr key={r.id} className="border-b border-default hover:bg-figma-bg-1">
-                <td className="px-3 py-2 tabular-nums text-fg-t7">{r.id}</td>
-                <td className="px-3 py-2 font-medium text-fg-t11">
-                  {(r.country ?? "").trim() ? r.country : "—"}
-                </td>
-                <td className="px-3 py-2 text-fg-t7">{(r.visa_type ?? "").trim() ? r.visa_type : "—"}</td>
-                <td className="px-3 py-2 tabular-nums font-medium text-fg-t11">
-                  {visaMoneyCell(r.visa_price != null ? r.visa_price : r.price ?? null, r.currency)}
-                </td>
-                <td className="px-3 py-2 tabular-nums text-sm text-fg-t6">
-                  {visaMoneyCell(r.offer_price ?? null, r.currency)}
-                </td>
-                <td className="px-3 py-2 text-fg-t7">
-                  {r.processing_days != null ? `${r.processing_days} days` : "—"}
-                </td>
-                <td className="px-3 py-2">
-                  <OfferStatusBadge status={r.status ?? null} />
-                </td>
-                <td className="px-3 py-2">
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => void openEdit(r)}
+      <Table>
+        <THead>
+          <TR>
+            <TH>{t("admin.crud.common.id")}</TH>
+            <TH>{t("admin.crud.visas.col.country")}</TH>
+            <TH>{t("admin.crud.visas.col.type")}</TH>
+            <TH>{t("admin.crud.visas.col.visa_price")}</TH>
+            <TH>{t("admin.crud.visas.col.offer_price")}</TH>
+            <TH>{t("admin.crud.visas.col.processing")}</TH>
+            <TH>{t("admin.crud.common.status")}</TH>
+            <TH>{t("admin.crud.common.actions")}</TH>
+          </TR>
+        </THead>
+        <TBody>
+          {rows.length === 0 ? (
+            <TEmpty colSpan={8}>{t("admin.crud.visas.empty")}</TEmpty>
+          ) : null}
+          {rows.map((r) => (
+            <TR key={r.id}>
+              <TD className="tabular-nums text-fg-t7">{r.id}</TD>
+              <TD className="font-medium text-fg-t11">
+                {(r.country ?? "").trim() ? r.country : "—"}
+              </TD>
+              <TD className="text-fg-t7">{(r.visa_type ?? "").trim() ? r.visa_type : "—"}</TD>
+              <TD className="tabular-nums font-medium text-fg-t11">
+                {visaMoneyCell(r.visa_price != null ? r.visa_price : r.price ?? null, r.currency)}
+              </TD>
+              <TD className="tabular-nums text-sm text-fg-t6">
+                {visaMoneyCell(r.offer_price ?? null, r.currency)}
+              </TD>
+              <TD className="text-fg-t7">
+                {r.processing_days != null ? `${r.processing_days} days` : "—"}
+              </TD>
+              <TD>
+                <OfferStatusBadge status={r.status ?? null} />
+              </TD>
+              <TD>
+                <div className="flex flex-col gap-1">
+                  <button
+                    type="button"
+                    onClick={() => void openEdit(r)}
+                    disabled={busy}
+                    className="text-left text-xs text-info-700 hover:underline disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {t("admin.crud.common.edit")}
+                  </button>
+                  {r.offer_id && isSubmittableStatus(r.status) && (
+                    <Button
+                      size="sm"
+                      variant="primary"
                       disabled={busy}
-                      className="text-xs text-info-700 underline disabled:cursor-not-allowed disabled:opacity-40"
+                      onClick={() => void handleSubmitForReview(r.offer_id!)}
+                      className="self-start"
                     >
-                      {t("admin.crud.common.edit")}
-                    </button>
-                    {r.offer_id && isSubmittableStatus(r.status) && (
-                      <button
-                        type="button"
-                        onClick={() => void handleSubmitForReview(r.offer_id!)}
-                        disabled={busy}
-                        className="rounded bg-primary px-2 py-0.5 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        Submit for review
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => void handleDelete(r.id)}
-                      disabled={busy}
-                      className="text-xs text-error-600 underline disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      {t("admin.crud.common.delete")}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                      Submit for review
+                    </Button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => void handleDelete(r.id)}
+                    disabled={busy}
+                    className="text-left text-xs text-error-600 hover:underline disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {t("admin.crud.common.delete")}
+                  </button>
+                </div>
+              </TD>
+            </TR>
+          ))}
+        </TBody>
+      </Table>
       {meta && <PaginationBar meta={meta} onPage={setPage} />}
     </div>
   );
