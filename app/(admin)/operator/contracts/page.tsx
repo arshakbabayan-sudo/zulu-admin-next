@@ -191,7 +191,7 @@ export default function OperatorContractsPage() {
             </TEmpty>
           ) : null}
           {filteredRows.map((r) => (
-            <TR key={r.id}>
+            <TR key={r.id} href={`/operator/contracts/${r.id}`}>
               <TD className="font-mono text-xs text-fg-t8">{r.contract_number}</TD>
               <TD className="text-xs text-fg-t7">{contractTypeLabel(r.type)}</TD>
               <TD>

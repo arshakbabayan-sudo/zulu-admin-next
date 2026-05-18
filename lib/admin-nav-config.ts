@@ -74,6 +74,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/platform/seller-applications", labelKey: "admin.nav.tab.seller_applications" },
       { href: "/platform/users", labelKey: "admin.nav.tab.users" },
       { href: "/platform/contracts", labelKey: "admin.nav.tab.contracts" },
+      { href: "/platform/contract-templates", labelKey: "admin.nav.tab.contract_templates" },
     ],
     visibility: "platform_admin",
   },

@@ -39,7 +39,8 @@ import {
   THead,
   TR,
 } from "@/components/ui";
-import { RefreshCw, Search } from "lucide-react";
+import { Plus, RefreshCw, Search } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 function formatDate(value: string | null | undefined): string {
@@ -104,6 +105,15 @@ export default function PlatformContractsPage() {
           meta
             ? `${meta.total} total · page ${meta.current_page} of ${meta.last_page}`
             : "Platform and partner contracts"
+        }
+        actions={
+          <Link
+            href="/platform/contracts/new"
+            className="inline-flex h-10 items-center gap-2 rounded-md bg-primary-500 px-4 text-ds-button-s font-ds-button-s font-semibold text-white transition hover:bg-purple-dark"
+          >
+            <Plus className="h-4 w-4" aria-hidden />
+            New contract
+          </Link>
         }
       />
 
@@ -195,7 +205,7 @@ export default function PlatformContractsPage() {
             <TEmpty colSpan={9}>No contracts match the current filters.</TEmpty>
           ) : null}
           {rows.map((r) => (
-            <TR key={r.id}>
+            <TR key={r.id} href={`/platform/contracts/${r.id}`}>
               <TD className="font-mono text-xs text-fg-t8">{r.contract_number}</TD>
               <TD className="text-xs text-fg-t7">{contractTypeLabel(r.type)}</TD>
               <TD>
