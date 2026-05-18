@@ -1,5 +1,13 @@
 "use client";
 
+/** Phase-2 migration: page chrome (header / list table / save / cancel /
+ * submit-for-review / forbidden / error banners) on design-system primitives.
+ * The dense in-form fields (hundreds of inputClass usages across the multi-
+ * section form for vehicle / pricing / advanced options) intentionally keep
+ * their compact layout because the design-system Input primitive's 48px
+ * height would break the dense column grids. Same pattern as the inner
+ * sections of /operator/hotels and /operator/flights. */
+
 import { ContentLanguagePill } from "@/components/ContentLanguagePill";
 import { CsvImportModal } from "@/components/CsvImportModal";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
@@ -10,6 +18,17 @@ import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
 import { MainImageDescriptionFields } from "@/components/MainImageDescriptionFields";
 import { LatLngFields } from "@/components/LatLngFields";
 import { TranslationTabs } from "@/components/TranslationTabs";
+import {
+  Button,
+  PageHeader,
+  Table,
+  TBody,
+  TD,
+  TEmpty,
+  TH,
+  THead,
+  TR,
+} from "@/components/ui";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ApiRequestError } from "@/lib/api-client";
@@ -712,9 +731,9 @@ export default function OperatorCarsPage() {
 
   if (forbidden)
     return (
-      <div>
+      <div className="space-y-4">
         <h1 className="admin-page-title">{t("admin.crud.cars.title")}</h1>
-        <div className="mt-4">
+        <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
       </div>
@@ -731,41 +750,40 @@ export default function OperatorCarsPage() {
     }`;
 
   return (
-    <div>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-3">
-          <h1 className="admin-page-title">{t("admin.crud.cars.title")}</h1>
-          {form === null && <ContentLanguagePill />}
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <ImportExportButtons
-            busy={busy || exportBusy}
-            exportDisabled={!token}
-            onTemplate={() => downloadCsvFile("cars-template.csv", carTemplateCsv())}
-            onExport={async () => {
-              if (!token) return;
-              setExportBusy(true);
-              try {
-                const csv = await exportCarsCsv(token);
-                downloadCsvFile(csvExportFilename("cars"), csv);
-              } catch (e) {
-                alert(e instanceof ApiRequestError ? e.message : "Export failed");
-              } finally {
-                setExportBusy(false);
-              }
-            }}
-            onImport={() => setImportOpen(true)}
-          />
-          <button
-            type="button"
-            onClick={() => void openCreate()}
-            disabled={busy}
-            className="admin-btn-primary"
-          >
-            {busy ? "Loading…" : t("admin.crud.cars.new_btn")}
-          </button>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title={
+          <span className="inline-flex items-center gap-3">
+            {t("admin.crud.cars.title")}
+            {form === null && <ContentLanguagePill />}
+          </span>
+        }
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <ImportExportButtons
+              busy={busy || exportBusy}
+              exportDisabled={!token}
+              onTemplate={() => downloadCsvFile("cars-template.csv", carTemplateCsv())}
+              onExport={async () => {
+                if (!token) return;
+                setExportBusy(true);
+                try {
+                  const csv = await exportCarsCsv(token);
+                  downloadCsvFile(csvExportFilename("cars"), csv);
+                } catch (e) {
+                  alert(e instanceof ApiRequestError ? e.message : "Export failed");
+                } finally {
+                  setExportBusy(false);
+                }
+              }}
+              onImport={() => setImportOpen(true)}
+            />
+            <Button size="sm" disabled={busy} onClick={() => void openCreate()}>
+              {busy ? "Loading…" : t("admin.crud.cars.new_btn")}
+            </Button>
+          </div>
+        }
+      />
       <CsvImportModal
         open={importOpen}
         title={t("admin.crud.cars.import_title")}
@@ -783,13 +801,17 @@ export default function OperatorCarsPage() {
           return res;
         }}
       />
-      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
-      {formErr && !form && <p className="mt-2 text-sm text-error-600">{formErr}</p>}
+      {err && (
+        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
+      )}
+      {formErr && !form && (
+        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{formErr}</div>
+      )}
       {form && (
-        <div className="mt-4 rounded border border-default bg-white p-4">
-          <h2 className="mb-3 text-base font-medium">{editId ? t("admin.crud.cars.form_edit") : t("admin.crud.cars.form_new")}</h2>
+        <section className="admin-card p-4">
+          <h2 className="mb-3 text-base font-semibold">{editId ? t("admin.crud.cars.form_edit") : t("admin.crud.cars.form_new")}</h2>
           {fieldSummary && (
-            <div className="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-error-800">
+            <div className="mb-3 rounded-zulu border border-error-100 bg-error-50 px-3 py-2 text-sm text-error-700">
               <div className="font-medium">{fieldSummary.title}</div>
               <ul className="mt-1 list-disc pl-5">
                 {fieldSummary.items.slice(0, 12).map((it, idx) => (
@@ -1767,9 +1789,9 @@ export default function OperatorCarsPage() {
                 </>
               )}
           </div>
-          {formErr && <p className="mt-2 text-sm text-error-600">{formErr}</p>}
+          {formErr && <p className="mt-2 text-sm text-error-700">{formErr}</p>}
           {editId !== null && (
-            <div className="mt-6 rounded border border-default bg-figma-bg-1 p-3">
+            <div className="mt-6 rounded-zulu border border-default bg-figma-bg-1 p-3">
               <h3 className="mb-2 text-sm font-medium text-fg-t6">
                 Translations <span className="text-fg-t7 font-normal">(EN-ից բացի՝ RU / HY)</span>
               </h3>
@@ -1784,89 +1806,75 @@ export default function OperatorCarsPage() {
             </div>
           )}
           <div className="mt-4 flex gap-2">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void handleSubmit()}
-              className="admin-btn-primary"
-            >
+            <Button size="sm" disabled={busy} onClick={() => void handleSubmit()}>
               {busy ? t("admin.crud.common.saving") : t("common.save")}
-            </button>
-            <button
-              type="button"
-              onClick={closeForm}
-              className="rounded border border-default px-4 py-1.5 text-sm"
-            >
+            </Button>
+            <Button variant="outline" size="sm" onClick={closeForm}>
               {t("common.cancel")}
-            </button>
+            </Button>
           </div>
-        </div>
+        </section>
       )}
-      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
-        <table className="w-full min-w-[640px] text-left text-sm">
-          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
-            <tr>
-              <th className="px-3 py-2">{t("admin.crud.common.id")}</th>
-              <th className="px-3 py-2">{t("admin.crud.cars.col.company")}</th>
-              <th className="px-3 py-2">{t("admin.crud.cars.col.pickup")}</th>
-              <th className="px-3 py-2">{t("admin.crud.cars.col.dropoff")}</th>
-              <th className="px-3 py-2">{t("admin.crud.cars.col.class")}</th>
-              <th className="px-3 py-2">{t("admin.crud.cars.col.offer")}</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">{t("admin.crud.common.actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && (
-              <tr>
-                <td colSpan={8} className="px-3 py-6 text-center text-fg-t6">
-                  {t("admin.crud.cars.empty")}
-                </td>
-              </tr>
-            )}
-            {rows.map((r) => (
-              <tr key={r.id} className="border-b border-default hover:bg-figma-bg-1">
-                <td className="px-3 py-2 tabular-nums text-fg-t7">{r.id}</td>
-                <td className="px-3 py-2 tabular-nums">{companyCell(r)}</td>
-                <td className="px-3 py-2">{r.pickup_location ?? "—"}</td>
-                <td className="px-3 py-2">{r.dropoff_location ?? "—"}</td>
-                <td className="px-3 py-2">{r.vehicle_class ?? "—"}</td>
-                <td className="px-3 py-2">{offerTitle(r)}</td>
-                <td className="px-3 py-2">
-                  <OfferStatusBadge status={r.offer?.status ?? null} />
-                </td>
-                <td className="px-3 py-2">
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => openEdit(r)}
-                      className="text-xs text-info-700 underline"
+      <Table>
+        <THead>
+          <TR>
+            <TH>{t("admin.crud.common.id")}</TH>
+            <TH>{t("admin.crud.cars.col.company")}</TH>
+            <TH>{t("admin.crud.cars.col.pickup")}</TH>
+            <TH>{t("admin.crud.cars.col.dropoff")}</TH>
+            <TH>{t("admin.crud.cars.col.class")}</TH>
+            <TH>{t("admin.crud.cars.col.offer")}</TH>
+            <TH>Status</TH>
+            <TH>{t("admin.crud.common.actions")}</TH>
+          </TR>
+        </THead>
+        <TBody>
+          {rows.length === 0 ? (
+            <TEmpty colSpan={8}>{t("admin.crud.cars.empty")}</TEmpty>
+          ) : null}
+          {rows.map((r) => (
+            <TR key={r.id}>
+              <TD className="tabular-nums text-fg-t7">{r.id}</TD>
+              <TD className="tabular-nums">{companyCell(r)}</TD>
+              <TD>{r.pickup_location ?? "—"}</TD>
+              <TD>{r.dropoff_location ?? "—"}</TD>
+              <TD>{r.vehicle_class ?? "—"}</TD>
+              <TD>{offerTitle(r)}</TD>
+              <TD>
+                <OfferStatusBadge status={r.offer?.status ?? null} />
+              </TD>
+              <TD>
+                <div className="flex flex-col gap-1">
+                  <button
+                    type="button"
+                    onClick={() => openEdit(r)}
+                    className="text-left text-xs text-info-700 hover:underline"
+                  >
+                    {t("admin.crud.common.edit")}
+                  </button>
+                  {r.offer?.id && isSubmittableStatus(r.offer.status) && (
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      onClick={() => void handleSubmitForReview(r.offer!.id!)}
+                      className="self-start"
                     >
-                      {t("admin.crud.common.edit")}
-                    </button>
-                    {r.offer?.id && isSubmittableStatus(r.offer.status) && (
-                      <button
-                        type="button"
-                        onClick={() => void handleSubmitForReview(r.offer!.id!)}
-                        className="rounded bg-primary px-2 py-0.5 text-xs font-medium text-white"
-                      >
-                        Submit for review
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => void handleDelete(r.id)}
-                      className="text-xs text-error-600 underline"
-                    >
-                      {t("admin.crud.common.delete")}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                      Submit for review
+                    </Button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => void handleDelete(r.id)}
+                    className="text-left text-xs text-error-600 hover:underline"
+                  >
+                    {t("admin.crud.common.delete")}
+                  </button>
+                </div>
+              </TD>
+            </TR>
+          ))}
+        </TBody>
+      </Table>
       {meta && <PaginationBar meta={meta} onPage={setPage} />}
     </div>
   );
