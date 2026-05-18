@@ -1,5 +1,7 @@
 "use client";
 
+/** Phase-2 migration to shared @/components/ui primitives. */
+
 import { ContentLanguagePill } from "@/components/ContentLanguagePill";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { HotelsXlsxImportModal } from "@/components/HotelsXlsxImportModal";
@@ -10,6 +12,21 @@ import { PaginationBar } from "@/components/PaginationBar";
 import { LocationCascadeSelect } from "@/components/LocationCascadeSelect";
 import { SourceLanguagePicker } from "@/components/SourceLanguagePicker";
 import { TranslationTabs } from "@/components/TranslationTabs";
+import {
+  Button,
+  Checkbox,
+  FormField,
+  Input,
+  PageHeader,
+  Select,
+  Table,
+  TBody,
+  TD,
+  TEmpty,
+  TH,
+  THead,
+  TR,
+} from "@/components/ui";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { ApiRequestError } from "@/lib/api-client";
 import { apiSubmitOfferForReview } from "@/lib/platform-admin-api";
@@ -234,73 +251,77 @@ export default function OperatorHotelsPage() {
 
   if (forbidden)
     return (
-      <div>
+      <div className="space-y-4">
         <h1 className="admin-page-title">{t("admin.crud.hotels.title")}</h1>
-        <div className="mt-4">
+        <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
       </div>
     );
 
   return (
-    <div>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-3">
-          <h1 className="admin-page-title">{t("admin.crud.hotels.title")}</h1>
-          {/* Pill is hidden when edit/create form is open: switching content lang
-              there would either discard unsaved edits (refetch) or silently
-              overwrite the EN source on save (no refetch). Use the Translations
-              tabs at the bottom of the edit form instead. */}
-          {form === null && <ContentLanguagePill />}
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <ImportExportButtons
-            busy={busy || exportBusy}
-            exportDisabled={!token}
-            onTemplate={async () => {
-              try {
-                const blob = await buildHotelsTemplateBlob();
-                downloadBlob("hotels-template.xlsx", blob);
-              } catch (e) {
-                alert(e instanceof Error ? e.message : "Template download failed");
-              }
-            }}
-            onExport={async () => {
-              if (!token) return;
-              setExportBusy(true);
-              try {
-                const csv = await exportHotelsCsv(token);
-                downloadCsvFile(csvExportFilename("hotels"), csv);
-              } catch (e) {
-                alert(e instanceof ApiRequestError ? e.message : "Export failed");
-              } finally {
-                setExportBusy(false);
-              }
-            }}
-            onImport={() => setImportOpen(true)}
-          />
-          <button
-            type="button"
-            onClick={openCreate}
-            className="admin-btn-primary"
-          >
-            {t("admin.crud.hotels.new_btn")}
-          </button>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title={
+          <span className="inline-flex items-center gap-3">
+            {t("admin.crud.hotels.title")}
+            {/* Pill is hidden when edit/create form is open: switching content lang
+                there would either discard unsaved edits (refetch) or silently
+                overwrite the EN source on save (no refetch). Use the Translations
+                tabs at the bottom of the edit form instead. */}
+            {form === null && <ContentLanguagePill />}
+          </span>
+        }
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <ImportExportButtons
+              busy={busy || exportBusy}
+              exportDisabled={!token}
+              onTemplate={async () => {
+                try {
+                  const blob = await buildHotelsTemplateBlob();
+                  downloadBlob("hotels-template.xlsx", blob);
+                } catch (e) {
+                  alert(e instanceof Error ? e.message : "Template download failed");
+                }
+              }}
+              onExport={async () => {
+                if (!token) return;
+                setExportBusy(true);
+                try {
+                  const csv = await exportHotelsCsv(token);
+                  downloadCsvFile(csvExportFilename("hotels"), csv);
+                } catch (e) {
+                  alert(e instanceof ApiRequestError ? e.message : "Export failed");
+                } finally {
+                  setExportBusy(false);
+                }
+              }}
+              onImport={() => setImportOpen(true)}
+            />
+            <Button size="sm" onClick={openCreate}>
+              {t("admin.crud.hotels.new_btn")}
+            </Button>
+          </div>
+        }
+      />
       <HotelsXlsxImportModal
         open={importOpen}
         token={token}
         onClose={() => setImportOpen(false)}
         onSuccess={() => void load()}
       />
-      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
+      {err && (
+        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
+          {err}
+        </div>
+      )}
       {formLoading && editId != null && !form && (
-        <div className="mt-4 rounded border border-default bg-white p-4 text-sm text-fg-t6">{t("admin.crud.hotels.loading")}</div>
+        <div className="admin-card p-4 text-sm text-fg-t6">{t("admin.crud.hotels.loading")}</div>
       )}
       {form && (
-        <div className="mt-4 rounded border border-default bg-white p-4">
-          <h2 className="mb-3 text-base font-medium">{editId ? t("admin.crud.hotels.form_edit") : t("admin.crud.hotels.form_new")}</h2>
+        <section className="admin-card p-4">
+          <h2 className="mb-3 text-base font-semibold">{editId ? t("admin.crud.hotels.form_edit") : t("admin.crud.hotels.form_new")}</h2>
           <SourceLanguagePicker
             value={form.source_lang ?? "en"}
             onChange={(next) => setForm((p) => (p ? { ...p, source_lang: next } : p))}
@@ -309,9 +330,9 @@ export default function OperatorHotelsPage() {
           />
           <div className="grid gap-3 sm:grid-cols-2">
             {editId == null && (
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.offer_id")}</span>
-                <input
+              <FormField label={t("admin.crud.hotels.field.offer_id")} htmlFor="hotel-offer-id">
+                <Input
+                  id="hotel-offer-id"
                   type="number"
                   min={1}
                   value={form.offer_id === "" ? "" : form.offer_id}
@@ -325,48 +346,48 @@ export default function OperatorHotelsPage() {
                         : p
                     )
                   }
-                  className="rounded border border-default px-2 py-1.5 text-sm"
                 />
-              </label>
+              </FormField>
             )}
             {(["hotel_name", "property_type", "hotel_type", "district_or_area"] as const).map(
               (f) => (
-                <label key={f} className="flex flex-col gap-1 text-sm">
-                  <span className="font-medium text-fg-t6">{t(`admin.crud.hotels.field.${f}`)}</span>
-                  <input
+                <FormField key={f} label={t(`admin.crud.hotels.field.${f}`)} htmlFor={`hotel-${f}`}>
+                  <Input
+                    id={`hotel-${f}`}
                     value={form[f]}
                     onChange={(e) => setForm((p) => (p ? { ...p, [f]: e.target.value } : p))}
-                    className="rounded border border-default px-2 py-1.5 text-sm"
                   />
-                </label>
+                </FormField>
               )
             )}
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-fg-t6">Accommodation type</span>
-              <select
+            <FormField label="Accommodation type" htmlFor="hotel-accommodation-type">
+              <Select
+                id="hotel-accommodation-type"
                 value={form.accommodation_type}
                 onChange={(e) =>
                   setForm((p) =>
                     p ? { ...p, accommodation_type: e.target.value as HotelAccommodationType } : p
                   )
                 }
-                className="rounded border border-default px-2 py-1.5 text-sm"
               >
                 {HOTEL_ACCOMMODATION_TYPES.map((opt) => (
                   <option key={opt} value={opt}>
                     {opt.charAt(0).toUpperCase() + opt.slice(1)}
                   </option>
                 ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-              <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.full_address")}</span>
-              <input
+              </Select>
+            </FormField>
+            <FormField
+              label={t("admin.crud.hotels.field.full_address")}
+              htmlFor="hotel-full-address"
+              className="sm:col-span-2"
+            >
+              <Input
+                id="hotel-full-address"
                 value={form.full_address}
                 onChange={(e) => setForm((p) => (p ? { ...p, full_address: e.target.value } : p))}
-                className="rounded border border-default px-2 py-1.5 text-sm"
               />
-            </label>
+            </FormField>
             <ImageUploadField
               value={form.main_image}
               onChange={(v) => setForm((p) => (p ? { ...p, main_image: v } : p))}
@@ -374,19 +395,25 @@ export default function OperatorHotelsPage() {
               label="Main image"
               altText="Hotel preview"
             />
-            <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-              <span className="font-medium text-fg-t6">
-                Short description{" "}
-                <span className="text-fg-t7 font-normal">(կարճ նկարագրություն հյուրանոցի մասին` ցույց է տրվում &quot;About the hotel&quot; բաժնում)</span>
-              </span>
-              <textarea
+            <FormField
+              label={
+                <>
+                  Short description{" "}
+                  <span className="text-fg-t6 font-normal">(կարճ նկարագրություն հյուրանոցի մասին` ցույց է տրվում &quot;About the hotel&quot; բաժնում)</span>
+                </>
+              }
+              htmlFor="hotel-short-description"
+              className="sm:col-span-2"
+            >
+              <Input
+                as="textarea"
+                id="hotel-short-description"
                 rows={4}
                 placeholder="Royal Manotel, Geneva is just 3.5 mi from the airport..."
                 value={form.short_description}
                 onChange={(e) => setForm((p) => (p ? { ...p, short_description: e.target.value } : p))}
-                className="rounded border border-default px-2 py-1.5 text-sm"
               />
-            </label>
+            </FormField>
             <LocationCascadeSelect
               token={token}
               value={form.location_id === "" ? null : Number(form.location_id)}
@@ -405,44 +432,46 @@ export default function OperatorHotelsPage() {
                 )
               }
             />
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.latitude")}</span>
-              <input
+            <FormField label={t("admin.crud.hotels.field.latitude")} htmlFor="hotel-latitude">
+              <Input
+                id="hotel-latitude"
                 value={form.latitude}
                 onChange={(e) => setForm((p) => (p ? { ...p, latitude: e.target.value } : p))}
-                className="rounded border border-default px-2 py-1.5 text-sm"
                 placeholder="e.g. 40.1776"
               />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.longitude")}</span>
-              <input
+            </FormField>
+            <FormField label={t("admin.crud.hotels.field.longitude")} htmlFor="hotel-longitude">
+              <Input
+                id="hotel-longitude"
                 value={form.longitude}
                 onChange={(e) => setForm((p) => (p ? { ...p, longitude: e.target.value } : p))}
-                className="rounded border border-default px-2 py-1.5 text-sm"
                 placeholder="e.g. 44.5126"
               />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.meal_type")}</span>
-              <select
+            </FormField>
+            <FormField label={t("admin.crud.hotels.field.meal_type")} htmlFor="hotel-meal-type">
+              <Select
+                id="hotel-meal-type"
                 value={form.meal_type}
                 onChange={(e) => setForm((p) => (p ? { ...p, meal_type: e.target.value } : p))}
-                className="rounded border border-default px-2 py-1.5 text-sm"
               >
                 {HOTEL_MEAL_TYPES.map((m) => (
                   <option key={m} value={m}>
                     {hotelMealTypeLabel(m)}
                   </option>
                 ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.star_rating")}</span>
-              <span className="text-xs text-fg-t6">
-                Optional (1–5) — API field <code className="rounded bg-figma-bg-1 px-1">{HOTEL_API_STAR_RATING_KEY}</code>
-              </span>
-              <input
+              </Select>
+            </FormField>
+            <FormField
+              label={t("admin.crud.hotels.field.star_rating")}
+              htmlFor="hotel-star-rating"
+              helperText={
+                <>
+                  Optional (1–5) — API field <code className="rounded bg-figma-bg-1 px-1">{HOTEL_API_STAR_RATING_KEY}</code>
+                </>
+              }
+            >
+              <Input
+                id="hotel-star-rating"
                 type="number"
                 min={1}
                 max={5}
@@ -457,47 +486,43 @@ export default function OperatorHotelsPage() {
                       : p
                   )
                 }
-                className="rounded border border-default px-2 py-1.5 text-sm"
               />
-            </label>
+            </FormField>
           </div>
           <div className="mt-4 flex flex-col gap-3 border-t border-default pt-4">
             <span className="text-xs font-semibold uppercase text-fg-t6">{t("admin.crud.hotels.section.availability")}</span>
             <div className="grid gap-3 sm:grid-cols-2">
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.availability_status")}</span>
-                <select
+              <FormField label={t("admin.crud.hotels.field.availability_status")} htmlFor="hotel-availability-status">
+                <Select
+                  id="hotel-availability-status"
                   value={form.availability_status}
                   onChange={(e) => setForm((p) => (p ? { ...p, availability_status: e.target.value } : p))}
-                  className="rounded border border-default px-2 py-1.5 text-sm"
                 >
                   {HOTEL_AVAILABILITY_STATUSES.map((m) => (
                     <option key={m} value={m}>
                       {hotelAvailabilityLabel(m)}
                     </option>
                   ))}
-                </select>
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.status")}</span>
-                <select
+                </Select>
+              </FormField>
+              <FormField label={t("admin.crud.hotels.field.status")} htmlFor="hotel-status">
+                <Select
+                  id="hotel-status"
                   value={form.status}
                   onChange={(e) => setForm((p) => (p ? { ...p, status: e.target.value } : p))}
-                  className="rounded border border-default px-2 py-1.5 text-sm"
                 >
                   {HOTEL_LIFECYCLE_STATUSES.map((m) => (
                     <option key={m} value={m}>
                       {hotelLifecycleStatusLabel(m)}
                     </option>
                   ))}
-                </select>
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.room_inventory_mode")}</span>
-                <input
+                </Select>
+              </FormField>
+              <FormField label={t("admin.crud.hotels.field.room_inventory_mode")} htmlFor="hotel-room-inventory-mode-input">
+                <Input
+                  id="hotel-room-inventory-mode-input"
                   value={form.room_inventory_mode}
                   onChange={(e) => setForm((p) => (p ? { ...p, room_inventory_mode: e.target.value } : p))}
-                  className="rounded border border-default px-2 py-1.5 text-sm"
                   maxLength={64}
                   list="hotel-room-inventory-mode"
                   placeholder="e.g. per_room"
@@ -507,49 +532,36 @@ export default function OperatorHotelsPage() {
                     <option key={m} value={m} />
                   ))}
                 </datalist>
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.visibility_rule")}</span>
-                <select
+              </FormField>
+              <FormField label={t("admin.crud.hotels.field.visibility_rule")} htmlFor="hotel-visibility-rule">
+                <Select
+                  id="hotel-visibility-rule"
                   value={form.visibility_rule}
                   onChange={(e) => setForm((p) => (p ? { ...p, visibility_rule: e.target.value } : p))}
-                  className="rounded border border-default px-2 py-1.5 text-sm"
                 >
                   {HOTEL_VISIBILITY_RULES.map((r) => (
                     <option key={r} value={r}>
                       {hotelVisibilityRuleLabel(r)}
                     </option>
                   ))}
-                </select>
-              </label>
+                </Select>
+              </FormField>
               <div className="flex flex-col gap-2 sm:col-span-2">
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={form.bookable}
-                    onChange={(e) => setForm((p) => (p ? { ...p, bookable: e.target.checked } : p))}
-                    className="rounded border border-default"
-                  />
-                  <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.bookable")}</span>
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={form.is_package_eligible}
-                    onChange={(e) => setForm((p) => (p ? { ...p, is_package_eligible: e.target.checked } : p))}
-                    className="rounded border border-default"
-                  />
-                  <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.is_package_eligible")}</span>
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={form.appears_in_packages}
-                    onChange={(e) => setForm((p) => (p ? { ...p, appears_in_packages: e.target.checked } : p))}
-                    className="rounded border border-default"
-                  />
-                  <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.appears_in_packages")}</span>
-                </label>
+                <Checkbox
+                  checked={form.bookable}
+                  onChange={(e) => setForm((p) => (p ? { ...p, bookable: e.target.checked } : p))}
+                  label={t("admin.crud.hotels.field.bookable")}
+                />
+                <Checkbox
+                  checked={form.is_package_eligible}
+                  onChange={(e) => setForm((p) => (p ? { ...p, is_package_eligible: e.target.checked } : p))}
+                  label={t("admin.crud.hotels.field.is_package_eligible")}
+                />
+                <Checkbox
+                  checked={form.appears_in_packages}
+                  onChange={(e) => setForm((p) => (p ? { ...p, appears_in_packages: e.target.checked } : p))}
+                  label={t("admin.crud.hotels.field.appears_in_packages")}
+                />
               </div>
             </div>
           </div>
@@ -557,15 +569,12 @@ export default function OperatorHotelsPage() {
             <span className="text-xs font-semibold uppercase text-fg-t6">{t("admin.crud.hotels.section.facilities")}</span>
             <div className="grid gap-2 sm:grid-cols-2">
               {HOTEL_FACILITY_AMENITY_KEYS.map((key) => (
-                <label key={key} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={form[key]}
-                    onChange={(e) => setForm((p) => (p ? { ...p, [key]: e.target.checked } : p))}
-                    className="rounded border border-default"
-                  />
-                  <span>{t(`admin.crud.hotels.field.${key}`)}</span>
-                </label>
+                <Checkbox
+                  key={key}
+                  checked={form[key]}
+                  onChange={(e) => setForm((p) => (p ? { ...p, [key]: e.target.checked } : p))}
+                  label={t(`admin.crud.hotels.field.${key}`)}
+                />
               ))}
             </div>
           </div>
@@ -573,24 +582,20 @@ export default function OperatorHotelsPage() {
             <span className="text-xs font-semibold uppercase text-fg-t6">{t("admin.crud.hotels.section.policies")}</span>
             <div className="grid gap-2 sm:grid-cols-2">
               {HOTEL_POLICY_BOOLEAN_KEYS.map((key) => (
-                <label key={key} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={form[key]}
-                    onChange={(e) => setForm((p) => (p ? { ...p, [key]: e.target.checked } : p))}
-                    className="rounded border border-default"
-                  />
-                  <span>{t(`admin.crud.hotels.field.${key}`)}</span>
-                </label>
+                <Checkbox
+                  key={key}
+                  checked={form[key]}
+                  onChange={(e) => setForm((p) => (p ? { ...p, [key]: e.target.checked } : p))}
+                  label={t(`admin.crud.hotels.field.${key}`)}
+                />
               ))}
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.cancellation_policy_type")}</span>
-                <input
+              <FormField label={t("admin.crud.hotels.field.cancellation_policy_type")} htmlFor="hotel-cancellation-policy-type-input">
+                <Input
+                  id="hotel-cancellation-policy-type-input"
                   value={form.cancellation_policy_type}
                   onChange={(e) => setForm((p) => (p ? { ...p, cancellation_policy_type: e.target.value } : p))}
-                  className="rounded border border-default px-2 py-1.5 text-sm"
                   maxLength={64}
                   list="hotel-cancellation-policy-type"
                 />
@@ -599,37 +604,42 @@ export default function OperatorHotelsPage() {
                     <option key={m} value={m} />
                   ))}
                 </datalist>
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.cancellation_deadline_at")}</span>
-                <input
+              </FormField>
+              <FormField label={t("admin.crud.hotels.field.cancellation_deadline_at")} htmlFor="hotel-cancellation-deadline">
+                <Input
+                  id="hotel-cancellation-deadline"
                   type="datetime-local"
                   value={form.cancellation_deadline_at}
                   onChange={(e) =>
                     setForm((p) => (p ? { ...p, cancellation_deadline_at: e.target.value } : p))
                   }
-                  className="rounded border border-default px-2 py-1.5 text-sm"
                 />
-              </label>
-              <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-                <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.no_show_policy")}</span>
-                <input
+              </FormField>
+              <FormField
+                label={t("admin.crud.hotels.field.no_show_policy")}
+                htmlFor="hotel-no-show-policy"
+                className="sm:col-span-2"
+              >
+                <Input
+                  id="hotel-no-show-policy"
                   value={form.no_show_policy}
                   onChange={(e) => setForm((p) => (p ? { ...p, no_show_policy: e.target.value } : p))}
-                  className="rounded border border-default px-2 py-1.5 text-sm"
                   maxLength={255}
                   placeholder="Short no-show terms"
                 />
-              </label>
+              </FormField>
             </div>
           </div>
           <div className="mt-4 flex flex-col gap-3 border-t border-default pt-4">
             <span className="text-xs font-semibold uppercase text-fg-t6">{t("admin.crud.hotels.section.review_data")}</span>
             <div className="grid gap-3 sm:grid-cols-2">
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.review_score")}</span>
-                <span className="text-xs text-fg-t6">0–10, optional</span>
-                <input
+              <FormField
+                label={t("admin.crud.hotels.field.review_score")}
+                htmlFor="hotel-review-score"
+                helperText="0–10, optional"
+              >
+                <Input
+                  id="hotel-review-score"
                   type="number"
                   min={0}
                   max={10}
@@ -645,12 +655,11 @@ export default function OperatorHotelsPage() {
                         : p
                     )
                   }
-                  className="rounded border border-default px-2 py-1.5 text-sm"
                 />
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.review_count")}</span>
-                <input
+              </FormField>
+              <FormField label={t("admin.crud.hotels.field.review_count")} htmlFor="hotel-review-count">
+                <Input
+                  id="hotel-review-count"
                   type="number"
                   min={0}
                   step={1}
@@ -665,15 +674,17 @@ export default function OperatorHotelsPage() {
                         : p
                     )
                   }
-                  className="rounded border border-default px-2 py-1.5 text-sm"
                 />
-              </label>
-              <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-                <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.review_label")}</span>
-                <input
+              </FormField>
+              <FormField
+                label={t("admin.crud.hotels.field.review_label")}
+                htmlFor="hotel-review-label-input"
+                className="sm:col-span-2"
+              >
+                <Input
+                  id="hotel-review-label-input"
                   value={form.review_label}
                   onChange={(e) => setForm((p) => (p ? { ...p, review_label: e.target.value } : p))}
-                  className="rounded border border-default px-2 py-1.5 text-sm"
                   maxLength={255}
                   list="hotel-review-label"
                 />
@@ -682,7 +693,7 @@ export default function OperatorHotelsPage() {
                     <option key={m} value={m} />
                   ))}
                 </datalist>
-              </label>
+              </FormField>
             </div>
           </div>
           <div className="mt-6 flex flex-col gap-3 border-t border-default pt-4">
@@ -690,28 +701,28 @@ export default function OperatorHotelsPage() {
               <span className="text-xs font-semibold uppercase text-fg-t6">
                 {t("admin.crud.hotels.section.rooms")}
               </span>
-              <button
-                type="button"
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() =>
                   setForm((p) => (p ? { ...p, rooms: [...p.rooms, newHotelRoomFormRow()] } : p))
                 }
-                className="rounded border border-default px-2 py-1 text-xs text-fg-t7 hover:bg-figma-bg-1"
               >
                 {t("admin.crud.hotels.add_room")}
-              </button>
+              </Button>
             </div>
             <p className="text-xs text-fg-t6">
               Each room needs at least one rate row. Dates use YYYY-MM-DD (optional). Edit mode replaces all rooms on
               save (sync with API).
             </p>
             {form.rooms.map((room, ri) => (
-              <div key={room.clientKey} className="rounded border border-default bg-figma-bg-1/80 p-3">
+              <div key={room.clientKey} className="rounded-zulu border border-default bg-figma-bg-1/80 p-3">
                 <div className="mb-2 flex items-start justify-between gap-2">
                   <span className="text-sm font-medium text-fg-t7">Room {ri + 1}</span>
                   {form.rooms.length > 1 && (
                     <button
                       type="button"
-                      className="text-xs text-error-600 underline"
+                      className="text-xs text-error-600 hover:underline"
                       onClick={() =>
                         setForm((p) =>
                           p && p.rooms.length > 1
@@ -732,8 +743,11 @@ export default function OperatorHotelsPage() {
                       rooms[ri] = { ...rooms[ri], ...patch };
                       return { ...p, rooms };
                     });
-                  const numField = (key: "max_adults" | "max_children" | "max_total_guests" | "bed_count" | "room_inventory_count", min = 0) => (
-                    <input
+                  const numField = (
+                    key: "max_adults" | "max_children" | "max_total_guests" | "bed_count" | "room_inventory_count",
+                    min = 0
+                  ) => (
+                    <Input
                       type="number"
                       min={min}
                       value={room[key] === "" ? "" : (room[key] as number)}
@@ -741,14 +755,12 @@ export default function OperatorHotelsPage() {
                         const v = e.target.value;
                         updateRoom({ [key]: v === "" ? "" : Number(v) } as Partial<typeof room>);
                       }}
-                      className="rounded border border-default px-2 py-1.5 text-sm"
                     />
                   );
                   const txtField = (key: "bed_type" | "room_size" | "room_view" | "view_type" | "status") => (
-                    <input
+                    <Input
                       value={room[key]}
                       onChange={(e) => updateRoom({ [key]: e.target.value } as Partial<typeof room>)}
-                      className="rounded border border-default px-2 py-1.5 text-sm"
                     />
                   );
                   const boolField = (
@@ -760,107 +772,78 @@ export default function OperatorHotelsPage() {
                       | "smoking_allowed",
                     label: string
                   ) => (
-                    <label key={key} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={room[key]}
-                        onChange={(e) => updateRoom({ [key]: e.target.checked } as Partial<typeof room>)}
-                        className="rounded border border-default"
-                      />
-                      <span>{label}</span>
-                    </label>
+                    <Checkbox
+                      key={key}
+                      checked={room[key]}
+                      onChange={(e) => updateRoom({ [key]: e.target.checked } as Partial<typeof room>)}
+                      label={label}
+                    />
                   );
                   return (
                     <>
                       {/* Identity */}
                       <div className="grid gap-2 sm:grid-cols-2">
-                        <label className="flex flex-col gap-1 text-sm">
-                          <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.room_type")}</span>
-                          <input
+                        <FormField label={t("admin.crud.hotels.field.room_type")} htmlFor={`room-type-${ri}`}>
+                          <Input
+                            id={`room-type-${ri}`}
                             value={room.room_type}
                             onChange={(e) => updateRoom({ room_type: e.target.value })}
-                            className="rounded border border-default px-2 py-1.5 text-sm"
                             placeholder="standard / deluxe / suite"
                           />
-                        </label>
-                        <label className="flex flex-col gap-1 text-sm">
-                          <span className="font-medium text-fg-t6">{t("admin.crud.hotels.field.room_name")}</span>
-                          <input
+                        </FormField>
+                        <FormField label={t("admin.crud.hotels.field.room_name")} htmlFor={`room-name-${ri}`}>
+                          <Input
+                            id={`room-name-${ri}`}
                             value={room.room_name}
                             onChange={(e) => updateRoom({ room_name: e.target.value })}
-                            className="rounded border border-default px-2 py-1.5 text-sm"
                           />
-                        </label>
+                        </FormField>
                       </div>
 
                       {/* Capacity */}
                       <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                        <label className="flex flex-col gap-1 text-sm">
-                          <span className="font-medium text-fg-t6">Max adults *</span>
-                          {numField("max_adults", 1)}
-                        </label>
-                        <label className="flex flex-col gap-1 text-sm">
-                          <span className="font-medium text-fg-t6">Max children</span>
-                          {numField("max_children", 0)}
-                        </label>
-                        <label className="flex flex-col gap-1 text-sm">
-                          <span className="font-medium text-fg-t6">Max total guests *</span>
-                          {numField("max_total_guests", 1)}
-                        </label>
+                        <FormField label="Max adults" required>{numField("max_adults", 1)}</FormField>
+                        <FormField label="Max children">{numField("max_children", 0)}</FormField>
+                        <FormField label="Max total guests" required>{numField("max_total_guests", 1)}</FormField>
                       </div>
 
                       {/* Bed + Size */}
                       <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                        <label className="flex flex-col gap-1 text-sm">
-                          <span className="font-medium text-fg-t6">Bed type</span>
-                          <input
+                        <FormField label="Bed type" htmlFor={`room-bed-type-${ri}`}>
+                          <Input
+                            id={`room-bed-type-${ri}`}
                             value={room.bed_type}
                             onChange={(e) => updateRoom({ bed_type: e.target.value })}
-                            className="rounded border border-default px-2 py-1.5 text-sm"
                             placeholder="double / twin / king"
                           />
-                        </label>
-                        <label className="flex flex-col gap-1 text-sm">
-                          <span className="font-medium text-fg-t6">Bed count</span>
-                          {numField("bed_count", 1)}
-                        </label>
-                        <label className="flex flex-col gap-1 text-sm">
-                          <span className="font-medium text-fg-t6">Room size (m²)</span>
-                          {txtField("room_size")}
-                        </label>
+                        </FormField>
+                        <FormField label="Bed count">{numField("bed_count", 1)}</FormField>
+                        <FormField label="Room size (m²)">{txtField("room_size")}</FormField>
                       </div>
 
                       {/* View + Inventory + Status */}
                       <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                        <label className="flex flex-col gap-1 text-sm">
-                          <span className="font-medium text-fg-t6">Room view</span>
-                          {txtField("room_view")}
-                        </label>
-                        <label className="flex flex-col gap-1 text-sm">
-                          <span className="font-medium text-fg-t6">View type</span>
-                          <input
+                        <FormField label="Room view">{txtField("room_view")}</FormField>
+                        <FormField label="View type" htmlFor={`room-view-type-${ri}`}>
+                          <Input
+                            id={`room-view-type-${ri}`}
                             value={room.view_type}
                             onChange={(e) => updateRoom({ view_type: e.target.value })}
-                            className="rounded border border-default px-2 py-1.5 text-sm"
                             placeholder="sea / mountain / city / garden"
                           />
-                        </label>
-                        <label className="flex flex-col gap-1 text-sm">
-                          <span className="font-medium text-fg-t6">Inventory count</span>
-                          {numField("room_inventory_count", 0)}
-                        </label>
+                        </FormField>
+                        <FormField label="Inventory count">{numField("room_inventory_count", 0)}</FormField>
                       </div>
 
                       <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                        <label className="flex flex-col gap-1 text-sm">
-                          <span className="font-medium text-fg-t6">Status</span>
-                          <input
+                        <FormField label="Status" htmlFor={`room-status-${ri}`}>
+                          <Input
+                            id={`room-status-${ri}`}
                             value={room.status}
                             onChange={(e) => updateRoom({ status: e.target.value })}
-                            className="rounded border border-default px-2 py-1.5 text-sm"
                             placeholder="active / inactive"
                           />
-                        </label>
+                        </FormField>
                       </div>
 
                       {/* Bathroom */}
@@ -900,15 +883,17 @@ export default function OperatorHotelsPage() {
 
                       {/* Images */}
                       <div className="mt-4 border-t border-default pt-3">
-                        <label className="flex flex-col gap-1 text-sm">
-                          <span className="font-medium text-fg-t6">Room images (one URL per line)</span>
-                          <textarea
+                        <FormField label="Room images (one URL per line)" htmlFor={`room-images-${ri}`}>
+                          <Input
+                            as="textarea"
+                            id={`room-images-${ri}`}
+                            rows={3}
                             value={room.room_images}
                             onChange={(e) => updateRoom({ room_images: e.target.value })}
-                            className="min-h-[60px] rounded border border-default px-2 py-1.5 text-sm font-mono"
-                            placeholder="https://example.com/room1.jpg&#10;https://example.com/room2.jpg"
+                            placeholder={"https://example.com/room1.jpg\nhttps://example.com/room2.jpg"}
+                            className="font-mono"
                           />
-                        </label>
+                        </FormField>
                       </div>
                     </>
                   );
@@ -1101,23 +1086,25 @@ export default function OperatorHotelsPage() {
                     </tbody>
                   </table>
                 </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setForm((p) => {
-                      if (!p) return p;
-                      const rooms = [...p.rooms];
-                      rooms[ri] = {
-                        ...rooms[ri],
-                        pricings: [...rooms[ri].pricings, newHotelPricingFormRow()],
-                      };
-                      return { ...p, rooms };
-                    })
-                  }
-                  className="mt-2 text-xs text-info-700 underline"
-                >
-                  {t("admin.crud.hotels.add_rate")}
-                </button>
+                <div className="mt-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() =>
+                      setForm((p) => {
+                        if (!p) return p;
+                        const rooms = [...p.rooms];
+                        rooms[ri] = {
+                          ...rooms[ri],
+                          pricings: [...rooms[ri].pricings, newHotelPricingFormRow()],
+                        };
+                        return { ...p, rooms };
+                      })
+                    }
+                  >
+                    {t("admin.crud.hotels.add_rate")}
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -1129,7 +1116,7 @@ export default function OperatorHotelsPage() {
             </ul>
           )}
           {editId !== null && (
-            <div className="mt-6 rounded border border-default bg-figma-bg-1 p-3">
+            <div className="mt-6 rounded-zulu border border-default bg-figma-bg-1 p-3">
               <h3 className="mb-2 text-sm font-medium text-fg-t6">
                 Բովանդակություն բոլոր լեզուներով{" "}
                 <span className="text-fg-t7 font-normal">(բոլոր լեզուները հավասար են — ընտրիր դրոշակը)</span>
@@ -1148,83 +1135,73 @@ export default function OperatorHotelsPage() {
             </div>
           )}
           <div className="mt-4 flex gap-2">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void handleSubmit()}
-              className="admin-btn-primary"
-            >
+            <Button size="sm" disabled={busy} onClick={() => void handleSubmit()}>
               {busy ? t("admin.crud.common.saving") : t("common.save")}
-            </button>
-            <button type="button" onClick={closeForm} className="rounded border border-default px-4 py-1.5 text-sm">
+            </Button>
+            <Button variant="outline" size="sm" onClick={closeForm}>
               {t("common.cancel")}
-            </button>
+            </Button>
           </div>
-        </div>
+        </section>
       )}
-      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
-        <table className="w-full min-w-[600px] text-left text-sm">
-          <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
-            <tr>
-              <th className="px-3 py-2">{t("admin.crud.common.id")}</th>
-              <th className="px-3 py-2">{t("admin.crud.hotels.col.hotel")}</th>
-              <th className="px-3 py-2">{t("admin.crud.hotels.col.city")}</th>
-              <th className="px-3 py-2">{t("admin.crud.hotels.col.country")}</th>
-              <th className="px-3 py-2">{t("admin.crud.hotels.col.stars")}</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">{t("admin.crud.common.actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-fg-t6">
-                  {t("admin.crud.hotels.empty")}
-                </td>
-              </tr>
-            )}
-            {rows.map((r) => (
-              <tr key={r.id} className="border-b border-default hover:bg-figma-bg-1">
-                <td className="px-3 py-2 tabular-nums text-fg-t7">{r.id}</td>
-                <td className="px-3 py-2 font-medium">{r.hotel_name ?? "-"}</td>
-                <td className="px-3 py-2">{r.city ?? "-"}</td>
-                <td className="px-3 py-2">{r.country ?? "-"}</td>
-                <td className="px-3 py-2">{formatHotelStarRatingDisplay(r.star_rating)}</td>
-                <td className="px-3 py-2">
-                  <OfferStatusBadge status={r.offer?.status ?? null} />
-                </td>
-                <td className="px-3 py-2">
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => void openEdit(r)}
-                      className="text-xs text-info-700 underline"
+      <Table>
+        <THead>
+          <TR>
+            <TH>{t("admin.crud.common.id")}</TH>
+            <TH>{t("admin.crud.hotels.col.hotel")}</TH>
+            <TH>{t("admin.crud.hotels.col.city")}</TH>
+            <TH>{t("admin.crud.hotels.col.country")}</TH>
+            <TH>{t("admin.crud.hotels.col.stars")}</TH>
+            <TH>Status</TH>
+            <TH>{t("admin.crud.common.actions")}</TH>
+          </TR>
+        </THead>
+        <TBody>
+          {rows.length === 0 ? (
+            <TEmpty colSpan={7}>{t("admin.crud.hotels.empty")}</TEmpty>
+          ) : null}
+          {rows.map((r) => (
+            <TR key={r.id}>
+              <TD className="tabular-nums text-fg-t7">{r.id}</TD>
+              <TD className="font-medium">{r.hotel_name ?? "-"}</TD>
+              <TD>{r.city ?? "-"}</TD>
+              <TD>{r.country ?? "-"}</TD>
+              <TD>{formatHotelStarRatingDisplay(r.star_rating)}</TD>
+              <TD>
+                <OfferStatusBadge status={r.offer?.status ?? null} />
+              </TD>
+              <TD>
+                <div className="flex flex-col gap-1">
+                  <button
+                    type="button"
+                    onClick={() => void openEdit(r)}
+                    className="text-left text-xs text-info-700 hover:underline"
+                  >
+                    {t("admin.crud.common.edit")}
+                  </button>
+                  {r.offer?.id && isSubmittableStatus(r.offer.status) && (
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      onClick={() => void handleSubmitForReview(r.offer!.id!)}
+                      className="self-start"
                     >
-                      {t("admin.crud.common.edit")}
-                    </button>
-                    {r.offer?.id && isSubmittableStatus(r.offer.status) && (
-                      <button
-                        type="button"
-                        onClick={() => void handleSubmitForReview(r.offer!.id!)}
-                        className="rounded bg-primary px-2 py-0.5 text-xs font-medium text-white"
-                      >
-                        Submit for review
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => void handleDelete(r.id)}
-                      className="text-xs text-error-600 underline"
-                    >
-                      {t("admin.crud.common.delete")}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                      Submit for review
+                    </Button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => void handleDelete(r.id)}
+                    className="text-left text-xs text-error-600 hover:underline"
+                  >
+                    {t("admin.crud.common.delete")}
+                  </button>
+                </div>
+              </TD>
+            </TR>
+          ))}
+        </TBody>
+      </Table>
       {meta && <PaginationBar meta={meta} onPage={setPage} />}
     </div>
   );
