@@ -204,10 +204,20 @@ export default function PlatformCompanyDetailPage({
           )}
 
           {tab === "permissions" && (
-            <PlaceholderTab
-              text={t("admin.platform_companies.seller_service_types")}
-              hint={`${company.active_seller_permissions_count ?? 0} ${t("admin.platform_companies.yes")}`}
-            />
+            <div className="space-y-3">
+              <PlaceholderTab
+                text={t("admin.platform_companies.seller_service_types")}
+                hint={`${company.active_seller_permissions_count ?? 0} ${t("admin.platform_companies.yes")}`}
+              />
+              {user?.is_super_admin && (
+                <Link
+                  href={`/platform/companies/${companyId}/module-permissions`}
+                  className="inline-flex h-9 items-center rounded-zulu border border-default bg-white px-4 text-sm font-semibold text-fg-t8 transition hover:bg-figma-bg-1"
+                >
+                  Edit admin module access →
+                </Link>
+              )}
+            </div>
           )}
 
           {tab === "partner" && (
