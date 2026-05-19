@@ -1,14 +1,13 @@
 "use client";
 
 /**
- * Phase 7.13 — Non-service hours (time-off requests).
+ * Phase 7.13 — Non-service hours (time-off requests + clock-in/out).
  *
- * Replaces the ComingSoonPage placeholder. Employees create pending
- * time-off requests; managers approve / reject / cancel. The same record
- * doubles as the non-service-hours log for payroll roll-ups (Phase 7.15).
+ * Two sibling surfaces on one page:
+ *   - Top section: live clock-in/out punch tracking (shift attendance)
+ *   - Bottom section: planned absences (time-off request workflow)
  *
- * Clock-in/out punch tracking is a separate follow-up — this surface
- * captures planned absences only.
+ * Both feed payroll roll-ups in Phase 7.15.
  */
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
@@ -87,6 +86,40 @@ async function fetchTimeOff(
   return apiFetchJson(`/time-off?${q.toString()}`, { method: "GET", token });
 }
 
+type TimePunchRow = {
+  id: number;
+  user: { id: number; name: string; email: string } | null;
+  punched_in_at: string | null;
+  punched_out_at: string | null;
+  minutes_worked: number | null;
+  is_open: boolean;
+  source: string;
+};
+
+function formatTime(value: string | null): string {
+  if (!value) return "—";
+  const d = new Date(value);
+  return Number.isNaN(d.getTime())
+    ? "—"
+    : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatDuration(minutes: number | null, openSinceIso: string | null): string {
+  if (minutes !== null) {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return `${h}h ${m.toString().padStart(2, "0")}m`;
+  }
+  if (openSinceIso) {
+    const open = new Date(openSinceIso);
+    const diff = Math.max(0, Math.floor((Date.now() - open.getTime()) / 60000));
+    const h = Math.floor(diff / 60);
+    const m = diff % 60;
+    return `${h}h ${m.toString().padStart(2, "0")}m (open)`;
+  }
+  return "—";
+}
+
 export default function Bucket3NonServiceHoursPage() {
   const { token, user } = useAdminAuth();
   const allowed = canAccessOperatorToolsNav(user);
@@ -106,6 +139,9 @@ export default function Bucket3NonServiceHoursPage() {
     notes: "",
   });
 
+  const [punches, setPunches] = useState<TimePunchRow[]>([]);
+  const [myOpen, setMyOpen] = useState<TimePunchRow | null>(null);
+
   const load = useCallback(async () => {
     if (!token || !allowed) return;
     setErr(null);
@@ -120,9 +156,66 @@ export default function Bucket3NonServiceHoursPage() {
     }
   }, [token, allowed, page, statusFilter]);
 
+  const loadPunches = useCallback(async () => {
+    if (!token || !allowed) return;
+    try {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const q = new URLSearchParams();
+      q.set("per_page", "50");
+      q.set("date_from", todayStart.toISOString());
+      const res = await apiFetchJson<ApiSuccessEnvelope<TimePunchRow[]>>(
+        `/time-punches?${q.toString()}`,
+        { method: "GET", token }
+      );
+      setPunches(res.data);
+      const myUserId = user?.id;
+      const open = res.data.find((p) => p.is_open && p.user?.id === myUserId) ?? null;
+      setMyOpen(open);
+    } catch (e) {
+      if (!(e instanceof ApiRequestError && e.status === 403)) {
+        // Surface the error but don't kill the page — the time-off block is
+        // independent.
+        setErr(e instanceof ApiRequestError ? e.message : "Failed to load punches");
+      }
+    }
+  }, [token, allowed, user?.id]);
+
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    void loadPunches();
+  }, [loadPunches]);
+
+  async function clockIn() {
+    if (!token) return;
+    setErr(null);
+    setBusy(true);
+    try {
+      await apiFetchJson(`/time-punches/clock-in`, { method: "POST", token });
+      await loadPunches();
+    } catch (e) {
+      setErr(e instanceof ApiRequestError ? e.message : "Clock in failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function clockOut(id: number) {
+    if (!token) return;
+    setErr(null);
+    setBusy(true);
+    try {
+      await apiFetchJson(`/time-punches/${id}/clock-out`, { method: "POST", token });
+      await loadPunches();
+    } catch (e) {
+      setErr(e instanceof ApiRequestError ? e.message : "Clock out failed");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function handleCreate() {
     if (!token) return;
@@ -185,11 +278,7 @@ export default function Bucket3NonServiceHoursPage() {
     <div className="space-y-6">
       <PageHeader
         title="Non-service hours"
-        subtitle={
-          meta
-            ? `${meta.total} time-off record${meta.total === 1 ? "" : "s"}`
-            : "Employee time-off requests + non-availability log"
-        }
+        subtitle="Clock-in/out shift attendance + planned time-off requests"
       />
 
       {err && (
@@ -197,6 +286,61 @@ export default function Bucket3NonServiceHoursPage() {
           {err}
         </div>
       )}
+
+      <section className="admin-card p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h2 className="text-base font-semibold">Today's shifts</h2>
+            <p className="text-xs text-fg-t6">
+              Live clock-in / clock-out. Open shifts (no out-stamp) show who is currently on the clock.
+            </p>
+          </div>
+          {myOpen ? (
+            <Button size="sm" variant="primary" disabled={busy} onClick={() => void clockOut(myOpen.id)}>
+              {busy ? "…" : `Clock out (open since ${formatTime(myOpen.punched_in_at)})`}
+            </Button>
+          ) : (
+            <Button size="sm" variant="primary" disabled={busy} onClick={() => void clockIn()}>
+              {busy ? "…" : "Clock in"}
+            </Button>
+          )}
+        </div>
+
+        <Table>
+          <THead>
+            <TR>
+              <TH>Employee</TH>
+              <TH>In</TH>
+              <TH>Out</TH>
+              <TH>Duration</TH>
+              <TH align="right">Actions</TH>
+            </TR>
+          </THead>
+          <TBody>
+            {punches.length === 0 ? <TEmpty colSpan={5}>No shifts today.</TEmpty> : null}
+            {punches.map((p) => (
+              <TR key={p.id}>
+                <TD>
+                  <div className="font-medium text-fg-t8">{p.user?.name ?? "—"}</div>
+                  <div className="text-xs text-fg-t6">{p.user?.email ?? ""}</div>
+                </TD>
+                <TD className="text-xs tabular-nums">{formatTime(p.punched_in_at)}</TD>
+                <TD className="text-xs tabular-nums">
+                  {p.is_open ? <span className="text-success-700">on the clock</span> : formatTime(p.punched_out_at)}
+                </TD>
+                <TD className="text-xs tabular-nums">{formatDuration(p.minutes_worked, p.is_open ? p.punched_in_at : null)}</TD>
+                <TD align="right">
+                  {p.is_open && (
+                    <Button size="sm" variant="outline" disabled={busy} onClick={() => void clockOut(p.id)}>
+                      Clock out
+                    </Button>
+                  )}
+                </TD>
+              </TR>
+            ))}
+          </TBody>
+        </Table>
+      </section>
 
       <section className="admin-card p-4 space-y-3">
         <h2 className="text-base font-semibold">Request time off</h2>
