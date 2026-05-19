@@ -49,8 +49,29 @@ type CaseRow = {
   opened_by: { id: number; name: string } | null;
   opened_at: string | null;
   closed_at: string | null;
+  sla_due_at: string | null;
+  escalated_at: string | null;
+  sla_remaining_minutes: number | null;
   closing_notes: string | null;
 };
+
+function formatSlaChip(row: CaseRow): { label: string; tone: "neutral" | "success" | "warning" | "danger" } | null {
+  if (row.closed_at) return null;
+  if (row.escalated_at) {
+    return { label: "Escalated", tone: "danger" };
+  }
+  const m = row.sla_remaining_minutes;
+  if (m === null || m === undefined) return null;
+  if (m < 0) {
+    const overdueH = Math.floor(Math.abs(m) / 60);
+    const overdueM = Math.abs(m) % 60;
+    return { label: `Overdue ${overdueH}h ${overdueM}m`, tone: "danger" };
+  }
+  const hours = Math.floor(m / 60);
+  const mins = m % 60;
+  const tone: "neutral" | "warning" | "success" = m < 60 ? "warning" : "success";
+  return { label: `${hours}h ${mins.toString().padStart(2, "0")}m left`, tone };
+}
 
 type Reply = {
   id: number;
@@ -362,28 +383,35 @@ export default function Bucket3CasesPage() {
             <TH>Title</TH>
             <TH>Status</TH>
             <TH>Priority</TH>
+            <TH>SLA</TH>
             <TH>Assigned</TH>
             <TH>Opened</TH>
           </TR>
         </THead>
         <TBody>
           {rows.length === 0 ? (
-            <TEmpty colSpan={6}>No cases match the filter.</TEmpty>
+            <TEmpty colSpan={7}>No cases match the filter.</TEmpty>
           ) : null}
-          {rows.map((r) => (
-            <TR key={r.id} onClick={() => setSelected(r)}>
-              <TD className="font-mono text-xs text-fg-t8">{r.case_number}</TD>
-              <TD className="font-medium text-fg-t8 max-w-[280px] truncate">{r.title}</TD>
-              <TD>
-                <StatusPill status={statusTier(r.status)}>{r.status}</StatusPill>
-              </TD>
-              <TD>
-                <StatusPill status={priorityTier(r.priority)}>{r.priority}</StatusPill>
-              </TD>
-              <TD className="text-xs text-fg-t7">{r.assigned_to?.name ?? "—"}</TD>
-              <TD className="text-xs text-fg-t6">{formatDate(r.opened_at)}</TD>
-            </TR>
-          ))}
+          {rows.map((r) => {
+            const sla = formatSlaChip(r);
+            return (
+              <TR key={r.id} onClick={() => setSelected(r)}>
+                <TD className="font-mono text-xs text-fg-t8">{r.case_number}</TD>
+                <TD className="font-medium text-fg-t8 max-w-[280px] truncate">{r.title}</TD>
+                <TD>
+                  <StatusPill status={statusTier(r.status)}>{r.status}</StatusPill>
+                </TD>
+                <TD>
+                  <StatusPill status={priorityTier(r.priority)}>{r.priority}</StatusPill>
+                </TD>
+                <TD>
+                  {sla ? <StatusPill status={sla.tone}>{sla.label}</StatusPill> : <span className="text-xs text-fg-t6">—</span>}
+                </TD>
+                <TD className="text-xs text-fg-t7">{r.assigned_to?.name ?? "—"}</TD>
+                <TD className="text-xs text-fg-t6">{formatDate(r.opened_at)}</TD>
+              </TR>
+            );
+          })}
         </TBody>
       </Table>
 
