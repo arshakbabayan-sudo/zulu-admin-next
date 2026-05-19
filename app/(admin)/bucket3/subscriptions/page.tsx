@@ -32,6 +32,10 @@ import {
 } from "@/components/ui";
 import { useCallback, useEffect, useState } from "react";
 
+type FeatureValue = boolean | number;
+type FeatureMap = Record<string, FeatureValue>;
+type FeatureDef = { key: string; label: string; type: "bool" | "limit"; default: FeatureValue };
+
 type Plan = {
   id: number;
   code: string;
@@ -40,10 +44,19 @@ type Plan = {
   monthly_price: number;
   annual_price: number | null;
   currency: string;
-  features: string[] | null;
+  features: FeatureMap | string[] | null;
   is_active: boolean;
   display_order: number;
 };
+
+function summariseFeatures(f: Plan["features"]): string {
+  if (!f) return "—";
+  if (Array.isArray(f)) return f.length === 0 ? "—" : f.join(", ");
+  const parts = Object.entries(f)
+    .filter(([, v]) => v !== false)
+    .map(([k, v]) => (typeof v === "boolean" ? k : `${k}=${v}`));
+  return parts.length === 0 ? "—" : parts.join(", ");
+}
 
 type CompanySubscription = {
   id: number;
@@ -87,10 +100,11 @@ export default function Bucket3SubscriptionsPage() {
     monthly_price: "0",
     annual_price: "",
     currency: "USD",
-    features_csv: "",
     is_active: true,
     display_order: "0",
   });
+  const [featureCatalog, setFeatureCatalog] = useState<FeatureDef[]>([]);
+  const [planFeatures, setPlanFeatures] = useState<FeatureMap>({});
 
   // Assign form
   const [assign, setAssign] = useState({
@@ -107,20 +121,30 @@ export default function Bucket3SubscriptionsPage() {
     if (!token || !allowed) return;
     setErr(null);
     try {
-      const [plansRes, subsRes] = await Promise.all([
+      const [plansRes, subsRes, catalogRes] = await Promise.all([
         apiFetchJson<ApiSuccessEnvelope<Plan[]>>(`/subscription-plans`, { method: "GET", token }),
         apiFetchJson<ApiSuccessEnvelope<CompanySubscription[]> & { meta: ApiListMeta }>(
           `/company-subscriptions?page=${subPage}&per_page=50`,
           { method: "GET", token }
         ),
+        apiFetchJson<ApiSuccessEnvelope<FeatureDef[]>>(`/subscription-plans/feature-catalog`, {
+          method: "GET",
+          token,
+        }).catch(() => ({ data: [] as FeatureDef[] })),
       ]);
       setPlans(plansRes.data);
       setSubs(subsRes.data);
       setSubMeta(subsRes.meta);
+      setFeatureCatalog(catalogRes.data);
+      if (Object.keys(planFeatures).length === 0 && catalogRes.data.length > 0) {
+        const defaults: FeatureMap = {};
+        for (const def of catalogRes.data) defaults[def.key] = def.default;
+        setPlanFeatures(defaults);
+      }
     } catch (e) {
       setErr(e instanceof ApiRequestError ? e.message : "Failed to load");
     }
-  }, [token, allowed, subPage]);
+  }, [token, allowed, subPage, planFeatures]);
 
   useEffect(() => {
     void load();
@@ -134,10 +158,6 @@ export default function Bucket3SubscriptionsPage() {
     }
     setBusy(true);
     try {
-      const features = planForm.features_csv
-        .split(",")
-        .map((s) => s.trim())
-        .filter((s) => s !== "");
       const body: Record<string, unknown> = {
         code: planForm.code.trim().toLowerCase(),
         name: planForm.name.trim(),
@@ -148,7 +168,7 @@ export default function Bucket3SubscriptionsPage() {
         display_order: Number(planForm.display_order) || 0,
       };
       if (planForm.annual_price.trim()) body.annual_price = Number(planForm.annual_price);
-      if (features.length > 0) body.features = features;
+      if (Object.keys(planFeatures).length > 0) body.features = planFeatures;
       await apiFetchJson(`/subscription-plans`, { method: "POST", token, body });
       setPlanForm({
         code: "",
@@ -157,10 +177,13 @@ export default function Bucket3SubscriptionsPage() {
         monthly_price: "0",
         annual_price: "",
         currency: "USD",
-        features_csv: "",
         is_active: true,
         display_order: "0",
       });
+      // Reset features to catalog defaults
+      const defaults: FeatureMap = {};
+      for (const def of featureCatalog) defaults[def.key] = def.default;
+      setPlanFeatures(defaults);
       await load();
     } catch (e) {
       setErr(e instanceof ApiRequestError ? e.message : "Plan creation failed");
@@ -259,7 +282,9 @@ export default function Bucket3SubscriptionsPage() {
                 <TD className="tabular-nums">
                   {p.annual_price != null ? `${p.currency} ${p.annual_price.toFixed(2)}` : "—"}
                 </TD>
-                <TD className="text-xs text-fg-t6">{p.features?.join(", ") ?? "—"}</TD>
+                <TD className="text-xs text-fg-t6 max-w-[280px] truncate" title={summariseFeatures(p.features)}>
+                  {summariseFeatures(p.features)}
+                </TD>
                 <TD className="tabular-nums">{p.display_order}</TD>
                 <TD>
                   {p.is_active ? (
@@ -328,18 +353,47 @@ export default function Bucket3SubscriptionsPage() {
               onChange={(e) => setPlanForm((p) => ({ ...p, display_order: e.target.value }))}
             />
           </FormField>
-          <FormField
-            label="Features"
-            htmlFor="plan-features"
-            helperText="Comma-separated feature keys, e.g. priority_placement, advanced_analytics"
-            className="sm:col-span-2 lg:col-span-2"
-          >
-            <Input
-              id="plan-features"
-              value={planForm.features_csv}
-              onChange={(e) => setPlanForm((p) => ({ ...p, features_csv: e.target.value }))}
-            />
-          </FormField>
+          {featureCatalog.length > 0 && (
+            <div className="sm:col-span-2 lg:col-span-3 space-y-2">
+              <div className="text-sm font-medium text-fg-t7">Features</div>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {featureCatalog.map((def) => (
+                  <div
+                    key={def.key}
+                    className="flex items-center justify-between gap-2 rounded-zulu border border-default bg-figma-bg-1/30 px-3 py-2"
+                  >
+                    <div className="flex flex-col">
+                      <span className="text-xs font-medium text-fg-t8">{def.label}</span>
+                      <span className="font-mono text-[10px] text-fg-t6">{def.key}</span>
+                    </div>
+                    {def.type === "bool" ? (
+                      <Checkbox
+                        checked={Boolean(planFeatures[def.key])}
+                        onChange={(e) =>
+                          setPlanFeatures((p) => ({ ...p, [def.key]: e.target.checked }))
+                        }
+                      />
+                    ) : (
+                      <Input
+                        type="number"
+                        className="!w-24"
+                        value={String(planFeatures[def.key] ?? def.default)}
+                        onChange={(e) =>
+                          setPlanFeatures((p) => ({
+                            ...p,
+                            [def.key]: Number(e.target.value) || 0,
+                          }))
+                        }
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-fg-t6">
+                Numeric limits: set to <code>-1</code> for unlimited. Toggles default-off mean the feature is gated.
+              </p>
+            </div>
+          )}
           <div className="flex items-end pb-2">
             <Checkbox
               checked={planForm.is_active}
