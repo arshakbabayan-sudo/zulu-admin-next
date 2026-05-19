@@ -290,7 +290,7 @@ export default function Bucket3NonServiceHoursPage() {
       <section className="admin-card p-4 space-y-3">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <h2 className="text-base font-semibold">Today's shifts</h2>
+            <h2 className="text-base font-semibold">Today&apos;s shifts</h2>
             <p className="text-xs text-fg-t6">
               Live clock-in / clock-out. Open shifts (no out-stamp) show who is currently on the clock.
             </p>
