@@ -52,6 +52,16 @@ type CaseRow = {
   closing_notes: string | null;
 };
 
+type Reply = {
+  id: number;
+  case_id: number;
+  user: { id: number; name: string; email: string } | null;
+  body: string;
+  visibility: "public" | "internal";
+  attachments: unknown;
+  created_at: string | null;
+};
+
 function formatDate(value: string | null | undefined): string {
   if (!value) return "—";
   const d = new Date(value);
@@ -116,6 +126,10 @@ export default function Bucket3CasesPage() {
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState<CaseRow | null>(null);
   const [composeOpen, setComposeOpen] = useState(false);
+  const [replies, setReplies] = useState<Reply[]>([]);
+  const [replyDraft, setReplyDraft] = useState("");
+  const [replySending, setReplySending] = useState(false);
+  const isStaff = canAccessPlatformAdminNav(user);
   const [compose, setCompose] = useState({
     title: "",
     description: "",
@@ -145,6 +159,56 @@ export default function Bucket3CasesPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const loadReplies = useCallback(
+    async (caseId: number) => {
+      if (!token) return;
+      try {
+        const res = await apiFetchJson<ApiSuccessEnvelope<Reply[]>>(`/cases/${caseId}/replies`, {
+          method: "GET",
+          token,
+        });
+        setReplies(res.data);
+      } catch (e) {
+        if (!(e instanceof ApiRequestError && e.status === 403)) {
+          setErr(e instanceof ApiRequestError ? e.message : "Failed to load replies");
+        }
+        setReplies([]);
+      }
+    },
+    [token]
+  );
+
+  useEffect(() => {
+    if (selected) {
+      void loadReplies(selected.id);
+    } else {
+      setReplies([]);
+      setReplyDraft("");
+    }
+  }, [selected, loadReplies]);
+
+  async function sendReply(visibility: "public" | "internal") {
+    if (!token || !selected) return;
+    const body = replyDraft.trim();
+    if (!body) return;
+    setReplySending(true);
+    try {
+      await apiFetchJson(`/cases/${selected.id}/replies`, {
+        method: "POST",
+        token,
+        body: { body, visibility },
+      });
+      setReplyDraft("");
+      await loadReplies(selected.id);
+      // Posting may have reopened a closed case; refresh the list silently.
+      void load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : "Reply failed");
+    } finally {
+      setReplySending(false);
+    }
+  }
 
   async function handleCreate() {
     if (!token) return;
@@ -431,6 +495,73 @@ export default function Bucket3CasesPage() {
                 />
               </FormField>
             </div>
+            {/* Conversation thread */}
+            <div className="space-y-2 border-t border-default pt-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-fg-t8">Conversation</h3>
+                <span className="text-xs text-fg-t6">{replies.length} message{replies.length === 1 ? "" : "s"}</span>
+              </div>
+              <div className="max-h-64 space-y-2 overflow-y-auto rounded-zulu border border-default bg-figma-bg-1/30 p-3">
+                {replies.length === 0 ? (
+                  <p className="text-xs text-fg-t6">No replies yet. Start the conversation below.</p>
+                ) : (
+                  replies.map((r) => (
+                    <div
+                      key={r.id}
+                      className={`rounded-zulu p-2 text-xs ${
+                        r.visibility === "internal"
+                          ? "border border-warning-200 bg-warning-50"
+                          : "border border-default bg-white"
+                      }`}
+                    >
+                      <div className="mb-1 flex items-center justify-between gap-2">
+                        <div className="font-medium text-fg-t8">{r.user?.name ?? "Unknown"}</div>
+                        <div className="flex items-center gap-2 text-fg-t6">
+                          {r.visibility === "internal" && (
+                            <span className="rounded bg-warning-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning-900">
+                              Internal
+                            </span>
+                          )}
+                          <span>{formatDate(r.created_at)}</span>
+                        </div>
+                      </div>
+                      <div className="whitespace-pre-wrap text-fg-t7">{r.body}</div>
+                    </div>
+                  ))
+                )}
+              </div>
+              <FormField label="Reply" htmlFor="case-reply-body">
+                <Input
+                  as="textarea"
+                  id="case-reply-body"
+                  rows={3}
+                  value={replyDraft}
+                  onChange={(e) => setReplyDraft(e.target.value)}
+                  placeholder="Type your reply…"
+                />
+              </FormField>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="primary"
+                  disabled={replySending || !replyDraft.trim()}
+                  onClick={() => void sendReply("public")}
+                >
+                  {replySending ? "Sending…" : "Send reply"}
+                </Button>
+                {isStaff && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={replySending || !replyDraft.trim()}
+                    onClick={() => void sendReply("internal")}
+                  >
+                    Send internal note
+                  </Button>
+                )}
+              </div>
+            </div>
+
             <div className="flex gap-2">
               <Button size="sm" variant="ghost" onClick={() => setSelected(null)}>
                 Close
