@@ -13,7 +13,7 @@
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessOperatorToolsNav } from "@/lib/access";
-import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
+import { ApiRequestError, apiDownloadFile, apiFetchJson } from "@/lib/api-client";
 import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
 import {
   Button,
@@ -171,6 +171,33 @@ export default function Bucket3PayrollPage() {
       setErr(e instanceof ApiRequestError ? e.message : "Create failed");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function downloadPayslip(id: number) {
+    if (!token) return;
+    setErr(null);
+    try {
+      await apiDownloadFile(`/payroll/${id}/payslip`, `payslip-${id}.pdf`, { token });
+    } catch (e) {
+      setErr(e instanceof ApiRequestError ? e.message : "Payslip download failed");
+    }
+  }
+
+  async function exportBankBatch() {
+    if (!token) return;
+    setErr(null);
+    const q = new URLSearchParams();
+    q.set("status", statusFilter || "finalized");
+    const stamp = new Date().toISOString().slice(0, 10);
+    try {
+      await apiDownloadFile(
+        `/payroll/bank-batch?${q.toString()}`,
+        `payroll-batch-${stamp}.csv`,
+        { token }
+      );
+    } catch (e) {
+      setErr(e instanceof ApiRequestError ? e.message : "Bank batch export failed");
     }
   }
 
@@ -338,7 +365,7 @@ export default function Bucket3PayrollPage() {
         </div>
       </section>
 
-      <div className="admin-card p-4">
+      <div className="admin-card p-4 flex items-center justify-between gap-3 flex-wrap">
         <label className="flex items-center gap-2 text-sm text-fg-t6">
           <span className="font-medium text-fg-t7">Status</span>
           <Select
@@ -358,6 +385,9 @@ export default function Bucket3PayrollPage() {
             ))}
           </Select>
         </label>
+        <Button size="sm" variant="outline" onClick={() => void exportBankBatch()}>
+          Export bank batch (CSV)
+        </Button>
       </div>
 
       <Table>
@@ -400,7 +430,10 @@ export default function Bucket3PayrollPage() {
                 <StatusPill status={statusTier(r.status)}>{r.status}</StatusPill>
               </TD>
               <TD align="right">
-                <div className="flex justify-end gap-2">
+                <div className="flex justify-end gap-2 flex-wrap">
+                  <Button size="sm" variant="ghost" onClick={() => void downloadPayslip(r.id)}>
+                    Payslip
+                  </Button>
                   {r.status === "draft" && (
                     <Button size="sm" variant="outline" disabled={busy} onClick={() => void changeStatus(r.id, "finalized")}>
                       Finalize

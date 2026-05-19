@@ -128,3 +128,37 @@ export async function apiFetchJson<T>(
 
   return json as T;
 }
+
+/**
+ * Fetch a binary response (PDF, CSV, XLSX) and trigger a browser download.
+ * Used for payslip PDFs and bank-batch CSV exports — endpoints that return
+ * a file rather than JSON. Reuses the same auth headers and base URL.
+ */
+export async function apiDownloadFile(
+  path: string,
+  filename: string,
+  opts: { token?: string | null; method?: string } = {}
+): Promise<void> {
+  const base = getApiBaseUrl().replace(/\/$/, "");
+  const url = path.startsWith("http") ? path : `${base}${path.startsWith("/") ? "" : "/"}${path}`;
+  const headers = new Headers();
+  if (opts.token) headers.set("Authorization", `Bearer ${opts.token}`);
+
+  const res = await fetch(url, { method: opts.method ?? "GET", headers });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new ApiRequestError(text || `HTTP ${res.status}`, res.status);
+  }
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  try {
+    const a = document.createElement("a");
+    a.href = objectUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+  }
+}
