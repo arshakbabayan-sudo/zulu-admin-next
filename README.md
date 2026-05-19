@@ -1,36 +1,123 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ZULU Admin (Next.js 15)
 
-## Getting Started
+The operator / agent / platform-admin surface for ZULU. Production deploys
+to Vercel (`admin.zulu.am`) on every push to `main`.
 
-First, run the development server:
+## Stack
+
+- Next.js 15 (App Router)
+- React 19
+- TypeScript strict-ish (some `any` left in legacy code — see roadmap E4)
+- Tailwind 4 + custom design tokens (ZULU primary purple, Quest CRM patterns)
+- Self-hosted UI design system at `components/ui/*` (Button / Card / Input
+  / Select / Table / Modal / Drawer / Tabs / Pagination / PageHeader /
+  StatusPill / ActiveFiltersChips)
+- Sanctum token auth (Bearer) — token stored in localStorage by
+  AdminAuthContext
+
+## Local setup
 
 ```bash
+# 1. Clone + install
+git clone git@github.com:arshakbabayan-sudo/zulu-admin-next.git
+cd zulu-admin-next
+npm install
+
+# 2. Env
+cp .env.local.example .env.local
+# Set NEXT_PUBLIC_API_URL — usually unset for local dev so the
+# `/api/proxy/*` Next rewrite hits 127.0.0.1:8008 (Laravel)
+
+# 3. Serve
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Open http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The backend must be running at `http://127.0.0.1:8008` for `/api/proxy/*`
+rewrites to work. See `next.config.mjs` for the rewrite rules.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Daily commands
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run dev            # dev server with hot reload
+npm run build          # production build (must pass before merging)
+npm run start          # serve the production build locally
+npm run lint           # ESLint
+npx tsc --noEmit       # type-check (run frequently — Vercel CI is strict)
+```
 
-## Learn More
+## Project structure
 
-To learn more about Next.js, take a look at the following resources:
+```
+app/
+  (admin)/                  ← all authenticated admin pages
+    bucket3/                ← Bucket-3 modules (cases, customers, payroll, etc.)
+    operator/               ← Operator-only screens (hotels, excursions, transfers)
+    platform/               ← Super-admin / platform-admin screens
+    support/                ← Support tickets workspace
+    localization/           ← UI translation editor
+    layout.tsx              ← admin shell (sidebar, header, lang switcher)
+  login/                    ← public auth pages
+  register/operator/
+  register/agent/
+  forgot-password/
+  reset-password/
+  2fa/
+  api/proxy/                ← Next rewrite proxy → Laravel API (dev only)
+components/
+  ui/                       ← design system primitives (one-stop import)
+  ForbiddenNotice.tsx
+  PlatformAdminGuard.tsx
+contexts/                   ← AdminAuthContext, LanguageContext
+hooks/                      ← useDebounce, useExcursionWizardStepper
+lib/                        ← api-client, api-base, access, zulu-lang, etc.
+public/                     ← static assets (logo, favicons, brand SVGs)
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Conventions
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- All API calls go through `lib/api-client.ts` (`apiFetchJson` or `apiDownloadFile`).
+- Auth state lives in `AdminAuthContext` — read with `useAdminAuth()`.
+- Access checks: `canAccessSupportNav(user)`, `canAccessPlatformAdminNav(user)`, etc. from `lib/access`.
+- Forbidden surfaces render `<ForbiddenNotice />` instead of crashing.
+- Pages import from `@/components/ui` (barrel), never individual files.
+- Status / priority chips: `<StatusPill status="success">...</StatusPill>`; tones: `neutral | info | success | warning | danger`.
+- Modal vs Drawer: modal for short forms (< 5 fields); Drawer for detail views with multiple sections.
+- Active filters above a list: `<ActiveFiltersChips filters={[...]} onClearAll={...} />`.
+- Search inputs: debounce 300ms via `useDebounce(draft, 300)`, never Enter-to-search.
 
-## Deploy on Vercel
+## Deploy
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+`main` auto-deploys to Vercel (`admin.zulu.am`) on every push. Pre-deploy
+hooks run lint + build; a broken build blocks deploy.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Vercel ESLint silent-fail gotcha:** if `next.config.mjs` has
+`eslint: { ignoreDuringBuilds: true }`, lint failures don't block deploy.
+Make sure that flag is `false` (or removed) on `main`.
+
+## Documentation
+
+- `../docs/decisions/ADR-*.md` — architecture decisions
+- `../docs/design/specs/zulu-*.md` — Figma specs cached for offline reference
+- `../docs/roadmaps/zulu-roadmap-2026-05-20.md` — what's still on the burn-down
+
+## Adding a new admin page
+
+1. Pick the route family: `app/(admin)/<family>/<name>/page.tsx`.
+2. Use `useAdminAuth()` to read token + user.
+3. Guard with the right `canAccess*` helper; render `<ForbiddenNotice />` if denied.
+4. Use `apiFetchJson` for data fetches.
+5. Use `<PageHeader title="..." subtitle="..." />` + UI primitives.
+6. If the page surfaces a new sidebar entry, register a `moduleKey` in
+   `lib/access.ts` and add nav-translation seed row backend-side.
+
+## Adding a new translation key
+
+Don't hand-edit `ui_translations` — instead:
+```bash
+cd ../backend
+php artisan localization:import-csv path/to/keys.csv
+php artisan cache:forget ui_translations_<lang>
+```
+
+Or, add via the admin UI at `/localization/ui-translations`.
