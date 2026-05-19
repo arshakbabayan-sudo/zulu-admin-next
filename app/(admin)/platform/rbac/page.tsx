@@ -57,8 +57,8 @@ export default function PlatformRbacPage() {
       try {
         const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" };
         const [s, m] = await Promise.all([
-          fetch(`${baseURL}/api/platform-admin/rbac/stats`, { headers }),
-          fetch(`${baseURL}/api/platform-admin/rbac/matrix`, { headers }),
+          fetch(`${baseURL}/platform-admin/rbac/stats`, { headers }),
+          fetch(`${baseURL}/platform-admin/rbac/matrix`, { headers }),
         ]);
         if (s.status === 403 || m.status === 403) {
           if (!cancelled) setForbidden(true);

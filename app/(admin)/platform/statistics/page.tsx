@@ -125,10 +125,10 @@ export default function PlatformStatisticsPage() {
       try {
         const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" };
         const [sRes, rRes, oRes, tRes] = await Promise.all([
-          fetch(`${baseURL}/api/platform-admin/statistics/dashboard?days=${days}`, { headers }),
-          fetch(`${baseURL}/api/platform-admin/statistics/revenue-series?days=${days}`, { headers }),
-          fetch(`${baseURL}/api/platform-admin/statistics/orders-series?days=${days}`, { headers }),
-          fetch(`${baseURL}/api/platform-admin/statistics/sellers?days=${days}&limit=20`, { headers }),
+          fetch(`${baseURL}/platform-admin/statistics/dashboard?days=${days}`, { headers }),
+          fetch(`${baseURL}/platform-admin/statistics/revenue-series?days=${days}`, { headers }),
+          fetch(`${baseURL}/platform-admin/statistics/orders-series?days=${days}`, { headers }),
+          fetch(`${baseURL}/platform-admin/statistics/sellers?days=${days}&limit=20`, { headers }),
         ]);
 
         if ([sRes, rRes, oRes, tRes].some((res) => res.status === 403)) {
@@ -170,7 +170,7 @@ export default function PlatformStatisticsPage() {
     setSellerDetail(null);
     try {
       const res = await fetch(
-        `${baseURL}/api/platform-admin/statistics/sellers/${s.company_id}?days=${days}`,
+        `${baseURL}/platform-admin/statistics/sellers/${s.company_id}?days=${days}`,
         { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } }
       );
       const json = await res.json();

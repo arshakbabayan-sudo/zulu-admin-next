@@ -109,8 +109,8 @@ export default function PlatformConnectionsPage() {
 
         const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" };
         const [listRes, statsRes] = await Promise.all([
-          fetch(`${baseURL}/api/platform-admin/connections?${params.toString()}`, { headers }),
-          fetch(`${baseURL}/api/platform-admin/connections/stats`, { headers }),
+          fetch(`${baseURL}/platform-admin/connections?${params.toString()}`, { headers }),
+          fetch(`${baseURL}/platform-admin/connections/stats`, { headers }),
         ]);
 
         if (listRes.status === 403 || statsRes.status === 403) {
@@ -166,7 +166,7 @@ export default function PlatformConnectionsPage() {
     setSelected(row);
     setTerminateReason("");
     try {
-      const res = await fetch(`${baseURL}/api/platform-admin/connections/${row.id}`, {
+      const res = await fetch(`${baseURL}/platform-admin/connections/${row.id}`, {
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
       });
       const json = await res.json();
@@ -189,7 +189,7 @@ export default function PlatformConnectionsPage() {
     setActionLoading(true);
     try {
       const res = await fetch(
-        `${baseURL}/api/platform-admin/connections/${selected.id}/force-terminate`,
+        `${baseURL}/platform-admin/connections/${selected.id}/force-terminate`,
         {
           method: "POST",
           headers: {

@@ -121,8 +121,8 @@ export default function PlatformNotificationsPage() {
 
         const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" };
         const [listRes, statsRes] = await Promise.all([
-          fetch(`${baseURL}/api/platform-admin/notifications?${params.toString()}`, { headers }),
-          fetch(`${baseURL}/api/platform-admin/notifications/stats`, { headers }),
+          fetch(`${baseURL}/platform-admin/notifications?${params.toString()}`, { headers }),
+          fetch(`${baseURL}/platform-admin/notifications/stats`, { headers }),
         ]);
 
         if (listRes.status === 403 || statsRes.status === 403) {

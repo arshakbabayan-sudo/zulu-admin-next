@@ -44,7 +44,7 @@ export default function PlatformApiDocsPage() {
       const SwaggerUIBundle = window.SwaggerUIBundle;
       if (!SwaggerUIBundle) return;
       SwaggerUIBundle({
-        url: `${baseURL}/api/platform-admin/openapi.json`,
+        url: `${baseURL}/platform-admin/openapi.json`,
         dom_id: "#swagger-ui-root",
         deepLinking: true,
         presets: [SwaggerUIBundle.presets.apis],

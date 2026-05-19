@@ -81,10 +81,10 @@ export default function PlatformWebhooksPage() {
         const baseURL = process.env.NEXT_PUBLIC_API_URL || "https://api.zulu.am";
 
         const [statsRes, subsRes, delivQs] = await Promise.all([
-          fetch(`${baseURL}/api/platform-admin/webhooks/stats`, { headers }).then((r) => r.json()),
-          fetch(`${baseURL}/api/platform-admin/webhooks/subscriptions`, { headers }).then((r) => r.json()),
+          fetch(`${baseURL}/platform-admin/webhooks/stats`, { headers }).then((r) => r.json()),
+          fetch(`${baseURL}/platform-admin/webhooks/subscriptions`, { headers }).then((r) => r.json()),
           fetch(
-            `${baseURL}/api/platform-admin/webhooks/deliveries${statusFilter ? `?status=${statusFilter}` : ""}`,
+            `${baseURL}/platform-admin/webhooks/deliveries${statusFilter ? `?status=${statusFilter}` : ""}`,
             { headers }
           ).then((r) => r.json()),
         ]);
@@ -271,7 +271,7 @@ function ReplayButton({
     setError(null);
     try {
       const baseURL = process.env.NEXT_PUBLIC_API_URL || "https://api.zulu.am";
-      const res = await fetch(`${baseURL}/api/platform-admin/webhooks/deliveries/${deliveryId}/replay`, {
+      const res = await fetch(`${baseURL}/platform-admin/webhooks/deliveries/${deliveryId}/replay`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
       });

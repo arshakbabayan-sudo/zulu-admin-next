@@ -108,8 +108,8 @@ export default function PlatformLoyaltyPage() {
 
         const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" };
         const [listRes, statsRes] = await Promise.all([
-          fetch(`${baseURL}/api/platform-admin/loyalty/accounts?${params.toString()}`, { headers }),
-          fetch(`${baseURL}/api/platform-admin/loyalty/stats`, { headers }),
+          fetch(`${baseURL}/platform-admin/loyalty/accounts?${params.toString()}`, { headers }),
+          fetch(`${baseURL}/platform-admin/loyalty/stats`, { headers }),
         ]);
 
         if (listRes.status === 403 || statsRes.status === 403) {
@@ -154,7 +154,7 @@ export default function PlatformLoyaltyPage() {
     setAdjustReason("");
     try {
       const res = await fetch(
-        `${baseURL}/api/platform-admin/loyalty/accounts/${acct.user_id}/transactions`,
+        `${baseURL}/platform-admin/loyalty/accounts/${acct.user_id}/transactions`,
         { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } }
       );
       const json = await res.json();
@@ -189,7 +189,7 @@ export default function PlatformLoyaltyPage() {
     setActionLoading(true);
     try {
       const res = await fetch(
-        `${baseURL}/api/platform-admin/loyalty/accounts/${selected.user_id}/adjust`,
+        `${baseURL}/platform-admin/loyalty/accounts/${selected.user_id}/adjust`,
         {
           method: "POST",
           headers: {

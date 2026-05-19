@@ -133,7 +133,7 @@ export default function PlatformAuditLogsPage() {
         if (q.trim()) params.set("q", q.trim());
 
         const res = await fetch(
-          `${baseURL}/api/platform-admin/audit-logs?${params.toString()}`,
+          `${baseURL}/platform-admin/audit-logs?${params.toString()}`,
           { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } }
         );
         if (res.status === 403) {
@@ -192,7 +192,7 @@ export default function PlatformAuditLogsPage() {
     setIntegrity(null);
     try {
       const res = await fetch(
-        `${baseURL}/api/platform-admin/audit-logs/verify-integrity?limit=1000`,
+        `${baseURL}/platform-admin/audit-logs/verify-integrity?limit=1000`,
         {
           method: "POST",
           headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },

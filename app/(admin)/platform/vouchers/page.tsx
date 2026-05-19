@@ -122,7 +122,7 @@ export default function PlatformVouchersPage() {
         if (serviceType) params.set("service_type", serviceType);
         if (q.trim()) params.set("q", q.trim());
 
-        const res = await fetch(`${baseURL}/api/platform-admin/vouchers?${params.toString()}`, {
+        const res = await fetch(`${baseURL}/platform-admin/vouchers?${params.toString()}`, {
           headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
         });
         if (res.status === 403) {
@@ -176,7 +176,7 @@ export default function PlatformVouchersPage() {
     setLogs([]);
     setDetailLoading(true);
     try {
-      const res = await fetch(`${baseURL}/api/platform-admin/vouchers/${row.id}`, {
+      const res = await fetch(`${baseURL}/platform-admin/vouchers/${row.id}`, {
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
       });
       const json = await res.json();
@@ -195,7 +195,7 @@ export default function PlatformVouchersPage() {
     if (!confirm(t("admin.platform_vouchers.confirm_void"))) return;
     setActionLoading("void");
     try {
-      const res = await fetch(`${baseURL}/api/platform-admin/vouchers/${id}/void`, {
+      const res = await fetch(`${baseURL}/platform-admin/vouchers/${id}/void`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
       });
@@ -217,7 +217,7 @@ export default function PlatformVouchersPage() {
     if (!confirm(t("admin.platform_vouchers.confirm_reissue"))) return;
     setActionLoading("reissue");
     try {
-      const res = await fetch(`${baseURL}/api/platform-admin/vouchers/${id}/reissue`, {
+      const res = await fetch(`${baseURL}/platform-admin/vouchers/${id}/reissue`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

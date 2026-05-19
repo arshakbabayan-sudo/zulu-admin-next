@@ -74,8 +74,8 @@ export default function PlatformSecurityPage() {
 
         const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" };
         const [listRes, statsRes] = await Promise.all([
-          fetch(`${baseURL}/api/platform-admin/security/two-factor?${params.toString()}`, { headers }),
-          fetch(`${baseURL}/api/platform-admin/security/stats`, { headers }),
+          fetch(`${baseURL}/platform-admin/security/two-factor?${params.toString()}`, { headers }),
+          fetch(`${baseURL}/platform-admin/security/stats`, { headers }),
         ]);
 
         if (listRes.status === 403 || statsRes.status === 403) {
@@ -115,7 +115,7 @@ export default function PlatformSecurityPage() {
     setError(null);
     setSuccess(null);
     try {
-      const res = await fetch(`${baseURL}/api/platform-admin/security/users/${row.user_id}/force-disable-2fa`, {
+      const res = await fetch(`${baseURL}/platform-admin/security/users/${row.user_id}/force-disable-2fa`, {
         method: "POST", headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
       });
       const json = await res.json();
@@ -135,7 +135,7 @@ export default function PlatformSecurityPage() {
     setError(null);
     setSuccess(null);
     try {
-      const res = await fetch(`${baseURL}/api/platform-admin/security/users/${userId}/force-logout`, {
+      const res = await fetch(`${baseURL}/platform-admin/security/users/${userId}/force-logout`, {
         method: "POST", headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
       });
       const json = await res.json();
