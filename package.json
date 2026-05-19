@@ -7,7 +7,9 @@
     "dev:3001": "next dev -p 3001",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:e2e": "playwright test --config=tests-e2e/playwright.config.ts",
+    "test:e2e:ui": "playwright test --config=tests-e2e/playwright.config.ts --ui"
   },
   "dependencies": {
     "@tiptap/extension-link": "^3.23.4",
