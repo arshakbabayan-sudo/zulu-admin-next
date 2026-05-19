@@ -196,7 +196,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   {
     key: "loyalty_promo",
     labelKey: "admin.nav.group.loyalty_promo",
-    icon: "/icons/menu/loyalty.svg",
+    icon: "/icons/menu/star.svg",
     defaultHref: "/platform/loyalty",
     tabs: [
       { href: "/platform/loyalty", labelKey: "admin.nav.tab.loyalty_programs", moduleKey: "ops.loyalty" },
