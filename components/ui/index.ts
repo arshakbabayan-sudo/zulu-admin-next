@@ -19,3 +19,4 @@ export { Tabs, type TabItem, type TabsProps } from "./Tabs";
 export { Pagination, type PaginationProps } from "./Pagination";
 export { PageHeader, type PageHeaderProps } from "./PageHeader";
 export { StatusPill } from "./StatusPill";
+export { ActiveFiltersChips, type FilterChip } from "./ActiveFiltersChips";

@@ -14,6 +14,7 @@ import { canAccessOperatorToolsNav, canAccessPlatformAdminNav } from "@/lib/acce
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
 import {
+  ActiveFiltersChips,
   Button,
   FormField,
   Input,
@@ -29,6 +30,7 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useCallback, useEffect, useState } from "react";
 
 const STATUSES = ["open", "in_progress", "pending_customer", "resolved", "closed", "escalated"] as const;
@@ -140,8 +142,8 @@ export default function Bucket3CasesPage() {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<CaseStatus | "">("");
   const [priorityFilter, setPriorityFilter] = useState<Priority | "">("");
-  const [search, setSearch] = useState("");
   const [searchDraft, setSearchDraft] = useState("");
+  const search = useDebounce(searchDraft, 300);
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -318,20 +320,17 @@ export default function Bucket3CasesPage() {
         </div>
       )}
 
-      <div className="admin-card p-4">
+      <div className="admin-card p-4 space-y-3">
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1 min-w-[220px]">
             <input
               type="search"
               value={searchDraft}
-              onChange={(e) => setSearchDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  setPage(1);
-                  setSearch(searchDraft.trim());
-                }
+              onChange={(e) => {
+                setSearchDraft(e.target.value);
+                setPage(1);
               }}
-              placeholder="Search by case number or title"
+              placeholder="Search by case number or title…"
               className="h-9 w-full rounded-zulu border border-default bg-white px-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
             />
           </div>
@@ -374,6 +373,34 @@ export default function Bucket3CasesPage() {
             </Select>
           </label>
         </div>
+        <ActiveFiltersChips
+          filters={[
+            {
+              key: "search",
+              label: "Search",
+              value: searchDraft,
+              onRemove: () => setSearchDraft(""),
+            },
+            {
+              key: "status",
+              label: "Status",
+              value: statusFilter,
+              onRemove: () => setStatusFilter(""),
+            },
+            {
+              key: "priority",
+              label: "Priority",
+              value: priorityFilter,
+              onRemove: () => setPriorityFilter(""),
+            },
+          ]}
+          onClearAll={() => {
+            setSearchDraft("");
+            setStatusFilter("");
+            setPriorityFilter("");
+            setPage(1);
+          }}
+        />
       </div>
 
       <Table>
