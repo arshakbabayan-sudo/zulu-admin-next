@@ -20,3 +20,4 @@ export { Pagination, type PaginationProps } from "./Pagination";
 export { PageHeader, type PageHeaderProps } from "./PageHeader";
 export { StatusPill } from "./StatusPill";
 export { ActiveFiltersChips, type FilterChip } from "./ActiveFiltersChips";
+export { Drawer, DrawerSection, type DrawerProps } from "./Drawer";
