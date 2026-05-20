@@ -12,6 +12,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { canAccessOperatorToolsNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
@@ -88,6 +89,7 @@ async function deleteBlocked(
 
 export default function Bucket3BlockDatesPage() {
   const { token, user } = useAdminAuth();
+  const confirm = useConfirm();
   const allowed = canAccessOperatorToolsNav(user);
   const [rows, setRows] = useState<BlockedRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -156,7 +158,8 @@ export default function Bucket3BlockDatesPage() {
 
   async function handleDelete(id: number) {
     if (!token) return;
-    if (!window.confirm("Remove this blocked date range?")) return;
+    const ok = await confirm({ messageKey: "admin.bucket3.block_dates.confirm_delete", variant: "danger" });
+    if (!ok) return;
     setBusy(true);
     try {
       await deleteBlocked(token, id);

@@ -4,6 +4,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { getApiBaseUrl } from "@/lib/api-base";
@@ -40,6 +41,7 @@ const LANGS = ["", "en", "ru", "hy"];
 export default function PlatformNewsletterPage() {
   const { token, user } = useAdminAuth();
   const { t } = useLanguage();
+  const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<NewsletterSubscriptionRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -92,7 +94,8 @@ export default function PlatformNewsletterPage() {
 
   async function handleDelete(id: number) {
     if (!token) return;
-    if (!window.confirm(t("admin.newsletter.confirm_unsubscribe"))) return;
+    const ok = await confirm({ messageKey: "admin.newsletter.confirm_unsubscribe" });
+    if (!ok) return;
     setBusyId(id);
     try {
       await apiDeleteNewsletterSubscription(token, id);

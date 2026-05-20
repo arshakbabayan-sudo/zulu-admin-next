@@ -4,6 +4,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
@@ -38,6 +39,7 @@ type Stats = { total_users: number; two_factor_confirmed: number; two_factor_pen
 export default function PlatformSecurityPage() {
   const { token, user } = useAdminAuth();
   const { t } = useLanguage();
+  const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);
 
   const [rows, setRows] = useState<TwoFactorRow[]>([]);
@@ -110,7 +112,11 @@ export default function PlatformSecurityPage() {
 
   const forceDisable = async (row: TwoFactorRow) => {
     const target = row.user?.name ?? `user #${row.user_id}`;
-    if (!confirm(t("admin.security.confirm_force_disable_2fa").replace("{target}", target))) return;
+    const ok = await confirm({
+      message: t("admin.security.confirm_force_disable_2fa").replace("{target}", target),
+      variant: "danger",
+    });
+    if (!ok) return;
     setActionLoading(`disable-${row.user_id}`);
     setError(null);
     setSuccess(null);
@@ -130,7 +136,11 @@ export default function PlatformSecurityPage() {
 
   const forceLogoutById = async (userId: number, userName?: string) => {
     const target = userName ?? `user #${userId}`;
-    if (!confirm(t("admin.security.confirm_force_logout").replace("{target}", target))) return;
+    const ok = await confirm({
+      message: t("admin.security.confirm_force_logout").replace("{target}", target),
+      variant: "danger",
+    });
+    if (!ok) return;
     setActionLoading(`logout-${userId}`);
     setError(null);
     setSuccess(null);

@@ -11,6 +11,7 @@ import { OfferStatusBadge, isSubmittableStatus } from "@/components/OfferStatusB
 import { PaginationBar } from "@/components/PaginationBar";
 import { TranslationTabs } from "@/components/TranslationTabs";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { ApiRequestError } from "@/lib/api-client";
 import { apiSubmitOfferForReview } from "@/lib/platform-admin-api";
 import type { ApiListMeta } from "@/lib/api-envelope";
@@ -48,6 +49,7 @@ const STATUSES = ["", "draft", "active", "inactive", "archived"];
 export default function OperatorPackagesPage() {
   const { token } = useAdminAuth();
   const { t, contentLang } = useLanguage();
+  const confirm = useConfirm();
   const [rows, setRows] = useState<PackageRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
   const [page, setPage] = useState(1);
@@ -154,7 +156,9 @@ export default function OperatorPackagesPage() {
   }
 
   async function handleDelete(id: number) {
-    if (!token || !window.confirm(t("admin.crud.packages.delete_confirm"))) return;
+    if (!token) return;
+    const ok = await confirm({ messageKey: "admin.crud.packages.delete_confirm", variant: "danger" });
+    if (!ok) return;
     setBusyId(id);
     try {
       await apiDeletePackage(token, id);
@@ -168,11 +172,12 @@ export default function OperatorPackagesPage() {
 
   async function handleToggle(r: PackageRow) {
     if (!token) return;
-    const confirmMsg =
+    const messageKey =
       r.status === "active"
-        ? t("admin.crud.packages.deactivate_confirm")
-        : t("admin.crud.packages.activate_confirm");
-    if (!window.confirm(confirmMsg)) return;
+        ? "admin.crud.packages.deactivate_confirm"
+        : "admin.crud.packages.activate_confirm";
+    const ok = await confirm({ messageKey, variant: r.status === "active" ? "danger" : undefined });
+    if (!ok) return;
     setBusyId(r.id);
     try {
       if (r.status === "active") await apiDeactivatePackage(token, r.id);
@@ -187,12 +192,10 @@ export default function OperatorPackagesPage() {
 
   async function handleSubmitForReview(offerId: number) {
     if (!token) return;
-    if (
-      !window.confirm(
-        "Submit this package for super-admin review? Once submitted, you cannot edit it until it's approved or rejected."
-      )
-    )
-      return;
+    const ok = await confirm({
+      message: "Submit this package for super-admin review? Once submitted, you cannot edit it until it's approved or rejected.",
+    });
+    if (!ok) return;
     setBusyId(offerId);
     try {
       await apiSubmitOfferForReview(token, offerId);

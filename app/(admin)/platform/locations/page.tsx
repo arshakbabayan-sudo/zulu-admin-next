@@ -4,6 +4,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
@@ -42,6 +43,7 @@ import { useCallback, useEffect, useState } from "react";
 export default function PlatformLocationsPage() {
   const { token, user } = useAdminAuth();
   const { t } = useLanguage();
+  const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);
   const [countries, setCountries] = useState<LocationCountryRow[]>([]);
   const [regions, setRegions] = useState<LocationRegionRow[]>([]);
@@ -183,7 +185,8 @@ export default function PlatformLocationsPage() {
 
   async function delCountry(id: number) {
     if (!token) return;
-    if (!window.confirm(t("admin.locations.confirm_delete_country"))) return;
+    const ok = await confirm({ messageKey: "admin.locations.confirm_delete_country", variant: "danger" });
+    if (!ok) return;
     setBusy(true);
     try {
       await apiLocationCountryDelete(token, id);
@@ -243,7 +246,8 @@ export default function PlatformLocationsPage() {
 
   async function delRegion(id: number) {
     if (!token) return;
-    if (!window.confirm(t("admin.locations.confirm_delete_region"))) return;
+    const ok = await confirm({ messageKey: "admin.locations.confirm_delete_region", variant: "danger" });
+    if (!ok) return;
     setBusy(true);
     try {
       await apiLocationRegionDelete(token, id);
@@ -311,7 +315,8 @@ export default function PlatformLocationsPage() {
 
   async function delCity(id: number) {
     if (!token) return;
-    if (!window.confirm(t("admin.locations.confirm_delete_city"))) return;
+    const ok = await confirm({ messageKey: "admin.locations.confirm_delete_city", variant: "danger" });
+    if (!ok) return;
     setBusy(true);
     try {
       await apiLocationCityDelete(token, id);

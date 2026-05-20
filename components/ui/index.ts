@@ -15,6 +15,7 @@ export { Switch, type SwitchProps } from "./Switch";
 export { FormField, type FormFieldProps } from "./FormField";
 export { Table, THead, TBody, TR, TH, TD, TEmpty } from "./Table";
 export { Modal, type ModalProps } from "./Modal";
+export { ConfirmDialog, type ConfirmDialogProps, type ConfirmDialogVariant } from "./ConfirmDialog";
 export { Tabs, type TabItem, type TabsProps } from "./Tabs";
 export { Pagination, type PaginationProps } from "./Pagination";
 export { PageHeader, type PageHeaderProps } from "./PageHeader";

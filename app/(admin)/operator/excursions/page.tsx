@@ -28,6 +28,7 @@ import {
   TR,
 } from "@/components/ui";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useExcursionWizardStepper } from "@/hooks/useExcursionWizardStepper";
 import { ApiRequestError } from "@/lib/api-client";
 import { apiSubmitOfferForReview } from "@/lib/platform-admin-api";
@@ -142,6 +143,7 @@ const EXCURSION_STEP_LABEL_KEYS: Record<number, string> = {
 export default function OperatorExcursionsPage() {
   const { token } = useAdminAuth();
   const { t, contentLang } = useLanguage();
+  const confirm = useConfirm();
   const [rows, setRows] = useState<ExcursionRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
   const [page, setPage] = useState(1);
@@ -353,7 +355,9 @@ export default function OperatorExcursionsPage() {
   }
 
   async function handleDelete(id: number) {
-    if (!token || !window.confirm(t("admin.crud.excursions.delete_confirm"))) return;
+    if (!token) return;
+    const ok = await confirm({ messageKey: "admin.crud.excursions.delete_confirm", variant: "danger" });
+    if (!ok) return;
     setBusy(true);
     try {
       await apiDeleteExcursion(token, id);
@@ -368,7 +372,8 @@ export default function OperatorExcursionsPage() {
 
   async function handleSubmitForReview(offerId: number) {
     if (!token) return;
-    if (!window.confirm("Submit this excursion for super-admin review? Once submitted, you cannot edit it until it's approved or rejected.")) return;
+    const ok = await confirm({ messageKey: "admin.crud.submit_for_review_confirm" });
+    if (!ok) return;
     setBusy(true);
     try {
       await apiSubmitOfferForReview(token, offerId);

@@ -18,6 +18,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import {
@@ -79,6 +80,7 @@ export default function AdminContractDetailPage() {
   const router = useRouter();
   const id = String(params.id);
   const { token, user } = useAdminAuth();
+  const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);
   const [row, setRow] = useState<ContractDetail | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -107,7 +109,8 @@ export default function AdminContractDetailPage() {
 
   async function handleSend() {
     if (!token || !row) return;
-    if (!window.confirm("Send this contract to the partner for signing?")) return;
+    const ok = await confirm({ messageKey: "admin.platform_contracts.confirm_send_for_signing" });
+    if (!ok) return;
     setBusyAction("send");
     try {
       await apiAdminSendContract(token, row.id);
@@ -121,7 +124,8 @@ export default function AdminContractDetailPage() {
 
   async function handleCountersign() {
     if (!token || !row) return;
-    if (!window.confirm("Counter-sign this contract on ZULU's behalf? This is a binding action.")) return;
+    const ok = await confirm({ messageKey: "admin.platform_contracts.confirm_counter_sign" });
+    if (!ok) return;
     setBusyAction("countersign");
     try {
       await apiAdminCountersignContract(token, row.id);

@@ -12,6 +12,8 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessOperatorToolsNav } from "@/lib/access";
 import { ApiRequestError, apiDownloadFile, apiFetchJson } from "@/lib/api-client";
 import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
@@ -89,6 +91,8 @@ async function fetchPayroll(
 
 export default function Bucket3PayrollPage() {
   const { token, user } = useAdminAuth();
+  const confirm = useConfirm();
+  const { t } = useLanguage();
   const allowed = canAccessOperatorToolsNav(user);
   const [rows, setRows] = useState<PayrollRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -203,7 +207,10 @@ export default function Bucket3PayrollPage() {
 
   async function changeStatus(id: number, status: Status) {
     if (!token) return;
-    if (!window.confirm(`Move record to "${status}"?`)) return;
+    const ok = await confirm({
+      message: t("admin.bucket3.payroll.confirm_move").replace("{status}", status),
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       await apiFetchJson(`/payroll/${id}/status`, {

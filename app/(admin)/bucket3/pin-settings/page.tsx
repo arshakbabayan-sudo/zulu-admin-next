@@ -16,6 +16,7 @@
  */
 
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiSuccessEnvelope } from "@/lib/api-envelope";
 import { Button, FormField, Input, PageHeader } from "@/components/ui";
@@ -31,6 +32,7 @@ function formatDate(value: string | null | undefined): string {
 
 export default function Bucket3PinSettingsPage() {
   const { token } = useAdminAuth();
+  const confirm = useConfirm();
   const [status, setStatus] = useState<PinStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -140,7 +142,8 @@ export default function Bucket3PinSettingsPage() {
       setErr("Account password required to clear PIN");
       return;
     }
-    if (!window.confirm("Clear your PIN? You can set a new one later.")) return;
+    const ok = await confirm({ messageKey: "admin.bucket3.pin_settings.confirm_clear", variant: "danger" });
+    if (!ok) return;
     setBusy(true);
     try {
       await apiFetchJson<ApiSuccessEnvelope<PinStatus>>(`/account/pin`, {

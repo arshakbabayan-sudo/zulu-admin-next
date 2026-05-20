@@ -11,6 +11,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { canAccessOperatorToolsNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import {
@@ -61,6 +62,7 @@ export default function SellerContractDetailPage() {
   const router = useRouter();
   const id = String(params.id);
   const { token, user } = useAdminAuth();
+  const confirm = useConfirm();
   const allowed = canAccessOperatorToolsNav(user);
   const [row, setRow] = useState<ContractDetail | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -87,7 +89,8 @@ export default function SellerContractDetailPage() {
 
   async function handleSign() {
     if (!token || !row) return;
-    if (!window.confirm("Sign this contract? This is a binding action.")) return;
+    const ok = await confirm({ messageKey: "admin.operator.contracts.confirm_sign" });
+    if (!ok) return;
     setSigning(true);
     try {
       await apiSellerSignContract(token, row.id);

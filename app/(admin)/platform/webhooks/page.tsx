@@ -7,6 +7,7 @@ import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import {
   FormField,
@@ -262,11 +263,13 @@ function ReplayButton({
   onReplayed: () => void;
 }) {
   const { t } = useLanguage();
+  const confirm = useConfirm();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const replay = async () => {
-    if (!confirm(t("admin.platform_webhooks.confirm_replay"))) return;
+    const ok = await confirm({ messageKey: "admin.platform_webhooks.confirm_replay" });
+    if (!ok) return;
     setBusy(true);
     setError(null);
     try {

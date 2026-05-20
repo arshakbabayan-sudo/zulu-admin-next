@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
@@ -81,6 +82,7 @@ type Meta = {
 export default function PlatformVouchersPage() {
   const { token, user } = useAdminAuth();
   const { t } = useLanguage();
+  const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);
 
   const [rows, setRows] = useState<VoucherRow[]>([]);
@@ -192,7 +194,8 @@ export default function PlatformVouchersPage() {
   };
 
   const voidVoucher = async (id: number) => {
-    if (!confirm(t("admin.platform_vouchers.confirm_void"))) return;
+    const ok = await confirm({ messageKey: "admin.platform_vouchers.confirm_void", variant: "danger" });
+    if (!ok) return;
     setActionLoading("void");
     try {
       const res = await fetch(`${baseURL}/platform-admin/vouchers/${id}/void`, {
@@ -214,7 +217,8 @@ export default function PlatformVouchersPage() {
   };
 
   const reissueVoucher = async (id: number) => {
-    if (!confirm(t("admin.platform_vouchers.confirm_reissue"))) return;
+    const ok = await confirm({ messageKey: "admin.platform_vouchers.confirm_reissue" });
+    if (!ok) return;
     setActionLoading("reissue");
     try {
       const res = await fetch(`${baseURL}/platform-admin/vouchers/${id}/reissue`, {

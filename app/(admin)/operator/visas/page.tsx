@@ -24,6 +24,7 @@ import {
   TR,
 } from "@/components/ui";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { canAccessOperatorToolsNav, userHasSellerServiceType } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import { apiSubmitOfferForReview } from "@/lib/platform-admin-api";
@@ -369,6 +370,7 @@ function bodyFromForm(form: VisaPayload, mode: "create" | "update"): VisaPayload
 export default function OperatorVisasPage() {
   const { token, user } = useAdminAuth();
   const { t, contentLang } = useLanguage();
+  const confirm = useConfirm();
   const allowed = canAccessOperatorToolsNav(user) && userHasSellerServiceType(user, "visa");
   const [rows, setRows] = useState<VisaRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -483,7 +485,9 @@ export default function OperatorVisasPage() {
   }
 
   async function handleDelete(id: number) {
-    if (!token || !window.confirm(t("admin.crud.visas.delete_confirm"))) return;
+    if (!token) return;
+    const ok = await confirm({ messageKey: "admin.crud.visas.delete_confirm", variant: "danger" });
+    if (!ok) return;
     setBusy(true);
     try {
       await apiDeleteVisa(token, id);
@@ -497,7 +501,8 @@ export default function OperatorVisasPage() {
 
   async function handleSubmitForReview(offerId: number) {
     if (!token) return;
-    if (!window.confirm("Submit this visa for super-admin review? Once submitted, you cannot edit it until it's approved or rejected.")) return;
+    const ok = await confirm({ messageKey: "admin.crud.submit_for_review_confirm" });
+    if (!ok) return;
     setBusy(true);
     try {
       await apiSubmitOfferForReview(token, offerId);

@@ -2,6 +2,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
@@ -25,6 +26,7 @@ export default function CompanyApplicationDetailPage() {
   const id = Number(params.id);
   const { token, user } = useAdminAuth();
   const { t } = useLanguage();
+  const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);
   const [row, setRow] = useState<CompanyApplicationRow | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -51,7 +53,8 @@ export default function CompanyApplicationDetailPage() {
 
   async function approve() {
     if (!token || !row) return;
-    if (!window.confirm(t("admin.company_application_detail.confirm_approve"))) return;
+    const ok = await confirm({ messageKey: "admin.company_application_detail.confirm_approve" });
+    if (!ok) return;
     setBusy(true);
     try {
       await apiApproveCompanyApplication(token, row.id);

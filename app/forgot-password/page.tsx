@@ -42,7 +42,7 @@ export default function AdminForgotPasswordPage() {
       <div className="mb-6 flex flex-col items-center text-center">
         <img src="/branding/logo-zulu.svg" alt="ZULU" className="h-16 w-auto" />
         <p className="mt-3 max-w-xs text-ds-body-2 text-fg-t6">
-          Operations console — internal access only
+          {t("admin.login.tagline")}
         </p>
       </div>
       <Card className="w-full max-w-sm">

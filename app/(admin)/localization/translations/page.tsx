@@ -4,6 +4,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessLocalizationTranslationsNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
@@ -22,6 +23,7 @@ import { Button, FormField, Input, PageHeader, Select } from "@/components/ui";
 export default function LocalizationTranslationsPage() {
   const { token, user } = useAdminAuth();
   const { t } = useLanguage();
+  const confirm = useConfirm();
   const allowed = canAccessLocalizationTranslationsNav(user);
   const isSuper = user?.is_super_admin === true;
 
@@ -133,7 +135,8 @@ export default function LocalizationTranslationsPage() {
       setErr(t("admin.content_translations.err_invalid_id"));
       return;
     }
-    if (!window.confirm(t("admin.content_translations.confirm_delete"))) return;
+    const ok = await confirm({ messageKey: "admin.content_translations.confirm_delete", variant: "danger" });
+    if (!ok) return;
     setErr(null);
     setMsg(null);
     setBusy(true);

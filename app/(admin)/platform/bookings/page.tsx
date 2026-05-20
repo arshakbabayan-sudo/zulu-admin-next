@@ -10,6 +10,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
@@ -54,6 +55,7 @@ function formatDate(value: string | null | undefined): string {
 export default function PlatformBookingsPage() {
   const { t } = useLanguage();
   const { token, user } = useAdminAuth();
+  const confirmDialog = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<BookingRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -86,7 +88,9 @@ export default function PlatformBookingsPage() {
   }, [load]);
 
   async function handleConfirm(id: number) {
-    if (!token || !window.confirm(t("admin.platform_bookings.confirm_confirm"))) return;
+    if (!token) return;
+    const ok = await confirmDialog({ messageKey: "admin.platform_bookings.confirm_confirm" });
+    if (!ok) return;
     setBusyId(id);
     try {
       await apiConfirmBooking(token, id);
@@ -99,7 +103,9 @@ export default function PlatformBookingsPage() {
   }
 
   async function handleCancel(id: number) {
-    if (!token || !window.confirm(t("admin.platform_bookings.confirm_cancel"))) return;
+    if (!token) return;
+    const ok = await confirmDialog({ messageKey: "admin.platform_bookings.confirm_cancel", variant: "danger" });
+    if (!ok) return;
     setBusyId(id);
     try {
       await apiCancelBooking(token, id);

@@ -10,6 +10,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { canAccessOperatorToolsNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiSuccessEnvelope } from "@/lib/api-envelope";
@@ -87,6 +88,7 @@ async function fetchFields(token: string): Promise<ApiSuccessEnvelope<IndexRespo
 
 export default function Bucket3CustomFieldsPage() {
   const { token, user } = useAdminAuth();
+  const confirm = useConfirm();
   const allowed = canAccessOperatorToolsNav(user);
   const [data, setData] = useState<IndexResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -183,7 +185,8 @@ export default function Bucket3CustomFieldsPage() {
 
   async function handleDelete(id: number) {
     if (!token) return;
-    if (!window.confirm("Remove this custom field definition?")) return;
+    const ok = await confirm({ messageKey: "admin.bucket3.custom_fields.confirm_delete", variant: "danger" });
+    if (!ok) return;
     setBusy(true);
     try {
       await apiFetchJson(`/custom-fields/${id}`, { method: "DELETE", token });

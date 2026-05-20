@@ -4,6 +4,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
@@ -65,6 +66,7 @@ type Stats = {
 export default function PlatformConnectionsPage() {
   const { token, user } = useAdminAuth();
   const { t } = useLanguage();
+  const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);
 
   const [rows, setRows] = useState<ConnectionRow[]>([]);
@@ -184,7 +186,11 @@ export default function PlatformConnectionsPage() {
       setError(t("admin.platform_connections.err_termination_reason_required"));
       return;
     }
-    if (!confirm(t("admin.platform_connections.confirm_force_terminate").replace("{id}", selected.id))) return;
+    const ok = await confirm({
+      message: t("admin.platform_connections.confirm_force_terminate").replace("{id}", selected.id),
+      variant: "danger",
+    });
+    if (!ok) return;
 
     setActionLoading(true);
     try {

@@ -40,6 +40,7 @@ import {
   TR,
 } from "@/components/ui";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ApiRequestError } from "@/lib/api-client";
 import { apiSubmitOfferForReview } from "@/lib/platform-admin-api";
@@ -217,6 +218,7 @@ const inputCls = "rounded border border-default px-2 py-1.5 text-sm";
 export default function OperatorFlightsPage() {
   const { token } = useAdminAuth();
   const { t, contentLang } = useLanguage();
+  const confirm = useConfirm();
   const [rows, setRows] = useState<FlightRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
   const [page, setPage] = useState(1);
@@ -417,7 +419,9 @@ export default function OperatorFlightsPage() {
   }
 
   async function handleDelete(id: number) {
-    if (!token || !window.confirm("Delete this flight?")) return;
+    if (!token) return;
+    const ok = await confirm({ messageKey: "admin.crud.flights.delete_confirm", variant: "danger" });
+    if (!ok) return;
     setBusy(true);
     try {
       await apiDeleteFlight(token, id);
@@ -431,7 +435,8 @@ export default function OperatorFlightsPage() {
 
   async function handleSubmitForReview(offerId: number) {
     if (!token) return;
-    if (!window.confirm("Submit this flight for super-admin review?")) return;
+    const ok = await confirm({ messageKey: "admin.crud.submit_for_review_confirm" });
+    if (!ok) return;
     setBusy(true);
     try {
       await apiSubmitOfferForReview(token, offerId);

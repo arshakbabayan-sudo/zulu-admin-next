@@ -12,6 +12,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { canAccessOperatorToolsNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import {
@@ -65,6 +66,7 @@ function configToDraft(c: CommissionConfig | null): DraftRow {
 
 export default function OperatorCommissionSettingsPage() {
   const { token, user } = useAdminAuth();
+  const confirm = useConfirm();
   const allowed = canAccessOperatorToolsNav(user);
   const [data, setData] = useState<CommissionSettingsResponse | null>(null);
   const [defaultDraft, setDefaultDraft] = useState<DraftRow>(configToDraft(null));
@@ -151,7 +153,8 @@ export default function OperatorCommissionSettingsPage() {
 
   async function removeOverride(agentCompanyId: number) {
     if (!token) return;
-    if (!window.confirm("Remove this per-agent override? They will fall back to the default rate.")) return;
+    const ok = await confirm({ messageKey: "admin.operator.commission_settings.confirm_remove_override", variant: "danger" });
+    if (!ok) return;
     setBusy(true);
     setErr(null);
     try {

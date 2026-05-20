@@ -1,6 +1,7 @@
 "use client";
 
 import { AdminAuthProvider } from "@/contexts/AdminAuthContext";
+import { ConfirmDialogProvider } from "@/contexts/ConfirmDialogContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import type { ReactNode } from "react";
 
@@ -13,7 +14,9 @@ export function Providers({
 }) {
   return (
     <LanguageProvider initialLang={initialLang}>
-      <AdminAuthProvider>{children}</AdminAuthProvider>
+      <AdminAuthProvider>
+        <ConfirmDialogProvider>{children}</ConfirmDialogProvider>
+      </AdminAuthProvider>
     </LanguageProvider>
   );
 }

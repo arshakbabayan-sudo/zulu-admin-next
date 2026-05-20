@@ -14,6 +14,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { canAccessSuperAdminOnlyPlatformNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiSuccessEnvelope } from "@/lib/api-envelope";
@@ -30,6 +31,7 @@ type Target = "all_b2c" | "all_staff" | "by_company" | "specific_users";
 
 export default function Bucket3BulkNotificationsPage() {
   const { token, user } = useAdminAuth();
+  const confirm = useConfirm();
   const allowed = canAccessSuperAdminOnlyPlatformNav(user);
   const [target, setTarget] = useState<Target>("all_b2c");
   const [companyId, setCompanyId] = useState("");
@@ -75,7 +77,8 @@ export default function Bucket3BulkNotificationsPage() {
       payload.user_ids = ids;
     }
 
-    if (!window.confirm("Send broadcast to the matched recipients?")) return;
+    const ok = await confirm({ messageKey: "admin.bucket3.bulk_notifications.confirm_send" });
+    if (!ok) return;
 
     setBusy(true);
     try {

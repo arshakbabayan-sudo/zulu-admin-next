@@ -28,6 +28,7 @@ import {
   TR,
 } from "@/components/ui";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { ApiRequestError } from "@/lib/api-client";
 import { apiSubmitOfferForReview } from "@/lib/platform-admin-api";
 import type { ApiListMeta } from "@/lib/api-envelope";
@@ -123,6 +124,7 @@ const EMPTY: HotelFormPayload = {
 export default function OperatorHotelsPage() {
   const { token } = useAdminAuth();
   const { t, contentLang } = useLanguage();
+  const confirm = useConfirm();
   const [rows, setRows] = useState<HotelRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
   const [page, setPage] = useState(1);
@@ -223,7 +225,9 @@ export default function OperatorHotelsPage() {
   }
 
   async function handleDelete(id: number) {
-    if (!token || !window.confirm(t("admin.crud.hotels.delete_confirm"))) return;
+    if (!token) return;
+    const ok = await confirm({ messageKey: "admin.crud.hotels.delete_confirm", variant: "danger" });
+    if (!ok) return;
     setBusy(true);
     try {
       await apiDeleteHotel(token, id);
@@ -237,7 +241,8 @@ export default function OperatorHotelsPage() {
 
   async function handleSubmitForReview(offerId: number) {
     if (!token) return;
-    if (!window.confirm("Submit this hotel for super-admin review? Once submitted, you cannot edit it until it's approved or rejected.")) return;
+    const ok = await confirm({ messageKey: "admin.crud.submit_for_review_confirm" });
+    if (!ok) return;
     setBusy(true);
     try {
       await apiSubmitOfferForReview(token, offerId);

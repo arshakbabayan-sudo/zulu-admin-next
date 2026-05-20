@@ -4,6 +4,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
@@ -67,6 +68,7 @@ type Stats = {
 export default function PlatformLoyaltyPage() {
   const { token, user } = useAdminAuth();
   const { t } = useLanguage();
+  const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);
 
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -177,14 +179,12 @@ export default function PlatformLoyaltyPage() {
       setError(t("admin.platform_loyalty.err_reason_required"));
       return;
     }
-    if (
-      !confirm(
-        t("admin.platform_loyalty.confirm_adjust")
-          .replace("{points}", `${points > 0 ? "+" : ""}${points}`)
-          .replace("{user}", selected.user?.name ?? `user #${selected.user_id}`)
-      )
-    )
-      return;
+    const ok = await confirm({
+      message: t("admin.platform_loyalty.confirm_adjust")
+        .replace("{points}", `${points > 0 ? "+" : ""}${points}`)
+        .replace("{user}", selected.user?.name ?? `user #${selected.user_id}`),
+    });
+    if (!ok) return;
 
     setActionLoading(true);
     try {

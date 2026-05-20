@@ -10,6 +10,7 @@
 import Link from "next/link";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
@@ -100,6 +101,7 @@ function isValidWidgetContentPayload(value: unknown): value is Record<string, un
 export default function AdminPageEditorLayoutPage() {
   const { token, user } = useAdminAuth();
   const { t } = useLanguage();
+  const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);
   const params = useParams<{ id: string }>();
   const pageId = Number(params?.id ?? 0);
@@ -327,7 +329,11 @@ export default function AdminPageEditorLayoutPage() {
 
   async function deleteWidget(widget: AdminWidgetContentRow) {
     if (!token) return;
-    if (!window.confirm(`Delete "${widgetLabel(widget.widget_slug)}" widget?`)) return;
+    const ok = await confirm({
+      message: t("admin.pages.confirm_delete_widget").replace("{label}", widgetLabel(widget.widget_slug)),
+      variant: "danger",
+    });
+    if (!ok) return;
     setBusyAction(`widget-delete:${widget.id}`);
     setErr(null);
     try {

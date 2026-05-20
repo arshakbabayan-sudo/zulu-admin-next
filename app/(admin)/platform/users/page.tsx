@@ -14,6 +14,7 @@
 import Link from "next/link";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
@@ -42,6 +43,7 @@ import {
 export default function PlatformUsersPage() {
   const { token, user } = useAdminAuth();
   const { t } = useLanguage();
+  const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<PlatformAdminUserRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -71,7 +73,12 @@ export default function PlatformUsersPage() {
   }, [load]);
 
   async function deactivate(id: number) {
-    if (!token || !window.confirm(t("admin.users.confirm_deactivate").replace("{id}", String(id)))) return;
+    if (!token) return;
+    const ok = await confirm({
+      message: t("admin.users.confirm_deactivate").replace("{id}", String(id)),
+      variant: "danger",
+    });
+    if (!ok) return;
     setBusyId(id);
     try {
       await apiDeactivatePlatformUser(token, id);

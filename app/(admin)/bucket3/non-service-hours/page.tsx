@@ -12,6 +12,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { canAccessOperatorToolsNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
@@ -122,6 +123,7 @@ function formatDuration(minutes: number | null, openSinceIso: string | null): st
 
 export default function Bucket3NonServiceHoursPage() {
   const { token, user } = useAdminAuth();
+  const confirm = useConfirm();
   const allowed = canAccessOperatorToolsNav(user);
   const [rows, setRows] = useState<TimeOffRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -246,8 +248,14 @@ export default function Bucket3NonServiceHoursPage() {
 
   async function decide(id: number, status: "approved" | "rejected" | "cancelled") {
     if (!token) return;
-    const verb = status === "approved" ? "Approve" : status === "rejected" ? "Reject" : "Cancel";
-    if (!window.confirm(`${verb} this request?`)) return;
+    const messageKey =
+      status === "approved"
+        ? "admin.bucket3.non_service_hours.confirm_approve"
+        : status === "rejected"
+        ? "admin.bucket3.non_service_hours.confirm_reject"
+        : "admin.bucket3.non_service_hours.confirm_cancel";
+    const ok = await confirm({ messageKey });
+    if (!ok) return;
     setBusy(true);
     try {
       await apiFetchJson(`/time-off/${id}/decide`, {

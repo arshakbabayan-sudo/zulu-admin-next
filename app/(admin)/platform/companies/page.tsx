@@ -18,6 +18,7 @@ import { PartnerSettingsModal } from "@/components/PartnerSettingsModal";
 import { TranslationsModal } from "@/components/TranslationsModal";
 import { StatusPill, autoStatusTone } from "@/components/ui/StatusPill";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
@@ -47,6 +48,7 @@ function labelServiceType(t: string): string {
 export default function PlatformCompaniesPage() {
   const { t } = useLanguage();
   const { token, user } = useAdminAuth();
+  const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<PlatformCompanyRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -218,15 +220,13 @@ export default function PlatformCompaniesPage() {
   async function toggleSeller(row: PlatformCompanyRow) {
     if (!token) return;
     const nextLabel = row.is_seller ? t("admin.platform_companies.disable_seller") : t("admin.platform_companies.enable_seller");
-    if (
-      !window.confirm(
-        t("admin.platform_companies.confirm_toggle_seller")
-          .replace("{action}", nextLabel)
-          .replace("{name}", row.name)
-      )
-    ) {
-      return;
-    }
+    const ok = await confirm({
+      message: t("admin.platform_companies.confirm_toggle_seller")
+        .replace("{action}", nextLabel)
+        .replace("{name}", row.name),
+      variant: "danger",
+    });
+    if (!ok) return;
     setBusyId(row.id);
     try {
       await apiToggleCompanySeller(token, row.id);

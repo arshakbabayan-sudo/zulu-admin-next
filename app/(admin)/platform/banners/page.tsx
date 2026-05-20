@@ -4,6 +4,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { getApiPublicOrigin } from "@/lib/api-base";
@@ -42,6 +43,7 @@ function resolveBannerImageSrc(row: PlatformBannerRow): string | null {
 export default function PlatformBannersPage() {
   const { token, user } = useAdminAuth();
   const { t } = useLanguage();
+  const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<PlatformBannerRow[]>([]);
   const [err, setErr] = useState<string | null>(null);
@@ -140,7 +142,8 @@ export default function PlatformBannersPage() {
 
   async function remove(id: number) {
     if (!token) return;
-    if (!window.confirm(t("admin.banners.confirm_delete"))) return;
+    const ok = await confirm({ messageKey: "admin.banners.confirm_delete", variant: "danger" });
+    if (!ok) return;
     setBusyId(id);
     try {
       await apiDeletePlatformBanner(token, id);

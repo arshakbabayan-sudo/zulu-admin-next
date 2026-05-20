@@ -58,7 +58,7 @@ export default function LoginPage() {
             is just the decorative dot of the "i" in "spin" of the wordmark. */}
         <img src="/branding/logo-zulu.svg" alt="ZULU" className="h-16 w-auto" />
         <p className="mt-3 max-w-xs text-ds-body-2 text-fg-t6">
-          Operations console — internal access only
+          {t("admin.login.tagline")}
         </p>
       </div>
       <Card className="w-full max-w-sm">
@@ -102,13 +102,13 @@ export default function LoginPage() {
                   onChange={(e) => setRememberMe(e.target.checked)}
                   className="h-4 w-4 rounded border-border text-primary-500 focus:ring-2 focus:ring-primary-500 focus:ring-offset-1"
                 />
-                Remember me
+                {t("admin.login.remember_me")}
               </label>
               <Link
                 href="/forgot-password"
                 className="text-ds-body-3 font-medium text-primary-500 hover:text-primary-700"
               >
-                Forgot password?
+                {t("admin.login.forgot_password_link")}
               </Link>
             </div>
             {(localError || error) && (

@@ -13,6 +13,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { canAccessOperatorToolsNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
@@ -109,6 +110,7 @@ async function deleteCatalogItem(token: string, id: number) {
 
 export default function Bucket3ServiceCatalogPage() {
   const { token, user } = useAdminAuth();
+  const confirm = useConfirm();
   const allowed = canAccessOperatorToolsNav(user);
   const [rows, setRows] = useState<ServiceRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -191,7 +193,8 @@ export default function Bucket3ServiceCatalogPage() {
 
   async function handleDelete(id: number) {
     if (!token) return;
-    if (!window.confirm("Remove this catalog item?")) return;
+    const ok = await confirm({ messageKey: "admin.bucket3.service_catalog.confirm_delete", variant: "danger" });
+    if (!ok) return;
     setBusy(true);
     try {
       await deleteCatalogItem(token, id);

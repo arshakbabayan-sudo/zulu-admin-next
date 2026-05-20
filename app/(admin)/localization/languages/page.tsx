@@ -10,6 +10,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessLocalizationLanguagesNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
@@ -366,6 +367,7 @@ function AiTranslatorPanel({ token }: { token: string }) {
 export default function LocalizationLanguagesPage() {
   const { t } = useLanguage();
   const { token, user } = useAdminAuth();
+  const confirmDialog = useConfirm();
   const allowed = canAccessLocalizationLanguagesNav(user);
 
   const [rows, setRows] = useState<LocalizationLanguageRow[]>([]);
@@ -403,7 +405,13 @@ export default function LocalizationLanguagesPage() {
 
   async function handleDelete(row: LocalizationLanguageRow) {
     if (!token) return;
-    if (!confirm(`Delete "${row.name_en ?? row.name}" (${row.code})?`)) return;
+    const ok = await confirmDialog({
+      message: t("admin.localization.languages.confirm_delete")
+        .replace("{name}", row.name_en ?? row.name)
+        .replace("{code}", row.code),
+      variant: "danger",
+    });
+    if (!ok) return;
     setBusyId(row.id);
     try {
       await apiLocalizationDeleteLanguage(token, row.id);

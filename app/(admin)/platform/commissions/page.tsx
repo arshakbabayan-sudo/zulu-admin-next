@@ -4,6 +4,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
@@ -35,6 +36,7 @@ type Tab = "policies" | "records";
 export default function CommissionsPage() {
   const { token, user } = useAdminAuth();
   const { t } = useLanguage();
+  const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);
   const [tab, setTab] = useState<Tab>("policies");
 
@@ -82,7 +84,9 @@ export default function CommissionsPage() {
   useEffect(() => { if (tab === "records") loadRecords(); }, [tab, loadRecords]);
 
   async function handleDeactivate(id: number) {
-    if (!token || !window.confirm(t("admin.platform_commissions.confirm_deactivate"))) return;
+    if (!token) return;
+    const ok = await confirm({ messageKey: "admin.platform_commissions.confirm_deactivate" });
+    if (!ok) return;
     setBusyId(id);
     try {
       await apiDeactivateCommission(token, id);

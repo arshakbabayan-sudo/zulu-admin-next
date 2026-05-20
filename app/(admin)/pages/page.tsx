@@ -4,6 +4,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
@@ -137,6 +138,7 @@ function AddPageModal({
 export default function AdminPagesListPage() {
   const { token, user } = useAdminAuth();
   const { t } = useLanguage();
+  const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);
 
   const [rows, setRows] = useState<AdminPageRow[]>([]);
@@ -196,7 +198,11 @@ export default function AdminPagesListPage() {
 
   async function handleDelete(row: AdminPageRow) {
     if (!token) return;
-    if (!window.confirm(`Delete page "${row.page_name}"?`)) return;
+    const ok = await confirm({
+      message: t("admin.pages.confirm_delete").replace("{name}", row.page_name),
+      variant: "danger",
+    });
+    if (!ok) return;
     setBusyId(row.id);
     try {
       await apiDeleteAdminPage(token, row.id);

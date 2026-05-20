@@ -15,6 +15,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { StatusPill } from "@/components/ui/StatusPill";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
@@ -65,6 +66,7 @@ export default function PlatformUserDetailPage() {
   const router = useRouter();
   const { token, user: me } = useAdminAuth();
   const { t } = useLanguage();
+  const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(me);
   const userId = Number(params?.id);
 
@@ -130,7 +132,11 @@ export default function PlatformUserDetailPage() {
 
   async function handleDeactivate() {
     if (!token || !user) return;
-    if (!window.confirm(t("admin.users.confirm_deactivate").replace("{id}", String(user.id)))) return;
+    const ok = await confirm({
+      message: t("admin.users.confirm_deactivate").replace("{id}", String(user.id)),
+      variant: "danger",
+    });
+    if (!ok) return;
     try {
       await apiDeactivatePlatformUser(token, user.id);
       await load();

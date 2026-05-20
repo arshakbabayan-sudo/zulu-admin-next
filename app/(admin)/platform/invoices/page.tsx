@@ -4,6 +4,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
@@ -31,6 +32,7 @@ const STATUSES = ["", "draft", "issued", "paid", "cancelled", "overdue"];
 export default function PlatformInvoicesPage() {
   const { token, user } = useAdminAuth();
   const { t } = useLanguage();
+  const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<InvoiceRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -57,7 +59,9 @@ export default function PlatformInvoicesPage() {
   useEffect(() => { load(); }, [load]);
 
   async function handleIssue(id: number) {
-    if (!token || !window.confirm(t("admin.invoices.confirm_issue"))) return;
+    if (!token) return;
+    const ok = await confirm({ messageKey: "admin.invoices.confirm_issue" });
+    if (!ok) return;
     setBusyId(id);
     try { await apiIssueInvoice(token, id); await load(); }
     catch (e) { alert(e instanceof ApiRequestError ? e.message : t("admin.invoices.err_generic")); }
@@ -65,7 +69,9 @@ export default function PlatformInvoicesPage() {
   }
 
   async function handleCancel(id: number) {
-    if (!token || !window.confirm(t("admin.invoices.confirm_cancel"))) return;
+    if (!token) return;
+    const ok = await confirm({ messageKey: "admin.invoices.confirm_cancel", variant: "danger" });
+    if (!ok) return;
     setBusyId(id);
     try { await apiCancelInvoice(token, id); await load(); }
     catch (e) { alert(e instanceof ApiRequestError ? e.message : t("admin.invoices.err_generic")); }

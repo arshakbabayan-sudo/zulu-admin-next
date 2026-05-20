@@ -6,6 +6,7 @@ import { ContentLanguagePill } from "@/components/ContentLanguagePill";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { TranslationsModal } from "@/components/TranslationsModal";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { canAccessOperatorToolsNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
@@ -33,6 +34,7 @@ const STATUSES = ["", "draft", "published", "archived"];
 export default function OperatorOffersPage() {
   const { token, user } = useAdminAuth();
   const { t, contentLang } = useLanguage();
+  const confirm = useConfirm();
   const allowed = canAccessOperatorToolsNav(user);
   const [rows, setRows] = useState<OfferRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -60,7 +62,9 @@ export default function OperatorOffersPage() {
   useEffect(() => { load(); }, [load]);
 
   async function handlePublish(id: number) {
-    if (!token || !window.confirm(t("admin.crud.offers.publish_confirm"))) return;
+    if (!token) return;
+    const ok = await confirm({ messageKey: "admin.crud.offers.publish_confirm" });
+    if (!ok) return;
     setBusyId(id);
     try { await apiPublishOffer(token, id); await load(); }
     catch (e) { alert(e instanceof ApiRequestError ? e.message : "Failed"); }
@@ -68,7 +72,9 @@ export default function OperatorOffersPage() {
   }
 
   async function handleArchive(id: number) {
-    if (!token || !window.confirm(t("admin.crud.offers.archive_confirm"))) return;
+    if (!token) return;
+    const ok = await confirm({ messageKey: "admin.crud.offers.archive_confirm", variant: "danger" });
+    if (!ok) return;
     setBusyId(id);
     try { await apiArchiveOffer(token, id); await load(); }
     catch (e) { alert(e instanceof ApiRequestError ? e.message : "Failed"); }
