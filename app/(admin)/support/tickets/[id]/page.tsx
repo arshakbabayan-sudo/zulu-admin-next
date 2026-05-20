@@ -11,8 +11,10 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessSupportNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
+import { formatDateTime } from "@/lib/format";
 import {
   apiSupportTicket,
   apiSupportTicketReply,
@@ -85,17 +87,11 @@ function StatusStep({
   );
 }
 
-function formatDateTime(value: string | null | undefined): string {
-  if (!value) return "—";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString();
-}
-
 export default function SupportTicketDetailPage() {
   const params = useParams();
   const id = Number(params.id);
   const { token, user } = useAdminAuth();
+  const { lang } = useLanguage();
   const allowed = canAccessSupportNav(user);
   const isSuper = user?.is_super_admin === true;
   const [ticket, setTicket] = useState<SupportTicketDetail | null>(null);
@@ -221,10 +217,10 @@ export default function SupportTicketDetailPage() {
       {ticket && (
         <>
           <div className="grid gap-3 sm:grid-cols-3">
-            <StatusStep label="Created" value={formatDateTime(createdAt)} tone="info" />
+            <StatusStep label="Created" value={formatDateTime(createdAt, lang)} tone="info" />
             <StatusStep
               label="Last reply"
-              value={lastMessage ? `${lastMessage.is_admin_reply ? "Admin" : "User"} · ${formatDateTime(lastReplyDate)}` : "—"}
+              value={lastMessage ? `${lastMessage.is_admin_reply ? "Admin" : "User"} · ${formatDateTime(lastReplyDate, lang)}` : "—"}
               tone="muted"
             />
             <StatusStep label="Status" value={ticket.status || "—"} tone={statusTone(ticket.status)} />
@@ -287,7 +283,7 @@ export default function SupportTicketDetailPage() {
                         </span>
                         {m.user && <span className="text-fg-t7">{m.user.name}</span>}
                         <span className="text-fg-t6">·</span>
-                        <span className="text-fg-t6">{formatDateTime(m.created_at)}</span>
+                        <span className="text-fg-t6">{formatDateTime(m.created_at, lang)}</span>
                       </div>
                       <div className="mt-2 whitespace-pre-wrap text-fg-t8">{m.message}</div>
                     </li>

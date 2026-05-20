@@ -9,6 +9,7 @@ import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { formatDate } from "@/lib/format";
 import {
   apiCommissions,
   apiCommissionRecords,
@@ -35,7 +36,7 @@ type Tab = "policies" | "records";
 
 export default function CommissionsPage() {
   const { token, user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);
   const [tab, setTab] = useState<Tab>("policies");
@@ -205,7 +206,7 @@ export default function CommissionsPage() {
                   <TD>{r.company?.name ?? r.company_id ?? "—"}</TD>
                   <TD className="tabular-nums">{r.booking_id ?? "—"}</TD>
                   <TD className="text-xs text-fg-t6">
-                    {r.created_at ? new Date(r.created_at).toLocaleDateString() : "—"}
+                    {formatDate(r.created_at, lang)}
                   </TD>
                 </TR>
               ))}

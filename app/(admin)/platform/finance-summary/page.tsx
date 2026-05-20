@@ -23,7 +23,7 @@ function SummaryCard({ label, value, sub }: { label: string; value: string; sub?
 
 export default function PlatformFinanceSummaryPage() {
   const { token, user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [data, setData] = useState<PlatformFinanceSummary | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -74,16 +74,16 @@ export default function PlatformFinanceSummaryPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <SummaryCard
             label={t("admin.finance_summary.card_total_payments")}
-            value={data.total_payments_paid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            value={data.total_payments_paid.toLocaleString(lang, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             sub={t("admin.finance_summary.sub_paid_payments").replace("{n}", String(data.payments_count_paid))}
           />
           <SummaryCard
             label={t("admin.finance_summary.card_commission_accrued")}
-            value={data.total_commission_accrued.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            value={data.total_commission_accrued.toLocaleString(lang, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           />
           <SummaryCard
             label={t("admin.finance_summary.card_commission_pending")}
-            value={data.total_commission_pending.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            value={data.total_commission_pending.toLocaleString(lang, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             sub={t("admin.finance_summary.sub_commission_records").replace("{n}", String(data.commission_records_count))}
           />
         </div>

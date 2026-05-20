@@ -15,6 +15,7 @@ import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { apiBookings, apiConfirmBooking, apiCancelBooking, type BookingRow } from "@/lib/bookings-api";
+import { formatDate } from "@/lib/format";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useCallback, useEffect, useState } from "react";
 import { RefreshCw, Search } from "lucide-react";
@@ -35,25 +36,19 @@ import {
 
 const STATUSES = ["", "pending", "confirmed", "cancelled", "completed"];
 
-function formatAmount(amount: number | string | null | undefined, currency: string | null | undefined): string {
+function formatAmount(amount: number | string | null | undefined, currency: string | null | undefined, lang: string): string {
   if (amount == null || amount === "") return "—";
   const n = Number(amount);
   if (!Number.isFinite(n)) return "—";
-  const formatted = new Intl.NumberFormat(undefined, {
+  const formatted = new Intl.NumberFormat(lang, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(n);
   return currency ? `${currency} ${formatted}` : formatted;
 }
 
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "—";
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString();
-}
-
 export default function PlatformBookingsPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { token, user } = useAdminAuth();
   const confirmDialog = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);
@@ -232,7 +227,7 @@ export default function PlatformBookingsPage() {
                     {r.status ? t(`admin.platform_bookings.status_${r.status}`) : "—"}
                   </StatusPill>
                 </TD>
-                <TD className="tabular-nums text-fg-t8">{formatAmount(r.total_amount, r.currency)}</TD>
+                <TD className="tabular-nums text-fg-t8">{formatAmount(r.total_amount, r.currency, lang)}</TD>
                 <TD className="text-fg-t8">{r.company?.name ?? "—"}</TD>
                 <TD>{r.user?.name ?? "—"}</TD>
                 <TD>
@@ -245,7 +240,7 @@ export default function PlatformBookingsPage() {
                     "—"
                   )}
                 </TD>
-                <TD className="text-xs text-fg-t6">{formatDate(r.created_at)}</TD>
+                <TD className="text-xs text-fg-t6">{formatDate(r.created_at, lang)}</TD>
                 <TD align="right">
                   <div className="flex justify-end gap-2">
                     {r.status === "pending" && (
@@ -308,11 +303,11 @@ export default function PlatformBookingsPage() {
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div>
                 <div className="text-fg-t6">{t("admin.platform_bookings.amount")}</div>
-                <div className="tabular-nums text-fg-t8">{formatAmount(r.total_amount, r.currency)}</div>
+                <div className="tabular-nums text-fg-t8">{formatAmount(r.total_amount, r.currency, lang)}</div>
               </div>
               <div>
                 <div className="text-fg-t6">{t("admin.platform_bookings.created")}</div>
-                <div className="text-fg-t8">{formatDate(r.created_at)}</div>
+                <div className="text-fg-t8">{formatDate(r.created_at, lang)}</div>
               </div>
               <div>
                 <div className="text-fg-t6">{t("admin.platform_bookings.company")}</div>

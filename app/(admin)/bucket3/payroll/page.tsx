@@ -14,6 +14,7 @@ import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { formatDate } from "@/lib/format";
 import { canAccessOperatorToolsNav } from "@/lib/access";
 import { ApiRequestError, apiDownloadFile, apiFetchJson } from "@/lib/api-client";
 import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
@@ -60,12 +61,6 @@ type PayrollRow = {
   created_at: string | null;
 };
 
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "—";
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString();
-}
-
 function statusTier(s: Status): "neutral" | "info" | "success" {
   switch (s) {
     case "draft":
@@ -92,7 +87,7 @@ async function fetchPayroll(
 export default function Bucket3PayrollPage() {
   const { token, user } = useAdminAuth();
   const confirm = useConfirm();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const allowed = canAccessOperatorToolsNav(user);
   const [rows, setRows] = useState<PayrollRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -421,7 +416,7 @@ export default function Bucket3PayrollPage() {
                 <div className="text-xs text-fg-t6">{r.user?.email ?? ""}</div>
               </TD>
               <TD className="text-xs">
-                {formatDate(r.period_start)} → {formatDate(r.period_end)}
+                {formatDate(r.period_start, lang)} → {formatDate(r.period_end, lang)}
               </TD>
               <TD className="tabular-nums">
                 {r.currency} {r.gross_pay.toFixed(2)}
@@ -451,7 +446,7 @@ export default function Bucket3PayrollPage() {
                     </Button>
                   )}
                   {r.status === "paid" && (
-                    <span className="text-xs text-success-700">{t("admin.bucket3.payroll.paid").replace("{date}", formatDate(r.paid_at))}</span>
+                    <span className="text-xs text-success-700">{t("admin.bucket3.payroll.paid").replace("{date}", formatDate(r.paid_at, lang))}</span>
                   )}
                 </div>
               </TD>

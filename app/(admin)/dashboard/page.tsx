@@ -24,6 +24,7 @@ import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import { apiPlatformStats, type PlatformStats } from "@/lib/platform-admin-api";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { formatNumber } from "@/lib/format";
 import { PageHeader } from "@/components/ui";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -40,11 +41,11 @@ import {
   CheckCircle2,
 } from "lucide-react";
 
-function formatValue(n: number | undefined | null): string {
+function formatValue(n: number | undefined | null, lang: string = "en"): string {
   if (n == null || !Number.isFinite(n)) return "—";
   if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (Math.abs(n) >= 10_000) return `${(n / 1_000).toFixed(1)}k`;
-  return new Intl.NumberFormat().format(n);
+  return formatNumber(n, lang);
 }
 
 /* ─── small building blocks ─────────────────────────────────────────── */
@@ -245,7 +246,7 @@ function MultiDonut({
 /* ─── widget bodies ────────────────────────────────────────────────── */
 
 function BookingOverview({ stats }: { stats: PlatformStats }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const total = stats.bookings_total ?? 0;
   const paid = stats.package_orders_paid ?? 0;
   const pending = stats.package_orders_pending_payment ?? 0;
@@ -261,7 +262,7 @@ function BookingOverview({ stats }: { stats: PlatformStats }) {
   return (
     <div className="space-y-4">
       {rows.map((r) => (
-        <ProgressRow key={r.label} label={r.label} value={formatValue(r.value)} pct={r.pct} color={r.color} />
+        <ProgressRow key={r.label} label={r.label} value={formatValue(r.value, lang)} pct={r.pct} color={r.color} />
       ))}
     </div>
   );
@@ -294,7 +295,7 @@ function MonthlyEarnings() {
 }
 
 function ApprovalsProgress({ stats }: { stats: PlatformStats }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   // Backed by /api/platform-admin/approvals counters in a follow-up.
   // For now, render the layout with an empty-state row.
   const total = (stats.companies_active ?? 0) + (stats.companies_suspended ?? 0);
@@ -306,12 +307,12 @@ function ApprovalsProgress({ stats }: { stats: PlatformStats }) {
   return (
     <>
       <div className="mb-5 flex flex-col items-center">
-        <span className="text-3xl font-semibold tabular-nums text-fg-t11">{formatValue(total)}</span>
+        <span className="text-3xl font-semibold tabular-nums text-fg-t11">{formatValue(total, lang)}</span>
         <span className="text-xs text-fg-t6">{t("admin.dashboard.total_companies")}</span>
       </div>
       <div className="space-y-3.5">
         {rows.map((r) => (
-          <ProgressRow key={r.label} label={r.label} value={formatValue(r.value)} pct={r.pct} color={r.color} />
+          <ProgressRow key={r.label} label={r.label} value={formatValue(r.value, lang)} pct={r.pct} color={r.color} />
         ))}
       </div>
     </>
@@ -319,7 +320,7 @@ function ApprovalsProgress({ stats }: { stats: PlatformStats }) {
 }
 
 function OrderSummaryDonut({ stats }: { stats: PlatformStats }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const paid = stats.package_orders_paid ?? 0;
   const pending = stats.package_orders_pending_payment ?? 0;
   const total = stats.package_orders_total ?? 0;
@@ -330,7 +331,7 @@ function OrderSummaryDonut({ stats }: { stats: PlatformStats }) {
     { label: t("admin.dashboard.pending_payment"), value: pending, color: "#F59E0B" },
     { label: t("admin.dashboard.other_draft"), value: other, color: "#94A3B8" },
   ];
-  const totalLabel = formatValue(total);
+  const totalLabel = formatValue(total, lang);
   return (
     <div className="flex flex-col items-center gap-5 md:flex-row md:items-center md:justify-around">
       <MultiDonut segments={segments} centerLabel={t("admin.dashboard.orders")} centerValue={totalLabel} />
@@ -339,7 +340,7 @@ function OrderSummaryDonut({ stats }: { stats: PlatformStats }) {
           <li key={s.label} className="flex items-center gap-2.5">
             <span className="size-2.5 rounded-full" style={{ backgroundColor: s.color }} aria-hidden />
             <span className="text-fg-t7">{s.label}</span>
-            <span className="ml-auto tabular-nums text-fg-t11">{formatValue(s.value)}</span>
+            <span className="ml-auto tabular-nums text-fg-t11">{formatValue(s.value, lang)}</span>
           </li>
         ))}
       </ul>
@@ -504,26 +505,26 @@ function TopOperatorsByRevenue() {
 }
 
 function ActiveOffers({ stats }: { stats: PlatformStats }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const published = stats.offers_published ?? 0;
   const total = stats.offers_total ?? 0;
   const draft = Math.max(0, total - published);
   return (
     <>
       <div className="mb-5 flex flex-col items-center">
-        <span className="text-3xl font-semibold tabular-nums text-fg-t11">{formatValue(total)}</span>
+        <span className="text-3xl font-semibold tabular-nums text-fg-t11">{formatValue(total, lang)}</span>
         <span className="text-xs text-fg-t6">{t("admin.dashboard.total_offers")}</span>
       </div>
       <div className="space-y-3.5">
         <ProgressRow
           label={t("admin.dashboard.published")}
-          value={formatValue(published)}
+          value={formatValue(published, lang)}
           pct={total === 0 ? 0 : (published / total) * 100}
           color="#10B981"
         />
         <ProgressRow
           label={t("admin.dashboard.draft_archived")}
-          value={formatValue(draft)}
+          value={formatValue(draft, lang)}
           pct={total === 0 ? 0 : (draft / total) * 100}
           color="#94A3B8"
         />
@@ -535,7 +536,7 @@ function ActiveOffers({ stats }: { stats: PlatformStats }) {
 /* ─── page shell ───────────────────────────────────────────────────── */
 
 export default function DashboardPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { token, user } = useAdminAuth();
   const [stats, setStats] = useState<PlatformStats | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -630,20 +631,20 @@ export default function DashboardPage() {
       <div className="grid gap-5 lg:grid-cols-3">
         <HeroStatCard
           label={t("admin.dashboard.total_bookings")}
-          value={formatValue((stats.bookings_total ?? 0) + (stats.package_orders_total ?? 0))}
+          value={formatValue((stats.bookings_total ?? 0) + (stats.package_orders_total ?? 0), lang)}
           icon={Briefcase}
           subRow={{
-            left: { label: t("admin.dashboard.bookings_legacy"), value: formatValue(stats.bookings_total) },
-            right: { label: t("admin.dashboard.package_orders"), value: formatValue(stats.package_orders_total) },
+            left: { label: t("admin.dashboard.bookings_legacy"), value: formatValue(stats.bookings_total, lang) },
+            right: { label: t("admin.dashboard.package_orders"), value: formatValue(stats.package_orders_total, lang) },
           }}
         />
         <HeroStatCard
           label={t("admin.dashboard.total_operators")}
-          value={formatValue(stats.companies_total)}
+          value={formatValue(stats.companies_total, lang)}
           icon={Building2}
           subRow={{
-            left: { label: t("admin.dashboard.active"), value: formatValue(stats.companies_active) },
-            right: { label: t("admin.dashboard.sellers"), value: formatValue(stats.companies_sellers) },
+            left: { label: t("admin.dashboard.active"), value: formatValue(stats.companies_active, lang) },
+            right: { label: t("admin.dashboard.sellers"), value: formatValue(stats.companies_sellers, lang) },
           }}
         />
         <HeroStatCard

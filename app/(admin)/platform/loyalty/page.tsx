@@ -9,6 +9,7 @@ import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { formatDateTime, formatNumber } from "@/lib/format";
 import {
   Button,
   FormField,
@@ -67,7 +68,7 @@ type Stats = {
 
 export default function PlatformLoyaltyPage() {
   const { token, user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);
 
@@ -242,15 +243,15 @@ export default function PlatformLoyaltyPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
             label={t("admin.platform_loyalty.accounts")}
-            value={stats.total_accounts.toLocaleString()}
+            value={formatNumber(stats.total_accounts, lang)}
           />
           <StatCard
             label={t("admin.platform_loyalty.points_outstanding")}
-            value={stats.total_points_outstanding.toLocaleString()}
+            value={formatNumber(stats.total_points_outstanding, lang)}
           />
           <StatCard
             label={t("admin.platform_loyalty.lifetime_points")}
-            value={stats.total_lifetime_points.toLocaleString()}
+            value={formatNumber(stats.total_lifetime_points, lang)}
           />
           <StatCard
             label={t("admin.platform_loyalty.gold_plus_platinum")}
@@ -268,7 +269,7 @@ export default function PlatformLoyaltyPage() {
                 {t(`admin.platform_loyalty.tier_${tn}`)}
               </div>
               <div className="mt-1 text-lg font-bold tabular-nums">
-                {(stats.by_tier?.[tn] ?? 0).toLocaleString()}
+                {formatNumber(stats.by_tier?.[tn] ?? 0, lang)}
               </div>
             </div>
           ))}
@@ -345,10 +346,10 @@ export default function PlatformLoyaltyPage() {
                 <TierBadge tier={a.tier} />
               </TD>
               <TD align="right" className="tabular-nums">
-                {a.points_balance.toLocaleString()}
+                {formatNumber(a.points_balance, lang)}
               </TD>
               <TD align="right" className="tabular-nums">
-                {a.lifetime_points.toLocaleString()}
+                {formatNumber(a.lifetime_points, lang)}
               </TD>
               <TD align="right" onClick={(e) => e.stopPropagation()}>
                 <button
@@ -370,7 +371,7 @@ export default function PlatformLoyaltyPage() {
             {t("admin.platform_loyalty.pagination")
               .replace("{page}", String(page))
               .replace("{lastPage}", String(lastPage))
-              .replace("{total}", total.toLocaleString())}
+              .replace("{total}", formatNumber(total, lang))}
           </span>
           <Pagination
             page={page}
@@ -425,7 +426,7 @@ export default function PlatformLoyaltyPage() {
                   {t("admin.platform_loyalty.balance")}
                 </div>
                 <div className="mt-1 text-lg font-bold tabular-nums">
-                  {selected.points_balance.toLocaleString()}
+                  {formatNumber(selected.points_balance, lang)}
                 </div>
               </div>
               <div className="admin-card p-3">
@@ -433,7 +434,7 @@ export default function PlatformLoyaltyPage() {
                   {t("admin.platform_loyalty.lifetime")}
                 </div>
                 <div className="mt-1 text-lg font-bold tabular-nums">
-                  {selected.lifetime_points.toLocaleString()}
+                  {formatNumber(selected.lifetime_points, lang)}
                 </div>
               </div>
             </div>
@@ -507,7 +508,7 @@ export default function PlatformLoyaltyPage() {
                       {selected.transactions.map((tx) => (
                         <TR key={tx.id}>
                           <TD className="text-xs whitespace-nowrap">
-                            {new Date(tx.created_at).toLocaleString()}
+                            {formatDateTime(tx.created_at, lang)}
                           </TD>
                           <TD className="text-xs">{tx.type}</TD>
                           <TD
@@ -517,7 +518,7 @@ export default function PlatformLoyaltyPage() {
                             }`}
                           >
                             {tx.points > 0 ? "+" : ""}
-                            {tx.points.toLocaleString()}
+                            {formatNumber(tx.points, lang)}
                           </TD>
                           <TD className="text-xs">{tx.reason ?? "—"}</TD>
                         </TR>

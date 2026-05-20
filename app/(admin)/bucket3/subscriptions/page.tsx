@@ -14,6 +14,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessSuperAdminOnlyPlatformNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
+import { formatDate } from "@/lib/format";
 import {
   Button,
   Checkbox,
@@ -85,7 +86,7 @@ function statusTier(s: CompanySubscription["status"]): "neutral" | "info" | "suc
 
 export default function Bucket3SubscriptionsPage() {
   const { token, user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const allowed = canAccessSuperAdminOnlyPlatformNav(user);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [subs, setSubs] = useState<CompanySubscription[]>([]);
@@ -536,9 +537,9 @@ export default function Bucket3SubscriptionsPage() {
                 </TD>
                 <TD className="text-xs">{s.billing_period}</TD>
                 <TD className="text-xs text-fg-t6">
-                  {s.period_starts_at ? new Date(s.period_starts_at).toLocaleDateString() : "—"}
+                  {formatDate(s.period_starts_at, lang)}
                   {" → "}
-                  {s.period_ends_at ? new Date(s.period_ends_at).toLocaleDateString() : "—"}
+                  {formatDate(s.period_ends_at, lang)}
                 </TD>
                 <TD className="text-xs text-fg-t6">{s.notes ?? "—"}</TD>
               </TR>

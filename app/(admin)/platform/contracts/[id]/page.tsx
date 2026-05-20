@@ -19,8 +19,10 @@
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
+import { formatDate, formatDateTime } from "@/lib/format";
 import {
   apiAdminContract,
   apiAdminCountersignContract,
@@ -35,18 +37,6 @@ import { Button, PageHeader, StatusPill } from "@/components/ui";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "—";
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString();
-}
-
-function formatDateTime(value: string | null | undefined): string {
-  if (!value) return "—";
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString();
-}
 
 function canSend(status: string): boolean {
   return status === "draft";
@@ -80,6 +70,7 @@ export default function AdminContractDetailPage() {
   const router = useRouter();
   const id = String(params.id);
   const { token, user } = useAdminAuth();
+  const { lang } = useLanguage();
   const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);
   const [row, setRow] = useState<ContractDetail | null>(null);
@@ -292,11 +283,11 @@ export default function AdminContractDetailPage() {
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between gap-3">
               <dt className="text-fg-t6">Effective</dt>
-              <dd className="text-right text-fg-t8">{formatDate(row.effective_date)}</dd>
+              <dd className="text-right text-fg-t8">{formatDate(row.effective_date, lang)}</dd>
             </div>
             <div className="flex justify-between gap-3">
               <dt className="text-fg-t6">Expires</dt>
-              <dd className="text-right text-fg-t8">{formatDate(row.expiry_date)}</dd>
+              <dd className="text-right text-fg-t8">{formatDate(row.expiry_date, lang)}</dd>
             </div>
             <div className="flex justify-between gap-3">
               <dt className="text-fg-t6">Auto-renew</dt>
@@ -314,7 +305,7 @@ export default function AdminContractDetailPage() {
               <>
                 <div className="flex justify-between gap-3 border-t border-default pt-2">
                   <dt className="text-fg-t6">Terminated at</dt>
-                  <dd className="text-right text-fg-t8">{formatDateTime(row.terminated_at)}</dd>
+                  <dd className="text-right text-fg-t8">{formatDateTime(row.terminated_at, lang)}</dd>
                 </div>
                 <div className="flex justify-between gap-3">
                   <dt className="text-fg-t6">Reason</dt>
@@ -383,7 +374,7 @@ export default function AdminContractDetailPage() {
                     <span className="ml-2 text-xs text-fg-t6">by user #{v.created_by_user_id}</span>
                   )}
                 </div>
-                <span className="text-xs text-fg-t6">{formatDateTime(v.created_at)}</span>
+                <span className="text-xs text-fg-t6">{formatDateTime(v.created_at, lang)}</span>
               </li>
             ))}
           </ul>

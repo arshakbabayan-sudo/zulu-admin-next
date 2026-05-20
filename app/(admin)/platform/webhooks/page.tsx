@@ -9,6 +9,7 @@ import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { formatDate, formatDateTime, formatNumber } from "@/lib/format";
 import {
   FormField,
   PageHeader,
@@ -58,7 +59,7 @@ type Delivery = {
 
 export default function PlatformWebhooksPage() {
   const { token, user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [stats, setStats] = useState<WebhookStats | null>(null);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -126,9 +127,9 @@ export default function PlatformWebhooksPage() {
       {stats && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard label={t("admin.platform_webhooks.subscriptions")} value={`${stats.active_subscriptions} / ${stats.total_subscriptions}`} hint={t("admin.platform_webhooks.active_total")} />
-          <StatCard label={t("admin.platform_webhooks.total_deliveries")} value={stats.deliveries_total.toLocaleString()} />
+          <StatCard label={t("admin.platform_webhooks.total_deliveries")} value={formatNumber(stats.deliveries_total, lang)} />
           <StatCard label={t("admin.platform_webhooks.success_rate")} value={stats.success_rate !== null ? `${stats.success_rate}%` : "—"} tone={stats.success_rate !== null && stats.success_rate >= 95 ? "good" : "warn"} />
-          <StatCard label={t("admin.platform_webhooks.failed_lifetime")} value={stats.deliveries_failed.toLocaleString()} tone={stats.deliveries_failed > 0 ? "warn" : "neutral"} />
+          <StatCard label={t("admin.platform_webhooks.failed_lifetime")} value={formatNumber(stats.deliveries_failed, lang)} tone={stats.deliveries_failed > 0 ? "warn" : "neutral"} />
         </div>
       )}
 
@@ -190,9 +191,9 @@ export default function PlatformWebhooksPage() {
                   <TD className="tabular-nums">{d.attempt_count}</TD>
                   <TD className="tabular-nums text-xs">{d.last_response_status ?? "—"}</TD>
                   <TD className="text-xs text-fg-t6">
-                    {d.last_attempt_at ? new Date(d.last_attempt_at).toLocaleString() : "—"}
+                    {formatDateTime(d.last_attempt_at, lang)}
                   </TD>
-                  <TD className="text-xs text-fg-t6">{new Date(d.created_at).toLocaleDateString()}</TD>
+                  <TD className="text-xs text-fg-t6">{formatDate(d.created_at, lang)}</TD>
                   <TD align="right">
                     {d.status === "failed" && (
                       <ReplayButton deliveryId={d.id} token={token ?? ""} onReplayed={() => setStatusFilter((s) => s)} />
@@ -232,7 +233,7 @@ export default function PlatformWebhooksPage() {
                     {t(`admin.platform_webhooks.subscription_status_${s.status}`)}
                   </StatusPill>
                 </TD>
-                <TD className="text-xs text-fg-t6">{new Date(s.created_at).toLocaleDateString()}</TD>
+                <TD className="text-xs text-fg-t6">{formatDate(s.created_at, lang)}</TD>
               </TR>
             ))}
           </TBody>

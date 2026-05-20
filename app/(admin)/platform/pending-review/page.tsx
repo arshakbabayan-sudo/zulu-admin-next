@@ -14,6 +14,7 @@ import {
   apiRejectOffer,
   type PendingReviewOfferRow,
 } from "@/lib/platform-admin-api";
+import { formatDateTime } from "@/lib/format";
 import { useCallback, useEffect, useState } from "react";
 import {
   Button,
@@ -36,7 +37,7 @@ const TYPE_FILTERS = ["", "hotel", "car", "transfer", "excursion", "flight", "pa
 
 export default function PendingReviewPage() {
   const { token, user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
 
   const [rows, setRows] = useState<PendingReviewOfferRow[]>([]);
@@ -178,7 +179,7 @@ export default function PendingReviewPage() {
               <TD>{r.company?.name ?? "—"}</TD>
               <TD>{r.company?.country ?? "—"}</TD>
               <TD className="text-xs text-fg-t6">
-                {r.submitted_for_review_at ? new Date(r.submitted_for_review_at).toLocaleString() : "—"}
+                {formatDateTime(r.submitted_for_review_at, lang)}
               </TD>
               <TD align="right">
                 <div className="flex justify-end gap-2">

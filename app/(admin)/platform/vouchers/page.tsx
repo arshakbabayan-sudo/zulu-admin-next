@@ -7,6 +7,7 @@ import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { formatDate, formatDateTime } from "@/lib/format";
 import {
   Button,
   FormField,
@@ -81,7 +82,7 @@ type Meta = {
 
 export default function PlatformVouchersPage() {
   const { token, user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);
 
@@ -337,11 +338,11 @@ export default function PlatformVouchersPage() {
               <TD className="text-xs">{r.holder_name}</TD>
               <TD><VoucherStatusBadge status={r.status} /></TD>
               <TD className="text-xs">
-                {r.valid_from ? new Date(r.valid_from).toLocaleDateString() : "—"}
-                {r.valid_to ? ` → ${new Date(r.valid_to).toLocaleDateString()}` : ""}
+                {formatDate(r.valid_from, lang)}
+                {r.valid_to ? ` → ${formatDate(r.valid_to, lang)}` : ""}
               </TD>
               <TD className="tabular-nums text-xs">{r.verification_count}</TD>
-              <TD className="text-xs text-fg-t6">{new Date(r.created_at).toLocaleDateString()}</TD>
+              <TD className="text-xs text-fg-t6">{formatDate(r.created_at, lang)}</TD>
               <TD align="right" onClick={(e) => e.stopPropagation()}>
                 <button
                   type="button"
@@ -435,9 +436,9 @@ export default function PlatformVouchersPage() {
                 label={t("admin.platform_vouchers.valid")}
                 value={
                   selected.valid_from
-                    ? `${new Date(selected.valid_from).toLocaleDateString()}${
+                    ? `${formatDate(selected.valid_from, lang)}${
                         selected.valid_to
-                          ? " → " + new Date(selected.valid_to).toLocaleDateString()
+                          ? " → " + formatDate(selected.valid_to, lang)
                           : ""
                       }`
                     : "—"
@@ -445,7 +446,7 @@ export default function PlatformVouchersPage() {
               />
               <DetailRow
                 label={t("admin.platform_vouchers.used_at")}
-                value={selected.used_at ? new Date(selected.used_at).toLocaleString() : "—"}
+                value={formatDateTime(selected.used_at, lang)}
               />
               <DetailRow label={t("admin.platform_vouchers.scan_count")} value={String(selected.verification_count)} />
               {selected.reissued_from_id && (
@@ -477,7 +478,7 @@ export default function PlatformVouchersPage() {
                     <tbody>
                       {logs.map((l) => (
                         <tr key={l.id} className="border-t border-default">
-                          <td className="px-2 py-1">{new Date(l.scanned_at).toLocaleString()}</td>
+                          <td className="px-2 py-1">{formatDateTime(l.scanned_at, lang)}</td>
                           <td className="px-2 py-1 font-mono">{l.scanner_ip ?? "—"}</td>
                           <td className="px-2 py-1">{l.result}</td>
                         </tr>

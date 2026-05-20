@@ -8,6 +8,7 @@ import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { formatDateTime, formatNumber } from "@/lib/format";
 import {
   Button,
   FormField,
@@ -74,7 +75,7 @@ type Stats = {
 
 export default function PlatformNotificationsPage() {
   const { token, user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
 
   const [rows, setRows] = useState<NotificationRow[]>([]);
@@ -176,9 +177,9 @@ export default function PlatformNotificationsPage() {
 
       {stats && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label={t("admin.platform_notifications.total")} value={stats.total.toLocaleString()} />
-          <StatCard label={t("admin.platform_notifications.unread")} value={stats.unread.toLocaleString()} tone={stats.unread > 0 ? "warn" : "neutral"} />
-          <StatCard label={t("admin.platform_notifications.read")} value={stats.read.toLocaleString()} tone="good" />
+          <StatCard label={t("admin.platform_notifications.total")} value={formatNumber(stats.total, lang)} />
+          <StatCard label={t("admin.platform_notifications.unread")} value={formatNumber(stats.unread, lang)} tone={stats.unread > 0 ? "warn" : "neutral"} />
+          <StatCard label={t("admin.platform_notifications.read")} value={formatNumber(stats.read, lang)} tone="good" />
           <StatCard label={t("admin.platform_notifications.critical_lifetime")} value={String(stats.by_priority?.critical ?? 0)} tone={(stats.by_priority?.critical ?? 0) > 0 ? "warn" : "neutral"} />
         </div>
       )}
@@ -265,7 +266,7 @@ export default function PlatformNotificationsPage() {
             : null}
           {rows.map((r) => (
             <TR key={r.id} onClick={() => setSelected(r)}>
-              <TD className="text-xs text-fg-t6 whitespace-nowrap">{new Date(r.created_at).toLocaleString()}</TD>
+              <TD className="text-xs text-fg-t6 whitespace-nowrap">{formatDateTime(r.created_at, lang)}</TD>
               <TD className="text-xs">
                 {r.user?.name ?? `#${r.user_id}`}
                 {r.user?.email && <div className="text-fg-t6">{r.user.email}</div>}
@@ -314,7 +315,7 @@ export default function PlatformNotificationsPage() {
             <div className="mt-4 rounded-zulu border border-default bg-figma-bg-1 p-3 text-sm whitespace-pre-wrap">{selected.message}</div>
             <dl className="mt-6 space-y-2 text-sm">
               <DetailRow label={t("admin.platform_notifications.user")} value={selected.user ? `${selected.user.name} <${selected.user.email}>` : `#${selected.user_id}`} />
-              <DetailRow label={t("admin.platform_notifications.when")} value={new Date(selected.created_at).toLocaleString()} />
+              <DetailRow label={t("admin.platform_notifications.when")} value={formatDateTime(selected.created_at, lang)} />
               <DetailRow label={t("admin.platform_notifications.type")} value={selected.type} />
               <DetailRow label={t("admin.platform_notifications.event")} value={selected.event_type ?? "—"} />
               <DetailRow label={t("admin.platform_notifications.subject")} value={selected.subject_type ? `${selected.subject_type}${selected.subject_id ? " #" + selected.subject_id : ""}` : "—"} />

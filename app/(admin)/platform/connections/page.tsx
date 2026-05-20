@@ -9,6 +9,7 @@ import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { formatDate, formatDateTime, formatNumber } from "@/lib/format";
 import {
   Button,
   FormField,
@@ -65,7 +66,7 @@ type Stats = {
 
 export default function PlatformConnectionsPage() {
   const { token, user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);
 
@@ -249,7 +250,7 @@ export default function PlatformConnectionsPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
             label={t("admin.platform_connections.total_connections")}
-            value={stats.total.toLocaleString()}
+            value={formatNumber(stats.total, lang)}
           />
           <StatCard
             label={t("admin.platform_connections.status_active")}
@@ -359,7 +360,7 @@ export default function PlatformConnectionsPage() {
               </TD>
               <TD className="text-xs">{r.proposed_by?.name ?? "—"}</TD>
               <TD className="text-xs whitespace-nowrap">
-                {r.proposed_at ? new Date(r.proposed_at).toLocaleDateString() : "—"}
+                {formatDate(r.proposed_at, lang)}
               </TD>
               <TD align="right" onClick={(e) => e.stopPropagation()}>
                 <button
@@ -381,7 +382,7 @@ export default function PlatformConnectionsPage() {
             {t("admin.platform_connections.pagination")
               .replace("{page}", String(page))
               .replace("{lastPage}", String(lastPage))
-              .replace("{total}", total.toLocaleString())}
+              .replace("{total}", formatNumber(total, lang))}
           </span>
           <Pagination
             page={page}
@@ -442,7 +443,7 @@ export default function PlatformConnectionsPage() {
               <DetailRow
                 label={t("admin.platform_connections.proposed_at")}
                 value={
-                  selected.proposed_at ? new Date(selected.proposed_at).toLocaleString() : "—"
+                  formatDateTime(selected.proposed_at, lang)
                 }
               />
               <DetailRow
@@ -456,16 +457,14 @@ export default function PlatformConnectionsPage() {
               <DetailRow
                 label={t("admin.platform_connections.responded_at")}
                 value={
-                  selected.responded_at
-                    ? new Date(selected.responded_at).toLocaleString()
-                    : "—"
+                  formatDateTime(selected.responded_at, lang)
                 }
               />
               {selected.terminated_at && (
                 <>
                   <DetailRow
                     label={t("admin.platform_connections.terminated_at")}
-                    value={new Date(selected.terminated_at).toLocaleString()}
+                    value={formatDateTime(selected.terminated_at, lang)}
                   />
                   <DetailRow
                     label={t("admin.platform_connections.termination_reason")}

@@ -14,6 +14,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
+import { formatDate } from "@/lib/format";
 import {
   apiAdminContracts,
   CONTRACT_STATUSES,
@@ -43,14 +44,8 @@ import { Plus, RefreshCw, Search } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "—";
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString();
-}
-
 export default function PlatformContractsPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { token, user } = useAdminAuth();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<ContractRow[]>([]);
@@ -221,9 +216,9 @@ export default function PlatformContractsPage() {
                   <span className="ml-1 text-fg-t6">({r.template.language.toUpperCase()})</span>
                 ) : null}
               </TD>
-              <TD className="text-xs text-fg-t6">{formatDate(r.effective_date)}</TD>
-              <TD className="text-xs text-fg-t6">{formatDate(r.expiry_date)}</TD>
-              <TD className="text-xs text-fg-t6">{formatDate(r.created_at)}</TD>
+              <TD className="text-xs text-fg-t6">{formatDate(r.effective_date, lang)}</TD>
+              <TD className="text-xs text-fg-t6">{formatDate(r.expiry_date, lang)}</TD>
+              <TD className="text-xs text-fg-t6">{formatDate(r.created_at, lang)}</TD>
             </TR>
           ))}
         </TBody>

@@ -93,7 +93,7 @@ type SellerDetail = {
 
 export default function PlatformStatisticsPage() {
   const { token, user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
 
   const [days, setDays] = useState(30);
@@ -257,17 +257,17 @@ export default function PlatformStatisticsPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Kpi
               label={t("admin.platform_statistics.revenue")}
-              value={`$${snapshot.revenue.total.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}
-              hint={`${snapshot.revenue.order_count.toLocaleString()} ${t("admin.platform_statistics.paid_orders")}`}
+              value={`$${snapshot.revenue.total.toLocaleString(lang, { maximumFractionDigits: 2 })}`}
+              hint={`${snapshot.revenue.order_count.toLocaleString(lang)} ${t("admin.platform_statistics.paid_orders")}`}
             />
             <Kpi
               label={t("admin.platform_statistics.avg_order_value")}
-              value={`$${snapshot.revenue.avg_order_value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}
+              value={`$${snapshot.revenue.avg_order_value.toLocaleString(lang, { maximumFractionDigits: 2 })}`}
             />
             <Kpi
               label={t("admin.platform_statistics.new_users")}
-              value={snapshot.users.new_in_window.toLocaleString()}
-              hint={`${snapshot.users.total.toLocaleString()} ${t("admin.platform_statistics.total")}`}
+              value={snapshot.users.new_in_window.toLocaleString(lang)}
+              hint={`${snapshot.users.total.toLocaleString(lang)} ${t("admin.platform_statistics.total")}`}
             />
             <Kpi
               label={t("admin.platform_statistics.saga_success")}
@@ -307,7 +307,7 @@ export default function PlatformStatisticsPage() {
               <span>{revenueSeries[0]?.date ?? ""}</span>
               <span>
                 {t("admin.platform_statistics.max")}: $
-                {maxRevenue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                {maxRevenue.toLocaleString(lang, { maximumFractionDigits: 2 })}
               </span>
               <span>{revenueSeries[revenueSeries.length - 1]?.date ?? ""}</span>
             </div>
@@ -333,7 +333,7 @@ export default function PlatformStatisticsPage() {
             <div className="mt-2 flex justify-between text-xs text-fg-t6">
               <span>{ordersSeries[0]?.date ?? ""}</span>
               <span>
-                {t("admin.platform_statistics.max")}: {maxOrders.toLocaleString()}
+                {t("admin.platform_statistics.max")}: {maxOrders.toLocaleString(lang)}
               </span>
               <span>{ordersSeries[ordersSeries.length - 1]?.date ?? ""}</span>
             </div>
@@ -379,7 +379,7 @@ export default function PlatformStatisticsPage() {
                 </div>
                 <div className="mt-1 text-fg-t7">
                   {t("admin.platform_statistics.premium")}: $
-                  {snapshot.insurance.total_premium_collected.toLocaleString(undefined, {
+                  {snapshot.insurance.total_premium_collected.toLocaleString(lang, {
                     maximumFractionDigits: 2,
                   })}
                 </div>
@@ -445,7 +445,7 @@ export default function PlatformStatisticsPage() {
                       </TD>
                       <TD align="right" className="font-bold tabular-nums">
                         $
-                        {s.revenue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                        {s.revenue.toLocaleString(lang, { maximumFractionDigits: 2 })}
                       </TD>
                       <TD align="right" className="tabular-nums">
                         {s.orders}
@@ -510,19 +510,19 @@ export default function PlatformStatisticsPage() {
                 <div className="mt-4 grid grid-cols-2 gap-3">
                   <Kpi
                     label={t("admin.platform_statistics.revenue")}
-                    value={`$${sellerDetail.total_revenue.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}
+                    value={`$${sellerDetail.total_revenue.toLocaleString(lang, { maximumFractionDigits: 2 })}`}
                   />
                   <Kpi
                     label={t("admin.platform_statistics.avg_order")}
-                    value={`$${sellerDetail.avg_order_value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}
+                    value={`$${sellerDetail.avg_order_value.toLocaleString(lang, { maximumFractionDigits: 2 })}`}
                   />
                   <Kpi
                     label={t("admin.platform_statistics.paid_orders")}
-                    value={sellerDetail.paid_orders.toLocaleString()}
+                    value={sellerDetail.paid_orders.toLocaleString(lang)}
                   />
                   <Kpi
                     label={t("admin.platform_statistics.total_orders")}
-                    value={sellerDetail.total_orders.toLocaleString()}
+                    value={sellerDetail.total_orders.toLocaleString(lang)}
                   />
                 </div>
 
@@ -593,10 +593,11 @@ function BreakdownCard({
   total: number;
   byKey: Record<string, number>;
 }) {
+  const { lang } = useLanguage();
   return (
     <div className="admin-card p-4">
       <h3 className="text-xs font-semibold uppercase tracking-wide text-fg-t6">{title}</h3>
-      <div className="mt-2 text-lg font-bold tabular-nums">{total.toLocaleString()}</div>
+      <div className="mt-2 text-lg font-bold tabular-nums">{total.toLocaleString(lang)}</div>
       <ul className="mt-2 space-y-1 text-xs">
         {Object.entries(byKey).map(([k, v]) => (
           <li key={k} className="flex justify-between">

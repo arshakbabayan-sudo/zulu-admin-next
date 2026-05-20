@@ -6,6 +6,7 @@ import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { formatDateTime } from "@/lib/format";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { getApiBaseUrl } from "@/lib/api-base";
 import { ApiRequestError } from "@/lib/api-client";
@@ -40,7 +41,7 @@ const LANGS = ["", "en", "ru", "hy"];
 
 export default function PlatformNewsletterPage() {
   const { token, user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, lang: uiLang } = useLanguage();
   const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<NewsletterSubscriptionRow[]>([]);
@@ -222,10 +223,10 @@ export default function PlatformNewsletterPage() {
               <TD className="font-medium">{r.email}</TD>
               <TD className="text-xs">{r.lang ?? "—"}</TD>
               <TD className="text-xs">{r.source ?? "—"}</TD>
-              <TD className="text-xs">{r.subscribed_at ? new Date(r.subscribed_at).toLocaleString() : "—"}</TD>
+              <TD className="text-xs">{formatDateTime(r.subscribed_at, uiLang)}</TD>
               <TD className="text-xs">
                 {r.unsubscribed_at ? (
-                  <span className="text-error-600">{new Date(r.unsubscribed_at).toLocaleString()}</span>
+                  <span className="text-error-600">{formatDateTime(r.unsubscribed_at, uiLang)}</span>
                 ) : (
                   <span className="text-success-700">{t("admin.newsletter.status_active")}</span>
                 )}

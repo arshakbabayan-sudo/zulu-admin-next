@@ -14,6 +14,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessOperatorToolsNav, canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
+import { formatDateTime } from "@/lib/format";
 import {
   ActiveFiltersChips,
   Button,
@@ -86,12 +87,6 @@ type Reply = {
   created_at: string | null;
 };
 
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "—";
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString();
-}
-
 function priorityTier(p: Priority): "neutral" | "info" | "warning" | "danger" {
   switch (p) {
     case "low":
@@ -137,7 +132,7 @@ async function fetchCases(
 
 export default function Bucket3CasesPage() {
   const { token, user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const allowed = canAccessOperatorToolsNav(user) || canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<CaseRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -437,7 +432,7 @@ export default function Bucket3CasesPage() {
                   {sla ? <StatusPill status={sla.tone}>{sla.label}</StatusPill> : <span className="text-xs text-fg-t6">—</span>}
                 </TD>
                 <TD className="text-xs text-fg-t7">{r.assigned_to?.name ?? "—"}</TD>
-                <TD className="text-xs text-fg-t6">{formatDate(r.opened_at)}</TD>
+                <TD className="text-xs text-fg-t6">{formatDateTime(r.opened_at, lang)}</TD>
               </TR>
             );
           })}
@@ -486,11 +481,11 @@ export default function Bucket3CasesPage() {
               </div>
               <div>
                 <div className="text-fg-t6">{t("admin.bucket3.cases.label.opened_at")}</div>
-                <div className="text-fg-t8">{formatDate(selected.opened_at)}</div>
+                <div className="text-fg-t8">{formatDateTime(selected.opened_at, lang)}</div>
               </div>
               <div>
                 <div className="text-fg-t6">{t("admin.bucket3.cases.label.closed_at")}</div>
-                <div className="text-fg-t8">{formatDate(selected.closed_at)}</div>
+                <div className="text-fg-t8">{formatDateTime(selected.closed_at, lang)}</div>
               </div>
               <div className="col-span-2">
                 <div className="text-fg-t6">{t("admin.bucket3.cases.label.company")}</div>
@@ -579,7 +574,7 @@ export default function Bucket3CasesPage() {
                               {t("admin.bucket3.cases.internal")}
                             </span>
                           )}
-                          <span>{formatDate(r.created_at)}</span>
+                          <span>{formatDateTime(r.created_at, lang)}</span>
                         </div>
                       </div>
                       <div className="whitespace-pre-wrap text-fg-t7">{r.body}</div>

@@ -17,6 +17,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessOperatorToolsNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
+import { formatDate } from "@/lib/format";
 import {
   Button,
   FormField,
@@ -56,12 +57,6 @@ type TimeOffRow = {
   decision_notes: string | null;
   created_at: string | null;
 };
-
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "—";
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString();
-}
 
 function statusTier(s: Status): "neutral" | "info" | "success" | "warning" | "danger" {
   switch (s) {
@@ -125,7 +120,7 @@ function formatDuration(minutes: number | null, openSinceIso: string | null): st
 export default function Bucket3NonServiceHoursPage() {
   const { token, user } = useAdminAuth();
   const confirm = useConfirm();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const allowed = canAccessOperatorToolsNav(user);
   const [rows, setRows] = useState<TimeOffRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -467,8 +462,8 @@ export default function Bucket3NonServiceHoursPage() {
                 <div className="text-xs text-fg-t6">{r.user?.email ?? ""}</div>
               </TD>
               <TD className="text-xs">{r.type}</TD>
-              <TD className="text-xs">{formatDate(r.starts_on)}</TD>
-              <TD className="text-xs">{formatDate(r.ends_on)}</TD>
+              <TD className="text-xs">{formatDate(r.starts_on, lang)}</TD>
+              <TD className="text-xs">{formatDate(r.ends_on, lang)}</TD>
               <TD className="tabular-nums text-xs">{r.hours_total ?? "—"}</TD>
               <TD>
                 <StatusPill status={statusTier(r.status)}>{r.status}</StatusPill>

@@ -17,6 +17,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessOperatorToolsNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
+import { formatDate } from "@/lib/format";
 import {
   Button,
   FormField,
@@ -49,12 +50,6 @@ type BlockedRow = {
   created_by: { id: number; name: string } | null;
   created_at: string | null;
 };
-
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "—";
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString();
-}
 
 async function fetchBlocked(
   token: string,
@@ -91,7 +86,7 @@ async function deleteBlocked(
 export default function Bucket3BlockDatesPage() {
   const { token, user } = useAdminAuth();
   const confirm = useConfirm();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const allowed = canAccessOperatorToolsNav(user);
   const [rows, setRows] = useState<BlockedRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -318,8 +313,8 @@ export default function Bucket3BlockDatesPage() {
               <TD className="tabular-nums text-fg-t7">{r.id}</TD>
               <TD className="text-xs">{r.item_type}</TD>
               <TD className="tabular-nums">{r.item_id ?? <span className="text-fg-t6">all</span>}</TD>
-              <TD className="text-xs">{formatDate(r.blocked_from)}</TD>
-              <TD className="text-xs">{formatDate(r.blocked_to)}</TD>
+              <TD className="text-xs">{formatDate(r.blocked_from, lang)}</TD>
+              <TD className="text-xs">{formatDate(r.blocked_to, lang)}</TD>
               <TD className="text-xs text-fg-t6">{r.reason ?? "—"}</TD>
               <TD className="text-xs text-fg-t6">{r.company_name ?? `#${r.company_id}`}</TD>
               <TD align="right">

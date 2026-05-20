@@ -13,6 +13,7 @@ import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
+import { formatDate } from "@/lib/format";
 import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
 import {
   PageHeader,
@@ -40,12 +41,6 @@ type UnverifiedRow = {
   companies: { id: number; name: string; role: string }[];
 };
 
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "—";
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString();
-}
-
 async function fetchUnverified(
   token: string,
   page: number,
@@ -63,7 +58,7 @@ async function fetchUnverified(
 
 export default function Bucket3UnverifiedAccountsPage() {
   const { token, user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<UnverifiedRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -168,7 +163,7 @@ export default function Bucket3UnverifiedAccountsPage() {
               </TD>
               <TD>
                 {u.email_verified_at ? (
-                  <span className="text-xs text-success-700">{formatDate(u.email_verified_at)}</span>
+                  <span className="text-xs text-success-700">{formatDate(u.email_verified_at, lang)}</span>
                 ) : (
                   <span className="text-xs text-warning-700">{t("admin.bucket3.unverified_accounts.not_verified")}</span>
                 )}
@@ -179,7 +174,7 @@ export default function Bucket3UnverifiedAccountsPage() {
                   ? t("admin.bucket3.unverified_accounts.b2c_no_company")
                   : u.companies.map((c) => c.name).join(", ")}
               </TD>
-              <TD className="text-xs text-fg-t6">{formatDate(u.created_at)}</TD>
+              <TD className="text-xs text-fg-t6">{formatDate(u.created_at, lang)}</TD>
             </TR>
           ))}
         </TBody>

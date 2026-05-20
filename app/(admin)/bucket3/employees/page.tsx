@@ -17,6 +17,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
+import { formatDate } from "@/lib/format";
 import {
   PageHeader,
   Pagination,
@@ -44,12 +45,6 @@ type EmployeeRow = {
   companies: { id: number; name: string; role: string }[];
 };
 
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "—";
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString();
-}
-
 async function fetchEmployees(
   token: string,
   page: number,
@@ -67,7 +62,7 @@ async function fetchEmployees(
 
 export default function Bucket3EmployeesPage() {
   const { token, user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<EmployeeRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -204,7 +199,7 @@ export default function Bucket3EmployeesPage() {
                   ))}
                 </div>
               </TD>
-              <TD className="text-xs text-fg-t6">{formatDate(e.created_at)}</TD>
+              <TD className="text-xs text-fg-t6">{formatDate(e.created_at, lang)}</TD>
             </TR>
           ))}
         </TBody>

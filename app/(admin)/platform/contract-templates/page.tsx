@@ -7,8 +7,10 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
+import { formatDate } from "@/lib/format";
 import {
   apiAdminContractTemplates,
   CONTRACT_LANGUAGES,
@@ -34,14 +36,9 @@ import { Plus, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "—";
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString();
-}
-
 export default function PlatformContractTemplatesPage() {
   const { token, user } = useAdminAuth();
+  const { lang } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<ContractTemplateRow[]>([]);
   const [typeFilter, setTypeFilter] = useState<ContractType | "">("");
@@ -177,7 +174,7 @@ export default function PlatformContractTemplatesPage() {
                   <span className="text-xs text-fg-t6">Draft</span>
                 )}
               </TD>
-              <TD className="text-xs text-fg-t6">{formatDate(tpl.updated_at)}</TD>
+              <TD className="text-xs text-fg-t6">{formatDate(tpl.updated_at, lang)}</TD>
             </TR>
           ))}
         </TBody>

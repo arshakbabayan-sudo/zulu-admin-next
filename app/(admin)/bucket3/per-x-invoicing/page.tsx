@@ -53,8 +53,8 @@ async function fetchAggregate(
   return apiFetchJson(`/invoices/aggregate?group_by=${groupBy}`, { method: "GET", token });
 }
 
-function formatAmount(amount: number, currency: string | null): string {
-  const f = new Intl.NumberFormat(undefined, {
+function formatAmount(amount: number, currency: string | null, lang: string): string {
+  const f = new Intl.NumberFormat(lang, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(amount);
@@ -70,7 +70,7 @@ function describeBucket(b: Bucket, groupBy: GroupBy): string {
 
 export default function Bucket3PerXInvoicingPage() {
   const { token, user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [groupBy, setGroupBy] = useState<GroupBy>("status");
   const [data, setData] = useState<AggregateResponse | null>(null);
@@ -166,7 +166,7 @@ export default function Bucket3PerXInvoicingPage() {
               >
                 <span className="text-fg-t6 uppercase">{curr}</span>
                 <span className="ml-2 font-medium text-fg-t8 tabular-nums">
-                  {new Intl.NumberFormat(undefined, {
+                  {new Intl.NumberFormat(lang, {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   }).format(total)}
@@ -198,7 +198,7 @@ export default function Bucket3PerXInvoicingPage() {
               )}
               <TD className="tabular-nums">{b.invoice_count}</TD>
               <TD align="right" className="tabular-nums font-medium text-fg-t8">
-                {formatAmount(b.total_sum, b.currency)}
+                {formatAmount(b.total_sum, b.currency, lang)}
               </TD>
             </TR>
           ))}

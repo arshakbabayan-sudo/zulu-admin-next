@@ -8,6 +8,7 @@ import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { formatDateTime, formatNumber } from "@/lib/format";
 import {
   Button,
   FormField,
@@ -80,7 +81,7 @@ type IntegrityResult = {
 
 export default function PlatformAuditLogsPage() {
   const { token, user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
 
   const [rows, setRows] = useState<AuditLogRow[]>([]);
@@ -427,7 +428,7 @@ export default function PlatformAuditLogsPage() {
           {rows.map((r) => (
             <TR key={r.id} onClick={() => setSelected(r)}>
               <TD className="text-xs whitespace-nowrap">
-                {new Date(r.created_at).toLocaleString()}
+                {formatDateTime(r.created_at, lang)}
               </TD>
               <TD>
                 <CategoryBadge category={r.category} />
@@ -468,7 +469,7 @@ export default function PlatformAuditLogsPage() {
             {t("admin.platform_audit_logs.pagination")
               .replace("{page}", String(meta.current_page))
               .replace("{lastPage}", String(meta.last_page))
-              .replace("{total}", meta.total.toLocaleString())}
+              .replace("{total}", formatNumber(meta.total, lang))}
           </span>
           <Pagination
             page={meta.current_page}
@@ -508,7 +509,7 @@ export default function PlatformAuditLogsPage() {
             <dl className="mt-4 space-y-2 text-sm">
               <DetailRow
                 label={t("admin.platform_audit_logs.time")}
-                value={new Date(selected.created_at).toLocaleString()}
+                value={formatDateTime(selected.created_at, lang)}
               />
               <DetailRow
                 label={t("admin.platform_audit_logs.category")}

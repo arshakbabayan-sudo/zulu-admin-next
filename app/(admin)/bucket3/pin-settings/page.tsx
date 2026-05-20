@@ -20,21 +20,16 @@ import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiSuccessEnvelope } from "@/lib/api-envelope";
+import { formatDateTime } from "@/lib/format";
 import { Button, FormField, Input, PageHeader } from "@/components/ui";
 import { useCallback, useEffect, useState } from "react";
 
 type PinStatus = { is_set: boolean; set_at: string | null };
 
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "—";
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString();
-}
-
 export default function Bucket3PinSettingsPage() {
   const { token } = useAdminAuth();
   const confirm = useConfirm();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [status, setStatus] = useState<PinStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -188,7 +183,7 @@ export default function Bucket3PinSettingsPage() {
         ) : status.is_set ? (
           <p className="text-sm text-fg-t8">
             {t("admin.bucket3.pin_settings.pin_is_set")}
-            <span className="ml-2 text-xs text-fg-t6">{t("admin.bucket3.pin_settings.last_set").replace("{date}", formatDate(status.set_at))}</span>
+            <span className="ml-2 text-xs text-fg-t6">{t("admin.bucket3.pin_settings.last_set").replace("{date}", formatDateTime(status.set_at, lang))}</span>
           </p>
         ) : (
           <p className="text-sm text-warning-700">{t("admin.bucket3.pin_settings.no_pin_set")}</p>

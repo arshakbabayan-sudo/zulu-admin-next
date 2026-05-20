@@ -42,6 +42,7 @@ import {
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { formatDateTime } from "@/lib/format";
 import { ApiRequestError } from "@/lib/api-client";
 import { apiSubmitOfferForReview } from "@/lib/platform-admin-api";
 import { csvExportFilename, downloadCsvFile } from "@/lib/csv-import-export";
@@ -217,7 +218,7 @@ const inputCls = "rounded border border-default px-2 py-1.5 text-sm";
 
 export default function OperatorFlightsPage() {
   const { token } = useAdminAuth();
-  const { t, contentLang } = useLanguage();
+  const { t, contentLang, lang } = useLanguage();
   const confirm = useConfirm();
   const [rows, setRows] = useState<FlightRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -1232,7 +1233,7 @@ export default function OperatorFlightsPage() {
                 {r.arrival_airport_code ?? r.arrival_city ?? "?"}
               </TD>
               <TD className="text-xs">
-                {r.departure_at ? new Date(r.departure_at).toLocaleString("en-US") : "—"}
+                {formatDateTime(r.departure_at, lang)}
               </TD>
               <TD>
                 <OfferStatusBadge status={r.offer?.status ?? null} />

@@ -7,6 +7,7 @@ import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { Button, FormField, Input, PageHeader } from "@/components/ui";
+import { formatNumber } from "@/lib/format";
 
 /**
  * Platform-admin RBAC oversight (Sprint 66, PART 28).
@@ -31,7 +32,7 @@ type Stats = {
 
 export default function PlatformRbacPage() {
   const { token, user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
 
   const [stats, setStats] = useState<Stats | null>(null);
@@ -120,12 +121,12 @@ export default function PlatformRbacPage() {
 
       {stats && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label={t("admin.rbac.stat_roles")} value={stats.total_roles.toLocaleString()} />
-          <StatCard label={t("admin.rbac.stat_permissions")} value={stats.total_permissions.toLocaleString()} />
-          <StatCard label={t("admin.rbac.stat_memberships")} value={stats.total_memberships.toLocaleString()} />
+          <StatCard label={t("admin.rbac.stat_roles")} value={formatNumber(stats.total_roles, lang)} />
+          <StatCard label={t("admin.rbac.stat_permissions")} value={formatNumber(stats.total_permissions, lang)} />
+          <StatCard label={t("admin.rbac.stat_memberships")} value={formatNumber(stats.total_memberships, lang)} />
           <StatCard
             label={t("admin.rbac.stat_super_admins")}
-            value={stats.super_admins.toLocaleString()}
+            value={formatNumber(stats.super_admins, lang)}
             tone="warn"
           />
         </div>

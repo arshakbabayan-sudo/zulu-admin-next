@@ -18,6 +18,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
+import { formatDateTime } from "@/lib/format";
 import {
   PageHeader,
   Pagination,
@@ -48,12 +49,6 @@ type AuditRow = {
   created_at: string;
 };
 
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "—";
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString();
-}
-
 async function fetchServiceLogs(
   token: string,
   page: number,
@@ -73,7 +68,7 @@ async function fetchServiceLogs(
 
 export default function Bucket3ServiceLogsPage() {
   const { token, user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<AuditRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -219,7 +214,7 @@ export default function Bucket3ServiceLogsPage() {
               <TD className="text-xs text-fg-t7">
                 {r.subject_type ? `${r.subject_type}${r.subject_id != null ? ` #${r.subject_id}` : ""}` : "—"}
               </TD>
-              <TD className="text-xs text-fg-t6">{formatDate(r.created_at)}</TD>
+              <TD className="text-xs text-fg-t6">{formatDateTime(r.created_at, lang)}</TD>
             </TR>
           ))}
         </TBody>

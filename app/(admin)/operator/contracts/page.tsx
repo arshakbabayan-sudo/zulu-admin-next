@@ -40,14 +40,9 @@ import {
   TR,
 } from "@/components/ui";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { formatDate } from "@/lib/format";
 import { RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "—";
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString();
-}
 
 /** A row is signable if the partner side has not signed yet and the contract
  * is in a state that allows signing (`sent` or `signed_by_a`). */
@@ -56,7 +51,7 @@ function isSignableRow(r: ContractRow): boolean {
 }
 
 export default function OperatorContractsPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { token, user } = useAdminAuth();
   const confirm = useConfirm();
   const allowed = canAccessOperatorToolsNav(user);
@@ -213,8 +208,8 @@ export default function OperatorContractsPage() {
                   <span className="ml-1 text-fg-t6">({r.template.language.toUpperCase()})</span>
                 ) : null}
               </TD>
-              <TD className="text-xs text-fg-t6">{formatDate(r.effective_date)}</TD>
-              <TD className="text-xs text-fg-t6">{formatDate(r.expiry_date)}</TD>
+              <TD className="text-xs text-fg-t6">{formatDate(r.effective_date, lang)}</TD>
+              <TD className="text-xs text-fg-t6">{formatDate(r.expiry_date, lang)}</TD>
               <TD align="right">
                 {isSignableRow(r) ? (
                   <Button

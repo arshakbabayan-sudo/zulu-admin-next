@@ -12,6 +12,7 @@ import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { formatDate } from "@/lib/format";
 import {
   apiFinanceSummary,
   apiFinanceEntitlements,
@@ -46,7 +47,7 @@ type Tab = "summary" | "entitlements" | "settlements";
 
 export default function FinancePage() {
   const { token, user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const companyOptions = user?.companies ?? [];
   const initialCompanyId = user?.context?.active_company_id ?? companyOptions[0]?.id ?? null;
@@ -280,7 +281,7 @@ export default function FinancePage() {
                   <TD>{r.company_id}</TD>
                   <TD className="tabular-nums">{r.package_order_id ?? "—"}</TD>
                   <TD className="text-xs text-fg-t6">
-                    {r.payable_at ? new Date(r.payable_at).toLocaleDateString() : "—"}
+                    {formatDate(r.payable_at, lang)}
                   </TD>
                 </TR>
               ))}
@@ -320,7 +321,7 @@ export default function FinancePage() {
                   </TD>
                   <TD>{r.company?.name ?? r.company_id}</TD>
                   <TD className="text-xs text-fg-t6">
-                    {r.settled_at ? new Date(r.settled_at).toLocaleDateString() : "—"}
+                    {formatDate(r.settled_at, lang)}
                   </TD>
                   <TD>
                     {r.status === "pending" && (

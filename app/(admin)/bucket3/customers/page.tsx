@@ -23,6 +23,7 @@ import {
   CUSTOMER_STATUSES,
   type CustomerRow,
 } from "@/lib/customers-api";
+import { formatDate } from "@/lib/format";
 import {
   Button,
   PageHeader,
@@ -40,15 +41,9 @@ import {
 import { RefreshCw, Search } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "—";
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString();
-}
-
 export default function Bucket3CustomersPage() {
   const { token, user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<CustomerRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -200,7 +195,7 @@ export default function Bucket3CustomersPage() {
               <TD className="tabular-nums">{c.bookings_count}</TD>
               <TD className="uppercase text-xs text-fg-t6">{c.preferred_language ?? "—"}</TD>
               <TD className="text-xs text-fg-t6">{c.nationality ?? "—"}</TD>
-              <TD className="text-xs text-fg-t6">{formatDate(c.created_at)}</TD>
+              <TD className="text-xs text-fg-t6">{formatDate(c.created_at, lang)}</TD>
             </TR>
           ))}
         </TBody>

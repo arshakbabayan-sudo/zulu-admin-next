@@ -23,6 +23,7 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import { formatDateTime, formatNumber } from "@/lib/format";
 
 type TwoFactorRow = {
   id: number;
@@ -38,7 +39,7 @@ type Stats = { total_users: number; two_factor_confirmed: number; two_factor_pen
 
 export default function PlatformSecurityPage() {
   const { token, user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);
 
@@ -184,9 +185,9 @@ export default function PlatformSecurityPage() {
 
       {stats && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label={t("admin.security.stat_total_users")} value={stats.total_users.toLocaleString()} />
-          <StatCard label={t("admin.security.stat_2fa_enabled")} value={stats.two_factor_confirmed.toLocaleString()} tone="good" />
-          <StatCard label={t("admin.security.stat_2fa_pending")} value={stats.two_factor_pending.toLocaleString()} tone={stats.two_factor_pending > 0 ? "warn" : "neutral"} />
+          <StatCard label={t("admin.security.stat_total_users")} value={formatNumber(stats.total_users, lang)} />
+          <StatCard label={t("admin.security.stat_2fa_enabled")} value={formatNumber(stats.two_factor_confirmed, lang)} tone="good" />
+          <StatCard label={t("admin.security.stat_2fa_pending")} value={formatNumber(stats.two_factor_pending, lang)} tone={stats.two_factor_pending > 0 ? "warn" : "neutral"} />
           <StatCard label={t("admin.security.stat_coverage")} value={`${stats.two_factor_coverage_pct}%`} tone={stats.two_factor_coverage_pct >= 50 ? "good" : "warn"} />
         </div>
       )}
@@ -257,8 +258,8 @@ export default function PlatformSecurityPage() {
                   <span className="text-fg-t7">{r.user?.role ?? "—"}</span>
                 )}
               </TD>
-              <TD className="text-xs text-fg-t6">{r.confirmed_at ? new Date(r.confirmed_at).toLocaleString() : "—"}</TD>
-              <TD className="text-xs text-fg-t6">{r.last_verified_at ? new Date(r.last_verified_at).toLocaleString() : t("admin.security.never")}</TD>
+              <TD className="text-xs text-fg-t6">{formatDateTime(r.confirmed_at, lang)}</TD>
+              <TD className="text-xs text-fg-t6">{r.last_verified_at ? formatDateTime(r.last_verified_at, lang) : t("admin.security.never")}</TD>
               <TD align="right">
                 <div className="inline-flex gap-2">
                   <button

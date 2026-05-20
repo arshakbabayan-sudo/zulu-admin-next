@@ -18,6 +18,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessOperatorToolsNav, canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
+import { formatDateTime } from "@/lib/format";
 import {
   apiCreateRequest,
   apiRequestsInbox,
@@ -47,15 +48,9 @@ import {
 } from "@/components/ui";
 import { useCallback, useEffect, useState } from "react";
 
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "—";
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString();
-}
-
 export default function Bucket3RequestsPage() {
   const { token, user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const allowed = canAccessOperatorToolsNav(user) || canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<RequestInboxRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -237,7 +232,7 @@ export default function Bucket3RequestsPage() {
                   {requestStatusLabel(r.status)}
                 </StatusPill>
               </TD>
-              <TD className="text-xs text-fg-t6">{formatDate(r.created_at)}</TD>
+              <TD className="text-xs text-fg-t6">{formatDateTime(r.created_at, lang)}</TD>
             </TR>
           ))}
         </TBody>
@@ -338,8 +333,8 @@ export default function Bucket3RequestsPage() {
               </Button>
             </div>
             <div className="border-t border-default pt-2 text-xs text-fg-t6">
-              {t("admin.bucket3.requests.created_at").replace("{date}", formatDate(selected.created_at))}
-              {selected.resolved_at ? t("admin.bucket3.requests.resolved_at").replace("{date}", formatDate(selected.resolved_at)) : ""}
+              {t("admin.bucket3.requests.created_at").replace("{date}", formatDateTime(selected.created_at, lang))}
+              {selected.resolved_at ? t("admin.bucket3.requests.resolved_at").replace("{date}", formatDateTime(selected.resolved_at, lang)) : ""}
               {selected.resolved_by ? t("admin.bucket3.requests.resolved_by").replace("{name}", selected.resolved_by.name) : ""}
             </div>
           </div>

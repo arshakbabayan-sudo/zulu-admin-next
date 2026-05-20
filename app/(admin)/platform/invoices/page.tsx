@@ -10,6 +10,7 @@ import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { apiInvoices, apiIssueInvoice, apiCancelInvoice, type InvoiceRow } from "@/lib/invoices-api";
+import { formatDate } from "@/lib/format";
 import { useCallback, useEffect, useState } from "react";
 import {
   Button,
@@ -31,7 +32,7 @@ const STATUSES = ["", "draft", "issued", "paid", "cancelled", "overdue"];
 
 export default function PlatformInvoicesPage() {
   const { token, user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<InvoiceRow[]>([]);
@@ -136,10 +137,10 @@ export default function PlatformInvoicesPage() {
               </TD>
               <TD>{r.company?.name ?? "—"}</TD>
               <TD className="text-xs text-fg-t6">
-                {r.issued_at ? new Date(r.issued_at).toLocaleDateString() : "—"}
+                {formatDate(r.issued_at, lang)}
               </TD>
               <TD className="text-xs text-fg-t6">
-                {r.due_date ? new Date(r.due_date).toLocaleDateString() : "—"}
+                {formatDate(r.due_date, lang)}
               </TD>
               <TD>
                 <div className="flex flex-col gap-1">
