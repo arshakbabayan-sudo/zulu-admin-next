@@ -75,6 +75,7 @@ export default function UiTranslationsPage() {
     if (!token || !selectedLang) return;
     setLoading(true);
     setErr(null);
+    setRows([]);
     try {
       const res = await apiUiTranslationsGetAdmin(token, { lang: selectedLang, page, per_page: PER_PAGE, search });
       setRows(res.data.data);
@@ -158,7 +159,7 @@ export default function UiTranslationsPage() {
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                 placeholder={t("admin.localization.search_placeholder")}
-                className="!h-10 pl-9 w-56"
+                className="!h-10 !pl-10 w-56"
               />
             </div>
             <Button size="sm" onClick={handleSearch}>
@@ -189,21 +190,25 @@ export default function UiTranslationsPage() {
           ) : rows.length === 0 ? (
             <TEmpty colSpan={3}>{t("admin.localization.empty")}</TEmpty>
           ) : null}
-          {rows.map((row, i) => (
-            <TR key={`${selectedLang}-${row.key}`}>
-              <TD align="center" className="tabular-nums text-fg-t6">{(page - 1) * PER_PAGE + i + 1}</TD>
-              <TD className="font-medium text-fg-t8">{row.key}</TD>
-              <TD>
-                <Input
-                  ref={(el) => { editRefs.current[row.key] = el as HTMLInputElement | null; }}
-                  type="text"
-                  defaultValue={row.value}
-                  onChange={(e) => handleEdit(row.key, e.target.value)}
-                  className="!h-10"
-                />
-              </TD>
-            </TR>
-          ))}
+          {rows.map((row, i) => {
+            const editedValue = edits[row.key];
+            const currentValue = editedValue !== undefined ? editedValue : row.value;
+            return (
+              <TR key={`${selectedLang}-${row.key}`}>
+                <TD align="center" className="tabular-nums text-fg-t6">{(page - 1) * PER_PAGE + i + 1}</TD>
+                <TD className="font-medium text-fg-t8">{row.key}</TD>
+                <TD>
+                  <Input
+                    ref={(el) => { editRefs.current[row.key] = el as HTMLInputElement | null; }}
+                    type="text"
+                    value={currentValue}
+                    onChange={(e) => handleEdit(row.key, e.target.value)}
+                    className="!h-10"
+                  />
+                </TD>
+              </TR>
+            );
+          })}
         </TBody>
       </Table>
 

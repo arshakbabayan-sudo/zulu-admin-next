@@ -306,7 +306,7 @@ export default function PlatformCompaniesPage() {
                 }
               }}
               placeholder={t("admin.platform_companies.search_placeholder")}
-              className="h-9 w-full rounded-zulu border border-default bg-white pl-10 pr-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+              className="h-10 w-full rounded-zulu border border-default bg-white pl-10 pr-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
             />
           </div>
           <button
@@ -315,7 +315,7 @@ export default function PlatformCompaniesPage() {
               setPage(1);
               setSearch(searchDraft.trim());
             }}
-            className="inline-flex h-9 items-center rounded-zulu bg-primary px-4 text-sm font-semibold text-white transition hover:opacity-90"
+            className="inline-flex h-10 items-center rounded-zulu bg-primary px-4 text-sm font-semibold text-white transition hover:opacity-90"
           >
             {t("common.apply")}
           </button>
@@ -327,7 +327,7 @@ export default function PlatformCompaniesPage() {
                 setPage(1);
                 setGovernanceFilter(e.target.value);
               }}
-              className="h-9 rounded-zulu border border-default bg-white px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+              className="h-10 rounded-zulu border border-default bg-white px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
             >
               <option value="">{t("common.any")}</option>
               {GOVERNANCE_STATUSES.map((s) => (
@@ -345,7 +345,7 @@ export default function PlatformCompaniesPage() {
                 setPage(1);
                 setSellerFilter(e.target.value);
               }}
-              className="h-9 rounded-zulu border border-default bg-white px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+              className="h-10 rounded-zulu border border-default bg-white px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
             >
               <option value="">{t("common.any")}</option>
               <option value="1">{t("admin.platform_companies.yes")}</option>
@@ -677,7 +677,7 @@ export default function PlatformCompaniesPage() {
               <button
                 type="button"
                 onClick={closePermissionsModal}
-                className="inline-flex h-9 items-center rounded-zulu border border-default bg-white px-4 text-sm font-medium text-fg-t7 transition hover:bg-white/70"
+                className="inline-flex h-10 items-center rounded-zulu border border-default bg-white px-4 text-sm font-medium text-fg-t7 transition hover:bg-white/70"
               >
                 {t("common.cancel")}
               </button>
@@ -685,7 +685,7 @@ export default function PlatformCompaniesPage() {
                 type="button"
                 disabled={!!permLoadErr || permLoading || busyId === permModalCompany.id}
                 onClick={() => void savePermissions()}
-                className="inline-flex h-9 items-center rounded-zulu bg-primary px-4 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
+                className="inline-flex h-10 items-center rounded-zulu bg-primary px-4 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
               >
                 {t("admin.platform_companies.save_permissions")}
               </button>
