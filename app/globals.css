@@ -566,7 +566,7 @@ html.dark input[type="radio"] {
 
   /* Reusable admin button classes — anchor on Quest CRM template patterns. */
   .admin-btn-primary {
-    @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-zulu px-3.5 text-sm font-medium text-white transition disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex h-10 items-center justify-center gap-1.5 rounded-zulu px-3.5 text-sm font-medium text-white transition disabled:opacity-50 disabled:cursor-not-allowed;
     background-color: var(--admin-primary);
   }
   .admin-btn-primary:hover:not(:disabled) {
@@ -574,16 +574,16 @@ html.dark input[type="radio"] {
   }
 
   .admin-btn-secondary {
-    @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-zulu border bg-white px-3.5 text-sm font-medium text-fg-t7 transition hover:bg-figma-bg-1 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex h-10 items-center justify-center gap-1.5 rounded-zulu border bg-white px-3.5 text-sm font-medium text-fg-t7 transition hover:bg-figma-bg-1 disabled:opacity-50 disabled:cursor-not-allowed;
     border-color: var(--admin-border);
   }
 
   .admin-btn-danger {
-    @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-zulu border border-error-200 bg-white px-3.5 text-sm font-medium text-error-700 transition hover:bg-error-50 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex h-10 items-center justify-center gap-1.5 rounded-zulu border border-error-200 bg-white px-3.5 text-sm font-medium text-error-700 transition hover:bg-error-50 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .admin-btn-ghost {
-    @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-zulu px-3 text-sm font-medium text-fg-t7 transition hover:bg-figma-bg-1 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex h-10 items-center justify-center gap-1.5 rounded-zulu px-3 text-sm font-medium text-fg-t7 transition hover:bg-figma-bg-1 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   /* Reusable empty-state row inside a table (use `<tr><td colSpan>...empty...</td></tr>`). */

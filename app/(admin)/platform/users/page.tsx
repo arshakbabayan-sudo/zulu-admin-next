@@ -130,7 +130,7 @@ export default function PlatformUsersPage() {
             placeholder={t("admin.users.search_placeholder")}
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className="h-9 w-full rounded-zulu border border-default bg-white pl-9 pr-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+            className="h-10 w-full rounded-zulu border border-default bg-white pl-9 pr-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
           />
         </div>
         <Button type="submit" size="sm">
@@ -247,7 +247,7 @@ export default function PlatformUsersPage() {
             <div className="flex gap-2 border-t border-default pt-3">
               <Link
                 href={`/platform/users/${r.id}`}
-                className="inline-flex h-9 flex-1 items-center justify-center rounded-zulu border border-default bg-white px-3 text-sm font-medium text-primary transition hover:bg-figma-bg-1"
+                className="inline-flex h-10 flex-1 items-center justify-center rounded-zulu border border-default bg-white px-3 text-sm font-medium text-primary transition hover:bg-figma-bg-1"
               >
                 {k("admin.users.btn_edit", "Edit")}
               </Link>
@@ -255,7 +255,7 @@ export default function PlatformUsersPage() {
                 type="button"
                 disabled={busyId === r.id || r.status === "inactive"}
                 onClick={() => deactivate(r.id)}
-                className="inline-flex h-9 flex-1 items-center justify-center rounded-zulu border border-error-200 bg-white px-3 text-sm font-medium text-error-700 transition hover:bg-error-50 disabled:opacity-40"
+                className="inline-flex h-10 flex-1 items-center justify-center rounded-zulu border border-error-200 bg-white px-3 text-sm font-medium text-error-700 transition hover:bg-error-50 disabled:opacity-40"
               >
                 {t("admin.users.btn_deactivate")}
               </button>

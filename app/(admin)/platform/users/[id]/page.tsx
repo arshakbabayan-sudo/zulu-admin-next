@@ -206,11 +206,11 @@ export default function PlatformUserDetailPage() {
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               disabled={saving}
-              className="h-9 w-full rounded-zulu border border-default bg-white px-3 text-sm text-fg-t8 placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100 disabled:opacity-60"
+              className="h-10 w-full rounded-zulu border border-default bg-white px-3 text-sm text-fg-t8 placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100 disabled:opacity-60"
             />
           </Field>
           <Field label="Email">
-            <input type="email" value={user.email} disabled className="h-9 w-full rounded-zulu border border-default bg-figma-bg-1 px-3 text-sm text-fg-t8 placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100 disabled:opacity-60" />
+            <input type="email" value={user.email} disabled className="h-10 w-full rounded-zulu border border-default bg-figma-bg-1 px-3 text-sm text-fg-t8 placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100 disabled:opacity-60" />
           </Field>
           <Field label={t("admin.users.field.phone") === "admin.users.field.phone" ? "Phone" : t("admin.users.field.phone")}>
             <input
@@ -218,7 +218,7 @@ export default function PlatformUserDetailPage() {
               value={form.phone}
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
               disabled={saving}
-              className="h-9 w-full rounded-zulu border border-default bg-white px-3 text-sm text-fg-t8 placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100 disabled:opacity-60"
+              className="h-10 w-full rounded-zulu border border-default bg-white px-3 text-sm text-fg-t8 placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100 disabled:opacity-60"
             />
           </Field>
           <Field label={t("admin.users.field.birth_date") === "admin.users.field.birth_date" ? "Birth date" : t("admin.users.field.birth_date")}>
@@ -227,7 +227,7 @@ export default function PlatformUserDetailPage() {
               value={form.birth_date}
               onChange={(e) => setForm({ ...form, birth_date: e.target.value })}
               disabled={saving}
-              className="h-9 w-full rounded-zulu border border-default bg-white px-3 text-sm text-fg-t8 placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100 disabled:opacity-60"
+              className="h-10 w-full rounded-zulu border border-default bg-white px-3 text-sm text-fg-t8 placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100 disabled:opacity-60"
             />
           </Field>
           <Field label={t("admin.users.field.nationality") === "admin.users.field.nationality" ? "Nationality" : t("admin.users.field.nationality")}>
@@ -236,7 +236,7 @@ export default function PlatformUserDetailPage() {
               value={form.nationality}
               onChange={(e) => setForm({ ...form, nationality: e.target.value })}
               disabled={saving}
-              className="h-9 w-full rounded-zulu border border-default bg-white px-3 text-sm text-fg-t8 placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100 disabled:opacity-60"
+              className="h-10 w-full rounded-zulu border border-default bg-white px-3 text-sm text-fg-t8 placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100 disabled:opacity-60"
             />
           </Field>
           <Field label={t("admin.users.field.language") === "admin.users.field.language" ? "Preferred language" : t("admin.users.field.language")}>
@@ -244,7 +244,7 @@ export default function PlatformUserDetailPage() {
               value={form.preferred_language}
               onChange={(e) => setForm({ ...form, preferred_language: e.target.value })}
               disabled={saving}
-              className="h-9 w-full rounded-zulu border border-default bg-white px-3 text-sm text-fg-t8 placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100 disabled:opacity-60"
+              className="h-10 w-full rounded-zulu border border-default bg-white px-3 text-sm text-fg-t8 placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100 disabled:opacity-60"
             >
               {LANG_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
@@ -256,7 +256,7 @@ export default function PlatformUserDetailPage() {
               value={form.status}
               onChange={(e) => setForm({ ...form, status: e.target.value })}
               disabled={saving}
-              className="h-9 w-full rounded-zulu border border-default bg-white px-3 text-sm text-fg-t8 placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100 disabled:opacity-60"
+              className="h-10 w-full rounded-zulu border border-default bg-white px-3 text-sm text-fg-t8 placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100 disabled:opacity-60"
             >
               {STATUS_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
@@ -270,7 +270,7 @@ export default function PlatformUserDetailPage() {
             type="button"
             onClick={handleDeactivate}
             disabled={saving || user.status === "inactive"}
-            className="inline-flex h-9 items-center rounded-zulu border border-error-200 bg-white px-3 text-sm font-medium text-error-700 transition hover:bg-error-50 disabled:opacity-40"
+            className="inline-flex h-10 items-center rounded-zulu border border-error-200 bg-white px-3 text-sm font-medium text-error-700 transition hover:bg-error-50 disabled:opacity-40"
           >
             {t("admin.users.btn_deactivate")}
           </button>
@@ -279,14 +279,14 @@ export default function PlatformUserDetailPage() {
               type="button"
               onClick={() => router.push("/platform/users")}
               disabled={saving}
-              className="inline-flex h-9 items-center rounded-zulu border border-default bg-white px-4 text-sm font-medium text-fg-t8 transition hover:bg-figma-bg-1 disabled:opacity-40"
+              className="inline-flex h-10 items-center rounded-zulu border border-default bg-white px-4 text-sm font-medium text-fg-t8 transition hover:bg-figma-bg-1 disabled:opacity-40"
             >
               {t("common.cancel")}
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex h-9 items-center rounded-zulu bg-primary px-4 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
+              className="inline-flex h-10 items-center rounded-zulu bg-primary px-4 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
             >
               {saving ? (t("common.saving") === "common.saving" ? "Saving…" : t("common.saving")) : t("common.save")}
             </button>

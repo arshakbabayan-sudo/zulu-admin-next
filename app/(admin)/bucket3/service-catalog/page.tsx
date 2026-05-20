@@ -330,7 +330,7 @@ export default function Bucket3ServiceCatalogPage() {
               }
             }}
             placeholder="Search by name or category"
-            className="h-9 w-full rounded-zulu border border-default bg-white px-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+            className="h-10 w-full rounded-zulu border border-default bg-white px-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
           />
         </div>
       </div>

@@ -212,7 +212,7 @@ export default function PlatformCompanyDetailPage({
               {user?.is_super_admin && (
                 <Link
                   href={`/platform/companies/${companyId}/module-permissions`}
-                  className="inline-flex h-9 items-center rounded-zulu border border-default bg-white px-4 text-sm font-semibold text-fg-t8 transition hover:bg-figma-bg-1"
+                  className="inline-flex h-10 items-center rounded-zulu border border-default bg-white px-4 text-sm font-semibold text-fg-t8 transition hover:bg-figma-bg-1"
                 >
                   Edit admin module access →
                 </Link>
@@ -230,7 +230,7 @@ export default function PlatformCompanyDetailPage({
               <button
                 type="button"
                 onClick={() => setPartnerOpen(true)}
-                className="inline-flex h-9 items-center rounded-zulu bg-primary px-4 text-sm font-semibold text-white transition hover:opacity-90"
+                className="inline-flex h-10 items-center rounded-zulu bg-primary px-4 text-sm font-semibold text-white transition hover:opacity-90"
               >
                 {t("admin.platform_companies.edit")}
               </button>
@@ -243,7 +243,7 @@ export default function PlatformCompanyDetailPage({
               <button
                 type="button"
                 onClick={() => setTranslateOpen(true)}
-                className="inline-flex h-9 items-center rounded-zulu bg-primary px-4 text-sm font-semibold text-white transition hover:opacity-90"
+                className="inline-flex h-10 items-center rounded-zulu bg-primary px-4 text-sm font-semibold text-white transition hover:opacity-90"
               >
                 {t("admin.platform_companies.edit")}
               </button>
@@ -417,7 +417,7 @@ function ProfileTab({
             <select
               value={draftGovernance}
               onChange={(e) => onDraftGovernance(e.target.value)}
-              className="h-9 rounded-zulu border border-default bg-white px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+              className="h-10 rounded-zulu border border-default bg-white px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
             >
               {GOVERNANCE_STATUSES.map((s) => (
                 <option key={s} value={s}>
@@ -431,7 +431,7 @@ function ProfileTab({
             type="button"
             disabled={busy || draftGovernance === company.governance_status}
             onClick={onSaveGovernance}
-            className="inline-flex h-9 items-center rounded-zulu bg-primary px-4 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
+            className="inline-flex h-10 items-center rounded-zulu bg-primary px-4 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
           >
             {t("admin.platform_companies.save_gov")}
           </button>
@@ -455,7 +455,7 @@ function ProfileTab({
             type="button"
             disabled={busy}
             onClick={onToggleSeller}
-            className="inline-flex h-9 items-center rounded-zulu border border-primary-100 bg-primary-50 px-4 text-sm font-medium text-primary transition hover:bg-primary-100 disabled:opacity-40"
+            className="inline-flex h-10 items-center rounded-zulu border border-primary-100 bg-primary-50 px-4 text-sm font-medium text-primary transition hover:bg-primary-100 disabled:opacity-40"
           >
             {company.is_seller
               ? t("admin.platform_companies.disable_seller")

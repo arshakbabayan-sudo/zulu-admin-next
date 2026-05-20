@@ -199,13 +199,13 @@ export default function SupportTicketDetailPage() {
               value={companyIdFilter}
               onChange={(e) => setCompanyIdFilter(e.target.value)}
               placeholder="omit = all"
-              className="h-9 w-40 rounded-zulu border border-default bg-white px-3 text-sm tabular-nums focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+              className="h-10 w-40 rounded-zulu border border-default bg-white px-3 text-sm tabular-nums focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
             />
           </label>
           <button
             type="button"
             onClick={() => load()}
-            className="inline-flex h-9 items-center rounded-zulu border border-default bg-white px-3 text-sm font-medium text-fg-t7 transition hover:bg-figma-bg-1"
+            className="inline-flex h-10 items-center rounded-zulu border border-default bg-white px-3 text-sm font-medium text-fg-t7 transition hover:bg-figma-bg-1"
           >
             Reload
           </button>

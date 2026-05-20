@@ -148,7 +148,7 @@ export default function Bucket3ServiceLogsPage() {
                 }
               }}
               placeholder="Search by action or subject id"
-              className="h-9 w-full rounded-zulu border border-default bg-white pl-9 pr-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+              className="h-10 w-full rounded-zulu border border-default bg-white pl-9 pr-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
             />
           </div>
           <label className="flex items-center gap-2 text-sm text-fg-t6">

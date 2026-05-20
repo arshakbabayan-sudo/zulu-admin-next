@@ -611,7 +611,7 @@ export default function DashboardPage() {
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="rounded-2xl border border-default bg-white p-6">
               <div className="flex items-center gap-3">
-                <div className="h-9 w-9 animate-pulse rounded-lg bg-slate-100" />
+                <div className="h-10 w-9 animate-pulse rounded-lg bg-slate-100" />
                 <div className="h-4 w-32 animate-pulse rounded bg-slate-100" />
               </div>
               <div className="mt-4 h-8 w-24 animate-pulse rounded bg-slate-100" />

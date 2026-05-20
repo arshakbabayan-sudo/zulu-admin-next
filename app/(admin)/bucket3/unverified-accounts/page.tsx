@@ -128,7 +128,7 @@ export default function Bucket3UnverifiedAccountsPage() {
               }
             }}
             placeholder="Search by name or email"
-            className="h-9 w-full rounded-zulu border border-default bg-white pl-9 pr-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+            className="h-10 w-full rounded-zulu border border-default bg-white pl-9 pr-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
           />
         </div>
       </div>

@@ -284,7 +284,7 @@ export default function Bucket3BlockDatesPage() {
                 setPage(1);
                 setFilterItemId(e.target.value);
               }}
-              className="h-9 max-w-[140px]"
+              className="h-10 max-w-[140px]"
               placeholder="filter"
             />
           </label>

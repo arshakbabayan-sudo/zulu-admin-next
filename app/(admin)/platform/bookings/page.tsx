@@ -161,7 +161,7 @@ export default function PlatformBookingsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t("admin.platform_bookings.search_placeholder")}
-              className="h-9 w-full rounded-zulu border border-default bg-white pl-9 pr-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+              className="h-10 w-full rounded-zulu border border-default bg-white pl-9 pr-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
             />
           </div>
           <label className="flex items-center gap-2 text-sm text-fg-t6">
@@ -324,7 +324,7 @@ export default function PlatformBookingsPage() {
                     type="button"
                     disabled={busyId === r.id}
                     onClick={() => void handleConfirm(r.id)}
-                    className="inline-flex h-9 flex-1 items-center justify-center rounded-zulu border border-success-200 bg-success-50 px-3 text-sm font-medium text-success-700 transition hover:bg-success-100 disabled:opacity-40"
+                    className="inline-flex h-10 flex-1 items-center justify-center rounded-zulu border border-success-200 bg-success-50 px-3 text-sm font-medium text-success-700 transition hover:bg-success-100 disabled:opacity-40"
                   >
                     {t("admin.platform_bookings.confirm")}
                   </button>
@@ -333,7 +333,7 @@ export default function PlatformBookingsPage() {
                   type="button"
                   disabled={busyId === r.id}
                   onClick={() => void handleCancel(r.id)}
-                  className="inline-flex h-9 flex-1 items-center justify-center rounded-zulu border border-error-200 bg-white px-3 text-sm font-medium text-error-700 transition hover:bg-error-50 disabled:opacity-40"
+                  className="inline-flex h-10 flex-1 items-center justify-center rounded-zulu border border-error-200 bg-white px-3 text-sm font-medium text-error-700 transition hover:bg-error-50 disabled:opacity-40"
                 >
                   {t("common.cancel")}
                 </button>
