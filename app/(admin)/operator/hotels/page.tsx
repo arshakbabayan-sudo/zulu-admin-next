@@ -4,7 +4,6 @@
 
 import { ContentLanguagePill } from "@/components/ContentLanguagePill";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
-import { HotelsXlsxImportModal } from "@/components/HotelsXlsxImportModal";
 import { ImageUploadField } from "@/components/ImageUploadField";
 import { ImportExportButtons } from "@/components/ImportExportButtons";
 import { OfferStatusBadge, isSubmittableStatus } from "@/components/OfferStatusBadge";
@@ -49,7 +48,6 @@ import {
   type HotelAccommodationType,
 } from "@/lib/inventory-crud-api";
 import { csvExportFilename, downloadCsvFile, exportHotelsCsv } from "@/lib/csv-import-export";
-import { buildHotelsTemplateBlob, downloadBlob } from "@/lib/hotels-xlsx";
 import {
   HOTEL_API_STAR_RATING_KEY,
   HOTEL_AVAILABILITY_STATUSES,
@@ -72,7 +70,16 @@ import {
   validateHotelOperatorForm,
 } from "@/lib/hotel-ui";
 import { useLanguage } from "@/contexts/LanguageContext";
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
+
+// Lazy-load the XLSX import modal — it pulls in ExcelJS (~200 KB) which is
+// only needed when the operator actually clicks "Import". Module + dep
+// download happens on first render of the modal (gated by importOpen).
+const HotelsXlsxImportModal = dynamic(
+  () => import("@/components/HotelsXlsxImportModal").then((m) => m.HotelsXlsxImportModal),
+  { ssr: false },
+);
 
 const EMPTY: HotelFormPayload = {
   offer_id: "",
@@ -284,6 +291,8 @@ export default function OperatorHotelsPage() {
               exportDisabled={!token}
               onTemplate={async () => {
                 try {
+                  // Lazy-load ExcelJS only when the operator asks for the template.
+                  const { buildHotelsTemplateBlob, downloadBlob } = await import("@/lib/hotels-xlsx");
                   const blob = await buildHotelsTemplateBlob();
                   downloadBlob("hotels-template.xlsx", blob);
                 } catch (e) {
@@ -310,12 +319,14 @@ export default function OperatorHotelsPage() {
           </div>
         }
       />
-      <HotelsXlsxImportModal
-        open={importOpen}
-        token={token}
-        onClose={() => setImportOpen(false)}
-        onSuccess={() => void load()}
-      />
+      {importOpen && (
+        <HotelsXlsxImportModal
+          open
+          token={token}
+          onClose={() => setImportOpen(false)}
+          onSuccess={() => void load()}
+        />
+      )}
       {err && (
         <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
           {err}
