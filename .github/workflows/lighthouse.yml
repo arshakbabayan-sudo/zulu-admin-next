@@ -1,0 +1,64 @@
+name: Lighthouse on production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Cancel any in-flight runs when a new push lands — we only care about
+# the latest deploy's score.
+concurrency:
+  group: lighthouse-admin-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Vercel auto-deploys on every push to main, but the deploy isn't
+      # instantaneous. Sleep 90s before probing so we measure the new
+      # build, not the previous one. (Vercel deploys typically finish
+      # in 60-90s for this repo.)
+      - name: Wait for Vercel deploy
+        run: sleep 90
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Lighthouse CI
+        run: npm install -g @lhci/cli@0.13.x
+
+      - name: Run Lighthouse
+        env:
+          LHCI_BUILD_CONTEXT__CURRENT_HASH: ${{ github.sha }}
+        run: |
+          # Probe two representative routes — login (cold path, no auth)
+          # and /sso (sso landing). Authenticated admin pages need a
+          # session token, which we can't easily mint from CI, so we
+          # measure the public surface only.
+          lhci collect \
+            --url=https://admin.zulu.am/login \
+            --url=https://admin.zulu.am/sso \
+            --numberOfRuns=2 \
+            --settings.preset=desktop
+          lhci assert \
+            --preset=lighthouse:recommended \
+            --assertions.categories:performance="warn" \
+            --assertions.categories:accessibility="error" \
+            --assertions.categories:best-practices="warn" \
+            --assertions.categories:seo="warn" \
+            || echo "::warning::Lighthouse assertions failed — see uploaded report"
+
+      - name: Upload Lighthouse report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-admin-${{ github.sha }}
+          path: .lighthouseci
+          retention-days: 30
