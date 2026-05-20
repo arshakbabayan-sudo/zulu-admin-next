@@ -120,6 +120,7 @@ export function TH({
   if (!sortable) {
     return (
       <th
+        scope="col"
         className={cn(
           "px-4 py-3 whitespace-nowrap",
           align === "right" && "text-right",
@@ -136,6 +137,8 @@ export function TH({
     sortDir === "asc" ? ChevronUp : sortDir === "desc" ? ChevronDown : ChevronsUpDown;
   return (
     <th
+      scope="col"
+      aria-sort={sortDir === "asc" ? "ascending" : sortDir === "desc" ? "descending" : "none"}
       className={cn(
         "px-4 py-3 whitespace-nowrap",
         align === "right" && "text-right",

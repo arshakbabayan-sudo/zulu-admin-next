@@ -699,7 +699,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         </nav>
 
       </aside>
-      <main className="admin-content min-w-0 flex-1 overflow-y-auto p-6">{children}</main>
+      <main id="main-content" className="admin-content min-w-0 flex-1 overflow-y-auto p-6">{children}</main>
       </div>
       {/* Navigation progress hint (subtle, header-attached) */}
       <div

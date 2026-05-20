@@ -45,6 +45,16 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
       >
+        {/* WCAG 2.1 — 2.4.1 Bypass blocks. Hidden until focused; lets
+            keyboard users jump past the sidebar/header chrome on every
+            admin page. Pairs with id="main-content" on AdminShell's
+            <main> wrapper. */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded focus:bg-bg-base focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-fg-base focus:ring-2 focus:ring-primary focus:outline-none"
+        >
+          Skip to content
+        </a>
         <Providers initialLang={htmlLang}>{children}</Providers>
       </body>
     </html>
