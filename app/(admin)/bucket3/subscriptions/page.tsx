@@ -10,6 +10,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessSuperAdminOnlyPlatformNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
@@ -84,6 +85,7 @@ function statusTier(s: CompanySubscription["status"]): "neutral" | "info" | "suc
 
 export default function Bucket3SubscriptionsPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessSuperAdminOnlyPlatformNav(user);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [subs, setSubs] = useState<CompanySubscription[]>([]);
@@ -153,7 +155,7 @@ export default function Bucket3SubscriptionsPage() {
   async function createPlan() {
     if (!token) return;
     if (!planForm.code.trim() || !planForm.name.trim()) {
-      setErr("Code and name required");
+      setErr(t("admin.bucket3.subscriptions.error.code_name_required"));
       return;
     }
     setBusy(true);
@@ -195,7 +197,7 @@ export default function Bucket3SubscriptionsPage() {
   async function assignPlan() {
     if (!token) return;
     if (!assign.company_id.trim() || !assign.plan_id.trim()) {
-      setErr("Company id and plan id required");
+      setErr(t("admin.bucket3.subscriptions.error.company_plan_required"));
       return;
     }
     setBusy(true);
@@ -233,7 +235,7 @@ export default function Bucket3SubscriptionsPage() {
   if (!allowed) {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">Subscriptions</h1>
+        <h1 className="admin-page-title">{t("admin.bucket3.subscriptions.title")}</h1>
         <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
@@ -244,8 +246,8 @@ export default function Bucket3SubscriptionsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Subscriptions"
-        subtitle="Plan catalog + per-company assignment. Payment-integration auto-renew is parked; period dates are admin-managed."
+        title={t("admin.bucket3.subscriptions.title")}
+        subtitle={t("admin.bucket3.subscriptions.subtitle")}
       />
 
       {err && (
@@ -255,22 +257,22 @@ export default function Bucket3SubscriptionsPage() {
       )}
 
       <section className="admin-card p-4 space-y-3">
-        <h2 className="text-base font-semibold">Plan catalog</h2>
+        <h2 className="text-base font-semibold">{t("admin.bucket3.subscriptions.plan_catalog")}</h2>
         <Table>
           <THead>
             <TR>
-              <TH>Code</TH>
-              <TH>Name</TH>
-              <TH>Monthly</TH>
-              <TH>Annual</TH>
-              <TH>Features</TH>
-              <TH>Order</TH>
-              <TH>Active</TH>
+              <TH>{t("admin.bucket3.subscriptions.col.code")}</TH>
+              <TH>{t("admin.bucket3.subscriptions.col.name")}</TH>
+              <TH>{t("admin.bucket3.subscriptions.col.monthly")}</TH>
+              <TH>{t("admin.bucket3.subscriptions.col.annual")}</TH>
+              <TH>{t("admin.bucket3.subscriptions.col.features")}</TH>
+              <TH>{t("admin.bucket3.subscriptions.col.order")}</TH>
+              <TH>{t("admin.bucket3.subscriptions.col.active")}</TH>
             </TR>
           </THead>
           <TBody>
             {plans.length === 0 ? (
-              <TEmpty colSpan={7}>No plans yet — add the first below.</TEmpty>
+              <TEmpty colSpan={7}>{t("admin.bucket3.subscriptions.empty_plans")}</TEmpty>
             ) : null}
             {plans.map((p) => (
               <TR key={p.id}>
@@ -288,9 +290,9 @@ export default function Bucket3SubscriptionsPage() {
                 <TD className="tabular-nums">{p.display_order}</TD>
                 <TD>
                   {p.is_active ? (
-                    <span className="text-xs font-medium text-success-700">Active</span>
+                    <span className="text-xs font-medium text-success-700">{t("admin.bucket3.subscriptions.status.active")}</span>
                   ) : (
-                    <span className="text-xs text-fg-t6">Inactive</span>
+                    <span className="text-xs text-fg-t6">{t("admin.bucket3.subscriptions.status.inactive")}</span>
                   )}
                 </TD>
               </TR>
@@ -300,23 +302,23 @@ export default function Bucket3SubscriptionsPage() {
       </section>
 
       <section className="admin-card p-4 space-y-3">
-        <h2 className="text-base font-semibold">Add plan</h2>
+        <h2 className="text-base font-semibold">{t("admin.bucket3.subscriptions.add_plan")}</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <FormField label="Code" htmlFor="plan-code" required helperText="lowercase, e.g. free / pro / enterprise">
+          <FormField label={t("admin.bucket3.subscriptions.field.code")} htmlFor="plan-code" required helperText={t("admin.bucket3.subscriptions.field.code_helper")}>
             <Input
               id="plan-code"
               value={planForm.code}
               onChange={(e) => setPlanForm((p) => ({ ...p, code: e.target.value.toLowerCase() }))}
             />
           </FormField>
-          <FormField label="Name" htmlFor="plan-name" required>
+          <FormField label={t("admin.bucket3.subscriptions.field.name")} htmlFor="plan-name" required>
             <Input
               id="plan-name"
               value={planForm.name}
               onChange={(e) => setPlanForm((p) => ({ ...p, name: e.target.value }))}
             />
           </FormField>
-          <FormField label="Currency" htmlFor="plan-currency">
+          <FormField label={t("admin.bucket3.subscriptions.field.currency")} htmlFor="plan-currency">
             <Input
               id="plan-currency"
               value={planForm.currency}
@@ -325,7 +327,7 @@ export default function Bucket3SubscriptionsPage() {
               className="uppercase"
             />
           </FormField>
-          <FormField label="Monthly price" htmlFor="plan-monthly">
+          <FormField label={t("admin.bucket3.subscriptions.field.monthly_price")} htmlFor="plan-monthly">
             <Input
               id="plan-monthly"
               type="number"
@@ -335,7 +337,7 @@ export default function Bucket3SubscriptionsPage() {
               onChange={(e) => setPlanForm((p) => ({ ...p, monthly_price: e.target.value }))}
             />
           </FormField>
-          <FormField label="Annual price" htmlFor="plan-annual">
+          <FormField label={t("admin.bucket3.subscriptions.field.annual_price")} htmlFor="plan-annual">
             <Input
               id="plan-annual"
               type="number"
@@ -345,7 +347,7 @@ export default function Bucket3SubscriptionsPage() {
               onChange={(e) => setPlanForm((p) => ({ ...p, annual_price: e.target.value }))}
             />
           </FormField>
-          <FormField label="Display order" htmlFor="plan-order">
+          <FormField label={t("admin.bucket3.subscriptions.field.display_order")} htmlFor="plan-order">
             <Input
               id="plan-order"
               type="number"
@@ -355,7 +357,7 @@ export default function Bucket3SubscriptionsPage() {
           </FormField>
           {featureCatalog.length > 0 && (
             <div className="sm:col-span-2 lg:col-span-3 space-y-2">
-              <div className="text-sm font-medium text-fg-t7">Features</div>
+              <div className="text-sm font-medium text-fg-t7">{t("admin.bucket3.subscriptions.field.features")}</div>
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {featureCatalog.map((def) => (
                   <div
@@ -390,7 +392,7 @@ export default function Bucket3SubscriptionsPage() {
                 ))}
               </div>
               <p className="text-xs text-fg-t6">
-                Numeric limits: set to <code>-1</code> for unlimited. Toggles default-off mean the feature is gated.
+                {t("admin.bucket3.subscriptions.features_helper")}
               </p>
             </div>
           )}
@@ -398,10 +400,10 @@ export default function Bucket3SubscriptionsPage() {
             <Checkbox
               checked={planForm.is_active}
               onChange={(e) => setPlanForm((p) => ({ ...p, is_active: e.target.checked }))}
-              label="Active"
+              label={t("admin.bucket3.subscriptions.field.active")}
             />
           </div>
-          <FormField label="Description" htmlFor="plan-desc" className="sm:col-span-2 lg:col-span-3">
+          <FormField label={t("admin.bucket3.subscriptions.field.description")} htmlFor="plan-desc" className="sm:col-span-2 lg:col-span-3">
             <Input
               as="textarea"
               id="plan-desc"
@@ -413,15 +415,15 @@ export default function Bucket3SubscriptionsPage() {
         </div>
         <div>
           <Button size="sm" disabled={busy} onClick={() => void createPlan()}>
-            {busy ? "Saving…" : "Add plan"}
+            {busy ? t("common.saving") : t("admin.bucket3.subscriptions.add_plan")}
           </Button>
         </div>
       </section>
 
       <section className="admin-card p-4 space-y-3">
-        <h2 className="text-base font-semibold">Assign plan to company</h2>
+        <h2 className="text-base font-semibold">{t("admin.bucket3.subscriptions.assign_plan")}</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <FormField label="Company id" htmlFor="assign-company" required>
+          <FormField label={t("admin.bucket3.subscriptions.field.company_id")} htmlFor="assign-company" required>
             <Input
               id="assign-company"
               type="number"
@@ -430,13 +432,13 @@ export default function Bucket3SubscriptionsPage() {
               onChange={(e) => setAssign((p) => ({ ...p, company_id: e.target.value }))}
             />
           </FormField>
-          <FormField label="Plan" htmlFor="assign-plan" required>
+          <FormField label={t("admin.bucket3.subscriptions.field.plan")} htmlFor="assign-plan" required>
             <Select
               id="assign-plan"
               value={assign.plan_id}
               onChange={(e) => setAssign((p) => ({ ...p, plan_id: e.target.value }))}
             >
-              <option value="">— pick —</option>
+              <option value="">{t("admin.bucket3.subscriptions.pick")}</option>
               {plans.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.code} — {p.name} ({p.currency} {p.monthly_price.toFixed(2)}/mo)
@@ -444,7 +446,7 @@ export default function Bucket3SubscriptionsPage() {
               ))}
             </Select>
           </FormField>
-          <FormField label="Status" htmlFor="assign-status">
+          <FormField label={t("admin.bucket3.subscriptions.field.status")} htmlFor="assign-status">
             <Select
               id="assign-status"
               value={assign.status}
@@ -458,7 +460,7 @@ export default function Bucket3SubscriptionsPage() {
               <option value="cancelled">cancelled</option>
             </Select>
           </FormField>
-          <FormField label="Billing period" htmlFor="assign-period">
+          <FormField label={t("admin.bucket3.subscriptions.field.billing_period")} htmlFor="assign-period">
             <Select
               id="assign-period"
               value={assign.billing_period}
@@ -473,7 +475,7 @@ export default function Bucket3SubscriptionsPage() {
               <option value="annual">annual</option>
             </Select>
           </FormField>
-          <FormField label="Period starts" htmlFor="assign-starts">
+          <FormField label={t("admin.bucket3.subscriptions.field.period_starts")} htmlFor="assign-starts">
             <Input
               id="assign-starts"
               type="date"
@@ -481,7 +483,7 @@ export default function Bucket3SubscriptionsPage() {
               onChange={(e) => setAssign((p) => ({ ...p, period_starts_at: e.target.value }))}
             />
           </FormField>
-          <FormField label="Period ends" htmlFor="assign-ends">
+          <FormField label={t("admin.bucket3.subscriptions.field.period_ends")} htmlFor="assign-ends">
             <Input
               id="assign-ends"
               type="date"
@@ -489,7 +491,7 @@ export default function Bucket3SubscriptionsPage() {
               onChange={(e) => setAssign((p) => ({ ...p, period_ends_at: e.target.value }))}
             />
           </FormField>
-          <FormField label="Notes" htmlFor="assign-notes" className="sm:col-span-2 lg:col-span-3">
+          <FormField label={t("admin.bucket3.subscriptions.field.notes")} htmlFor="assign-notes" className="sm:col-span-2 lg:col-span-3">
             <Input
               as="textarea"
               id="assign-notes"
@@ -501,27 +503,27 @@ export default function Bucket3SubscriptionsPage() {
         </div>
         <div>
           <Button size="sm" disabled={busy} onClick={() => void assignPlan()}>
-            {busy ? "Saving…" : "Assign plan"}
+            {busy ? t("common.saving") : t("admin.bucket3.subscriptions.assign")}
           </Button>
         </div>
       </section>
 
       <section className="admin-card p-4 space-y-3">
-        <h2 className="text-base font-semibold">Active company subscriptions</h2>
+        <h2 className="text-base font-semibold">{t("admin.bucket3.subscriptions.active_subscriptions")}</h2>
         <Table>
           <THead>
             <TR>
-              <TH>Company</TH>
-              <TH>Plan</TH>
-              <TH>Status</TH>
-              <TH>Billing</TH>
-              <TH>Period</TH>
-              <TH>Notes</TH>
+              <TH>{t("admin.bucket3.subscriptions.sub_col.company")}</TH>
+              <TH>{t("admin.bucket3.subscriptions.sub_col.plan")}</TH>
+              <TH>{t("admin.bucket3.subscriptions.sub_col.status")}</TH>
+              <TH>{t("admin.bucket3.subscriptions.sub_col.billing")}</TH>
+              <TH>{t("admin.bucket3.subscriptions.sub_col.period")}</TH>
+              <TH>{t("admin.bucket3.subscriptions.sub_col.notes")}</TH>
             </TR>
           </THead>
           <TBody>
             {subs.length === 0 ? (
-              <TEmpty colSpan={6}>No company subscriptions yet.</TEmpty>
+              <TEmpty colSpan={6}>{t("admin.bucket3.subscriptions.empty_subscriptions")}</TEmpty>
             ) : null}
             {subs.map((s) => (
               <TR key={s.id}>

@@ -17,6 +17,7 @@
 
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiSuccessEnvelope } from "@/lib/api-envelope";
 import { Button, FormField, Input, PageHeader } from "@/components/ui";
@@ -33,6 +34,7 @@ function formatDate(value: string | null | undefined): string {
 export default function Bucket3PinSettingsPage() {
   const { token } = useAdminAuth();
   const confirm = useConfirm();
+  const { t } = useLanguage();
   const [status, setStatus] = useState<PinStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -74,19 +76,19 @@ export default function Bucket3PinSettingsPage() {
     setErr(null);
     setSavedAt(null);
     if (!/^\d{4,8}$/.test(newPin)) {
-      setErr("PIN must be 4–8 digits");
+      setErr(t("admin.bucket3.pin_settings.error.pin_format"));
       return;
     }
     if (newPin !== confirmPin) {
-      setErr("PINs do not match");
+      setErr(t("admin.bucket3.pin_settings.error.mismatch"));
       return;
     }
     if (!password) {
-      setErr("Account password required to change PIN");
+      setErr(t("admin.bucket3.pin_settings.error.password_required"));
       return;
     }
     if (status.is_set && !currentPin) {
-      setErr("Current PIN required to change an existing PIN");
+      setErr(t("admin.bucket3.pin_settings.error.current_pin_required"));
       return;
     }
     setBusy(true);
@@ -116,7 +118,7 @@ export default function Bucket3PinSettingsPage() {
     setVerifyResult(null);
     setErr(null);
     if (!/^\d{4,8}$/.test(testPin)) {
-      setErr("PIN must be 4–8 digits");
+      setErr(t("admin.bucket3.pin_settings.error.pin_format"));
       return;
     }
     setBusy(true);
@@ -139,7 +141,7 @@ export default function Bucket3PinSettingsPage() {
     if (!token) return;
     setErr(null);
     if (!clearPassword) {
-      setErr("Account password required to clear PIN");
+      setErr(t("admin.bucket3.pin_settings.error.clear_password_required"));
       return;
     }
     const ok = await confirm({ messageKey: "admin.bucket3.pin_settings.confirm_clear", variant: "danger" });
@@ -164,8 +166,8 @@ export default function Bucket3PinSettingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="PIN settings"
-        subtitle="Set a personal 4–8 digit PIN that protects sensitive admin actions (refunds, force-close, terminate). Separate from your login password."
+        title={t("admin.bucket3.pin_settings.title")}
+        subtitle={t("admin.bucket3.pin_settings.subtitle")}
       />
 
       {err && (
@@ -175,34 +177,34 @@ export default function Bucket3PinSettingsPage() {
       )}
       {savedAt && (
         <div className="rounded-zulu border border-success-200 bg-success-50 px-4 py-2 text-sm text-success-700">
-          Saved at {savedAt}
+          {t("admin.bucket3.pin_settings.saved_at").replace("{time}", savedAt)}
         </div>
       )}
 
       <section className="admin-card p-4 space-y-2">
-        <h2 className="text-base font-semibold">Status</h2>
+        <h2 className="text-base font-semibold">{t("admin.bucket3.pin_settings.status")}</h2>
         {status === null ? (
-          <p className="text-sm text-fg-t6">Loading…</p>
+          <p className="text-sm text-fg-t6">{t("common.loading")}</p>
         ) : status.is_set ? (
           <p className="text-sm text-fg-t8">
-            PIN is set
-            <span className="ml-2 text-xs text-fg-t6">last set {formatDate(status.set_at)}</span>
+            {t("admin.bucket3.pin_settings.pin_is_set")}
+            <span className="ml-2 text-xs text-fg-t6">{t("admin.bucket3.pin_settings.last_set").replace("{date}", formatDate(status.set_at))}</span>
           </p>
         ) : (
-          <p className="text-sm text-warning-700">No PIN set — sensitive actions will fall back to password-only.</p>
+          <p className="text-sm text-warning-700">{t("admin.bucket3.pin_settings.no_pin_set")}</p>
         )}
       </section>
 
       <section className="admin-card p-4 space-y-3">
         <h2 className="text-base font-semibold">
-          {status?.is_set ? "Change PIN" : "Set PIN"}
+          {status?.is_set ? t("admin.bucket3.pin_settings.change_pin") : t("admin.bucket3.pin_settings.set_pin")}
         </h2>
         <div className="grid gap-3 sm:grid-cols-2">
           <FormField
-            label="Account password"
+            label={t("admin.bucket3.pin_settings.field.account_password")}
             htmlFor="pin-password"
             required
-            helperText="Confirms it's really you changing the PIN"
+            helperText={t("admin.bucket3.pin_settings.field.account_password_helper")}
           >
             <Input
               id="pin-password"
@@ -213,7 +215,7 @@ export default function Bucket3PinSettingsPage() {
             />
           </FormField>
           {status?.is_set && (
-            <FormField label="Current PIN" htmlFor="current-pin" required>
+            <FormField label={t("admin.bucket3.pin_settings.field.current_pin")} htmlFor="current-pin" required>
               <Input
                 id="current-pin"
                 type="password"
@@ -224,7 +226,7 @@ export default function Bucket3PinSettingsPage() {
               />
             </FormField>
           )}
-          <FormField label="New PIN (4–8 digits)" htmlFor="new-pin" required>
+          <FormField label={t("admin.bucket3.pin_settings.field.new_pin")} htmlFor="new-pin" required>
             <Input
               id="new-pin"
               type="password"
@@ -234,7 +236,7 @@ export default function Bucket3PinSettingsPage() {
               onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ""))}
             />
           </FormField>
-          <FormField label="Confirm new PIN" htmlFor="confirm-pin" required>
+          <FormField label={t("admin.bucket3.pin_settings.field.confirm_pin")} htmlFor="confirm-pin" required>
             <Input
               id="confirm-pin"
               type="password"
@@ -247,7 +249,7 @@ export default function Bucket3PinSettingsPage() {
         </div>
         <div>
           <Button size="sm" disabled={busy} onClick={() => void handleSetOrChange()}>
-            {busy ? "Saving…" : status?.is_set ? "Change PIN" : "Set PIN"}
+            {busy ? t("common.saving") : status?.is_set ? t("admin.bucket3.pin_settings.change_pin") : t("admin.bucket3.pin_settings.set_pin")}
           </Button>
         </div>
       </section>
@@ -255,12 +257,12 @@ export default function Bucket3PinSettingsPage() {
       {status?.is_set && (
         <>
           <section className="admin-card p-4 space-y-3">
-            <h2 className="text-base font-semibold">Test your PIN</h2>
+            <h2 className="text-base font-semibold">{t("admin.bucket3.pin_settings.test_pin")}</h2>
             <p className="text-xs text-fg-t6">
-              Verify the PIN against the server without performing any action — useful to confirm what you set.
+              {t("admin.bucket3.pin_settings.test_pin_helper")}
             </p>
             <div className="flex flex-wrap items-end gap-3">
-              <FormField label="PIN" htmlFor="test-pin" className="max-w-[220px]">
+              <FormField label={t("admin.bucket3.pin_settings.field.pin")} htmlFor="test-pin" className="max-w-[220px]">
                 <Input
                   id="test-pin"
                   type="password"
@@ -271,23 +273,23 @@ export default function Bucket3PinSettingsPage() {
                 />
               </FormField>
               <Button size="sm" variant="outline" disabled={busy} onClick={() => void handleVerify()}>
-                Verify
+                {t("admin.bucket3.pin_settings.verify")}
               </Button>
               {verifyResult === "ok" && (
-                <span className="text-sm font-medium text-success-700">✓ PIN matches</span>
+                <span className="text-sm font-medium text-success-700">{t("admin.bucket3.pin_settings.pin_matches")}</span>
               )}
               {verifyResult === "fail" && (
-                <span className="text-sm font-medium text-error-700">✗ PIN incorrect</span>
+                <span className="text-sm font-medium text-error-700">{t("admin.bucket3.pin_settings.pin_incorrect")}</span>
               )}
             </div>
           </section>
 
           <section className="admin-card p-4 space-y-3 border-error-100">
-            <h2 className="text-base font-semibold text-error-700">Clear PIN</h2>
+            <h2 className="text-base font-semibold text-error-700">{t("admin.bucket3.pin_settings.clear_pin")}</h2>
             <p className="text-xs text-fg-t6">
-              Removes your PIN. Sensitive actions will fall back to password-only auth until you set a new one.
+              {t("admin.bucket3.pin_settings.clear_pin_helper")}
             </p>
-            <FormField label="Account password" htmlFor="clear-password" required>
+            <FormField label={t("admin.bucket3.pin_settings.field.account_password")} htmlFor="clear-password" required>
               <Input
                 id="clear-password"
                 type="password"
@@ -297,7 +299,7 @@ export default function Bucket3PinSettingsPage() {
               />
             </FormField>
             <Button size="sm" variant="danger" disabled={busy} onClick={() => void handleClear()}>
-              Clear PIN
+              {t("admin.bucket3.pin_settings.clear_pin")}
             </Button>
           </section>
         </>

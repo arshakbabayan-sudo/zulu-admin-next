@@ -138,7 +138,7 @@ export default function Bucket3PayrollPage() {
     if (!token) return;
     setErr(null);
     if (!form.user_id.trim() || !form.period_start || !form.period_end) {
-      setErr("User id and period dates are required");
+      setErr(t("admin.bucket3.payroll.error.dates_and_user"));
       return;
     }
     setBusy(true);
@@ -229,7 +229,7 @@ export default function Bucket3PayrollPage() {
   if (!allowed || forbidden) {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">Payroll</h1>
+        <h1 className="admin-page-title">{t("admin.bucket3.payroll.title")}</h1>
         <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
@@ -240,11 +240,11 @@ export default function Bucket3PayrollPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Payroll"
+        title={t("admin.bucket3.payroll.title")}
         subtitle={
           meta
-            ? `${meta.total} payroll record${meta.total === 1 ? "" : "s"}`
-            : "Per-employee pay periods. Gross & net auto-computed server-side."
+            ? t("admin.bucket3.payroll.subtitle_count").replace("{count}", String(meta.total))
+            : t("admin.bucket3.payroll.subtitle")
         }
       />
 
@@ -255,9 +255,9 @@ export default function Bucket3PayrollPage() {
       )}
 
       <section className="admin-card p-4 space-y-3">
-        <h2 className="text-base font-semibold">Add payroll record</h2>
+        <h2 className="text-base font-semibold">{t("admin.bucket3.payroll.add_record")}</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <FormField label="User id" htmlFor="pr-user" required>
+          <FormField label={t("admin.bucket3.payroll.field.user_id")} htmlFor="pr-user" required>
             <Input
               id="pr-user"
               type="number"
@@ -266,7 +266,7 @@ export default function Bucket3PayrollPage() {
               onChange={(e) => setForm((p) => ({ ...p, user_id: e.target.value }))}
             />
           </FormField>
-          <FormField label="Period starts" htmlFor="pr-start" required>
+          <FormField label={t("admin.bucket3.payroll.field.period_starts")} htmlFor="pr-start" required>
             <Input
               id="pr-start"
               type="date"
@@ -274,7 +274,7 @@ export default function Bucket3PayrollPage() {
               onChange={(e) => setForm((p) => ({ ...p, period_start: e.target.value }))}
             />
           </FormField>
-          <FormField label="Period ends" htmlFor="pr-end" required>
+          <FormField label={t("admin.bucket3.payroll.field.period_ends")} htmlFor="pr-end" required>
             <Input
               id="pr-end"
               type="date"
@@ -282,7 +282,7 @@ export default function Bucket3PayrollPage() {
               onChange={(e) => setForm((p) => ({ ...p, period_end: e.target.value }))}
             />
           </FormField>
-          <FormField label="Base salary" htmlFor="pr-base">
+          <FormField label={t("admin.bucket3.payroll.field.base_salary")} htmlFor="pr-base">
             <Input
               id="pr-base"
               type="number"
@@ -292,7 +292,7 @@ export default function Bucket3PayrollPage() {
               onChange={(e) => setForm((p) => ({ ...p, base_salary: e.target.value }))}
             />
           </FormField>
-          <FormField label="Hours worked" htmlFor="pr-hours">
+          <FormField label={t("admin.bucket3.payroll.field.hours_worked")} htmlFor="pr-hours">
             <Input
               id="pr-hours"
               type="number"
@@ -302,7 +302,7 @@ export default function Bucket3PayrollPage() {
               onChange={(e) => setForm((p) => ({ ...p, hours_worked: e.target.value }))}
             />
           </FormField>
-          <FormField label="Hourly rate" htmlFor="pr-rate">
+          <FormField label={t("admin.bucket3.payroll.field.hourly_rate")} htmlFor="pr-rate">
             <Input
               id="pr-rate"
               type="number"
@@ -312,7 +312,7 @@ export default function Bucket3PayrollPage() {
               onChange={(e) => setForm((p) => ({ ...p, hourly_rate: e.target.value }))}
             />
           </FormField>
-          <FormField label="Commission" htmlFor="pr-comm">
+          <FormField label={t("admin.bucket3.payroll.field.commission")} htmlFor="pr-comm">
             <Input
               id="pr-comm"
               type="number"
@@ -322,7 +322,7 @@ export default function Bucket3PayrollPage() {
               onChange={(e) => setForm((p) => ({ ...p, commission_amount: e.target.value }))}
             />
           </FormField>
-          <FormField label="Bonus" htmlFor="pr-bonus">
+          <FormField label={t("admin.bucket3.payroll.field.bonus")} htmlFor="pr-bonus">
             <Input
               id="pr-bonus"
               type="number"
@@ -332,7 +332,7 @@ export default function Bucket3PayrollPage() {
               onChange={(e) => setForm((p) => ({ ...p, bonus_amount: e.target.value }))}
             />
           </FormField>
-          <FormField label="Deductions" htmlFor="pr-ded">
+          <FormField label={t("admin.bucket3.payroll.field.deductions")} htmlFor="pr-ded">
             <Input
               id="pr-ded"
               type="number"
@@ -342,7 +342,7 @@ export default function Bucket3PayrollPage() {
               onChange={(e) => setForm((p) => ({ ...p, deductions_amount: e.target.value }))}
             />
           </FormField>
-          <FormField label="Currency" htmlFor="pr-curr">
+          <FormField label={t("admin.bucket3.payroll.field.currency")} htmlFor="pr-curr">
             <Input
               id="pr-curr"
               maxLength={3}
@@ -351,7 +351,7 @@ export default function Bucket3PayrollPage() {
               onChange={(e) => setForm((p) => ({ ...p, currency: e.target.value.toUpperCase() }))}
             />
           </FormField>
-          <FormField label="Notes" htmlFor="pr-notes" className="sm:col-span-2 lg:col-span-3">
+          <FormField label={t("admin.bucket3.payroll.field.notes")} htmlFor="pr-notes" className="sm:col-span-2 lg:col-span-3">
             <Input
               as="textarea"
               id="pr-notes"
@@ -362,19 +362,18 @@ export default function Bucket3PayrollPage() {
           </FormField>
         </div>
         <p className="text-xs text-fg-t6">
-          Gross = base + (hourly × hours) + commission + bonus. Net = gross − deductions. Both auto-computed
-          server-side on insert.
+          {t("admin.bucket3.payroll.gross_net_helper")}
         </p>
         <div>
           <Button size="sm" disabled={busy} onClick={() => void handleCreate()}>
-            {busy ? "Saving…" : "Create payroll record"}
+            {busy ? t("common.saving") : t("admin.bucket3.payroll.create_record")}
           </Button>
         </div>
       </section>
 
       <div className="admin-card p-4 flex items-center justify-between gap-3 flex-wrap">
         <label className="flex items-center gap-2 text-sm text-fg-t6">
-          <span className="font-medium text-fg-t7">Status</span>
+          <span className="font-medium text-fg-t7">{t("admin.bucket3.payroll.filter.status")}</span>
           <Select
             fieldSize="sm"
             value={statusFilter}
@@ -384,7 +383,7 @@ export default function Bucket3PayrollPage() {
             }}
             className="!w-auto min-w-[140px]"
           >
-            <option value="">All</option>
+            <option value="">{t("common.all")}</option>
             {STATUSES.map((s) => (
               <option key={s} value={s}>
                 {s}
@@ -393,7 +392,7 @@ export default function Bucket3PayrollPage() {
           </Select>
         </label>
         <Button size="sm" variant="outline" onClick={() => void exportBankBatch()}>
-          Export bank batch (CSV)
+          {t("admin.bucket3.payroll.export_bank_batch")}
         </Button>
       </div>
 
@@ -401,18 +400,18 @@ export default function Bucket3PayrollPage() {
         <THead>
           <TR>
             <TH>#</TH>
-            <TH>Employee</TH>
-            <TH>Period</TH>
-            <TH>Gross</TH>
-            <TH>Deductions</TH>
-            <TH>Net</TH>
-            <TH>Status</TH>
-            <TH align="right">Actions</TH>
+            <TH>{t("admin.bucket3.payroll.col.employee")}</TH>
+            <TH>{t("admin.bucket3.payroll.col.period")}</TH>
+            <TH>{t("admin.bucket3.payroll.col.gross")}</TH>
+            <TH>{t("admin.bucket3.payroll.col.deductions")}</TH>
+            <TH>{t("admin.bucket3.payroll.col.net")}</TH>
+            <TH>{t("admin.bucket3.payroll.col.status")}</TH>
+            <TH align="right">{t("admin.bucket3.payroll.col.actions")}</TH>
           </TR>
         </THead>
         <TBody>
           {rows.length === 0 ? (
-            <TEmpty colSpan={8}>No payroll records yet.</TEmpty>
+            <TEmpty colSpan={8}>{t("admin.bucket3.payroll.empty")}</TEmpty>
           ) : null}
           {rows.map((r) => (
             <TR key={r.id}>
@@ -439,20 +438,20 @@ export default function Bucket3PayrollPage() {
               <TD align="right">
                 <div className="flex justify-end gap-2 flex-wrap">
                   <Button size="sm" variant="ghost" onClick={() => void downloadPayslip(r.id)}>
-                    Payslip
+                    {t("admin.bucket3.payroll.payslip")}
                   </Button>
                   {r.status === "draft" && (
                     <Button size="sm" variant="outline" disabled={busy} onClick={() => void changeStatus(r.id, "finalized")}>
-                      Finalize
+                      {t("admin.bucket3.payroll.finalize")}
                     </Button>
                   )}
                   {r.status === "finalized" && (
                     <Button size="sm" variant="primary" disabled={busy} onClick={() => void changeStatus(r.id, "paid")}>
-                      Mark paid
+                      {t("admin.bucket3.payroll.mark_paid")}
                     </Button>
                   )}
                   {r.status === "paid" && (
-                    <span className="text-xs text-success-700">Paid {formatDate(r.paid_at)}</span>
+                    <span className="text-xs text-success-700">{t("admin.bucket3.payroll.paid").replace("{date}", formatDate(r.paid_at))}</span>
                   )}
                 </div>
               </TD>

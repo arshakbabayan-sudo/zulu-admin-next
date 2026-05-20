@@ -13,6 +13,7 @@
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessOperatorToolsNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
@@ -90,6 +91,7 @@ async function deleteBlocked(
 export default function Bucket3BlockDatesPage() {
   const { token, user } = useAdminAuth();
   const confirm = useConfirm();
+  const { t } = useLanguage();
   const allowed = canAccessOperatorToolsNav(user);
   const [rows, setRows] = useState<BlockedRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -131,11 +133,11 @@ export default function Bucket3BlockDatesPage() {
     if (!token) return;
     setErr(null);
     if (!form.blocked_from || !form.blocked_to) {
-      setErr("From and to dates are required");
+      setErr(t("admin.bucket3.block_dates.error.dates_required"));
       return;
     }
     if (form.blocked_from > form.blocked_to) {
-      setErr("From date must be before to date");
+      setErr(t("admin.bucket3.block_dates.error.from_before_to"));
       return;
     }
     setBusy(true);
@@ -174,7 +176,7 @@ export default function Bucket3BlockDatesPage() {
   if (!allowed || forbidden) {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">Block dates</h1>
+        <h1 className="admin-page-title">{t("admin.bucket3.block_dates.title")}</h1>
         <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
@@ -185,11 +187,11 @@ export default function Bucket3BlockDatesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Block dates"
+        title={t("admin.bucket3.block_dates.title")}
         subtitle={
           meta
-            ? `${meta.total} blocked ranges · oldest first`
-            : "Block dates per inventory item to prevent overbooking when capacity isn't available"
+            ? t("admin.bucket3.block_dates.subtitle_count").replace("{count}", String(meta.total))
+            : t("admin.bucket3.block_dates.subtitle")
         }
       />
 
@@ -200,22 +202,22 @@ export default function Bucket3BlockDatesPage() {
       )}
 
       <section className="admin-card p-4 space-y-3">
-        <h2 className="text-base font-semibold">Add block</h2>
+        <h2 className="text-base font-semibold">{t("admin.bucket3.block_dates.add_block")}</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <FormField label="Item type" htmlFor="block-item-type" required>
+          <FormField label={t("admin.bucket3.block_dates.field.item_type")} htmlFor="block-item-type" required>
             <Select
               id="block-item-type"
               value={form.item_type}
               onChange={(e) => setForm((p) => ({ ...p, item_type: e.target.value as ItemType }))}
             >
-              {ITEM_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
+              {ITEM_TYPES.map((it) => (
+                <option key={it} value={it}>
+                  {it}
                 </option>
               ))}
             </Select>
           </FormField>
-          <FormField label="Item id (optional)" htmlFor="block-item-id" helperText="Leave blank to block all of this type">
+          <FormField label={t("admin.bucket3.block_dates.field.item_id")} htmlFor="block-item-id" helperText={t("admin.bucket3.block_dates.field.item_id_helper")}>
             <Input
               id="block-item-id"
               type="number"
@@ -224,7 +226,7 @@ export default function Bucket3BlockDatesPage() {
               onChange={(e) => setForm((p) => ({ ...p, item_id: e.target.value }))}
             />
           </FormField>
-          <FormField label="From" htmlFor="block-from" required>
+          <FormField label={t("admin.bucket3.block_dates.field.from")} htmlFor="block-from" required>
             <Input
               id="block-from"
               type="date"
@@ -232,7 +234,7 @@ export default function Bucket3BlockDatesPage() {
               onChange={(e) => setForm((p) => ({ ...p, blocked_from: e.target.value }))}
             />
           </FormField>
-          <FormField label="To" htmlFor="block-to" required>
+          <FormField label={t("admin.bucket3.block_dates.field.to")} htmlFor="block-to" required>
             <Input
               id="block-to"
               type="date"
@@ -240,18 +242,18 @@ export default function Bucket3BlockDatesPage() {
               onChange={(e) => setForm((p) => ({ ...p, blocked_to: e.target.value }))}
             />
           </FormField>
-          <FormField label="Reason" htmlFor="block-reason" className="sm:col-span-2 lg:col-span-4">
+          <FormField label={t("admin.bucket3.block_dates.field.reason")} htmlFor="block-reason" className="sm:col-span-2 lg:col-span-4">
             <Input
               id="block-reason"
               value={form.reason}
               onChange={(e) => setForm((p) => ({ ...p, reason: e.target.value }))}
-              placeholder="e.g. Sold out, maintenance, owner reservation"
+              placeholder={t("admin.bucket3.block_dates.field.reason_placeholder")}
             />
           </FormField>
         </div>
         <div>
           <Button size="sm" disabled={busy} onClick={() => void handleCreate()}>
-            {busy ? "Saving…" : "Add block"}
+            {busy ? t("common.saving") : t("admin.bucket3.block_dates.add_block")}
           </Button>
         </div>
       </section>
@@ -259,7 +261,7 @@ export default function Bucket3BlockDatesPage() {
       <div className="admin-card p-4">
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-sm text-fg-t6">
-            <span className="font-medium text-fg-t7">Item type</span>
+            <span className="font-medium text-fg-t7">{t("admin.bucket3.block_dates.field.item_type")}</span>
             <Select
               fieldSize="sm"
               value={filterType}
@@ -269,16 +271,16 @@ export default function Bucket3BlockDatesPage() {
               }}
               className="!w-auto min-w-[140px]"
             >
-              <option value="">All</option>
-              {ITEM_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
+              <option value="">{t("common.all")}</option>
+              {ITEM_TYPES.map((it) => (
+                <option key={it} value={it}>
+                  {it}
                 </option>
               ))}
             </Select>
           </label>
           <label className="flex items-center gap-2 text-sm text-fg-t6">
-            <span className="font-medium text-fg-t7">Item id</span>
+            <span className="font-medium text-fg-t7">{t("admin.bucket3.block_dates.filter.item_id")}</span>
             <Input
               type="number"
               min={1}
@@ -288,7 +290,7 @@ export default function Bucket3BlockDatesPage() {
                 setFilterItemId(e.target.value);
               }}
               className="h-10 max-w-[140px]"
-              placeholder="filter"
+              placeholder={t("admin.bucket3.block_dates.filter.placeholder")}
             />
           </label>
         </div>
@@ -298,18 +300,18 @@ export default function Bucket3BlockDatesPage() {
         <THead>
           <TR>
             <TH>#</TH>
-            <TH>Type</TH>
-            <TH>Item</TH>
-            <TH>From</TH>
-            <TH>To</TH>
-            <TH>Reason</TH>
-            <TH>Company</TH>
-            <TH align="right">Actions</TH>
+            <TH>{t("admin.bucket3.block_dates.col.type")}</TH>
+            <TH>{t("admin.bucket3.block_dates.col.item")}</TH>
+            <TH>{t("admin.bucket3.block_dates.col.from")}</TH>
+            <TH>{t("admin.bucket3.block_dates.col.to")}</TH>
+            <TH>{t("admin.bucket3.block_dates.col.reason")}</TH>
+            <TH>{t("admin.bucket3.block_dates.col.company")}</TH>
+            <TH align="right">{t("admin.bucket3.block_dates.col.actions")}</TH>
           </TR>
         </THead>
         <TBody>
           {rows.length === 0 ? (
-            <TEmpty colSpan={8}>No blocked dates yet.</TEmpty>
+            <TEmpty colSpan={8}>{t("admin.bucket3.block_dates.empty")}</TEmpty>
           ) : null}
           {rows.map((r) => (
             <TR key={r.id}>
@@ -327,7 +329,7 @@ export default function Bucket3BlockDatesPage() {
                   disabled={busy}
                   onClick={() => void handleDelete(r.id)}
                 >
-                  Remove
+                  {t("common.remove")}
                 </Button>
               </TD>
             </TR>

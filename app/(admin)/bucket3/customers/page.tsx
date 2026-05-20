@@ -14,6 +14,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
@@ -47,6 +48,7 @@ function formatDate(value: string | null | undefined): string {
 
 export default function Bucket3CustomersPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<CustomerRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -83,7 +85,7 @@ export default function Bucket3CustomersPage() {
   if (!allowed || forbidden) {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">Customers (B2C)</h1>
+        <h1 className="admin-page-title">{t("admin.bucket3.customers.title")}</h1>
         <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
@@ -94,11 +96,14 @@ export default function Bucket3CustomersPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Customers (B2C)"
+        title={t("admin.bucket3.customers.title")}
         subtitle={
           meta
-            ? `${meta.total} customers · page ${meta.current_page} of ${meta.last_page}`
-            : "End customers booking directly through ZULU"
+            ? t("admin.bucket3.customers.subtitle_count")
+                .replace("{count}", String(meta.total))
+                .replace("{page}", String(meta.current_page))
+                .replace("{last}", String(meta.last_page))
+            : t("admin.bucket3.customers.subtitle")
         }
       />
 
@@ -119,7 +124,7 @@ export default function Bucket3CustomersPage() {
                   setSearch(searchDraft.trim());
                 }
               }}
-              placeholder="Search by name, email, or phone"
+              placeholder={t("admin.bucket3.customers.search_placeholder")}
               className="h-10 w-full rounded-zulu border border-default bg-white pl-9 pr-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
             />
           </div>
@@ -130,10 +135,10 @@ export default function Bucket3CustomersPage() {
               setSearch(searchDraft.trim());
             }}
           >
-            Apply
+            {t("common.apply")}
           </Button>
           <label className="flex items-center gap-2 text-sm text-fg-t6">
-            <span className="font-medium text-fg-t7">Status</span>
+            <span className="font-medium text-fg-t7">{t("admin.bucket3.customers.filter.status")}</span>
             <Select
               fieldSize="sm"
               value={statusFilter}
@@ -145,14 +150,14 @@ export default function Bucket3CustomersPage() {
             >
               {CUSTOMER_STATUSES.map((s) => (
                 <option key={s} value={s}>
-                  {s ? s.charAt(0).toUpperCase() + s.slice(1) : "All"}
+                  {s ? s.charAt(0).toUpperCase() + s.slice(1) : t("common.all")}
                 </option>
               ))}
             </Select>
           </label>
           <Button variant="outline" size="sm" onClick={() => void load()}>
             <RefreshCw className="h-4 w-4" aria-hidden />
-            Refresh
+            {t("admin.bucket3.customers.refresh")}
           </Button>
         </div>
       </div>
@@ -167,20 +172,20 @@ export default function Bucket3CustomersPage() {
         <THead>
           <TR>
             <TH>#</TH>
-            <TH>Name</TH>
-            <TH>Email</TH>
-            <TH>Phone</TH>
-            <TH>Status</TH>
-            <TH>Bookings</TH>
-            <TH>Language</TH>
-            <TH>Nationality</TH>
-            <TH>Joined</TH>
+            <TH>{t("admin.bucket3.customers.col.name")}</TH>
+            <TH>{t("admin.bucket3.customers.col.email")}</TH>
+            <TH>{t("admin.bucket3.customers.col.phone")}</TH>
+            <TH>{t("admin.bucket3.customers.col.status")}</TH>
+            <TH>{t("admin.bucket3.customers.col.bookings")}</TH>
+            <TH>{t("admin.bucket3.customers.col.language")}</TH>
+            <TH>{t("admin.bucket3.customers.col.nationality")}</TH>
+            <TH>{t("admin.bucket3.customers.col.joined")}</TH>
           </TR>
         </THead>
         <TBody>
           {rows.length === 0 ? (
             <TEmpty colSpan={9}>
-              {search.trim() || statusFilter ? "No customers match the filter." : "No B2C customers yet."}
+              {search.trim() || statusFilter ? t("admin.bucket3.customers.empty_filter") : t("admin.bucket3.customers.empty")}
             </TEmpty>
           ) : null}
           {rows.map((c) => (

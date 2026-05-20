@@ -14,6 +14,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
@@ -72,6 +73,7 @@ async function fetchServiceLogs(
 
 export default function Bucket3ServiceLogsPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<AuditRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -103,7 +105,7 @@ export default function Bucket3ServiceLogsPage() {
   if (!allowed || forbidden) {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">Service logs</h1>
+        <h1 className="admin-page-title">{t("admin.bucket3.service_logs.title")}</h1>
         <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
@@ -114,18 +116,21 @@ export default function Bucket3ServiceLogsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Service logs"
+        title={t("admin.bucket3.service_logs.title")}
         subtitle={
           meta
-            ? `${meta.total} service events · page ${meta.current_page} of ${meta.last_page}`
-            : "Operations-scoped subset of the audit log (data_change / financial / approval / contract)"
+            ? t("admin.bucket3.service_logs.subtitle_count")
+                .replace("{count}", String(meta.total))
+                .replace("{page}", String(meta.current_page))
+                .replace("{last}", String(meta.last_page))
+            : t("admin.bucket3.service_logs.subtitle")
         }
         actions={
           <Link
             href="/platform/audit-logs"
             className="inline-flex h-10 items-center rounded-md border-2 border-primary-500 px-4 text-ds-button-s font-ds-button-s font-semibold text-primary-500 transition hover:bg-primary-50"
           >
-            Full audit log →
+            {t("admin.bucket3.service_logs.full_audit_log")}
           </Link>
         }
       />
@@ -147,12 +152,12 @@ export default function Bucket3ServiceLogsPage() {
                   setSearch(searchDraft.trim());
                 }
               }}
-              placeholder="Search by action or subject id"
+              placeholder={t("admin.bucket3.service_logs.search_placeholder")}
               className="h-10 w-full rounded-zulu border border-default bg-white pl-9 pr-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
             />
           </div>
           <label className="flex items-center gap-2 text-sm text-fg-t6">
-            <span className="font-medium text-fg-t7">Category</span>
+            <span className="font-medium text-fg-t7">{t("admin.bucket3.service_logs.filter.category")}</span>
             <Select
               fieldSize="sm"
               value={category}
@@ -162,7 +167,7 @@ export default function Bucket3ServiceLogsPage() {
               }}
               className="!w-auto min-w-[160px]"
             >
-              <option value="">All service categories</option>
+              <option value="">{t("admin.bucket3.service_logs.all_categories")}</option>
               {SERVICE_CATEGORIES.map((c) => (
                 <option key={c} value={c}>
                   {c}
@@ -183,16 +188,16 @@ export default function Bucket3ServiceLogsPage() {
         <THead>
           <TR>
             <TH>#</TH>
-            <TH>Category</TH>
-            <TH>Action</TH>
-            <TH>Actor</TH>
-            <TH>Subject</TH>
-            <TH>When</TH>
+            <TH>{t("admin.bucket3.service_logs.col.category")}</TH>
+            <TH>{t("admin.bucket3.service_logs.col.action")}</TH>
+            <TH>{t("admin.bucket3.service_logs.col.actor")}</TH>
+            <TH>{t("admin.bucket3.service_logs.col.subject")}</TH>
+            <TH>{t("admin.bucket3.service_logs.col.when")}</TH>
           </TR>
         </THead>
         <TBody>
           {rows.length === 0 ? (
-            <TEmpty colSpan={6}>No service-log entries match the filter.</TEmpty>
+            <TEmpty colSpan={6}>{t("admin.bucket3.service_logs.empty")}</TEmpty>
           ) : null}
           {rows.map((r) => (
             <TR key={r.id}>

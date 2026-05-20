@@ -14,6 +14,7 @@
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessOperatorToolsNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
@@ -111,6 +112,7 @@ async function deleteCatalogItem(token: string, id: number) {
 export default function Bucket3ServiceCatalogPage() {
   const { token, user } = useAdminAuth();
   const confirm = useConfirm();
+  const { t } = useLanguage();
   const allowed = canAccessOperatorToolsNav(user);
   const [rows, setRows] = useState<ServiceRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -163,7 +165,7 @@ export default function Bucket3ServiceCatalogPage() {
     if (!token) return;
     setErr(null);
     if (!form.name.trim()) {
-      setErr("Name is required");
+      setErr(t("admin.bucket3.service_catalog.error.name_required"));
       return;
     }
     const body: Record<string, unknown> = {
@@ -210,7 +212,7 @@ export default function Bucket3ServiceCatalogPage() {
   if (!allowed || forbidden) {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">Service catalog</h1>
+        <h1 className="admin-page-title">{t("admin.bucket3.service_catalog.title")}</h1>
         <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
@@ -221,11 +223,11 @@ export default function Bucket3ServiceCatalogPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Service catalog"
+        title={t("admin.bucket3.service_catalog.title")}
         subtitle={
           meta
-            ? `${meta.total} catalog item${meta.total === 1 ? "" : "s"}`
-            : "Generic bookable services alongside standard inventory"
+            ? t("admin.bucket3.service_catalog.subtitle_count").replace("{count}", String(meta.total))
+            : t("admin.bucket3.service_catalog.subtitle")
         }
       />
 
@@ -238,32 +240,32 @@ export default function Bucket3ServiceCatalogPage() {
       <section className="admin-card p-4 space-y-3">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-base font-semibold">
-            {editingId != null ? `Edit catalog item #${editingId}` : "Add catalog item"}
+            {editingId != null ? t("admin.bucket3.service_catalog.edit_item").replace("{id}", String(editingId)) : t("admin.bucket3.service_catalog.add_item")}
           </h2>
           {editingId != null && (
             <Button variant="outline" size="sm" onClick={clearEdit}>
-              Cancel edit
+              {t("admin.bucket3.service_catalog.cancel_edit")}
             </Button>
           )}
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <FormField label="Name" htmlFor="sc-name" required className="sm:col-span-2 lg:col-span-3">
+          <FormField label={t("admin.bucket3.service_catalog.field.name")} htmlFor="sc-name" required className="sm:col-span-2 lg:col-span-3">
             <Input
               id="sc-name"
               value={form.name}
               onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-              placeholder="e.g. Airport meet-and-greet"
+              placeholder={t("admin.bucket3.service_catalog.field.name_placeholder")}
             />
           </FormField>
-          <FormField label="Category" htmlFor="sc-category">
+          <FormField label={t("admin.bucket3.service_catalog.field.category")} htmlFor="sc-category">
             <Input
               id="sc-category"
               value={form.category}
               onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
-              placeholder="e.g. concierge, transport-extra"
+              placeholder={t("admin.bucket3.service_catalog.field.category_placeholder")}
             />
           </FormField>
-          <FormField label="Base price" htmlFor="sc-price">
+          <FormField label={t("admin.bucket3.service_catalog.field.base_price")} htmlFor="sc-price">
             <Input
               id="sc-price"
               type="number"
@@ -273,7 +275,7 @@ export default function Bucket3ServiceCatalogPage() {
               onChange={(e) => setForm((p) => ({ ...p, base_price: e.target.value }))}
             />
           </FormField>
-          <FormField label="Currency" htmlFor="sc-currency">
+          <FormField label={t("admin.bucket3.service_catalog.field.currency")} htmlFor="sc-currency">
             <Input
               id="sc-currency"
               value={form.currency}
@@ -282,13 +284,13 @@ export default function Bucket3ServiceCatalogPage() {
               className="uppercase"
             />
           </FormField>
-          <FormField label="Unit" htmlFor="sc-unit">
+          <FormField label={t("admin.bucket3.service_catalog.field.unit")} htmlFor="sc-unit">
             <Select
               id="sc-unit"
               value={form.unit}
               onChange={(e) => setForm((p) => ({ ...p, unit: e.target.value as Unit | "" }))}
             >
-              <option value="">— pick —</option>
+              <option value="">{t("admin.bucket3.service_catalog.pick")}</option>
               {UNITS.map((u) => (
                 <option key={u} value={u}>
                   {u}
@@ -300,10 +302,10 @@ export default function Bucket3ServiceCatalogPage() {
             <Checkbox
               checked={form.is_active}
               onChange={(e) => setForm((p) => ({ ...p, is_active: e.target.checked }))}
-              label="Active"
+              label={t("admin.bucket3.service_catalog.field.active")}
             />
           </div>
-          <FormField label="Description" htmlFor="sc-desc" className="sm:col-span-2 lg:col-span-3">
+          <FormField label={t("admin.bucket3.service_catalog.field.description")} htmlFor="sc-desc" className="sm:col-span-2 lg:col-span-3">
             <Input
               as="textarea"
               id="sc-desc"
@@ -315,7 +317,7 @@ export default function Bucket3ServiceCatalogPage() {
         </div>
         <div>
           <Button size="sm" disabled={busy} onClick={() => void handleSave()}>
-            {busy ? "Saving…" : editingId != null ? "Save changes" : "Add catalog item"}
+            {busy ? t("common.saving") : editingId != null ? t("admin.bucket3.service_catalog.save_changes") : t("admin.bucket3.service_catalog.add_item")}
           </Button>
         </div>
       </section>
@@ -332,7 +334,7 @@ export default function Bucket3ServiceCatalogPage() {
                 setSearch(searchDraft.trim());
               }
             }}
-            placeholder="Search by name or category"
+            placeholder={t("admin.bucket3.service_catalog.search_placeholder")}
             className="h-10 w-full rounded-zulu border border-default bg-white px-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
           />
         </div>
@@ -342,17 +344,17 @@ export default function Bucket3ServiceCatalogPage() {
         <THead>
           <TR>
             <TH>#</TH>
-            <TH>Name</TH>
-            <TH>Category</TH>
-            <TH>Price</TH>
-            <TH>Unit</TH>
-            <TH>Active</TH>
-            <TH align="right">Actions</TH>
+            <TH>{t("admin.bucket3.service_catalog.col.name")}</TH>
+            <TH>{t("admin.bucket3.service_catalog.col.category")}</TH>
+            <TH>{t("admin.bucket3.service_catalog.col.price")}</TH>
+            <TH>{t("admin.bucket3.service_catalog.col.unit")}</TH>
+            <TH>{t("admin.bucket3.service_catalog.col.active")}</TH>
+            <TH align="right">{t("admin.bucket3.service_catalog.col.actions")}</TH>
           </TR>
         </THead>
         <TBody>
           {rows.length === 0 ? (
-            <TEmpty colSpan={7}>No catalog items yet.</TEmpty>
+            <TEmpty colSpan={7}>{t("admin.bucket3.service_catalog.empty")}</TEmpty>
           ) : null}
           {rows.map((r) => (
             <TR key={r.id}>
@@ -367,15 +369,15 @@ export default function Bucket3ServiceCatalogPage() {
               <TD className="text-xs text-fg-t7">{r.unit ?? "—"}</TD>
               <TD>
                 {r.is_active ? (
-                  <span className="text-xs font-medium text-success-700">Active</span>
+                  <span className="text-xs font-medium text-success-700">{t("admin.bucket3.service_catalog.status.active")}</span>
                 ) : (
-                  <span className="text-xs text-fg-t6">Inactive</span>
+                  <span className="text-xs text-fg-t6">{t("admin.bucket3.service_catalog.status.inactive")}</span>
                 )}
               </TD>
               <TD align="right">
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" size="sm" disabled={busy} onClick={() => startEdit(r)}>
-                    Edit
+                    {t("common.edit")}
                   </Button>
                   <Button
                     variant="danger"
@@ -383,7 +385,7 @@ export default function Bucket3ServiceCatalogPage() {
                     disabled={busy}
                     onClick={() => void handleDelete(r.id)}
                   >
-                    Remove
+                    {t("common.remove")}
                   </Button>
                 </div>
               </TD>

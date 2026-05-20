@@ -10,6 +10,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessOperatorToolsNav, canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
@@ -136,6 +137,7 @@ async function fetchCases(
 
 export default function Bucket3CasesPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessOperatorToolsNav(user) || canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<CaseRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -237,7 +239,7 @@ export default function Bucket3CasesPage() {
     if (!token) return;
     setErr(null);
     if (!compose.title.trim() || !compose.description.trim()) {
-      setErr("Title and description are required");
+      setErr(t("admin.bucket3.cases.error.title_and_description"));
       return;
     }
     setBusy(true);
@@ -290,7 +292,7 @@ export default function Bucket3CasesPage() {
   if (!allowed || forbidden) {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">Cases &amp; Assignments</h1>
+        <h1 className="admin-page-title">{t("admin.bucket3.cases.title")}</h1>
         <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
@@ -301,15 +303,15 @@ export default function Bucket3CasesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Cases & Assignments"
+        title={t("admin.bucket3.cases.title")}
         subtitle={
           meta
-            ? `${meta.total} cases · sorted urgent → low`
-            : "Long-running issues with priority, owner, and structured status"
+            ? t("admin.bucket3.cases.subtitle_count").replace("{count}", String(meta.total))
+            : t("admin.bucket3.cases.subtitle")
         }
         actions={
           <Button size="sm" onClick={() => setComposeOpen(true)}>
-            New case
+            {t("admin.bucket3.cases.new_case")}
           </Button>
         }
       />
@@ -330,12 +332,12 @@ export default function Bucket3CasesPage() {
                 setSearchDraft(e.target.value);
                 setPage(1);
               }}
-              placeholder="Search by case number or title…"
+              placeholder={t("admin.bucket3.cases.search_placeholder")}
               className="h-10 w-full rounded-zulu border border-default bg-white px-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
             />
           </div>
           <label className="flex items-center gap-2 text-sm text-fg-t6">
-            <span className="font-medium text-fg-t7">Status</span>
+            <span className="font-medium text-fg-t7">{t("admin.bucket3.cases.filter.status")}</span>
             <Select
               fieldSize="sm"
               value={statusFilter}
@@ -345,7 +347,7 @@ export default function Bucket3CasesPage() {
               }}
               className="!w-auto min-w-[160px]"
             >
-              <option value="">All</option>
+              <option value="">{t("common.all")}</option>
               {STATUSES.map((s) => (
                 <option key={s} value={s}>
                   {s}
@@ -354,7 +356,7 @@ export default function Bucket3CasesPage() {
             </Select>
           </label>
           <label className="flex items-center gap-2 text-sm text-fg-t6">
-            <span className="font-medium text-fg-t7">Priority</span>
+            <span className="font-medium text-fg-t7">{t("admin.bucket3.cases.filter.priority")}</span>
             <Select
               fieldSize="sm"
               value={priorityFilter}
@@ -364,7 +366,7 @@ export default function Bucket3CasesPage() {
               }}
               className="!w-auto min-w-[140px]"
             >
-              <option value="">All</option>
+              <option value="">{t("common.all")}</option>
               {PRIORITIES.map((p) => (
                 <option key={p} value={p}>
                   {p}
@@ -406,18 +408,18 @@ export default function Bucket3CasesPage() {
       <Table>
         <THead>
           <TR>
-            <TH>Case #</TH>
-            <TH>Title</TH>
-            <TH>Status</TH>
-            <TH>Priority</TH>
-            <TH>SLA</TH>
-            <TH>Assigned</TH>
-            <TH>Opened</TH>
+            <TH>{t("admin.bucket3.cases.col.case_number")}</TH>
+            <TH>{t("admin.bucket3.cases.col.title")}</TH>
+            <TH>{t("admin.bucket3.cases.col.status")}</TH>
+            <TH>{t("admin.bucket3.cases.col.priority")}</TH>
+            <TH>{t("admin.bucket3.cases.col.sla")}</TH>
+            <TH>{t("admin.bucket3.cases.col.assigned")}</TH>
+            <TH>{t("admin.bucket3.cases.col.opened")}</TH>
           </TR>
         </THead>
         <TBody>
           {rows.length === 0 ? (
-            <TEmpty colSpan={7}>No cases match the filter.</TEmpty>
+            <TEmpty colSpan={7}>{t("admin.bucket3.cases.empty")}</TEmpty>
           ) : null}
           {rows.map((r) => {
             const sla = formatSlaChip(r);
@@ -475,28 +477,28 @@ export default function Bucket3CasesPage() {
             </p>
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div>
-                <div className="text-fg-t6">Opened by</div>
+                <div className="text-fg-t6">{t("admin.bucket3.cases.label.opened_by")}</div>
                 <div className="text-fg-t8">{selected.opened_by?.name ?? "—"}</div>
               </div>
               <div>
-                <div className="text-fg-t6">Assigned to</div>
+                <div className="text-fg-t6">{t("admin.bucket3.cases.label.assigned_to")}</div>
                 <div className="text-fg-t8">{selected.assigned_to?.name ?? "—"}</div>
               </div>
               <div>
-                <div className="text-fg-t6">Opened at</div>
+                <div className="text-fg-t6">{t("admin.bucket3.cases.label.opened_at")}</div>
                 <div className="text-fg-t8">{formatDate(selected.opened_at)}</div>
               </div>
               <div>
-                <div className="text-fg-t6">Closed at</div>
+                <div className="text-fg-t6">{t("admin.bucket3.cases.label.closed_at")}</div>
                 <div className="text-fg-t8">{formatDate(selected.closed_at)}</div>
               </div>
               <div className="col-span-2">
-                <div className="text-fg-t6">Company</div>
+                <div className="text-fg-t6">{t("admin.bucket3.cases.label.company")}</div>
                 <div className="text-fg-t8">{selected.company_name ?? "—"}</div>
               </div>
             </div>
             <div className="space-y-2">
-              <FormField label="Update status" htmlFor="case-status">
+              <FormField label={t("admin.bucket3.cases.field.update_status")} htmlFor="case-status">
                 <Select
                   id="case-status"
                   value={selected.status}
@@ -510,7 +512,7 @@ export default function Bucket3CasesPage() {
                   ))}
                 </Select>
               </FormField>
-              <FormField label="Update priority" htmlFor="case-priority">
+              <FormField label={t("admin.bucket3.cases.field.update_priority")} htmlFor="case-priority">
                 <Select
                   id="case-priority"
                   value={selected.priority}
@@ -524,7 +526,7 @@ export default function Bucket3CasesPage() {
                   ))}
                 </Select>
               </FormField>
-              <FormField label="Reassign (user id)" htmlFor="case-assign">
+              <FormField label={t("admin.bucket3.cases.field.reassign")} htmlFor="case-assign">
                 <Input
                   id="case-assign"
                   type="number"
@@ -539,7 +541,7 @@ export default function Bucket3CasesPage() {
                   disabled={busy}
                 />
               </FormField>
-              <FormField label="Closing notes" htmlFor="case-closing-notes">
+              <FormField label={t("admin.bucket3.cases.field.closing_notes")} htmlFor="case-closing-notes">
                 <Input
                   as="textarea"
                   id="case-closing-notes"
@@ -553,12 +555,12 @@ export default function Bucket3CasesPage() {
             {/* Conversation thread */}
             <div className="space-y-2 border-t border-default pt-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-fg-t8">Conversation</h3>
-                <span className="text-xs text-fg-t6">{replies.length} message{replies.length === 1 ? "" : "s"}</span>
+                <h3 className="text-sm font-semibold text-fg-t8">{t("admin.bucket3.cases.conversation")}</h3>
+                <span className="text-xs text-fg-t6">{t("admin.bucket3.cases.replies_count").replace("{count}", String(replies.length))}</span>
               </div>
               <div className="max-h-64 space-y-2 overflow-y-auto rounded-zulu border border-default bg-figma-bg-1/30 p-3">
                 {replies.length === 0 ? (
-                  <p className="text-xs text-fg-t6">No replies yet. Start the conversation below.</p>
+                  <p className="text-xs text-fg-t6">{t("admin.bucket3.cases.no_replies")}</p>
                 ) : (
                   replies.map((r) => (
                     <div
@@ -574,7 +576,7 @@ export default function Bucket3CasesPage() {
                         <div className="flex items-center gap-2 text-fg-t6">
                           {r.visibility === "internal" && (
                             <span className="rounded bg-warning-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning-900">
-                              Internal
+                              {t("admin.bucket3.cases.internal")}
                             </span>
                           )}
                           <span>{formatDate(r.created_at)}</span>
@@ -585,14 +587,14 @@ export default function Bucket3CasesPage() {
                   ))
                 )}
               </div>
-              <FormField label="Reply" htmlFor="case-reply-body">
+              <FormField label={t("admin.bucket3.cases.field.reply")} htmlFor="case-reply-body">
                 <Input
                   as="textarea"
                   id="case-reply-body"
                   rows={3}
                   value={replyDraft}
                   onChange={(e) => setReplyDraft(e.target.value)}
-                  placeholder="Type your reply…"
+                  placeholder={t("admin.bucket3.cases.field.reply_placeholder")}
                 />
               </FormField>
               <div className="flex flex-wrap gap-2">
@@ -602,7 +604,7 @@ export default function Bucket3CasesPage() {
                   disabled={replySending || !replyDraft.trim()}
                   onClick={() => void sendReply("public")}
                 >
-                  {replySending ? "Sending…" : "Send reply"}
+                  {replySending ? t("admin.bucket3.cases.sending") : t("admin.bucket3.cases.send_reply")}
                 </Button>
                 {isStaff && (
                   <Button
@@ -611,7 +613,7 @@ export default function Bucket3CasesPage() {
                     disabled={replySending || !replyDraft.trim()}
                     onClick={() => void sendReply("internal")}
                   >
-                    Send internal note
+                    {t("admin.bucket3.cases.send_internal")}
                   </Button>
                 )}
               </div>
@@ -619,7 +621,7 @@ export default function Bucket3CasesPage() {
 
             <div className="flex gap-2">
               <Button size="sm" variant="ghost" onClick={() => setSelected(null)}>
-                Close
+                {t("admin.bucket3.cases.close")}
               </Button>
             </div>
           </div>
@@ -636,15 +638,15 @@ export default function Bucket3CasesPage() {
             className="my-12 w-full max-w-2xl rounded-zulu bg-white p-6 shadow-zulu-card space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-lg font-semibold">New case</h2>
-            <FormField label="Title" htmlFor="case-new-title" required>
+            <h2 className="text-lg font-semibold">{t("admin.bucket3.cases.new_case")}</h2>
+            <FormField label={t("admin.bucket3.cases.field.title")} htmlFor="case-new-title" required>
               <Input
                 id="case-new-title"
                 value={compose.title}
                 onChange={(e) => setCompose((p) => ({ ...p, title: e.target.value }))}
               />
             </FormField>
-            <FormField label="Description" htmlFor="case-new-desc" required>
+            <FormField label={t("admin.bucket3.cases.field.description")} htmlFor="case-new-desc" required>
               <Input
                 as="textarea"
                 id="case-new-desc"
@@ -654,7 +656,7 @@ export default function Bucket3CasesPage() {
               />
             </FormField>
             <div className="grid gap-3 sm:grid-cols-2">
-              <FormField label="Priority" htmlFor="case-new-priority">
+              <FormField label={t("admin.bucket3.cases.field.priority")} htmlFor="case-new-priority">
                 <Select
                   id="case-new-priority"
                   value={compose.priority}
@@ -667,7 +669,7 @@ export default function Bucket3CasesPage() {
                   ))}
                 </Select>
               </FormField>
-              <FormField label="Company id (optional)" htmlFor="case-new-company">
+              <FormField label={t("admin.bucket3.cases.field.company_id")} htmlFor="case-new-company">
                 <Input
                   id="case-new-company"
                   type="number"
@@ -677,7 +679,7 @@ export default function Bucket3CasesPage() {
                 />
               </FormField>
               <FormField
-                label="Assign to user id (optional)"
+                label={t("admin.bucket3.cases.field.assignee")}
                 htmlFor="case-new-assignee"
                 className="sm:col-span-2"
               >
@@ -692,10 +694,10 @@ export default function Bucket3CasesPage() {
             </div>
             <div className="flex gap-2">
               <Button size="sm" disabled={busy} onClick={() => void handleCreate()}>
-                {busy ? "Creating…" : "Create case"}
+                {busy ? t("admin.bucket3.cases.creating") : t("admin.bucket3.cases.create")}
               </Button>
               <Button size="sm" variant="outline" onClick={() => setComposeOpen(false)}>
-                Cancel
+                {t("common.cancel")}
               </Button>
             </div>
           </div>

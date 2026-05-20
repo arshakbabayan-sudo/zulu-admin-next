@@ -13,6 +13,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
@@ -66,6 +67,7 @@ async function fetchEmployees(
 
 export default function Bucket3EmployeesPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<EmployeeRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -97,7 +99,7 @@ export default function Bucket3EmployeesPage() {
   if (!allowed || forbidden) {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">Employees</h1>
+        <h1 className="admin-page-title">{t("admin.bucket3.employees.title")}</h1>
         <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
@@ -108,11 +110,11 @@ export default function Bucket3EmployeesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Employees"
+        title={t("admin.bucket3.employees.title")}
         subtitle={
           meta
-            ? `${meta.total} staff users across all companies`
-            : "Staff users belonging to operator / agent companies"
+            ? t("admin.bucket3.employees.subtitle_count").replace("{count}", String(meta.total))
+            : t("admin.bucket3.employees.subtitle")
         }
       />
 
@@ -133,12 +135,12 @@ export default function Bucket3EmployeesPage() {
                   setSearch(searchDraft.trim());
                 }
               }}
-              placeholder="Search by name or email"
+              placeholder={t("admin.bucket3.employees.search_placeholder")}
               className="h-10 w-full rounded-zulu border border-default bg-white pl-9 pr-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
             />
           </div>
           <label className="flex items-center gap-2 text-sm text-fg-t6">
-            <span className="font-medium text-fg-t7">Status</span>
+            <span className="font-medium text-fg-t7">{t("admin.bucket3.employees.filter.status")}</span>
             <Select
               fieldSize="sm"
               value={statusFilter}
@@ -148,11 +150,11 @@ export default function Bucket3EmployeesPage() {
               }}
               className="!w-auto min-w-[140px]"
             >
-              <option value="">All</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="pending">Pending</option>
-              <option value="suspended">Suspended</option>
+              <option value="">{t("common.all")}</option>
+              <option value="active">{t("admin.bucket3.employees.status.active")}</option>
+              <option value="inactive">{t("admin.bucket3.employees.status.inactive")}</option>
+              <option value="pending">{t("admin.bucket3.employees.status.pending")}</option>
+              <option value="suspended">{t("admin.bucket3.employees.status.suspended")}</option>
             </Select>
           </label>
         </div>
@@ -168,16 +170,16 @@ export default function Bucket3EmployeesPage() {
         <THead>
           <TR>
             <TH>#</TH>
-            <TH>Name</TH>
-            <TH>Email</TH>
-            <TH>Status</TH>
-            <TH>Companies</TH>
-            <TH>Joined</TH>
+            <TH>{t("admin.bucket3.employees.col.name")}</TH>
+            <TH>{t("admin.bucket3.employees.col.email")}</TH>
+            <TH>{t("admin.bucket3.employees.col.status")}</TH>
+            <TH>{t("admin.bucket3.employees.col.companies")}</TH>
+            <TH>{t("admin.bucket3.employees.col.joined")}</TH>
           </TR>
         </THead>
         <TBody>
           {rows.length === 0 ? (
-            <TEmpty colSpan={6}>No employees match the filter.</TEmpty>
+            <TEmpty colSpan={6}>{t("admin.bucket3.employees.empty")}</TEmpty>
           ) : null}
           {rows.map((e) => (
             <TR key={e.id} href={`/platform/users/${e.id}`}>

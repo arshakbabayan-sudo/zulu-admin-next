@@ -10,6 +10,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
@@ -62,6 +63,7 @@ async function fetchUnverified(
 
 export default function Bucket3UnverifiedAccountsPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<UnverifiedRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -92,7 +94,7 @@ export default function Bucket3UnverifiedAccountsPage() {
   if (!allowed || forbidden) {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">Unverified accounts</h1>
+        <h1 className="admin-page-title">{t("admin.bucket3.unverified_accounts.title")}</h1>
         <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
@@ -103,11 +105,11 @@ export default function Bucket3UnverifiedAccountsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Unverified accounts"
+        title={t("admin.bucket3.unverified_accounts.title")}
         subtitle={
           meta
-            ? `${meta.total} pending or unconfirmed · oldest first`
-            : "Users with status=pending or unconfirmed email"
+            ? t("admin.bucket3.unverified_accounts.subtitle_count").replace("{count}", String(meta.total))
+            : t("admin.bucket3.unverified_accounts.subtitle")
         }
       />
 
@@ -127,7 +129,7 @@ export default function Bucket3UnverifiedAccountsPage() {
                 setSearch(searchDraft.trim());
               }
             }}
-            placeholder="Search by name or email"
+            placeholder={t("admin.bucket3.unverified_accounts.search_placeholder")}
             className="h-10 w-full rounded-zulu border border-default bg-white pl-9 pr-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
           />
         </div>
@@ -143,18 +145,18 @@ export default function Bucket3UnverifiedAccountsPage() {
         <THead>
           <TR>
             <TH>#</TH>
-            <TH>Name</TH>
-            <TH>Email</TH>
-            <TH>Status</TH>
-            <TH>Email verified</TH>
-            <TH>Intended role</TH>
-            <TH>Companies</TH>
-            <TH>Registered</TH>
+            <TH>{t("admin.bucket3.unverified_accounts.col.name")}</TH>
+            <TH>{t("admin.bucket3.unverified_accounts.col.email")}</TH>
+            <TH>{t("admin.bucket3.unverified_accounts.col.status")}</TH>
+            <TH>{t("admin.bucket3.unverified_accounts.col.email_verified")}</TH>
+            <TH>{t("admin.bucket3.unverified_accounts.col.intended_role")}</TH>
+            <TH>{t("admin.bucket3.unverified_accounts.col.companies")}</TH>
+            <TH>{t("admin.bucket3.unverified_accounts.col.registered")}</TH>
           </TR>
         </THead>
         <TBody>
           {rows.length === 0 ? (
-            <TEmpty colSpan={8}>No unverified accounts — the queue is empty.</TEmpty>
+            <TEmpty colSpan={8}>{t("admin.bucket3.unverified_accounts.empty")}</TEmpty>
           ) : null}
           {rows.map((u) => (
             <TR key={u.id} href={`/platform/users/${u.id}`}>
@@ -168,13 +170,13 @@ export default function Bucket3UnverifiedAccountsPage() {
                 {u.email_verified_at ? (
                   <span className="text-xs text-success-700">{formatDate(u.email_verified_at)}</span>
                 ) : (
-                  <span className="text-xs text-warning-700">Not verified</span>
+                  <span className="text-xs text-warning-700">{t("admin.bucket3.unverified_accounts.not_verified")}</span>
                 )}
               </TD>
               <TD className="text-xs text-fg-t7 capitalize">{u.intended_role ?? "—"}</TD>
               <TD className="text-xs text-fg-t6">
                 {u.companies.length === 0
-                  ? "B2C (no company)"
+                  ? t("admin.bucket3.unverified_accounts.b2c_no_company")
                   : u.companies.map((c) => c.name).join(", ")}
               </TD>
               <TD className="text-xs text-fg-t6">{formatDate(u.created_at)}</TD>

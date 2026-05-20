@@ -12,6 +12,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiSuccessEnvelope } from "@/lib/api-envelope";
@@ -69,6 +70,7 @@ function describeBucket(b: Bucket, groupBy: GroupBy): string {
 
 export default function Bucket3PerXInvoicingPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [groupBy, setGroupBy] = useState<GroupBy>("status");
   const [data, setData] = useState<AggregateResponse | null>(null);
@@ -95,7 +97,7 @@ export default function Bucket3PerXInvoicingPage() {
   if (!allowed || forbidden) {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">Per-X invoicing</h1>
+        <h1 className="admin-page-title">{t("admin.bucket3.per_x_invoicing.title")}</h1>
         <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
@@ -115,29 +117,29 @@ export default function Bucket3PerXInvoicingPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Per-X invoicing"
-        subtitle="Aggregate view of existing invoices, sliced by the chosen dimension. Read-only analytics — no schema changes."
+        title={t("admin.bucket3.per_x_invoicing.title")}
+        subtitle={t("admin.bucket3.per_x_invoicing.subtitle")}
       />
 
       <div className="admin-card p-4">
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-sm text-fg-t6">
-            <span className="font-medium text-fg-t7">Group by</span>
+            <span className="font-medium text-fg-t7">{t("admin.bucket3.per_x_invoicing.group_by")}</span>
             <Select
               fieldSize="sm"
               value={groupBy}
               onChange={(e) => setGroupBy(e.target.value as GroupBy)}
               className="!w-auto min-w-[180px]"
             >
-              <option value="status">Status</option>
-              <option value="currency">Currency</option>
-              <option value="month">Month (issuing date)</option>
-              <option value="operator">Operator (seller company)</option>
+              <option value="status">{t("admin.bucket3.per_x_invoicing.group.status")}</option>
+              <option value="currency">{t("admin.bucket3.per_x_invoicing.group.currency")}</option>
+              <option value="month">{t("admin.bucket3.per_x_invoicing.group.month")}</option>
+              <option value="operator">{t("admin.bucket3.per_x_invoicing.group.operator")}</option>
             </Select>
           </label>
           <Button variant="outline" size="sm" onClick={() => void load()}>
             <RefreshCw className="h-4 w-4" aria-hidden />
-            Refresh
+            {t("admin.bucket3.per_x_invoicing.refresh")}
           </Button>
         </div>
       </div>
@@ -150,10 +152,11 @@ export default function Bucket3PerXInvoicingPage() {
 
       {data && (
         <section className="admin-card p-4 space-y-2">
-          <h2 className="text-base font-semibold">Totals</h2>
+          <h2 className="text-base font-semibold">{t("admin.bucket3.per_x_invoicing.totals")}</h2>
           <p className="text-sm text-fg-t7">
-            {totalInvoices} invoice{totalInvoices === 1 ? "" : "s"} across {data.buckets.length} bucket
-            {data.buckets.length === 1 ? "" : "s"}.
+            {t("admin.bucket3.per_x_invoicing.totals_count")
+              .replace("{count}", String(totalInvoices))
+              .replace("{buckets}", String(data.buckets.length))}
           </p>
           <div className="flex flex-wrap gap-2">
             {Object.entries(totalsByCurrency).map(([curr, total]) => (
@@ -177,15 +180,15 @@ export default function Bucket3PerXInvoicingPage() {
       <Table>
         <THead>
           <TR>
-            <TH>{groupBy === "operator" ? "Operator" : "Bucket"}</TH>
-            {groupBy !== "currency" && <TH>Currency</TH>}
-            <TH>Invoices</TH>
-            <TH align="right">Total</TH>
+            <TH>{groupBy === "operator" ? t("admin.bucket3.per_x_invoicing.col.operator") : t("admin.bucket3.per_x_invoicing.col.bucket")}</TH>
+            {groupBy !== "currency" && <TH>{t("admin.bucket3.per_x_invoicing.col.currency")}</TH>}
+            <TH>{t("admin.bucket3.per_x_invoicing.col.invoices")}</TH>
+            <TH align="right">{t("admin.bucket3.per_x_invoicing.col.total")}</TH>
           </TR>
         </THead>
         <TBody>
           {!data || data.buckets.length === 0 ? (
-            <TEmpty colSpan={4}>No invoices in this slice.</TEmpty>
+            <TEmpty colSpan={4}>{t("admin.bucket3.per_x_invoicing.empty")}</TEmpty>
           ) : null}
           {data?.buckets.map((b, i) => (
             <TR key={`${b.bucket ?? "null"}-${b.currency ?? ""}-${i}`}>

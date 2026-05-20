@@ -14,6 +14,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessOperatorToolsNav, canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
@@ -54,6 +55,7 @@ function formatDate(value: string | null | undefined): string {
 
 export default function Bucket3RequestsPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessOperatorToolsNav(user) || canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<RequestInboxRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -134,7 +136,7 @@ export default function Bucket3RequestsPage() {
   if (!allowed || forbidden) {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">Requests inbox</h1>
+        <h1 className="admin-page-title">{t("admin.bucket3.requests.title")}</h1>
         <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
@@ -145,15 +147,18 @@ export default function Bucket3RequestsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Requests inbox"
+        title={t("admin.bucket3.requests.title")}
         subtitle={
           meta
-            ? `${meta.total} requests · page ${meta.current_page} of ${meta.last_page}`
-            : "Agent → operator special booking requests"
+            ? t("admin.bucket3.requests.subtitle_count")
+                .replace("{count}", String(meta.total))
+                .replace("{page}", String(meta.current_page))
+                .replace("{last}", String(meta.last_page))
+            : t("admin.bucket3.requests.subtitle")
         }
         actions={
           <Button size="sm" onClick={() => setComposeOpen(true)}>
-            New request
+            {t("admin.bucket3.requests.new_request")}
           </Button>
         }
       />
@@ -161,7 +166,7 @@ export default function Bucket3RequestsPage() {
       <div className="admin-card p-4">
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-sm text-fg-t6">
-            <span className="font-medium text-fg-t7">View</span>
+            <span className="font-medium text-fg-t7">{t("admin.bucket3.requests.view")}</span>
             <Select
               fieldSize="sm"
               value={box}
@@ -171,13 +176,13 @@ export default function Bucket3RequestsPage() {
               }}
               className="!w-auto min-w-[140px]"
             >
-              <option value="all">All</option>
-              <option value="inbox">Inbox (received)</option>
-              <option value="outbox">Outbox (sent)</option>
+              <option value="all">{t("common.all")}</option>
+              <option value="inbox">{t("admin.bucket3.requests.view.inbox")}</option>
+              <option value="outbox">{t("admin.bucket3.requests.view.outbox")}</option>
             </Select>
           </label>
           <label className="flex items-center gap-2 text-sm text-fg-t6">
-            <span className="font-medium text-fg-t7">Status</span>
+            <span className="font-medium text-fg-t7">{t("admin.bucket3.requests.filter.status")}</span>
             <Select
               fieldSize="sm"
               value={statusFilter}
@@ -187,7 +192,7 @@ export default function Bucket3RequestsPage() {
               }}
               className="!w-auto min-w-[160px]"
             >
-              <option value="">All</option>
+              <option value="">{t("common.all")}</option>
               {REQUEST_STATUSES.map((s) => (
                 <option key={s} value={s}>
                   {requestStatusLabel(s)}
@@ -208,16 +213,16 @@ export default function Bucket3RequestsPage() {
         <THead>
           <TR>
             <TH>#</TH>
-            <TH>Subject</TH>
-            <TH>From</TH>
-            <TH>To</TH>
-            <TH>Status</TH>
-            <TH>Created</TH>
+            <TH>{t("admin.bucket3.requests.col.subject")}</TH>
+            <TH>{t("admin.bucket3.requests.col.from")}</TH>
+            <TH>{t("admin.bucket3.requests.col.to")}</TH>
+            <TH>{t("admin.bucket3.requests.col.status")}</TH>
+            <TH>{t("admin.bucket3.requests.col.created")}</TH>
           </TR>
         </THead>
         <TBody>
           {rows.length === 0 ? (
-            <TEmpty colSpan={6}>No requests match the filter.</TEmpty>
+            <TEmpty colSpan={6}>{t("admin.bucket3.requests.empty")}</TEmpty>
           ) : null}
           {rows.map((r) => (
             <TR key={r.id} onClick={() => setSelected(r)}>
@@ -264,7 +269,7 @@ export default function Bucket3RequestsPage() {
                 <h2 className="text-lg font-semibold">{selected.subject}</h2>
                 <div className="mt-1 flex items-center gap-2 text-xs text-fg-t6">
                   <span>
-                    From {selected.requester_company?.name ?? selected.requester?.name ?? "—"}
+                    {t("admin.bucket3.requests.from").replace("{name}", selected.requester_company?.name ?? selected.requester?.name ?? "—")}
                   </span>
                   <span>→</span>
                   <span>{selected.target_company?.name ?? "—"}</span>
@@ -280,21 +285,21 @@ export default function Bucket3RequestsPage() {
             {selected.resolution_notes && (
               <div>
                 <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-fg-t6">
-                  Resolution notes
+                  {t("admin.bucket3.requests.resolution_notes")}
                 </div>
                 <p className="whitespace-pre-wrap rounded-zulu border border-default bg-white p-3 text-sm text-fg-t8">
                   {selected.resolution_notes}
                 </p>
               </div>
             )}
-            <FormField label="Resolution / response notes" htmlFor="resolution-notes">
+            <FormField label={t("admin.bucket3.requests.field.resolution_notes")} htmlFor="resolution-notes">
               <Input
                 as="textarea"
                 id="resolution-notes"
                 rows={3}
                 value={resolutionDraft}
                 onChange={(e) => setResolutionDraft(e.target.value)}
-                placeholder={selected.resolution_notes ?? "Add a note before changing status…"}
+                placeholder={selected.resolution_notes ?? t("admin.bucket3.requests.field.resolution_placeholder")}
               />
             </FormField>
             <div className="flex flex-wrap gap-2">
@@ -304,14 +309,14 @@ export default function Bucket3RequestsPage() {
                 disabled={busy || selected.status === "in_progress"}
                 onClick={() => void updateStatus("in_progress")}
               >
-                Mark in progress
+                {t("admin.bucket3.requests.mark_in_progress")}
               </Button>
               <Button
                 size="sm"
                 disabled={busy || selected.status === "resolved"}
                 onClick={() => void updateStatus("resolved")}
               >
-                Resolve
+                {t("admin.bucket3.requests.resolve")}
               </Button>
               <Button
                 size="sm"
@@ -319,7 +324,7 @@ export default function Bucket3RequestsPage() {
                 disabled={busy || selected.status === "rejected"}
                 onClick={() => void updateStatus("rejected")}
               >
-                Reject
+                {t("admin.bucket3.requests.reject")}
               </Button>
               <Button
                 size="sm"
@@ -329,13 +334,13 @@ export default function Bucket3RequestsPage() {
                   setResolutionDraft("");
                 }}
               >
-                Close
+                {t("admin.bucket3.requests.close")}
               </Button>
             </div>
             <div className="border-t border-default pt-2 text-xs text-fg-t6">
-              Created {formatDate(selected.created_at)}
-              {selected.resolved_at ? ` · resolved ${formatDate(selected.resolved_at)}` : ""}
-              {selected.resolved_by ? ` by ${selected.resolved_by.name}` : ""}
+              {t("admin.bucket3.requests.created_at").replace("{date}", formatDate(selected.created_at))}
+              {selected.resolved_at ? t("admin.bucket3.requests.resolved_at").replace("{date}", formatDate(selected.resolved_at)) : ""}
+              {selected.resolved_by ? t("admin.bucket3.requests.resolved_by").replace("{name}", selected.resolved_by.name) : ""}
             </div>
           </div>
         </div>
@@ -351,25 +356,25 @@ export default function Bucket3RequestsPage() {
             className="my-12 w-full max-w-2xl rounded-zulu bg-white p-6 shadow-zulu-card space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-lg font-semibold">New request</h2>
-            <FormField label="Target company id" htmlFor="compose-target" required>
+            <h2 className="text-lg font-semibold">{t("admin.bucket3.requests.new_request")}</h2>
+            <FormField label={t("admin.bucket3.requests.field.target_company")} htmlFor="compose-target" required>
               <Input
                 id="compose-target"
                 type="number"
                 min={1}
                 value={compose.target_company_id}
                 onChange={(e) => setCompose((p) => ({ ...p, target_company_id: e.target.value }))}
-                placeholder="e.g. 42"
+                placeholder={t("admin.bucket3.requests.field.target_company_placeholder")}
               />
             </FormField>
-            <FormField label="Subject" htmlFor="compose-subject" required>
+            <FormField label={t("admin.bucket3.requests.field.subject")} htmlFor="compose-subject" required>
               <Input
                 id="compose-subject"
                 value={compose.subject}
                 onChange={(e) => setCompose((p) => ({ ...p, subject: e.target.value }))}
               />
             </FormField>
-            <FormField label="Body" htmlFor="compose-body" required>
+            <FormField label={t("admin.bucket3.requests.field.body")} htmlFor="compose-body" required>
               <Input
                 as="textarea"
                 id="compose-body"
@@ -380,10 +385,10 @@ export default function Bucket3RequestsPage() {
             </FormField>
             <div className="flex gap-2">
               <Button size="sm" disabled={busy} onClick={() => void sendRequest()}>
-                {busy ? "Sending…" : "Send request"}
+                {busy ? t("admin.bucket3.requests.sending") : t("admin.bucket3.requests.send")}
               </Button>
               <Button size="sm" variant="outline" onClick={() => setComposeOpen(false)}>
-                Cancel
+                {t("common.cancel")}
               </Button>
             </div>
           </div>

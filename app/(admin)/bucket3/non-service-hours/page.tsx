@@ -13,6 +13,7 @@
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessOperatorToolsNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
@@ -124,6 +125,7 @@ function formatDuration(minutes: number | null, openSinceIso: string | null): st
 export default function Bucket3NonServiceHoursPage() {
   const { token, user } = useAdminAuth();
   const confirm = useConfirm();
+  const { t } = useLanguage();
   const allowed = canAccessOperatorToolsNav(user);
   const [rows, setRows] = useState<TimeOffRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -223,7 +225,7 @@ export default function Bucket3NonServiceHoursPage() {
     if (!token) return;
     setErr(null);
     if (!form.starts_on || !form.ends_on) {
-      setErr("Start and end dates required");
+      setErr(t("admin.bucket3.non_service_hours.error.dates_required"));
       return;
     }
     setBusy(true);
@@ -274,7 +276,7 @@ export default function Bucket3NonServiceHoursPage() {
   if (!allowed || forbidden) {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">Non-service hours</h1>
+        <h1 className="admin-page-title">{t("admin.bucket3.non_service_hours.title")}</h1>
         <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
@@ -285,8 +287,8 @@ export default function Bucket3NonServiceHoursPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Non-service hours"
-        subtitle="Clock-in/out shift attendance + planned time-off requests"
+        title={t("admin.bucket3.non_service_hours.title")}
+        subtitle={t("admin.bucket3.non_service_hours.subtitle")}
       />
 
       {err && (
@@ -298,18 +300,18 @@ export default function Bucket3NonServiceHoursPage() {
       <section className="admin-card p-4 space-y-3">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <h2 className="text-base font-semibold">Today&apos;s shifts</h2>
+            <h2 className="text-base font-semibold">{t("admin.bucket3.non_service_hours.todays_shifts")}</h2>
             <p className="text-xs text-fg-t6">
-              Live clock-in / clock-out. Open shifts (no out-stamp) show who is currently on the clock.
+              {t("admin.bucket3.non_service_hours.todays_shifts_helper")}
             </p>
           </div>
           {myOpen ? (
             <Button size="sm" variant="primary" disabled={busy} onClick={() => void clockOut(myOpen.id)}>
-              {busy ? "…" : `Clock out (open since ${formatTime(myOpen.punched_in_at)})`}
+              {busy ? "…" : t("admin.bucket3.non_service_hours.clock_out_open").replace("{time}", formatTime(myOpen.punched_in_at))}
             </Button>
           ) : (
             <Button size="sm" variant="primary" disabled={busy} onClick={() => void clockIn()}>
-              {busy ? "…" : "Clock in"}
+              {busy ? "…" : t("admin.bucket3.non_service_hours.clock_in")}
             </Button>
           )}
         </div>
@@ -317,15 +319,15 @@ export default function Bucket3NonServiceHoursPage() {
         <Table>
           <THead>
             <TR>
-              <TH>Employee</TH>
-              <TH>In</TH>
-              <TH>Out</TH>
-              <TH>Duration</TH>
-              <TH align="right">Actions</TH>
+              <TH>{t("admin.bucket3.non_service_hours.col.employee")}</TH>
+              <TH>{t("admin.bucket3.non_service_hours.col.in")}</TH>
+              <TH>{t("admin.bucket3.non_service_hours.col.out")}</TH>
+              <TH>{t("admin.bucket3.non_service_hours.col.duration")}</TH>
+              <TH align="right">{t("admin.bucket3.non_service_hours.col.actions")}</TH>
             </TR>
           </THead>
           <TBody>
-            {punches.length === 0 ? <TEmpty colSpan={5}>No shifts today.</TEmpty> : null}
+            {punches.length === 0 ? <TEmpty colSpan={5}>{t("admin.bucket3.non_service_hours.empty_shifts")}</TEmpty> : null}
             {punches.map((p) => (
               <TR key={p.id}>
                 <TD>
@@ -334,13 +336,13 @@ export default function Bucket3NonServiceHoursPage() {
                 </TD>
                 <TD className="text-xs tabular-nums">{formatTime(p.punched_in_at)}</TD>
                 <TD className="text-xs tabular-nums">
-                  {p.is_open ? <span className="text-success-700">on the clock</span> : formatTime(p.punched_out_at)}
+                  {p.is_open ? <span className="text-success-700">{t("admin.bucket3.non_service_hours.on_the_clock")}</span> : formatTime(p.punched_out_at)}
                 </TD>
                 <TD className="text-xs tabular-nums">{formatDuration(p.minutes_worked, p.is_open ? p.punched_in_at : null)}</TD>
                 <TD align="right">
                   {p.is_open && (
                     <Button size="sm" variant="outline" disabled={busy} onClick={() => void clockOut(p.id)}>
-                      Clock out
+                      {t("admin.bucket3.non_service_hours.clock_out")}
                     </Button>
                   )}
                 </TD>
@@ -351,9 +353,9 @@ export default function Bucket3NonServiceHoursPage() {
       </section>
 
       <section className="admin-card p-4 space-y-3">
-        <h2 className="text-base font-semibold">Request time off</h2>
+        <h2 className="text-base font-semibold">{t("admin.bucket3.non_service_hours.request_time_off")}</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <FormField label="User id (optional)" htmlFor="to-user" helperText="Leave blank to request for yourself">
+          <FormField label={t("admin.bucket3.non_service_hours.field.user_id")} htmlFor="to-user" helperText={t("admin.bucket3.non_service_hours.field.user_id_helper")}>
             <Input
               id="to-user"
               type="number"
@@ -362,20 +364,20 @@ export default function Bucket3NonServiceHoursPage() {
               onChange={(e) => setForm((p) => ({ ...p, user_id: e.target.value }))}
             />
           </FormField>
-          <FormField label="Type" htmlFor="to-type" required>
+          <FormField label={t("admin.bucket3.non_service_hours.field.type")} htmlFor="to-type" required>
             <Select
               id="to-type"
               value={form.type}
               onChange={(e) => setForm((p) => ({ ...p, type: e.target.value as Type }))}
             >
-              {TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
+              {TYPES.map((ty) => (
+                <option key={ty} value={ty}>
+                  {ty}
                 </option>
               ))}
             </Select>
           </FormField>
-          <FormField label="Hours total (optional)" htmlFor="to-hours">
+          <FormField label={t("admin.bucket3.non_service_hours.field.hours_total")} htmlFor="to-hours">
             <Input
               id="to-hours"
               type="number"
@@ -385,7 +387,7 @@ export default function Bucket3NonServiceHoursPage() {
               onChange={(e) => setForm((p) => ({ ...p, hours_total: e.target.value }))}
             />
           </FormField>
-          <FormField label="Starts" htmlFor="to-starts" required>
+          <FormField label={t("admin.bucket3.non_service_hours.field.starts")} htmlFor="to-starts" required>
             <Input
               id="to-starts"
               type="date"
@@ -393,7 +395,7 @@ export default function Bucket3NonServiceHoursPage() {
               onChange={(e) => setForm((p) => ({ ...p, starts_on: e.target.value }))}
             />
           </FormField>
-          <FormField label="Ends" htmlFor="to-ends" required>
+          <FormField label={t("admin.bucket3.non_service_hours.field.ends")} htmlFor="to-ends" required>
             <Input
               id="to-ends"
               type="date"
@@ -401,7 +403,7 @@ export default function Bucket3NonServiceHoursPage() {
               onChange={(e) => setForm((p) => ({ ...p, ends_on: e.target.value }))}
             />
           </FormField>
-          <FormField label="Notes" htmlFor="to-notes" className="sm:col-span-2 lg:col-span-3">
+          <FormField label={t("admin.bucket3.non_service_hours.field.notes")} htmlFor="to-notes" className="sm:col-span-2 lg:col-span-3">
             <Input
               as="textarea"
               id="to-notes"
@@ -413,14 +415,14 @@ export default function Bucket3NonServiceHoursPage() {
         </div>
         <div>
           <Button size="sm" disabled={busy} onClick={() => void handleCreate()}>
-            {busy ? "Submitting…" : "Submit request"}
+            {busy ? t("admin.bucket3.non_service_hours.submitting") : t("admin.bucket3.non_service_hours.submit_request")}
           </Button>
         </div>
       </section>
 
       <div className="admin-card p-4">
         <label className="flex items-center gap-2 text-sm text-fg-t6">
-          <span className="font-medium text-fg-t7">Status</span>
+          <span className="font-medium text-fg-t7">{t("admin.bucket3.non_service_hours.filter.status")}</span>
           <Select
             fieldSize="sm"
             value={statusFilter}
@@ -430,7 +432,7 @@ export default function Bucket3NonServiceHoursPage() {
             }}
             className="!w-auto min-w-[140px]"
           >
-            <option value="">All</option>
+            <option value="">{t("common.all")}</option>
             {STATUSES.map((s) => (
               <option key={s} value={s}>
                 {s}
@@ -444,18 +446,18 @@ export default function Bucket3NonServiceHoursPage() {
         <THead>
           <TR>
             <TH>#</TH>
-            <TH>Employee</TH>
-            <TH>Type</TH>
-            <TH>From</TH>
-            <TH>To</TH>
-            <TH>Hours</TH>
-            <TH>Status</TH>
-            <TH align="right">Actions</TH>
+            <TH>{t("admin.bucket3.non_service_hours.col.employee")}</TH>
+            <TH>{t("admin.bucket3.non_service_hours.col.type")}</TH>
+            <TH>{t("admin.bucket3.non_service_hours.col.from")}</TH>
+            <TH>{t("admin.bucket3.non_service_hours.col.to")}</TH>
+            <TH>{t("admin.bucket3.non_service_hours.col.hours")}</TH>
+            <TH>{t("admin.bucket3.non_service_hours.col.status")}</TH>
+            <TH align="right">{t("admin.bucket3.non_service_hours.col.actions")}</TH>
           </TR>
         </THead>
         <TBody>
           {rows.length === 0 ? (
-            <TEmpty colSpan={8}>No time-off records yet.</TEmpty>
+            <TEmpty colSpan={8}>{t("admin.bucket3.non_service_hours.empty_records")}</TEmpty>
           ) : null}
           {rows.map((r) => (
             <TR key={r.id}>
@@ -480,7 +482,7 @@ export default function Bucket3NonServiceHoursPage() {
                       disabled={busy}
                       onClick={() => void decide(r.id, "approved")}
                     >
-                      Approve
+                      {t("admin.bucket3.non_service_hours.approve")}
                     </Button>
                     <Button
                       size="sm"
@@ -488,7 +490,7 @@ export default function Bucket3NonServiceHoursPage() {
                       disabled={busy}
                       onClick={() => void decide(r.id, "rejected")}
                     >
-                      Reject
+                      {t("admin.bucket3.non_service_hours.reject")}
                     </Button>
                   </div>
                 ) : (

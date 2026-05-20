@@ -11,6 +11,7 @@
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessOperatorToolsNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiSuccessEnvelope } from "@/lib/api-envelope";
@@ -89,6 +90,7 @@ async function fetchFields(token: string): Promise<ApiSuccessEnvelope<IndexRespo
 export default function Bucket3CustomFieldsPage() {
   const { token, user } = useAdminAuth();
   const confirm = useConfirm();
+  const { t } = useLanguage();
   const allowed = canAccessOperatorToolsNav(user);
   const [data, setData] = useState<IndexResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -139,11 +141,11 @@ export default function Bucket3CustomFieldsPage() {
     if (!token) return;
     setErr(null);
     if (!form.key.trim() || !form.label.trim()) {
-      setErr("Key and label are required");
+      setErr(t("admin.bucket3.custom_fields.error.key_label_required"));
       return;
     }
     if (!/^[a-z0-9_]+$/.test(form.key.trim())) {
-      setErr("Key must be lowercase letters, digits, and underscores only");
+      setErr(t("admin.bucket3.custom_fields.error.key_format"));
       return;
     }
     const isOptioned = form.field_type === "select" || form.field_type === "multi_select";
@@ -202,7 +204,7 @@ export default function Bucket3CustomFieldsPage() {
   if (!allowed || forbidden) {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">Custom fields</h1>
+        <h1 className="admin-page-title">{t("admin.bucket3.custom_fields.title")}</h1>
         <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
@@ -215,11 +217,11 @@ export default function Bucket3CustomFieldsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Custom fields"
+        title={t("admin.bucket3.custom_fields.title")}
         subtitle={
           data
-            ? `${data.fields.length} field${data.fields.length === 1 ? "" : "s"} defined`
-            : "Add custom fields to your offers without touching code"
+            ? t("admin.bucket3.custom_fields.subtitle_count").replace("{count}", String(data.fields.length))
+            : t("admin.bucket3.custom_fields.subtitle")
         }
       />
 
@@ -232,16 +234,16 @@ export default function Bucket3CustomFieldsPage() {
       <section className="admin-card p-4 space-y-3">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-base font-semibold">
-            {editingId != null ? `Edit field #${editingId}` : "Add field"}
+            {editingId != null ? t("admin.bucket3.custom_fields.edit_field").replace("{id}", String(editingId)) : t("admin.bucket3.custom_fields.add_field")}
           </h2>
           {editingId != null && (
             <Button variant="outline" size="sm" onClick={clearEdit}>
-              Cancel edit
+              {t("admin.bucket3.custom_fields.cancel_edit")}
             </Button>
           )}
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <FormField label="Scope" htmlFor="cf-scope" required>
+          <FormField label={t("admin.bucket3.custom_fields.field.scope")} htmlFor="cf-scope" required>
             <Select
               id="cf-scope"
               value={form.scope}
@@ -255,46 +257,46 @@ export default function Bucket3CustomFieldsPage() {
             </Select>
           </FormField>
           <FormField
-            label="Key"
+            label={t("admin.bucket3.custom_fields.field.key")}
             htmlFor="cf-key"
             required
-            helperText="snake_case, used in API payloads. Immutable after creation by convention."
+            helperText={t("admin.bucket3.custom_fields.field.key_helper")}
           >
             <Input
               id="cf-key"
               value={form.key}
               onChange={(e) => setForm((p) => ({ ...p, key: e.target.value.toLowerCase() }))}
               disabled={editingId != null}
-              placeholder="e.g. has_balcony"
+              placeholder={t("admin.bucket3.custom_fields.field.key_placeholder")}
             />
           </FormField>
-          <FormField label="Label" htmlFor="cf-label" required>
+          <FormField label={t("admin.bucket3.custom_fields.field.label")} htmlFor="cf-label" required>
             <Input
               id="cf-label"
               value={form.label}
               onChange={(e) => setForm((p) => ({ ...p, label: e.target.value }))}
-              placeholder="What operators see in their form"
+              placeholder={t("admin.bucket3.custom_fields.field.label_placeholder")}
             />
           </FormField>
-          <FormField label="Type" htmlFor="cf-type" required>
+          <FormField label={t("admin.bucket3.custom_fields.field.type")} htmlFor="cf-type" required>
             <Select
               id="cf-type"
               value={form.field_type}
               onChange={(e) => setForm((p) => ({ ...p, field_type: e.target.value as FieldType }))}
             >
-              {(data?.available_field_types ?? ["text"]).map((t) => (
-                <option key={t} value={t}>
-                  {t}
+              {(data?.available_field_types ?? ["text"]).map((ft) => (
+                <option key={ft} value={ft}>
+                  {ft}
                 </option>
               ))}
             </Select>
           </FormField>
           {showOptions && (
             <FormField
-              label="Options"
+              label={t("admin.bucket3.custom_fields.field.options")}
               htmlFor="cf-options"
               required
-              helperText="Comma-separated, e.g. small, medium, large"
+              helperText={t("admin.bucket3.custom_fields.field.options_helper")}
               className="sm:col-span-2"
             >
               <Input
@@ -304,15 +306,15 @@ export default function Bucket3CustomFieldsPage() {
               />
             </FormField>
           )}
-          <FormField label="Help text" htmlFor="cf-help" className="sm:col-span-2 lg:col-span-3">
+          <FormField label={t("admin.bucket3.custom_fields.field.help_text")} htmlFor="cf-help" className="sm:col-span-2 lg:col-span-3">
             <Input
               id="cf-help"
               value={form.help_text}
               onChange={(e) => setForm((p) => ({ ...p, help_text: e.target.value }))}
-              placeholder="Optional hint shown under the field"
+              placeholder={t("admin.bucket3.custom_fields.field.help_text_placeholder")}
             />
           </FormField>
-          <FormField label="Display order" htmlFor="cf-order">
+          <FormField label={t("admin.bucket3.custom_fields.field.display_order")} htmlFor="cf-order">
             <Input
               id="cf-order"
               type="number"
@@ -324,23 +326,23 @@ export default function Bucket3CustomFieldsPage() {
             <Checkbox
               checked={form.is_required}
               onChange={(e) => setForm((p) => ({ ...p, is_required: e.target.checked }))}
-              label="Required"
+              label={t("admin.bucket3.custom_fields.field.required")}
             />
             <Checkbox
               checked={form.show_in_filter}
               onChange={(e) => setForm((p) => ({ ...p, show_in_filter: e.target.checked }))}
-              label="Show in filter"
+              label={t("admin.bucket3.custom_fields.field.show_in_filter")}
             />
             <Checkbox
               checked={form.is_active}
               onChange={(e) => setForm((p) => ({ ...p, is_active: e.target.checked }))}
-              label="Active"
+              label={t("admin.bucket3.custom_fields.field.active")}
             />
           </div>
         </div>
         <div>
           <Button size="sm" disabled={busy} onClick={() => void handleSave()}>
-            {busy ? "Saving…" : editingId != null ? "Save changes" : "Add field"}
+            {busy ? t("common.saving") : editingId != null ? t("admin.bucket3.custom_fields.save_changes") : t("admin.bucket3.custom_fields.add_field")}
           </Button>
         </div>
       </section>
@@ -348,19 +350,19 @@ export default function Bucket3CustomFieldsPage() {
       <Table>
         <THead>
           <TR>
-            <TH>Scope</TH>
-            <TH>Key</TH>
-            <TH>Label</TH>
-            <TH>Type</TH>
-            <TH>Flags</TH>
-            <TH>Order</TH>
-            <TH>Active</TH>
-            <TH align="right">Actions</TH>
+            <TH>{t("admin.bucket3.custom_fields.col.scope")}</TH>
+            <TH>{t("admin.bucket3.custom_fields.col.key")}</TH>
+            <TH>{t("admin.bucket3.custom_fields.col.label")}</TH>
+            <TH>{t("admin.bucket3.custom_fields.col.type")}</TH>
+            <TH>{t("admin.bucket3.custom_fields.col.flags")}</TH>
+            <TH>{t("admin.bucket3.custom_fields.col.order")}</TH>
+            <TH>{t("admin.bucket3.custom_fields.col.active")}</TH>
+            <TH align="right">{t("admin.bucket3.custom_fields.col.actions")}</TH>
           </TR>
         </THead>
         <TBody>
           {!data || data.fields.length === 0 ? (
-            <TEmpty colSpan={8}>No custom fields defined yet.</TEmpty>
+            <TEmpty colSpan={8}>{t("admin.bucket3.custom_fields.empty")}</TEmpty>
           ) : null}
           {data?.fields.map((f) => (
             <TR key={f.id}>
@@ -376,15 +378,15 @@ export default function Bucket3CustomFieldsPage() {
               <TD className="tabular-nums">{f.display_order}</TD>
               <TD>
                 {f.is_active ? (
-                  <span className="text-xs font-medium text-success-700">Active</span>
+                  <span className="text-xs font-medium text-success-700">{t("admin.bucket3.custom_fields.status.active")}</span>
                 ) : (
-                  <span className="text-xs text-fg-t6">Inactive</span>
+                  <span className="text-xs text-fg-t6">{t("admin.bucket3.custom_fields.status.inactive")}</span>
                 )}
               </TD>
               <TD align="right">
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" size="sm" disabled={busy} onClick={() => startEdit(f)}>
-                    Edit
+                    {t("common.edit")}
                   </Button>
                   <Button
                     variant="danger"
@@ -392,7 +394,7 @@ export default function Bucket3CustomFieldsPage() {
                     disabled={busy}
                     onClick={() => void handleDelete(f.id)}
                   >
-                    Remove
+                    {t("common.remove")}
                   </Button>
                 </div>
               </TD>
