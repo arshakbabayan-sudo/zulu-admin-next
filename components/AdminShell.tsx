@@ -20,6 +20,7 @@ import {
   resolveAdminPageTitle,
 } from "@/lib/admin-nav-config";
 import {
+  canAccessAgentToolsNav,
   canAccessInventoryOversightNav,
   canAccessLocalizationSectionNav,
   canAccessNotificationsNav,
@@ -265,6 +266,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const showSuperAdminOnlyPlatform = canAccessSuperAdminOnlyPlatformNav(user);
   const showInventory = canAccessInventoryOversightNav(user);
   const showLocalization = canAccessLocalizationSectionNav(user);
+  const showAgentTools = canAccessAgentToolsNav(user);
 
   const pageTitle = pathname ? resolveAdminPageTitle(pathname, t) : t("admin.nav.dashboard");
 
@@ -633,6 +635,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 case "bucket3":
                   // Bucket-3 placeholders: same gate as platform admin for now.
                   return showPlatform;
+                case "agent_tools":
+                  return showAgentTools;
                 default:
                   return false;
               }

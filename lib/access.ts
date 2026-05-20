@@ -141,3 +141,14 @@ export function defaultLandingPath(user: AdminUser | null): string {
 export function canAccessConnectionsNav(user: AdminUser | null): boolean {
   return user != null;
 }
+
+/**
+ * Agent-only sidebar group (e.g. /agent/contracts). Visible when the user
+ * has the `agent` role but does not otherwise hit a higher-tier group
+ * (operator tools / platform admin) — super admin always sees it.
+ */
+export function canAccessAgentToolsNav(user: AdminUser | null): boolean {
+  if (!user) return false;
+  if (user.is_super_admin) return true;
+  return user.roles?.includes("agent") ?? false;
+}

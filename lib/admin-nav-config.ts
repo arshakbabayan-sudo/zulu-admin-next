@@ -57,7 +57,8 @@ export type AdminNavGroup = {
     | "inventory_oversight"
     | "localization"
     | "super_admin"
-    | "bucket3";
+    | "bucket3"
+    | "agent_tools";
 };
 
 export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
@@ -130,6 +131,16 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     visibility: "operator_tools",
   },
   {
+    key: "agent_tools",
+    labelKey: "admin.nav.group.agent_tools",
+    icon: "/icons/menu/checklist.svg",
+    defaultHref: "/agent/contracts",
+    tabs: [
+      { href: "/agent/contracts", labelKey: "admin.nav.tab.my_contracts" },
+    ],
+    visibility: "agent_tools",
+  },
+  {
     key: "bookings",
     labelKey: "admin.nav.group.bookings",
     icon: "/icons/menu/booking.svg",
@@ -151,6 +162,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/platform/payments", labelKey: "admin.nav.tab.payments", moduleKey: "ops.finance" },
       { href: "/platform/commissions", labelKey: "admin.nav.tab.commissions", moduleKey: "ops.finance" },
       { href: "/platform/finance", labelKey: "admin.nav.tab.transactions", moduleKey: "ops.finance" },
+      { href: "/platform/vouchers", labelKey: "admin.nav.tab.vouchers", moduleKey: "ops.finance" },
     ],
     visibility: "platform_admin",
   },
@@ -210,6 +222,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     defaultHref: "/bucket3/customers",
     tabs: [
       { href: "/bucket3/customers", labelKey: "admin.nav.tab.bucket3.customers" },
+      { href: "/platform/packages", labelKey: "admin.nav.tab.packages_oversight", superAdminOnly: true },
       { href: "/bucket3/block-dates", labelKey: "admin.nav.tab.bucket3.block_dates" },
       { href: "/bucket3/per-x-invoicing", labelKey: "admin.nav.tab.bucket3.per_x_invoicing" },
       { href: "/bucket3/custom-fields", labelKey: "admin.nav.tab.bucket3.custom_fields" },
