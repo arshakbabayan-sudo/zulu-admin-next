@@ -270,7 +270,7 @@ export default function PlatformBannersPage() {
                 <TD>
                   {src ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={src} alt="" className="h-14 w-28 rounded object-cover" />
+                    <img src={src} alt={r.title_en ?? r.title_ru ?? r.title_hy ?? `Banner ${r.id}`} className="h-14 w-28 rounded object-cover" />
                   ) : (
                     "—"
                   )}

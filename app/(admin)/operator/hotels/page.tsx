@@ -70,6 +70,7 @@ import {
   validateHotelOperatorForm,
 } from "@/lib/hotel-ui";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useDocumentTitle } from "@/lib/use-document-title";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
 
@@ -131,6 +132,7 @@ const EMPTY: HotelFormPayload = {
 export default function OperatorHotelsPage() {
   const { token } = useAdminAuth();
   const { t, contentLang } = useLanguage();
+  useDocumentTitle(t("admin.operator.hotels.title"));
   const confirm = useConfirm();
   const [rows, setRows] = useState<HotelRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);

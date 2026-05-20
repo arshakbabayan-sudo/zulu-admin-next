@@ -15,6 +15,7 @@
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useDocumentTitle } from "@/lib/use-document-title";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
@@ -44,6 +45,7 @@ import { useCallback, useEffect, useState } from "react";
 export default function Bucket3CustomersPage() {
   const { token, user } = useAdminAuth();
   const { t, lang } = useLanguage();
+  useDocumentTitle(t("admin.bucket3.customers.title"));
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<CustomerRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);

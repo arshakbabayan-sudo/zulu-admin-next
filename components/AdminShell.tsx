@@ -301,7 +301,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             }}
             className="ml-3 inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-700 transition hover:bg-black/5"
           >
-            <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round">
+            <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
               <path d="M5 8h14M5 12h10M5 16h14" />
             </svg>
           </button>
@@ -390,7 +390,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             title="Open ZULU website"
             className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-700 transition hover:bg-black/5"
           >
-            <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M15 3h6v6" />
               <path d="M10 14 21 3" />
               <path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5" />
@@ -402,13 +402,13 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           >
             {adminTheme === "dark" ? (
               // Sun icon (currently dark, click to go light)
-              <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round">
+              <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
                 <circle cx="12" cy="12" r="4" />
                 <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
               </svg>
             ) : (
               // Moon icon (currently light, click to go dark)
-              <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2">
+              <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" aria-hidden="true">
                 <path d="M12 3a7 7 0 1 0 7 7 6 6 0 0 1-7-7Z" />
               </svg>
             )}
@@ -421,7 +421,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 onClick={() => setNotificationsOpen((o) => !o)}
                 badge={unreadCount}
               >
-                <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2">
+                <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" aria-hidden="true">
                   <path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5" />
                   <path d="M9 17a3 3 0 0 0 6 0" />
                 </svg>
@@ -480,7 +480,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               label={t("admin.header.apps")}
               onClick={() => setAppsOpen((o) => !o)}
             >
-              <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current">
+              <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
                 <circle cx="6" cy="6" r="1.8" />
                 <circle cx="12" cy="6" r="1.8" />
                 <circle cx="18" cy="6" r="1.8" />
@@ -570,7 +570,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                       onClick={() => setUserMenuOpen(false)}
                       className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-50"
                     >
-                      <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current text-slate-500" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current text-slate-500" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
                         <polyline points="10 17 15 12 10 7" />
                         <line x1="15" y1="12" x2="3" y2="12" />
@@ -586,7 +586,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                       }}
                       className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 transition hover:bg-red-50"
                     >
-                      <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
                         <polyline points="16 17 21 12 16 7" />
                         <line x1="21" y1="12" x2="9" y2="12" />
@@ -684,6 +684,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 <Link
                   key={g.key}
                   href={href}
+                  aria-current={active ? "page" : undefined}
                   className={`flex items-center rounded-lg px-3 py-2 transition ${
                     active ? "shadow-sm" : "text-slate-700 hover:bg-slate-100"
                   } ${sidebarOpen ? "gap-2" : "justify-center"}`}

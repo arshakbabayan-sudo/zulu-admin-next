@@ -1,4 +1,5 @@
 import React from "react";
+import { AlertCircle } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 /**
@@ -41,7 +42,14 @@ export function FormField({
       ) : null}
       {children}
       {error ? (
-        <p className="text-xs text-error-700 leading-4">{error}</p>
+        <p
+          role="alert"
+          aria-live="polite"
+          className="flex items-center gap-1 text-xs text-error-700 leading-4"
+        >
+          <AlertCircle className="size-3.5 shrink-0" aria-hidden="true" />
+          <span>{error}</span>
+        </p>
       ) : helperText ? (
         <p className="text-xs text-fg-t6 leading-4">{helperText}</p>
       ) : null}

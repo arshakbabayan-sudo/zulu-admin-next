@@ -24,6 +24,7 @@ import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import { apiPlatformStats, type PlatformStats } from "@/lib/platform-admin-api";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useDocumentTitle } from "@/lib/use-document-title";
 import { formatNumber } from "@/lib/format";
 import { PageHeader } from "@/components/ui";
 import Link from "next/link";
@@ -537,6 +538,7 @@ function ActiveOffers({ stats }: { stats: PlatformStats }) {
 
 export default function DashboardPage() {
   const { t, lang } = useLanguage();
+  useDocumentTitle(t("admin.dashboard.title"));
   const { token, user } = useAdminAuth();
   const [stats, setStats] = useState<PlatformStats | null>(null);
   const [err, setErr] = useState<string | null>(null);

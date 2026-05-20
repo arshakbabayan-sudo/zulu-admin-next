@@ -23,6 +23,7 @@ import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useDocumentTitle } from "@/lib/use-document-title";
 import {
   apiCompanyCountryPermissions,
   apiCompanySellerPermissions,
@@ -47,6 +48,7 @@ function labelServiceType(t: string): string {
 
 export default function PlatformCompaniesPage() {
   const { t } = useLanguage();
+  useDocumentTitle(t("admin.companies.title"));
   const { token, user } = useAdminAuth();
   const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);

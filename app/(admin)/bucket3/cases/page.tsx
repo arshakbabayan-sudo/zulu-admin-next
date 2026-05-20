@@ -11,6 +11,7 @@
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useDocumentTitle } from "@/lib/use-document-title";
 import { canAccessOperatorToolsNav, canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
@@ -133,6 +134,7 @@ async function fetchCases(
 export default function Bucket3CasesPage() {
   const { token, user } = useAdminAuth();
   const { t, lang } = useLanguage();
+  useDocumentTitle(t("admin.bucket3.cases.title"));
   const allowed = canAccessOperatorToolsNav(user) || canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<CaseRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
