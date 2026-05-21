@@ -35,25 +35,21 @@ jobs:
         run: npm install -g @lhci/cli@0.13.x
 
       - name: Run Lighthouse
+        id: lhci
         env:
           LHCI_BUILD_CONTEXT__CURRENT_HASH: ${{ github.sha }}
         run: |
           # Probe two representative routes — login (cold path, no auth)
           # and /sso (sso landing). Authenticated admin pages need a
           # session token, which we can't easily mint from CI, so we
-          # measure the public surface only.
+          # measure the public surface only. Thresholds live in
+          # .lighthouserc.json at the repo root.
           lhci collect \
             --url=https://admin.zulu.am/login \
             --url=https://admin.zulu.am/sso \
             --numberOfRuns=2 \
             --settings.preset=desktop
-          lhci assert \
-            --preset=lighthouse:recommended \
-            --assertions.categories:performance="warn" \
-            --assertions.categories:accessibility="error" \
-            --assertions.categories:best-practices="warn" \
-            --assertions.categories:seo="warn" \
-            || echo "::warning::Lighthouse assertions failed — see uploaded report"
+          lhci assert
 
       - name: Upload Lighthouse report
         if: always()
@@ -62,3 +58,25 @@ jobs:
           name: lighthouse-admin-${{ github.sha }}
           path: .lighthouseci
           retention-days: 30
+
+      - name: Notify Telegram on failure
+        if: failure()
+        env:
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          COMMIT_SHA: ${{ github.sha }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          SHORT_SHA="${COMMIT_SHA:0:7}"
+          FIRST_LINE="$(printf '%s' "$COMMIT_MSG" | head -n 1)"
+          MESSAGE=$(printf '🔴 <b>Lighthouse score dropped on admin.zulu.am</b>\n<b>Repo:</b> %s\n<b>Commit:</b> <code>%s</code> — %s\n<a href="%s">View report (lhci artifact)</a>' \
+            "$REPO" "$SHORT_SHA" "$FIRST_LINE" "$RUN_URL")
+          PAYLOAD=$(jq -nc \
+            --arg chat "$TG_CHAT_ID" \
+            --arg text "$MESSAGE" \
+            '{chat_id: $chat, text: $text, parse_mode: "HTML", disable_web_page_preview: true}')
+          curl -sS -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
+            -H "Content-Type: application/json; charset=utf-8" \
+            --data "$PAYLOAD" > /dev/null || true
