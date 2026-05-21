@@ -15,6 +15,7 @@ import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
+import { formatMoney } from "@/lib/format";
 import type { ApiSuccessEnvelope } from "@/lib/api-envelope";
 import {
   Button,
@@ -53,13 +54,8 @@ async function fetchAggregate(
   return apiFetchJson(`/invoices/aggregate?group_by=${groupBy}`, { method: "GET", token });
 }
 
-function formatAmount(amount: number, currency: string | null, lang: string): string {
-  const f = new Intl.NumberFormat(lang, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-  return currency ? `${currency} ${f}` : f;
-}
+// formatAmount replaced by formatMoney from @/lib/format — same shape, just
+// imported from the shared helper so future locale tweaks happen once.
 
 function describeBucket(b: Bucket, groupBy: GroupBy): string {
   if (groupBy === "operator") {
@@ -166,10 +162,7 @@ export default function Bucket3PerXInvoicingPage() {
               >
                 <span className="text-fg-t6 uppercase">{curr}</span>
                 <span className="ml-2 font-medium text-fg-t8 tabular-nums">
-                  {new Intl.NumberFormat(lang, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  }).format(total)}
+                  {formatMoney(total, lang)}
                 </span>
               </div>
             ))}
@@ -198,7 +191,7 @@ export default function Bucket3PerXInvoicingPage() {
               )}
               <TD className="tabular-nums">{b.invoice_count}</TD>
               <TD align="right" className="tabular-nums font-medium text-fg-t8">
-                {formatAmount(b.total_sum, b.currency, lang)}
+                {formatMoney(b.total_sum, lang, b.currency)}
               </TD>
             </TR>
           ))}

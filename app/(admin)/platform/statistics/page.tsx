@@ -8,6 +8,7 @@ import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { formatNumber } from "@/lib/format";
 import {
   Button,
   PageHeader,
@@ -257,17 +258,17 @@ export default function PlatformStatisticsPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Kpi
               label={t("admin.platform_statistics.revenue")}
-              value={`$${snapshot.revenue.total.toLocaleString(lang, { maximumFractionDigits: 2 })}`}
-              hint={`${snapshot.revenue.order_count.toLocaleString(lang)} ${t("admin.platform_statistics.paid_orders")}`}
+              value={`$${formatNumber(snapshot.revenue.total, lang, { maximumFractionDigits: 2 })}`}
+              hint={`${formatNumber(snapshot.revenue.order_count, lang)} ${t("admin.platform_statistics.paid_orders")}`}
             />
             <Kpi
               label={t("admin.platform_statistics.avg_order_value")}
-              value={`$${snapshot.revenue.avg_order_value.toLocaleString(lang, { maximumFractionDigits: 2 })}`}
+              value={`$${formatNumber(snapshot.revenue.avg_order_value, lang, { maximumFractionDigits: 2 })}`}
             />
             <Kpi
               label={t("admin.platform_statistics.new_users")}
-              value={snapshot.users.new_in_window.toLocaleString(lang)}
-              hint={`${snapshot.users.total.toLocaleString(lang)} ${t("admin.platform_statistics.total")}`}
+              value={formatNumber(snapshot.users.new_in_window, lang)}
+              hint={`${formatNumber(snapshot.users.total, lang)} ${t("admin.platform_statistics.total")}`}
             />
             <Kpi
               label={t("admin.platform_statistics.saga_success")}
@@ -307,7 +308,7 @@ export default function PlatformStatisticsPage() {
               <span>{revenueSeries[0]?.date ?? ""}</span>
               <span>
                 {t("admin.platform_statistics.max")}: $
-                {maxRevenue.toLocaleString(lang, { maximumFractionDigits: 2 })}
+                {formatNumber(maxRevenue, lang, { maximumFractionDigits: 2 })}
               </span>
               <span>{revenueSeries[revenueSeries.length - 1]?.date ?? ""}</span>
             </div>
@@ -333,7 +334,7 @@ export default function PlatformStatisticsPage() {
             <div className="mt-2 flex justify-between text-xs text-fg-t6">
               <span>{ordersSeries[0]?.date ?? ""}</span>
               <span>
-                {t("admin.platform_statistics.max")}: {maxOrders.toLocaleString(lang)}
+                {t("admin.platform_statistics.max")}: {formatNumber(maxOrders, lang)}
               </span>
               <span>{ordersSeries[ordersSeries.length - 1]?.date ?? ""}</span>
             </div>

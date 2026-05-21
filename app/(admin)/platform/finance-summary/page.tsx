@@ -8,6 +8,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { apiPlatformFinanceSummary, type PlatformFinanceSummary } from "@/lib/platform-admin-api";
+import { formatMoney } from "@/lib/format";
 import { useCallback, useEffect, useState } from "react";
 import { Button, PageHeader } from "@/components/ui";
 
@@ -74,16 +75,16 @@ export default function PlatformFinanceSummaryPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <SummaryCard
             label={t("admin.finance_summary.card_total_payments")}
-            value={data.total_payments_paid.toLocaleString(lang, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            value={formatMoney(data.total_payments_paid, lang)}
             sub={t("admin.finance_summary.sub_paid_payments").replace("{n}", String(data.payments_count_paid))}
           />
           <SummaryCard
             label={t("admin.finance_summary.card_commission_accrued")}
-            value={data.total_commission_accrued.toLocaleString(lang, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            value={formatMoney(data.total_commission_accrued, lang)}
           />
           <SummaryCard
             label={t("admin.finance_summary.card_commission_pending")}
-            value={data.total_commission_pending.toLocaleString(lang, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            value={formatMoney(data.total_commission_pending, lang)}
             sub={t("admin.finance_summary.sub_commission_records").replace("{n}", String(data.commission_records_count))}
           />
         </div>

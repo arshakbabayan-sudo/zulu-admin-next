@@ -46,9 +46,34 @@ export function formatDateTime(input: DateInput, lang: string = "en"): string {
 }
 
 /** Locale-aware number formatting (thousands separators, etc.). */
-export function formatNumber(n: NumberInput, lang: string = "en"): string {
+export function formatNumber(
+  n: NumberInput,
+  lang: string = "en",
+  options?: Intl.NumberFormatOptions
+): string {
   const num = toNumber(n);
-  return num == null ? EMPTY : new Intl.NumberFormat(lang).format(num);
+  return num == null ? EMPTY : new Intl.NumberFormat(lang, options).format(num);
+}
+
+/**
+ * Money amount with locale-correct grouping + a fixed two-decimal tail.
+ * Pass `currency` to append the ISO code (matches formatCurrency), or omit
+ * it for the bare "1,234.56" form admin dashboard cards expect.
+ */
+export function formatMoney(
+  value: NumberInput,
+  lang: string = "en",
+  currency?: string | null
+): string {
+  const num = toNumber(value);
+  if (num == null) return EMPTY;
+  const body = new Intl.NumberFormat(lang, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(num);
+  if (!currency) return body;
+
+  return `${body} ${currency.toUpperCase()}`;
 }
 
 /**
