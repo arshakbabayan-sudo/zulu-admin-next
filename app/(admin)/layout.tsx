@@ -2,6 +2,7 @@
 
 import { AdminGroupTabs } from "@/components/AdminGroupTabs";
 import { AdminShell } from "@/components/AdminShell";
+import { AutoDocumentTitle } from "@/components/AutoDocumentTitle";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -34,6 +35,7 @@ export default function AdminSectionLayout({
 
   return (
     <AdminShell>
+      <AutoDocumentTitle />
       <AdminGroupTabs />
       {children}
     </AdminShell>
