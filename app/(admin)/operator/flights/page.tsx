@@ -320,7 +320,7 @@ export default function OperatorFlightsPage() {
     setForm((p) => {
       if (!p) return p;
       const next = [...p.cabins];
-      next[idx] = { ...next[idx], ...patch };
+      next[idx] = { ...next[idx]!, ...patch };
       return { ...p, cabins: next };
     });
   }
@@ -397,7 +397,7 @@ export default function OperatorFlightsPage() {
         const startIdx = editId == null && persisted.length === 0 ? 1 : 0;
         for (let i = startIdx; i < toCreate.length; i++) {
           try {
-            await apiCreateFlightCabin(token, flightId, toCreate[i]);
+            await apiCreateFlightCabin(token, flightId, toCreate[i]!);
           } catch (e) {
             if (e instanceof ApiRequestError && e.status === 422 && e.body?.errors) {
               throw e;

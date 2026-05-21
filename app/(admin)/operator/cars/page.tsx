@@ -575,7 +575,7 @@ export default function OperatorCarsPage() {
           setBusy(false);
           return;
         }
-        const companyId = Number(companies[0].id);
+        const companyId = Number(companies[0]!.id);
         await apiCreateOffer(token, {
           company_id: companyId,
           type: "car",

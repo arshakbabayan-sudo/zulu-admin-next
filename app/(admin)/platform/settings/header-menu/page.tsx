@@ -101,6 +101,7 @@ export default function PlatformHeaderMenuPage() {
       if (swapIdx < 0 || swapIdx >= siblings.length) return prev;
       const a = siblings[idx];
       const b = siblings[swapIdx];
+      if (!a || !b) return prev;
       const tmp = a.position;
       return prev.map((r) => {
         const k = r.id || r._tempId;

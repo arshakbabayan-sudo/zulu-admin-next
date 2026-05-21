@@ -236,7 +236,7 @@ const FLIGHT_IMPORT_HEADER_KEY_MAP: Record<string, string> = (() => {
   };
   for (const key of FLIGHT_CSV_FIELDS) {
     map[normalizeCsvTemplateHeader(String(key))] = String(key);
-    map[normalizeCsvTemplateHeader(FLIGHT_TEMPLATE_LABELS[key])] = String(key);
+    map[normalizeCsvTemplateHeader(FLIGHT_TEMPLATE_LABELS[key] ?? String(key))] = String(key);
   }
   Object.assign(map, buildTranslationHeaderMap(normalizeCsvTemplateHeader));
   return map;
@@ -362,11 +362,10 @@ export function flightDetailToCsvRow(f: FlightRow): Record<string, unknown> {
 export function flightTemplateCsv(): string {
   const headers = [
     "ID (Update Existing; leave blank to create)",
-    ...FLIGHT_CSV_FIELDS.map((key) =>
-      FLIGHT_REQUIRED_TEMPLATE_FIELDS.has(key)
-        ? `${FLIGHT_TEMPLATE_LABELS[key]} *`
-        : FLIGHT_TEMPLATE_LABELS[key]
-    ),
+    ...FLIGHT_CSV_FIELDS.map((key) => {
+      const label = String(FLIGHT_TEMPLATE_LABELS[key] ?? key);
+      return FLIGHT_REQUIRED_TEMPLATE_FIELDS.has(key) ? `${label} *` : label;
+    }),
     ...TRANSLATION_CSV_HEADERS,
   ];
   return stringifyCsv(headers, [{}]);
@@ -485,11 +484,12 @@ export function hotelRowToFormPayload(row: Record<string, string>): HotelFormPay
   room.max_adults = 2;
   room.max_children = 0;
   room.max_total_guests = 2;
-  room.pricings = [newHotelPricingFormRow()];
-  room.pricings[0].price = "100";
-  room.pricings[0].currency = "USD";
-  room.pricings[0].pricing_mode = "per_night";
-  room.pricings[0].status = "active";
+  const firstPricing = newHotelPricingFormRow();
+  firstPricing.price = "100";
+  firstPricing.currency = "USD";
+  firstPricing.pricing_mode = "per_night";
+  firstPricing.status = "active";
+  room.pricings = [firstPricing];
 
   return {
     offer_id: num("offer_id"),

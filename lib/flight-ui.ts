@@ -54,7 +54,9 @@ export const FLIGHT_VISIBILITY_RULES = [
 ] as const;
 
 /** User-facing labels for canonical API fields. */
-export const FLIGHT_FIELD_LABELS: Record<string, string> = {
+// `satisfies` keeps literal types so indexing by known keys returns
+// `string` (not `string | undefined`) under `noUncheckedIndexedAccess`.
+export const FLIGHT_FIELD_LABELS = {
   "": "Form",
   offer_id: "Offer",
   flight_code_internal: "Flight code (internal)",
@@ -120,7 +122,7 @@ export const FLIGHT_FIELD_LABELS: Record<string, string> = {
   cabins: "Cabin classes",
   airline: "Airline",
   aircraft: "Aircraft",
-};
+} satisfies Record<string, string>;
 
 export function flightCabinClassLabel(value: string): string {
   const map: Record<string, string> = {
@@ -266,7 +268,7 @@ export function formatFlightApiValidationErrors(
   for (const [field, msgs] of Object.entries(errors)) {
     if (!Array.isArray(msgs) || msgs.length === 0) continue;
     const root = field.split(".")[0] ?? field;
-    const label = FLIGHT_FIELD_LABELS[root] ?? root;
+    const label = (FLIGHT_FIELD_LABELS as Record<string, string>)[root] ?? root;
     for (const m of msgs) {
       const clean = String(m ?? "").trim();
       if (clean) lines.push(`${label}: ${clean}`);

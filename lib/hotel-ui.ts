@@ -33,7 +33,9 @@ export const HOTEL_LIFECYCLE_STATUSES = [
 ] as const;
 
 /** User-facing labels for API fields (forms + validation error mapping). */
-export const HOTEL_FIELD_LABELS: Record<string, string> = {
+// `satisfies` keeps literal types so indexing by known keys returns
+// `string` (not `string | undefined`) under `noUncheckedIndexedAccess`.
+export const HOTEL_FIELD_LABELS = {
   "": "Form",
   offer_id: "Offer",
   hotel_name: "Hotel name",
@@ -85,7 +87,7 @@ export const HOTEL_FIELD_LABELS: Record<string, string> = {
   valid_to: "Valid to",
   min_nights: "Min nights",
   pricing_status: "Pricing status",
-};
+} satisfies Record<string, string>;
 
 /** Hotel room pricing — free string max 32 on API; common presets for selects. */
 export const HOTEL_ROOM_PRICING_MODES = ["per_night", "per_stay", "per_person"] as const;
@@ -387,7 +389,7 @@ export function validateHotelOperatorForm(form: HotelFormPayload, mode: "create"
 export function formatHotelApiValidationErrors(errors: Record<string, string[]>): string[] {
   const lines: string[] = [];
   for (const [key, msgs] of Object.entries(errors)) {
-    const label = HOTEL_FIELD_LABELS[key] ?? key.replace(/_/g, " ");
+    const label = (HOTEL_FIELD_LABELS as Record<string, string>)[key] ?? key.replace(/_/g, " ");
     for (const m of msgs) {
       lines.push(`${label}: ${m}`);
     }

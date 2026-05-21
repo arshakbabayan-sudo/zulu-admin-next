@@ -273,7 +273,7 @@ function normalizeCount(v: unknown): number {
 function extractFileName(path: string): string {
   const normalized = path.replace(/\\/g, "/");
   const parts = normalized.split("/").filter(Boolean);
-  return parts.length > 0 ? parts[parts.length - 1] : path;
+  return parts.length > 0 ? parts[parts.length - 1]! : path;
 }
 
 async function uploadWidgetImage(token: string | null, file: File): Promise<string> {

@@ -74,8 +74,8 @@ export default function PlatformFooterPage() {
       const newIdx = idx + delta;
       if (newIdx < 0 || newIdx >= prev.length) return prev;
       const copy = [...prev];
-      const tmp = copy[idx];
-      copy[idx] = copy[newIdx];
+      const tmp = copy[idx]!;
+      copy[idx] = copy[newIdx]!;
       copy[newIdx] = tmp;
       return copy.map((c, i) => ({ ...c, position: i + 1 }));
     });
@@ -110,8 +110,8 @@ export default function PlatformFooterPage() {
         const newIdx = linkIdx + delta;
         if (newIdx < 0 || newIdx >= c.links.length) return c;
         const copy = [...c.links];
-        const tmp = copy[linkIdx];
-        copy[linkIdx] = copy[newIdx];
+        const tmp = copy[linkIdx]!;
+        copy[linkIdx] = copy[newIdx]!;
         copy[newIdx] = tmp;
         return { ...c, links: copy.map((l, k) => ({ ...l, position: k + 1 })) };
       })

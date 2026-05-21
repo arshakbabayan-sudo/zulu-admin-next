@@ -142,7 +142,7 @@ export async function runFlightCsvImport(
   let success = 0;
 
   for (let idx = 0; idx < dataRows.length; idx++) {
-    const row = normalizeFlightCsvImportRow(dataRows[idx]);
+    const row = normalizeFlightCsvImportRow(dataRows[idx] ?? {});
     const r = rowLineNumbers[idx] ?? idx + 2;
     const idRaw = (row.id ?? "").trim();
     const payload = flightRowToPayload(row);
@@ -204,7 +204,7 @@ export async function runHotelCsvImport(
   let success = 0;
 
   for (let idx = 0; idx < dataRows.length; idx++) {
-    const row = normalizeHotelCsvImportRow(dataRows[idx]);
+    const row = normalizeHotelCsvImportRow(dataRows[idx] ?? {});
     const r = rowLineNumbers[idx] ?? idx + 2;
     const idRaw = (row.id ?? "").trim();
     const form = hotelRowToFormPayload(row);
@@ -256,7 +256,7 @@ export async function runTransferCsvImport(
   let success = 0;
 
   for (let idx = 0; idx < dataRows.length; idx++) {
-    const row = normalizeTransferCsvImportRow(dataRows[idx]);
+    const row = normalizeTransferCsvImportRow(dataRows[idx] ?? {});
     const r = rowLineNumbers[idx] ?? idx + 2;
     const idRaw = (row.id ?? "").trim();
     const offerRaw = (row.offer_id ?? "").trim();
@@ -318,7 +318,7 @@ export async function runCarCsvImport(
   let success = 0;
 
   for (let idx = 0; idx < dataRows.length; idx++) {
-    const row = normalizeCarCsvImportRow(dataRows[idx]);
+    const row = normalizeCarCsvImportRow(dataRows[idx] ?? {});
     const r = rowLineNumbers[idx] ?? idx + 2;
     const idRaw = (row.id ?? "").trim();
     const offerRaw = (row.offer_id ?? "").trim();
@@ -397,7 +397,7 @@ export async function runExcursionCsvImport(
   let success = 0;
 
   for (let idx = 0; idx < dataRows.length; idx++) {
-    const row = normalizeExcursionCsvImportRow(dataRows[idx]);
+    const row = normalizeExcursionCsvImportRow(dataRows[idx] ?? {});
     const r = rowLineNumbers[idx] ?? idx + 2;
     const idRaw = (row.id ?? "").trim();
     const offerRaw = (row.offer_id ?? "").trim();

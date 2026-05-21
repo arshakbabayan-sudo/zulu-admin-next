@@ -758,7 +758,7 @@ export default function OperatorHotelsPage() {
                     setForm((p) => {
                       if (!p) return p;
                       const rooms = [...p.rooms];
-                      rooms[ri] = { ...rooms[ri], ...patch };
+                      rooms[ri] = { ...rooms[ri]!, ...patch };
                       return { ...p, rooms };
                     });
                   const numField = (
@@ -943,9 +943,9 @@ export default function OperatorHotelsPage() {
                                 setForm((p) => {
                                   if (!p) return p;
                                   const rooms = [...p.rooms];
-                                  const pricings = [...rooms[ri].pricings];
-                                  pricings[pi] = { ...pricings[pi], price: e.target.value };
-                                  rooms[ri] = { ...rooms[ri], pricings };
+                                  const pricings = [...rooms[ri]!.pricings];
+                                  pricings[pi] = { ...pricings[pi]!, price: e.target.value };
+                                  rooms[ri] = { ...rooms[ri]!, pricings };
                                   return { ...p, rooms };
                                 })
                               }
@@ -960,12 +960,12 @@ export default function OperatorHotelsPage() {
                                 setForm((p) => {
                                   if (!p) return p;
                                   const rooms = [...p.rooms];
-                                  const pricings = [...rooms[ri].pricings];
+                                  const pricings = [...rooms[ri]!.pricings];
                                   pricings[pi] = {
-                                    ...pricings[pi],
+                                    ...pricings[pi]!,
                                     currency: e.target.value.toUpperCase(),
                                   };
-                                  rooms[ri] = { ...rooms[ri], pricings };
+                                  rooms[ri] = { ...rooms[ri]!, pricings };
                                   return { ...p, rooms };
                                 })
                               }
@@ -981,9 +981,9 @@ export default function OperatorHotelsPage() {
                                 setForm((p) => {
                                   if (!p) return p;
                                   const rooms = [...p.rooms];
-                                  const pricings = [...rooms[ri].pricings];
-                                  pricings[pi] = { ...pricings[pi], pricing_mode: e.target.value };
-                                  rooms[ri] = { ...rooms[ri], pricings };
+                                  const pricings = [...rooms[ri]!.pricings];
+                                  pricings[pi] = { ...pricings[pi]!, pricing_mode: e.target.value };
+                                  rooms[ri] = { ...rooms[ri]!, pricings };
                                   return { ...p, rooms };
                                 })
                               }
@@ -1005,9 +1005,9 @@ export default function OperatorHotelsPage() {
                                 setForm((p) => {
                                   if (!p) return p;
                                   const rooms = [...p.rooms];
-                                  const pricings = [...rooms[ri].pricings];
-                                  pricings[pi] = { ...pricings[pi], valid_from: e.target.value };
-                                  rooms[ri] = { ...rooms[ri], pricings };
+                                  const pricings = [...rooms[ri]!.pricings];
+                                  pricings[pi] = { ...pricings[pi]!, valid_from: e.target.value };
+                                  rooms[ri] = { ...rooms[ri]!, pricings };
                                   return { ...p, rooms };
                                 })
                               }
@@ -1023,9 +1023,9 @@ export default function OperatorHotelsPage() {
                                 setForm((p) => {
                                   if (!p) return p;
                                   const rooms = [...p.rooms];
-                                  const pricings = [...rooms[ri].pricings];
-                                  pricings[pi] = { ...pricings[pi], valid_to: e.target.value };
-                                  rooms[ri] = { ...rooms[ri], pricings };
+                                  const pricings = [...rooms[ri]!.pricings];
+                                  pricings[pi] = { ...pricings[pi]!, valid_to: e.target.value };
+                                  rooms[ri] = { ...rooms[ri]!, pricings };
                                   return { ...p, rooms };
                                 })
                               }
@@ -1042,13 +1042,13 @@ export default function OperatorHotelsPage() {
                                 setForm((p) => {
                                   if (!p) return p;
                                   const rooms = [...p.rooms];
-                                  const pricings = [...rooms[ri].pricings];
+                                  const pricings = [...rooms[ri]!.pricings];
                                   const v = e.target.value;
                                   pricings[pi] = {
-                                    ...pricings[pi],
+                                    ...pricings[pi]!,
                                     min_nights: v === "" ? "" : Number(v),
                                   };
-                                  rooms[ri] = { ...rooms[ri], pricings };
+                                  rooms[ri] = { ...rooms[ri]!, pricings };
                                   return { ...p, rooms };
                                 })
                               }
@@ -1064,9 +1064,9 @@ export default function OperatorHotelsPage() {
                                 setForm((p) => {
                                   if (!p) return p;
                                   const rooms = [...p.rooms];
-                                  const pricings = [...rooms[ri].pricings];
-                                  pricings[pi] = { ...pricings[pi], status: e.target.value };
-                                  rooms[ri] = { ...rooms[ri], pricings };
+                                  const pricings = [...rooms[ri]!.pricings];
+                                  pricings[pi] = { ...pricings[pi]!, status: e.target.value };
+                                  rooms[ri] = { ...rooms[ri]!, pricings };
                                   return { ...p, rooms };
                                 })
                               }
@@ -1089,8 +1089,8 @@ export default function OperatorHotelsPage() {
                                   setForm((p) => {
                                     if (!p) return p;
                                     const rooms = [...p.rooms];
-                                    const pricings = rooms[ri].pricings.filter((_, i) => i !== pi);
-                                    rooms[ri] = { ...rooms[ri], pricings };
+                                    const pricings = rooms[ri]!.pricings.filter((_, i) => i !== pi);
+                                    rooms[ri] = { ...rooms[ri]!, pricings };
                                     return { ...p, rooms };
                                   })
                                 }
@@ -1113,8 +1113,8 @@ export default function OperatorHotelsPage() {
                         if (!p) return p;
                         const rooms = [...p.rooms];
                         rooms[ri] = {
-                          ...rooms[ri],
-                          pricings: [...rooms[ri].pricings, newHotelPricingFormRow()],
+                          ...rooms[ri]!,
+                          pricings: [...rooms[ri]!.pricings, newHotelPricingFormRow()],
                         };
                         return { ...p, rooms };
                       })

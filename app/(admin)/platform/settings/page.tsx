@@ -73,7 +73,7 @@ export default function PlatformSettingsPage() {
   const categories = useMemo(() => grouped.map(([c]) => c), [grouped]);
 
   useEffect(() => {
-    if (!activeCategory && categories.length > 0) setActiveCategory(categories[0]);
+    if (!activeCategory && categories.length > 0) setActiveCategory(categories[0]!);
   }, [activeCategory, categories]);
 
   async function save(key: string) {

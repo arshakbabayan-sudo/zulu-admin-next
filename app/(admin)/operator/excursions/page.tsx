@@ -205,7 +205,7 @@ export default function OperatorExcursionsPage() {
           setBusy(false);
           return;
         }
-        const companyId = Number(companies[0].id);
+        const companyId = Number(companies[0]!.id);
         await apiCreateOffer(token, {
           company_id: companyId,
           type: "excursion",
@@ -930,7 +930,7 @@ export default function OperatorExcursionsPage() {
                           setForm((p) => {
                             if (!p) return p;
                             const next = [...p.price_by_dates];
-                            next[i] = { ...next[i], date: e.target.value };
+                            next[i] = { ...next[i]!, date: e.target.value };
                             return { ...p, price_by_dates: next };
                           })
                         }
@@ -946,7 +946,7 @@ export default function OperatorExcursionsPage() {
                             if (!p) return p;
                             const next = [...p.price_by_dates];
                             const v = e.target.value;
-                            next[i] = { ...next[i], price: v === "" ? "" : Number(v) };
+                            next[i] = { ...next[i]!, price: v === "" ? "" : Number(v) };
                             return { ...p, price_by_dates: next };
                           })
                         }

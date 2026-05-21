@@ -27,7 +27,9 @@ export type TransferBuilderState = {
 export function useTransferBuilderForm(initial: TransferFormValues, mode: TransferBuilderMode): TransferBuilderState {
   const [form, setForm] = useState<TransferFormValues>(initial);
   const [stepIndex, setStepIndex] = useState(0);
-  const step = TRANSFER_BUILDER_STEPS[Math.max(0, Math.min(TRANSFER_BUILDER_STEPS.length - 1, stepIndex))];
+  // The `step` lookup is guaranteed because we clamp the index into
+  // [0, length-1], but TS under noUncheckedIndexedAccess doesn't know.
+  const step = TRANSFER_BUILDER_STEPS[Math.max(0, Math.min(TRANSFER_BUILDER_STEPS.length - 1, stepIndex))] ?? TRANSFER_BUILDER_STEPS[0]!;
 
   const validateCurrentStep = useCallback(() => {
     return validateTransferStep(form, step, mode);
@@ -61,6 +63,7 @@ export function useTransferBuilderForm(initial: TransferFormValues, mode: Transf
     if (idx > stepIndex) {
       for (let i = 0; i < idx; i++) {
         const s = TRANSFER_BUILDER_STEPS[i];
+        if (!s) continue;
         if (validateTransferStep(form, s, mode).length > 0) return;
       }
     }

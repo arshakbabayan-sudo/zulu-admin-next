@@ -262,7 +262,7 @@ async function runVisaCsvImport(
   let success = 0;
 
   for (let idx = 0; idx < dataRows.length; idx++) {
-    const row = normalizeVisaCsvImportRow(dataRows[idx]);
+    const row = normalizeVisaCsvImportRow(dataRows[idx] ?? {});
     const line = rowLineNumbers[idx] ?? idx + 2;
     const idRaw = (row.id ?? "").trim();
     const form = visaPayloadFromCsvRow(row);

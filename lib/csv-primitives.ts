@@ -38,7 +38,7 @@ export function parseCsv(text: string): CsvParseResult {
   let delimiter = ",";
   const excelSepMatch = t.match(/^sep=(.)\r?\n/i);
   if (excelSepMatch) {
-    delimiter = excelSepMatch[1];
+    delimiter = excelSepMatch[1] ?? ",";
     t = t.slice(excelSepMatch[0].length);
   }
 
@@ -69,13 +69,13 @@ export function parseCsv(text: string): CsvParseResult {
     field += c; i++;
   }
   pushField();
-  if (row.length > 1 || (row.length === 1 && row[0].trim() !== "")) pushRow();
+  if (row.length > 1 || (row.length === 1 && (row[0] ?? "").trim() !== "")) pushRow();
 
   if (rowsRaw.length === 0) {
     return { headers: [], rows: [], rowLineNumbers: [], error: "File is empty." };
   }
 
-  const headers = rowsRaw[0].map((h) => h.trim());
+  const headers = (rowsRaw[0] ?? []).map((h) => h.trim());
   const seen = new Set<string>();
   for (const h of headers) {
     if (h === "") {
@@ -92,9 +92,12 @@ export function parseCsv(text: string): CsvParseResult {
   for (let r = 1; r < rowsRaw.length; r++) {
     const lineNumber = r + 1;
     const rr = rowsRaw[r];
+    if (!rr) continue;
     const obj: Record<string, string> = {};
     for (let c = 0; c < headers.length; c++) {
-      obj[headers[c]] = rr[c] ?? "";
+      const header = headers[c];
+      if (header === undefined) continue;
+      obj[header] = rr[c] ?? "";
     }
     if (rowIsAllBlank(obj)) continue;
     data.push(obj);

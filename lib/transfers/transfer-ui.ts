@@ -12,7 +12,9 @@ export const TRANSFER_BUILDER_STEPS = [
 
 export type TransferBuilderStep = (typeof TRANSFER_BUILDER_STEPS)[number];
 
-export const TRANSFER_FIELD_LABELS: Record<string, string> = {
+// `satisfies` keeps the literal type so indexing by known keys returns
+// `string` (not `string | undefined`) under `noUncheckedIndexedAccess`.
+export const TRANSFER_FIELD_LABELS = {
   "": "Form",
   offer_id: "Offer",
   currency: "Currency",
@@ -64,10 +66,10 @@ export const TRANSFER_FIELD_LABELS: Record<string, string> = {
   bookable: "Bookable online",
   is_package_eligible: "Package eligible",
   status: "Lifecycle status",
-};
+} satisfies Record<string, string>;
 
 function labelFor(key: string): string {
-  return TRANSFER_FIELD_LABELS[key] ?? key.replace(/_/g, " ");
+  return (TRANSFER_FIELD_LABELS as Record<string, string>)[key] ?? key.replace(/_/g, " ");
 }
 
 function isValidDateISO(s: string): boolean {

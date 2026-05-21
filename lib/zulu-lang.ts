@@ -128,7 +128,7 @@ export function getLanguageMeta(
   options: LanguageOption[] = getCachedLanguageOptions()
 ): LanguageOption {
   const found = options.find((o) => o.code === code);
-  return found ?? options[0] ?? FALLBACK_LANGUAGE_OPTIONS[0];
+  return found ?? options[0] ?? FALLBACK_LANGUAGE_OPTIONS[0]!;
 }
 
 export function resolveInitialLanguage(allowedCodes: string[], defaultCode: string): LangCode {

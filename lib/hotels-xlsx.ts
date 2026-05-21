@@ -563,21 +563,21 @@ export async function importHotelsXlsx(
   pricingRows.forEach((row, i) => {
     const code = (row.room_code ?? "").trim();
     if (!code) {
-      errors.push({ sheet: "Pricings", rowNumber: pricingRowNumbers[i], message: "Room Code is required." });
+      errors.push({ sheet: "Pricings", rowNumber: pricingRowNumbers[i] ?? 0, message: "Room Code is required." });
       return;
     }
     const priceRaw = (row.price ?? "").trim();
     if (!priceRaw) {
-      errors.push({ sheet: "Pricings", rowNumber: pricingRowNumbers[i], message: "Price is required." });
+      errors.push({ sheet: "Pricings", rowNumber: pricingRowNumbers[i] ?? 0, message: "Price is required." });
       return;
     }
     const priceNum = Number(priceRaw);
     if (!Number.isFinite(priceNum) || priceNum <= 0) {
-      errors.push({ sheet: "Pricings", rowNumber: pricingRowNumbers[i], message: "Price must be a positive number." });
+      errors.push({ sheet: "Pricings", rowNumber: pricingRowNumbers[i] ?? 0, message: "Price must be a positive number." });
       return;
     }
     if (!(row.currency ?? "").trim()) {
-      errors.push({ sheet: "Pricings", rowNumber: pricingRowNumbers[i], message: "Currency is required (3 letters)." });
+      errors.push({ sheet: "Pricings", rowNumber: pricingRowNumbers[i] ?? 0, message: "Currency is required (3 letters)." });
       return;
     }
     const list = pricingsByRoom.get(code) ?? [];
@@ -592,29 +592,29 @@ export async function importHotelsXlsx(
     const hotelCode = (row.hotel_code ?? "").trim();
     const roomCode = (row.room_code ?? "").trim();
     if (!hotelCode) {
-      errors.push({ sheet: "Rooms", rowNumber: roomRowNumbers[i], message: "Hotel Code is required." });
+      errors.push({ sheet: "Rooms", rowNumber: roomRowNumbers[i] ?? 0, message: "Hotel Code is required." });
       return;
     }
     if (!roomCode) {
-      errors.push({ sheet: "Rooms", rowNumber: roomRowNumbers[i], message: "Room Code is required." });
+      errors.push({ sheet: "Rooms", rowNumber: roomRowNumbers[i] ?? 0, message: "Room Code is required." });
       return;
     }
     if (seenRoomCodes.has(roomCode)) {
-      errors.push({ sheet: "Rooms", rowNumber: roomRowNumbers[i], message: `Duplicate Room Code "${roomCode}".` });
+      errors.push({ sheet: "Rooms", rowNumber: roomRowNumbers[i] ?? 0, message: `Duplicate Room Code "${roomCode}".` });
       return;
     }
     seenRoomCodes.add(roomCode);
     if (!(row.room_type ?? "").trim() || !(row.room_name ?? "").trim()) {
-      errors.push({ sheet: "Rooms", rowNumber: roomRowNumbers[i], message: "Room Type and Room Name are required." });
+      errors.push({ sheet: "Rooms", rowNumber: roomRowNumbers[i] ?? 0, message: "Room Type and Room Name are required." });
       return;
     }
     if (!(row.max_adults ?? "").trim() || !(row.max_total_guests ?? "").trim()) {
-      errors.push({ sheet: "Rooms", rowNumber: roomRowNumbers[i], message: "Max Adults and Max Total Guests are required." });
+      errors.push({ sheet: "Rooms", rowNumber: roomRowNumbers[i] ?? 0, message: "Max Adults and Max Total Guests are required." });
       return;
     }
     const pricings = pricingsByRoom.get(roomCode) ?? [];
     if (pricings.length === 0) {
-      errors.push({ sheet: "Rooms", rowNumber: roomRowNumbers[i], message: `No pricings found for Room Code "${roomCode}". Add at least one row in the Pricings sheet.` });
+      errors.push({ sheet: "Rooms", rowNumber: roomRowNumbers[i] ?? 0, message: `No pricings found for Room Code "${roomCode}". Add at least one row in the Pricings sheet.` });
       return;
     }
     const room = buildRoomFromRow(row, pricings);
@@ -628,7 +628,8 @@ export async function importHotelsXlsx(
   const seenHotelCodes = new Set<string>();
   for (let i = 0; i < hotelRows.length; i++) {
     const row = hotelRows[i];
-    const rNum = hotelRowNumbers[i];
+    if (!row) continue;
+    const rNum = hotelRowNumbers[i] ?? 0;
     const code = (row.hotel_code ?? "").trim();
     if (!code) {
       errors.push({ sheet: "Hotels", rowNumber: rNum, message: "Hotel Code is required." });
