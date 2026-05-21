@@ -14,7 +14,8 @@
  */
 
 import Link from "next/link";
-import { use, useCallback, useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { PartnerSettingsModal } from "@/components/PartnerSettingsModal";
 import { TranslationsModal } from "@/components/TranslationsModal";
@@ -34,13 +35,9 @@ import {
 const GOVERNANCE_STATUSES = ["pending", "active", "suspended", "rejected"] as const;
 type Tab = "profile" | "permissions" | "partner" | "translations";
 
-export default function PlatformCompanyDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = use(params);
-  const companyId = Number(id);
+export default function PlatformCompanyDetailPage() {
+  const params = useParams<{ id: string }>();
+  const companyId = Number(params?.id);
   const { t, lang, setLang, languageOptions } = useLanguage();
   const { token, user } = useAdminAuth();
   const confirm = useConfirm();
