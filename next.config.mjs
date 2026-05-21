@@ -1,3 +1,5 @@
+import { withSentryConfig } from "@sentry/nextjs";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // K1 safeguard: never let ESLint or TypeScript errors silently pass
@@ -17,4 +19,14 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+const sentryWebpackPluginOptions = {
+  org: "zulu-platform",
+  project: "zulu-admin",
+  silent: true,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  disableLogger: true,
+  hideSourceMaps: true,
+  tunnelRoute: "/monitoring",
+};
+
+export default withSentryConfig(nextConfig, sentryWebpackPluginOptions);
