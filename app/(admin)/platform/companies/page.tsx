@@ -124,7 +124,7 @@ export default function PlatformCompaniesPage() {
 
   function sortIndicator(field: SortField): string {
     if (sortBy !== field) return "";
-    return sortDir === "asc" ? " ↑" : " ↓";
+    return sortDir === "asc" ? " в†‘" : " в†“";
   }
 
   useEffect(() => {
@@ -144,7 +144,7 @@ export default function PlatformCompaniesPage() {
       const [permRes, countryRes, allCountriesRes] = await Promise.all([
         apiCompanySellerPermissions(token, row.id),
         apiCompanyCountryPermissions(token, row.id),
-        // Pull all countries from the location tree — one shot, no auth.
+        // Pull all countries from the location tree вЂ” one shot, no auth.
         fetch(
           `${process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8008/api"}/locations/search?types=country&limit=200`,
           { headers: { Accept: "application/json" } }
@@ -366,7 +366,7 @@ export default function PlatformCompaniesPage() {
           <table className="w-full min-w-[960px] text-left text-sm">
             <thead className="border-b border-default bg-figma-bg-1 text-xs font-medium uppercase tracking-wide text-fg-t6">
               <tr>
-                <th className="px-4 py-3">
+                <th scope="col" className="px-4 py-3">
                   <button
                     type="button"
                     onClick={() => toggleSort("id")}
@@ -376,7 +376,7 @@ export default function PlatformCompaniesPage() {
                     <span className="tabular-nums">{sortIndicator("id")}</span>
                   </button>
                 </th>
-                <th className="px-4 py-3">
+                <th scope="col" className="px-4 py-3">
                   <button
                     type="button"
                     onClick={() => toggleSort("name")}
@@ -386,7 +386,7 @@ export default function PlatformCompaniesPage() {
                     <span className="tabular-nums">{sortIndicator("name")}</span>
                   </button>
                 </th>
-                <th className="px-4 py-3">
+                <th scope="col" className="px-4 py-3">
                   <button
                     type="button"
                     onClick={() => toggleSort("type")}
@@ -396,7 +396,7 @@ export default function PlatformCompaniesPage() {
                     <span className="tabular-nums">{sortIndicator("type")}</span>
                   </button>
                 </th>
-                <th className="px-4 py-3">
+                <th scope="col" className="px-4 py-3">
                   <button
                     type="button"
                     onClick={() => toggleSort("status")}
@@ -406,7 +406,7 @@ export default function PlatformCompaniesPage() {
                     <span className="tabular-nums">{sortIndicator("status")}</span>
                   </button>
                 </th>
-                <th className="px-4 py-3">
+                <th scope="col" className="px-4 py-3">
                   <button
                     type="button"
                     onClick={() => toggleSort("governance_status")}
@@ -416,7 +416,7 @@ export default function PlatformCompaniesPage() {
                     <span className="tabular-nums">{sortIndicator("governance_status")}</span>
                   </button>
                 </th>
-                <th className="px-4 py-3">
+                <th scope="col" className="px-4 py-3">
                   <button
                     type="button"
                     onClick={() => toggleSort("is_seller")}
@@ -426,7 +426,7 @@ export default function PlatformCompaniesPage() {
                     <span className="tabular-nums">{sortIndicator("is_seller")}</span>
                   </button>
                 </th>
-                <th className="px-4 py-3 text-right">{t("admin.platform_companies.actions")}</th>
+                <th scope="col" className="px-4 py-3 text-right">{t("admin.platform_companies.actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -455,9 +455,9 @@ export default function PlatformCompaniesPage() {
                       {r.name}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-fg-t7 capitalize">{r.type ?? "—"}</td>
+                  <td className="px-4 py-3 text-fg-t7 capitalize">{r.type ?? "вЂ”"}</td>
                   <td className="px-4 py-3">
-                    {r.status ? <StatusPill status={r.status} /> : <span className="text-fg-t6">—</span>}
+                    {r.status ? <StatusPill status={r.status} /> : <span className="text-fg-t6">вЂ”</span>}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
@@ -482,7 +482,7 @@ export default function PlatformCompaniesPage() {
                       <StatusPill status="yes" tone="success">
                         {t("admin.platform_companies.yes")}
                         {r.active_seller_permissions_count != null && (
-                          <span className="ml-1 tabular-nums">· {r.active_seller_permissions_count}</span>
+                          <span className="ml-1 tabular-nums">В· {r.active_seller_permissions_count}</span>
                         )}
                       </StatusPill>
                     ) : (
@@ -613,22 +613,22 @@ export default function PlatformCompaniesPage() {
                   </h3>
                   {permModalCompany?.country && (
                     <div className="mb-3 rounded-zulu border border-success-100 bg-success-50 px-3 py-2 text-sm text-success-700">
-                      🏠 Home country: <span className="font-medium">{permModalCompany.country}</span>
+                      рџЏ  Home country: <span className="font-medium">{permModalCompany.country}</span>
                       <span className="ml-1 text-xs text-success-600">(always allowed)</span>
                     </div>
                   )}
 
-                  {/* Quick filter — handy for 40+ countries */}
+                  {/* Quick filter вЂ” handy for 40+ countries */}
                   <input
                     type="text"
-                    placeholder="Filter list…"
+                    placeholder="Filter listвЂ¦"
                     value={countryFilter}
                     onChange={(e) => setCountryFilter(e.target.value)}
                     className="mb-2 w-full rounded-zulu border border-default bg-white px-3 py-2 text-sm"
                   />
 
                   {countriesAll.length === 0 ? (
-                    <p className="text-xs text-fg-t6">Loading countries…</p>
+                    <p className="text-xs text-fg-t6">Loading countriesвЂ¦</p>
                   ) : (
                     <div className="max-h-64 overflow-y-auto rounded-zulu border border-default bg-white">
                       {countriesAll

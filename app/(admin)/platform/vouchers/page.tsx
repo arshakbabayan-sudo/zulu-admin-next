@@ -339,7 +339,7 @@ export default function PlatformVouchersPage() {
               <TD><VoucherStatusBadge status={r.status} /></TD>
               <TD className="text-xs">
                 {formatDate(r.valid_from, lang)}
-                {r.valid_to ? ` → ${formatDate(r.valid_to, lang)}` : ""}
+                {r.valid_to ? ` в†’ ${formatDate(r.valid_to, lang)}` : ""}
               </TD>
               <TD className="tabular-nums text-xs">{r.verification_count}</TD>
               <TD className="text-xs text-fg-t6">{formatDate(r.created_at, lang)}</TD>
@@ -375,7 +375,7 @@ export default function PlatformVouchersPage() {
               <div>
                 <h2 className="text-lg font-semibold">{t("admin.platform_vouchers.voucher")} {selected.voucher_number}</h2>
                 <p className="mt-1 text-xs text-fg-t6">
-                  {selected.service_type} · {selected.language.toUpperCase()}
+                  {selected.service_type} В· {selected.language.toUpperCase()}
                 </p>
               </div>
               <button
@@ -384,7 +384,7 @@ export default function PlatformVouchersPage() {
                 className="rounded p-1 text-fg-t6 hover:bg-figma-bg-1"
                 aria-label={t("common.close")}
               >
-                ✕
+                вњ•
               </button>
             </div>
 
@@ -430,7 +430,7 @@ export default function PlatformVouchersPage() {
               />
               <DetailRow
                 label={t("admin.platform_vouchers.issuer")}
-                value={selected.issuer_company?.name ?? "—"}
+                value={selected.issuer_company?.name ?? "вЂ”"}
               />
               <DetailRow
                 label={t("admin.platform_vouchers.valid")}
@@ -438,10 +438,10 @@ export default function PlatformVouchersPage() {
                   selected.valid_from
                     ? `${formatDate(selected.valid_from, lang)}${
                         selected.valid_to
-                          ? " → " + formatDate(selected.valid_to, lang)
+                          ? " в†’ " + formatDate(selected.valid_to, lang)
                           : ""
                       }`
-                    : "—"
+                    : "вЂ”"
                 }
               />
               <DetailRow
@@ -470,16 +470,16 @@ export default function PlatformVouchersPage() {
                   <table className="w-full text-left text-xs">
                     <thead className="bg-figma-bg-1 text-fg-t7">
                       <tr>
-                        <th className="px-2 py-1">{t("admin.platform_vouchers.when")}</th>
-                        <th className="px-2 py-1">{t("admin.platform_vouchers.ip")}</th>
-                        <th className="px-2 py-1">{t("admin.platform_vouchers.result")}</th>
+                        <th scope="col" className="px-2 py-1">{t("admin.platform_vouchers.when")}</th>
+                        <th scope="col" className="px-2 py-1">{t("admin.platform_vouchers.ip")}</th>
+                        <th scope="col" className="px-2 py-1">{t("admin.platform_vouchers.result")}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {logs.map((l) => (
                         <tr key={l.id} className="border-t border-default">
                           <td className="px-2 py-1">{formatDateTime(l.scanned_at, lang)}</td>
-                          <td className="px-2 py-1 font-mono">{l.scanner_ip ?? "—"}</td>
+                          <td className="px-2 py-1 font-mono">{l.scanner_ip ?? "вЂ”"}</td>
                           <td className="px-2 py-1">{l.result}</td>
                         </tr>
                       ))}

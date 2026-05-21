@@ -82,14 +82,14 @@ export default function CompanyApplicationsPage() {
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
-              <th className="px-3 py-2">{t("admin.company_applications.col_id")}</th>
-              <th className="px-3 py-2">{t("admin.company_applications.col_company")}</th>
-              <th className="px-3 py-2">Role</th>
-              <th className="px-3 py-2">Applicant</th>
-              <th className="px-3 py-2">{t("admin.company_applications.col_email")}</th>
-              <th className="px-3 py-2">{t("admin.company_applications.col_status")}</th>
-              <th className="px-3 py-2">{t("admin.company_applications.col_submitted")}</th>
-              <th className="px-3 py-2"> </th>
+              <th scope="col" className="px-3 py-2">{t("admin.company_applications.col_id")}</th>
+              <th scope="col" className="px-3 py-2">{t("admin.company_applications.col_company")}</th>
+              <th scope="col" className="px-3 py-2">Role</th>
+              <th scope="col" className="px-3 py-2">Applicant</th>
+              <th scope="col" className="px-3 py-2">{t("admin.company_applications.col_email")}</th>
+              <th scope="col" className="px-3 py-2">{t("admin.company_applications.col_status")}</th>
+              <th scope="col" className="px-3 py-2">{t("admin.company_applications.col_submitted")}</th>
+              <th scope="col" className="px-3 py-2"> </th>
             </tr>
           </thead>
           <tbody>
@@ -99,7 +99,7 @@ export default function CompanyApplicationsPage() {
               // user pre-registration link is missing (legacy/anonymous
               // submissions).
               const role = r.user?.intended_role ?? r.company_type ?? null;
-              const roleLabel = role === "agent" ? "Tour agent" : role === "operator" ? "Tour operator" : "—";
+              const roleLabel = role === "agent" ? "Tour agent" : role === "operator" ? "Tour operator" : "вЂ”";
               const roleClass =
                 role === "agent"
                   ? "bg-primary-50 text-primary-700 border-primary-200"
@@ -118,13 +118,13 @@ export default function CompanyApplicationsPage() {
                   <td className="px-3 py-2 text-xs">
                     {r.user ? (
                       <span>
-                        {r.user.name ?? "—"}
+                        {r.user.name ?? "вЂ”"}
                         {r.user.email && (
                           <span className="block text-fg-t6">{r.user.email}</span>
                         )}
                       </span>
                     ) : (
-                      <span className="text-fg-t6">— (anonymous)</span>
+                      <span className="text-fg-t6">вЂ” (anonymous)</span>
                     )}
                   </td>
                   <td className="px-3 py-2">{r.business_email}</td>

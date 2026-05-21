@@ -150,7 +150,7 @@ export default function PlatformRbacPage() {
         <table className="min-w-full text-left text-sm">
           <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7 sticky top-0">
             <tr>
-              <th className="px-3 py-2 text-left">{t("admin.rbac.col_role")}</th>
+              <th scope="col" className="px-3 py-2 text-left">{t("admin.rbac.col_role")}</th>
               {filteredPermissions.map((p) => (
                 <th
                   key={p.id}
@@ -180,11 +180,11 @@ export default function PlatformRbacPage() {
                     <td key={p.permission_id} className="px-2 py-2 text-center">
                       {p.granted ? (
                         <span className="text-success-600 font-bold" title={p.permission_name}>
-                          ✓
+                          вњ“
                         </span>
                       ) : (
                         <span className="text-fg-t7" title={p.permission_name}>
-                          ·
+                          В·
                         </span>
                       )}
                     </td>

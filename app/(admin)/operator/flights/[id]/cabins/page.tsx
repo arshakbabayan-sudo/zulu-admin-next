@@ -141,12 +141,12 @@ export default function FlightCabinsSeatMapPage() {
         <table className="w-full min-w-[680px] text-left text-sm">
           <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
-              <th className="px-3 py-2">Cabin</th>
-              <th className="px-3 py-2">Class</th>
-              <th className="px-3 py-2">Seats</th>
-              <th className="px-3 py-2">Adult price</th>
-              <th className="px-3 py-2">Seat map</th>
-              <th className="px-3 py-2">Action</th>
+              <th scope="col" className="px-3 py-2">Cabin</th>
+              <th scope="col" className="px-3 py-2">Class</th>
+              <th scope="col" className="px-3 py-2">Seats</th>
+              <th scope="col" className="px-3 py-2">Adult price</th>
+              <th scope="col" className="px-3 py-2">Seat map</th>
+              <th scope="col" className="px-3 py-2">Action</th>
             </tr>
           </thead>
           <tbody>

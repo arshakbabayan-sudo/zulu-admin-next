@@ -74,7 +74,7 @@ import { useDocumentTitle } from "@/lib/use-document-title";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
 
-// Lazy-load the XLSX import modal — it pulls in ExcelJS (~200 KB) which is
+// Lazy-load the XLSX import modal вЂ” it pulls in ExcelJS (~200 KB) which is
 // only needed when the operator actually clicks "Import". Module + dep
 // download happens on first render of the modal (gated by importOpen).
 const HotelsXlsxImportModal = dynamic(
@@ -417,7 +417,7 @@ export default function OperatorHotelsPage() {
               label={
                 <>
                   Short description{" "}
-                  <span className="text-fg-t6 font-normal">(կարճ նկարագրություն հյուրանոցի մասին` ցույց է տրվում &quot;About the hotel&quot; բաժնում)</span>
+                  <span className="text-fg-t6 font-normal">(ХЇХЎЦЂХі Х¶ХЇХЎЦЂХЎХЈЦЂХёЦ‚Х©ХµХёЦ‚Х¶ Х°ХµХёЦ‚ЦЂХЎХ¶ХёЦЃХ« ХґХЎХЅХ«Х¶` ЦЃХёЦ‚ХµЦЃ Х§ ХїЦЂХѕХёЦ‚Хґ &quot;About the hotel&quot; ХўХЎХЄХ¶ХёЦ‚Хґ)</span>
                 </>
               }
               htmlFor="hotel-short-description"
@@ -484,7 +484,7 @@ export default function OperatorHotelsPage() {
               htmlFor="hotel-star-rating"
               helperText={
                 <>
-                  Optional (1–5) — API field <code className="rounded bg-figma-bg-1 px-1">{HOTEL_API_STAR_RATING_KEY}</code>
+                  Optional (1вЂ“5) вЂ” API field <code className="rounded bg-figma-bg-1 px-1">{HOTEL_API_STAR_RATING_KEY}</code>
                 </>
               }
             >
@@ -654,7 +654,7 @@ export default function OperatorHotelsPage() {
               <FormField
                 label={t("admin.crud.hotels.field.review_score")}
                 htmlFor="hotel-review-score"
-                helperText="0–10, optional"
+                helperText="0вЂ“10, optional"
               >
                 <Input
                   id="hotel-review-score"
@@ -836,7 +836,7 @@ export default function OperatorHotelsPage() {
                           />
                         </FormField>
                         <FormField label="Bed count">{numField("bed_count", 1)}</FormField>
-                        <FormField label="Room size (m²)">{txtField("room_size")}</FormField>
+                        <FormField label="Room size (mВІ)">{txtField("room_size")}</FormField>
                       </div>
 
                       {/* View + Inventory + Status */}
@@ -920,14 +920,14 @@ export default function OperatorHotelsPage() {
                   <table className="w-full min-w-[720px] border-collapse text-xs">
                     <thead>
                       <tr className="border-b border-default bg-white text-left text-fg-t6">
-                        <th className="px-1 py-1.5 font-medium">{t("admin.crud.hotels.field.price")}</th>
-                        <th className="px-1 py-1.5 font-medium">{t("admin.crud.hotels.field.currency")}</th>
-                        <th className="px-1 py-1.5 font-medium">{t("admin.crud.hotels.field.pricing_mode")}</th>
-                        <th className="px-1 py-1.5 font-medium">{t("admin.crud.hotels.field.valid_from")}</th>
-                        <th className="px-1 py-1.5 font-medium">{t("admin.crud.hotels.field.valid_to")}</th>
-                        <th className="px-1 py-1.5 font-medium">{t("admin.crud.hotels.field.min_nights")}</th>
-                        <th className="px-1 py-1.5 font-medium">{t("admin.crud.hotels.field.pricing_status")}</th>
-                        <th className="px-1 py-1.5" />
+                        <th scope="col" className="px-1 py-1.5 font-medium">{t("admin.crud.hotels.field.price")}</th>
+                        <th scope="col" className="px-1 py-1.5 font-medium">{t("admin.crud.hotels.field.currency")}</th>
+                        <th scope="col" className="px-1 py-1.5 font-medium">{t("admin.crud.hotels.field.pricing_mode")}</th>
+                        <th scope="col" className="px-1 py-1.5 font-medium">{t("admin.crud.hotels.field.valid_from")}</th>
+                        <th scope="col" className="px-1 py-1.5 font-medium">{t("admin.crud.hotels.field.valid_to")}</th>
+                        <th scope="col" className="px-1 py-1.5 font-medium">{t("admin.crud.hotels.field.min_nights")}</th>
+                        <th scope="col" className="px-1 py-1.5 font-medium">{t("admin.crud.hotels.field.pricing_status")}</th>
+                        <th scope="col" className="px-1 py-1.5" />
                       </tr>
                     </thead>
                     <tbody>
@@ -1136,18 +1136,18 @@ export default function OperatorHotelsPage() {
           {editId !== null && (
             <div className="mt-6 rounded-zulu border border-default bg-figma-bg-1 p-3">
               <h3 className="mb-2 text-sm font-medium text-fg-t6">
-                Բովանդակություն բոլոր լեզուներով{" "}
-                <span className="text-fg-t7 font-normal">(բոլոր լեզուները հավասար են — ընտրիր դրոշակը)</span>
+                ФІХёХѕХЎХ¶Х¤ХЎХЇХёЦ‚Х©ХµХёЦ‚Х¶ ХўХёХ¬ХёЦЂ Х¬ХҐХ¦ХёЦ‚Х¶ХҐЦЂХёХѕ{" "}
+                <span className="text-fg-t7 font-normal">(ХўХёХ¬ХёЦЂ Х¬ХҐХ¦ХёЦ‚Х¶ХҐЦЂХЁ Х°ХЎХѕХЎХЅХЎЦЂ ХҐХ¶ вЂ” ХЁХ¶ХїЦЂХ«ЦЂ Х¤ЦЂХёХ·ХЎХЇХЁ)</span>
               </h3>
               <TranslationTabs
                 entityType="hotel"
                 entityId={editId}
                 fields={[
-                  { name: "hotel_name", label: "Հյուրանոցի անունը" },
-                  { name: "short_description", label: "Կարճ նկարագրություն", multiline: true },
-                  { name: "full_address", label: "Ամբողջական հասցե" },
-                  { name: "district_or_area", label: "Շրջան / տարածք" },
-                  { name: "review_label", label: "Գնահատման պիտակ" },
+                  { name: "hotel_name", label: "ХЂХµХёЦ‚ЦЂХЎХ¶ХёЦЃХ« ХЎХ¶ХёЦ‚Х¶ХЁ" },
+                  { name: "short_description", label: "ФїХЎЦЂХі Х¶ХЇХЎЦЂХЎХЈЦЂХёЦ‚Х©ХµХёЦ‚Х¶", multiline: true },
+                  { name: "full_address", label: "Ф±ХґХўХёХІХ»ХЎХЇХЎХ¶ Х°ХЎХЅЦЃХҐ" },
+                  { name: "district_or_area", label: "Х‡ЦЂХ»ХЎХ¶ / ХїХЎЦЂХЎХ®Ц„" },
+                  { name: "review_label", label: "ФіХ¶ХЎХ°ХЎХїХґХЎХ¶ ХєХ«ХїХЎХЇ" },
                 ]}
               />
             </div>
