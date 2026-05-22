@@ -71,22 +71,6 @@ export type AllLanguagesPayload = {
   available_fields: TranslatableField[];
 };
 
-export async function fetchTranslations(
-  entity_type: TranslatableEntityType,
-  entity_id: number,
-  language_code: string
-): Promise<TranslationsPayload> {
-  const params = new URLSearchParams({
-    entity_type,
-    entity_id: String(entity_id),
-    lang: language_code,
-  });
-  const json = await apiFetchJson<{ success: boolean; data: TranslationsPayload }>(
-    `/localization/translations?${params.toString()}`
-  );
-  return json.data;
-}
-
 export async function fetchAllLanguages(
   token: string,
   entity_type: TranslatableEntityType,

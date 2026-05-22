@@ -47,12 +47,6 @@ export const FLIGHT_CABIN_CLASSES = [
   "first",
 ] as const;
 
-export const FLIGHT_VISIBILITY_RULES = [
-  "show_all",
-  "show_accepted_only",
-  "hide_rejected",
-] as const;
-
 /** User-facing labels for canonical API fields. */
 // `satisfies` keeps literal types so indexing by known keys returns
 // `string` (not `string | undefined`) under `noUncheckedIndexedAccess`.
@@ -171,15 +165,6 @@ export function flightLifecycleStatusLabel(value: string): string {
     cancelled: "Cancelled",
     completed: "Completed",
     archived: "Archived",
-  };
-  return map[value] ?? value;
-}
-
-export function flightVisibilityRuleLabel(value: string): string {
-  const map: Record<string, string> = {
-    show_all: "Show all",
-    show_accepted_only: "Show accepted only",
-    hide_rejected: "Hide rejected",
   };
   return map[value] ?? value;
 }

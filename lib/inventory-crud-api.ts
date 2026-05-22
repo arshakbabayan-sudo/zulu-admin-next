@@ -2105,25 +2105,3 @@ export async function apiDeactivatePackage(
   return apiFetchJson(`/packages/${id}/deactivate`, { method: "POST", token, body: {} });
 }
 
-export async function apiPackageComponents(
-  token: string,
-  packageId: number
-): Promise<ApiSuccessEnvelope<{ id: number; component_type: string; component_id: number; sort_order?: number }[]>> {
-  return apiFetchJson(`/packages/${packageId}`, { method: "GET", token });
-}
-
-export async function apiAddPackageComponent(
-  token: string,
-  packageId: number,
-  body: { component_type: string; component_id: number }
-): Promise<ApiSuccessEnvelope<PackageRow>> {
-  return apiFetchJson(`/packages/${packageId}/components`, { method: "POST", token, body });
-}
-
-export async function apiRemovePackageComponent(
-  token: string,
-  packageId: number,
-  componentId: number
-): Promise<ApiSuccessEnvelope<PackageRow>> {
-  return apiFetchJson(`/packages/${packageId}/components/${componentId}`, { method: "DELETE", token });
-}

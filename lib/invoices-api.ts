@@ -75,13 +75,6 @@ export async function downloadInvoicesCsv(
   URL.revokeObjectURL(objectUrl);
 }
 
-export async function apiInvoice(
-  token: string,
-  id: number
-): Promise<ApiSuccessEnvelope<InvoiceRow>> {
-  return apiFetchJson(`/invoices/${id}`, { method: "GET", token });
-}
-
 export async function apiIssueInvoice(
   token: string,
   id: number

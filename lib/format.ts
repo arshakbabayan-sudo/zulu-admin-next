@@ -76,33 +76,3 @@ export function formatMoney(
   return `${body} ${currency.toUpperCase()}`;
 }
 
-/**
- * Currency-aware price string: "1,996 USD" with locale-correct thousands
- * separators and a trailing ISO currency code. Suppliers can leave the
- * currency unset on legacy data; in that case we default to USD.
- */
-export function formatCurrency(
-  value: NumberInput,
-  currency: string | null | undefined = DEFAULT_CURRENCY,
-  lang: string = "en"
-): string {
-  const num = toNumber(value);
-  if (num == null) return EMPTY;
-  const code = (currency ?? DEFAULT_CURRENCY).toUpperCase();
-  return `${new Intl.NumberFormat(lang).format(num)} ${code}`;
-}
-
-/**
- * Range formatter for booking-period / report-window cells. Returns the
- * em-dash placeholder if either side is missing.
- */
-export function formatDateRange(
-  start: DateInput,
-  end: DateInput,
-  lang: string = "en"
-): string {
-  const a = toDate(start);
-  const b = toDate(end);
-  if (!a || !b) return EMPTY;
-  return `${a.toLocaleDateString(lang)} – ${b.toLocaleDateString(lang)}`;
-}

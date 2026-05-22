@@ -26,13 +26,6 @@ export async function apiBookings(
   return apiFetchJson(`/bookings${qs ? `?${qs}` : ""}`, { method: "GET", token });
 }
 
-export async function apiBooking(
-  token: string,
-  id: number
-): Promise<ApiSuccessEnvelope<BookingRow>> {
-  return apiFetchJson(`/bookings/${id}`, { method: "GET", token });
-}
-
 export async function apiConfirmBooking(
   token: string,
   id: number

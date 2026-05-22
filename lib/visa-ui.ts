@@ -1,11 +1,3 @@
-import type { VisaRow } from "@/lib/inventory-crud-api";
-
-/** Offer-linked status from VisaResource (read-only; not writable via PATCH /visas). */
-export function visaOfferStatusLabel(r: VisaRow): string {
-  const s = (r.status ?? "").trim();
-  return s || "—";
-}
-
 export function visaNumberFromApi(value: unknown): number | undefined {
   if (value == null) return undefined;
   const n = Number(value);

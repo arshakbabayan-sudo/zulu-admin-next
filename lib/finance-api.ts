@@ -83,19 +83,6 @@ export async function apiMarkEntitlementsPayable(
   return apiFetchJson(`/finance/entitlements/mark-payable`, { method: "POST", token, body });
 }
 
-export async function apiCreateSettlement(
-  token: string,
-  body: {
-    company_id: number;
-    entitlement_ids: number[];
-    currency: string;
-    period_label?: string;
-    notes?: string;
-  }
-): Promise<ApiSuccessEnvelope<FinanceSettlementRow>> {
-  return apiFetchJson(`/finance/settlements`, { method: "POST", token, body });
-}
-
 export async function apiUpdateSettlementStatus(
   token: string,
   id: number,

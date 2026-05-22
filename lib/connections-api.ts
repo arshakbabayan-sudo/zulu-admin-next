@@ -38,7 +38,6 @@ export type ConnectionRow = {
 
 export const CONNECTION_SOURCE_TYPES = ["flight", "hotel", "transfer"] as const;
 export const CONNECTION_TARGET_TYPES = ["flight", "hotel", "transfer"] as const;
-export const CONNECTION_STATUSES = ["pending", "accepted", "rejected", "canceled"] as const;
 
 export type ConnectionsListParams = {
   page?: number;

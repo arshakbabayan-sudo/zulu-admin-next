@@ -147,17 +147,6 @@ export async function apiUiTranslationsSave(
   return apiFetchJson(`${LOC}/ui-translations`, { method: "POST", token, body });
 }
 
-export async function apiLocalizationToggleLanguage(
-  token: string,
-  languageId: number
-): Promise<ApiSuccessEnvelope<LocalizationLanguageRow & { is_enabled: boolean }>> {
-  return apiFetchJson(`${LOC}/languages/${languageId}/toggle`, {
-    method: "PATCH",
-    token,
-    body: {},
-  });
-}
-
 export async function apiLocalizationTranslationsGet(
   token: string | null | undefined,
   params: {
