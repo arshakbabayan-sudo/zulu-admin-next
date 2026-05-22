@@ -389,7 +389,7 @@ export default function OperatorVisasPage() {
   const fieldErrorFor = (fieldKey: string): string | null => {
     if (!errFields.has(fieldKey)) return null;
     const match = formErrLines.find((line) => line.startsWith(`${fieldKey}:`));
-    return match ?? "Invalid value";
+    return match ?? t("admin.crud.common.invalid_value");
   };
   const sectionTitleClass = "mb-3 text-xs font-semibold uppercase tracking-wide text-fg-t6";
 
@@ -403,7 +403,7 @@ export default function OperatorVisasPage() {
       setMeta(res.meta);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else setErr(e instanceof ApiRequestError ? e.message : "Failed");
+      else setErr(e instanceof ApiRequestError ? e.message : t("admin.crud.common.failed"));
     }
   }, [token, allowed, page, contentLang]);
 
@@ -477,7 +477,7 @@ export default function OperatorVisasPage() {
       if (e instanceof ApiRequestError && e.status === 422 && e.body?.errors) {
         setFormErrLines(linesFromApiErrors(e.body.errors));
       } else {
-        setFormErrLines([e instanceof ApiRequestError ? e.message : "Failed"]);
+        setFormErrLines([e instanceof ApiRequestError ? e.message : t("admin.crud.common.failed")]);
       }
     } finally {
       setBusy(false);
@@ -597,7 +597,7 @@ export default function OperatorVisasPage() {
                 <LocationCascadeSelect
                   token={token}
                   value={form.location_id === "" || form.location_id == null ? null : Number(form.location_id)}
-                  label="Location (select country/region/city)"
+                  label={t("admin.crud.visas.field.location")}
                   onChange={(locationId, meta) =>
                     setForm((p) =>
                       p
@@ -794,9 +794,9 @@ export default function OperatorVisasPage() {
                 entityType="visa"
                 entityId={editId}
                 fields={[
-                  { name: "title", label: "Title" },
-                  { name: "description", label: "Description", multiline: true },
-                  { name: "notes", label: "Notes", multiline: true },
+                  { name: "title", label: t("admin.crud.visas.field.title") },
+                  { name: "description", label: t("admin.crud.visas.field.description"), multiline: true },
+                  { name: "notes", label: t("admin.crud.visas.field.notes"), multiline: true },
                 ]}
               />
             </div>
