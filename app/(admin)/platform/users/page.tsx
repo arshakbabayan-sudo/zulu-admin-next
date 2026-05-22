@@ -27,6 +27,7 @@ import {
   apiHardDeletePlatformUser,
   apiPlatformUsers,
   type PlatformAdminUserRow,
+  type PlatformUserTypeFilter,
 } from "@/lib/platform-admin-api";
 import { useCallback, useEffect, useState } from "react";
 import { Search } from "lucide-react";
@@ -57,6 +58,8 @@ export default function PlatformUsersPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
+  // Phase 6.4 — type filter merges customers / staff / unverified
+  const [typeFilter, setTypeFilter] = useState<PlatformUserTypeFilter>("");
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -66,14 +69,19 @@ export default function PlatformUsersPage() {
     setErr(null);
     setForbidden(false);
     try {
-      const res = await apiPlatformUsers(token, { page, per_page: 20, search: search || undefined });
+      const res = await apiPlatformUsers(token, {
+        page,
+        per_page: 20,
+        search: search || undefined,
+        type: typeFilter || undefined,
+      });
       setRows(res.data);
       setMeta(res.meta);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
       else setErr(e instanceof ApiRequestError ? e.message : t("admin.users.err_load"));
     }
-  }, [token, allowed, page, search, t]);
+  }, [token, allowed, page, search, typeFilter, t]);
 
   useEffect(() => {
     load();
@@ -220,6 +228,20 @@ export default function PlatformUsersPage() {
             className="h-10 w-full rounded-zulu border border-default bg-white pl-9 pr-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
           />
         </div>
+        {/* Phase 6.4 — type filter (customers / staff / unverified) */}
+        <select
+          value={typeFilter}
+          onChange={(e) => {
+            setPage(1);
+            setTypeFilter(e.target.value as PlatformUserTypeFilter);
+          }}
+          className="h-10 rounded-zulu border border-default bg-white px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+        >
+          <option value="">{t("admin.users.type_all")}</option>
+          <option value="customers">{t("admin.users.type_customers")}</option>
+          <option value="staff">{t("admin.users.type_staff")}</option>
+          <option value="unverified">{t("admin.users.type_unverified")}</option>
+        </select>
         <Button type="submit" size="sm">
           {t("common.search")}
         </Button>

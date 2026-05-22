@@ -228,15 +228,17 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     icon: "/icons/menu/banner.svg",
     defaultHref: "/bucket3/customers",
     tabs: [
-      { href: "/bucket3/customers", labelKey: "admin.nav.tab.bucket3.customers" },
+      // Phase 6.4 — /bucket3/customers + /bucket3/unverified-accounts merged into
+      // /platform/users with a Type filter (customers / staff / unverified).
+      // The routes still exist for direct linking but are hidden from sidebar.
       // /platform/packages moved to My Inventory group (Phase 5.1)
       { href: "/bucket3/block-dates", labelKey: "admin.nav.tab.bucket3.block_dates" },
       { href: "/bucket3/per-x-invoicing", labelKey: "admin.nav.tab.bucket3.per_x_invoicing" },
       { href: "/bucket3/custom-fields", labelKey: "admin.nav.tab.bucket3.custom_fields" },
       { href: "/bucket3/employees", labelKey: "admin.nav.tab.bucket3.employees" },
-      { href: "/bucket3/bulk-notifications", labelKey: "admin.nav.tab.bucket3.bulk_notifications" },
+      // Phase 6.5 — /bucket3/bulk-notifications merged into /platform/notifications
+      // (route preserved; bulk-send button is on the unified notifications page).
       { href: "/bucket3/requests", labelKey: "admin.nav.tab.bucket3.requests" },
-      { href: "/bucket3/unverified-accounts", labelKey: "admin.nav.tab.bucket3.unverified_accounts" },
       { href: "/bucket3/service-logs", labelKey: "admin.nav.tab.bucket3.service_logs" },
       { href: "/bucket3/cases", labelKey: "admin.nav.tab.bucket3.cases" },
       { href: "/bucket3/subscriptions", labelKey: "admin.nav.tab.bucket3.subscriptions" },

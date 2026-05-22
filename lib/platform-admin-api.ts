@@ -508,15 +508,25 @@ export type PlatformAdminUserRow = {
   companies: { id: number; name: string; role: string }[];
 };
 
+/** Phase 6.4 — type filter merges customers / staff / unverified into one users page. */
+export type PlatformUserTypeFilter = "" | "customers" | "staff" | "unverified";
+
 export async function apiPlatformUsers(
   token: string,
-  params: { page?: number; per_page?: number; search?: string; status?: string }
+  params: {
+    page?: number;
+    per_page?: number;
+    search?: string;
+    status?: string;
+    type?: PlatformUserTypeFilter;
+  }
 ): Promise<ApiSuccessEnvelope<PlatformAdminUserRow[]> & { meta: ApiListMeta }> {
   const q = new URLSearchParams();
   if (params.page != null) q.set("page", String(params.page));
   if (params.per_page != null) q.set("per_page", String(params.per_page));
   if (params.search) q.set("search", params.search);
   if (params.status) q.set("status", params.status);
+  if (params.type) q.set("type", params.type);
   const qs = q.toString();
   return apiFetchJson(`${PA}/users${qs ? `?${qs}` : ""}`, { method: "GET", token });
 }
