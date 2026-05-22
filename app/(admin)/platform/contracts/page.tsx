@@ -73,9 +73,9 @@ export default function PlatformContractsPage() {
       setMeta(res.meta);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else setErr(e instanceof ApiRequestError ? e.message : "Failed to load contracts");
+      else setErr(e instanceof ApiRequestError ? e.message : t("admin.contracts.err_load_failed"));
     }
-  }, [token, allowed, page, statusFilter, typeFilter, search]);
+  }, [token, allowed, page, statusFilter, typeFilter, search, t]);
 
   useEffect(() => {
     void load();
@@ -84,7 +84,7 @@ export default function PlatformContractsPage() {
   if (!allowed || forbidden) {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">Contracts</h1>
+        <h1 className="admin-page-title">{t("admin.contracts.title")}</h1>
         <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
@@ -95,11 +95,11 @@ export default function PlatformContractsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Contracts"
+        title={t("admin.contracts.title")}
         subtitle={
           meta
-            ? `${meta.total} total · page ${meta.current_page} of ${meta.last_page}`
-            : "Platform and partner contracts"
+            ? `${meta.total} ${t("admin.contracts.meta_total_suffix")} · ${t("admin.contracts.meta_page_prefix")} ${meta.current_page}/${meta.last_page}`
+            : t("admin.contracts.subtitle")
         }
         actions={
           <Link
@@ -107,7 +107,7 @@ export default function PlatformContractsPage() {
             className="inline-flex h-10 items-center gap-2 rounded-md bg-primary-500 px-4 text-ds-button-s font-ds-button-s font-semibold text-white transition hover:bg-purple-dark"
           >
             <Plus className="h-4 w-4" aria-hidden />
-            New contract
+            {t("admin.contracts.btn_new")}
           </Link>
         }
       />
@@ -126,12 +126,12 @@ export default function PlatformContractsPage() {
                 setPage(1);
                 setSearch(e.target.value);
               }}
-              placeholder="Search by contract number"
+              placeholder={t("admin.contracts.search_placeholder")}
               className="h-10 w-full rounded-zulu border border-default bg-white pl-9 pr-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
             />
           </div>
           <label className="flex items-center gap-2 text-sm text-fg-t6">
-            <span className="font-medium text-fg-t7">Status</span>
+            <span className="font-medium text-fg-t7">{t("admin.contracts.filter_status")}</span>
             <Select
               fieldSize="sm"
               value={statusFilter}
@@ -150,7 +150,7 @@ export default function PlatformContractsPage() {
             </Select>
           </label>
           <label className="flex items-center gap-2 text-sm text-fg-t6">
-            <span className="font-medium text-fg-t7">Type</span>
+            <span className="font-medium text-fg-t7">{t("admin.contracts.filter_type")}</span>
             <Select
               fieldSize="sm"
               value={typeFilter}
@@ -170,7 +170,7 @@ export default function PlatformContractsPage() {
           </label>
           <Button variant="outline" size="sm" onClick={() => void load()}>
             <RefreshCw className="h-4 w-4" aria-hidden />
-            Refresh
+            {t("admin.crud.common.refresh")}
           </Button>
         </div>
       </div>
@@ -185,19 +185,19 @@ export default function PlatformContractsPage() {
         <THead>
           <TR>
             <TH>#</TH>
-            <TH>Type</TH>
-            <TH>Status</TH>
-            <TH>Party A</TH>
-            <TH>Party B</TH>
-            <TH>Template</TH>
-            <TH>Effective</TH>
-            <TH>Expires</TH>
-            <TH>Created</TH>
+            <TH>{t("admin.contracts.col_type")}</TH>
+            <TH>{t("admin.contracts.col_status")}</TH>
+            <TH>{t("admin.contracts.col_party_a")}</TH>
+            <TH>{t("admin.contracts.col_party_b")}</TH>
+            <TH>{t("admin.contracts.col_template")}</TH>
+            <TH>{t("admin.contracts.col_effective")}</TH>
+            <TH>{t("admin.contracts.col_expires")}</TH>
+            <TH>{t("admin.contracts.col_created")}</TH>
           </TR>
         </THead>
         <TBody>
           {rows.length === 0 ? (
-            <TEmpty colSpan={9}>No contracts match the current filters.</TEmpty>
+            <TEmpty colSpan={9}>{t("admin.contracts.empty_state")}</TEmpty>
           ) : null}
           {rows.map((r) => (
             <TR key={r.id} href={`/platform/contracts/${r.id}`}>
