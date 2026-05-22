@@ -11,6 +11,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import {
@@ -47,6 +48,7 @@ const EMPTY: FormState = {
 export default function AdminContractTemplateNewPage() {
   const router = useRouter();
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [busy, setBusy] = useState(false);
@@ -54,19 +56,19 @@ export default function AdminContractTemplateNewPage() {
 
   async function handleSubmit() {
     if (!token) return;
-    if (!form.name.trim()) return setErr("Name is required");
-    if (!form.body_template.trim()) return setErr("Body template is required");
+    if (!form.name.trim()) return setErr(t("admin.template_form.err_name_required"));
+    if (!form.body_template.trim()) return setErr(t("admin.template_form.err_body_required"));
 
     let defaults: Record<string, unknown> = {};
     if (form.default_variables_json.trim() && form.default_variables_json.trim() !== "{}") {
       try {
         const parsed = JSON.parse(form.default_variables_json);
         if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-          return setErr("Default variables must be a JSON object");
+          return setErr(t("admin.template_form.err_defaults_must_be_object"));
         }
         defaults = parsed as Record<string, unknown>;
       } catch {
-        return setErr("Default variables: invalid JSON");
+        return setErr(t("admin.template_form.err_defaults_invalid_json"));
       }
     }
 
@@ -83,7 +85,7 @@ export default function AdminContractTemplateNewPage() {
       });
       router.push(`/platform/contract-templates/${res.data.id}`);
     } catch (e) {
-      setErr(e instanceof ApiRequestError ? e.message : "Create failed");
+      setErr(e instanceof ApiRequestError ? e.message : t("admin.contract_new.err_create"));
     } finally {
       setBusy(false);
     }
@@ -92,7 +94,7 @@ export default function AdminContractTemplateNewPage() {
   if (!allowed) {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">New contract template</h1>
+        <h1 className="admin-page-title">{t("admin.template_form.new_title")}</h1>
         <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
@@ -103,14 +105,14 @@ export default function AdminContractTemplateNewPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="New contract template"
-        subtitle="Body text supports {{placeholders}} that contracts fill in at create time"
+        title={t("admin.template_form.new_title")}
+        subtitle={t("admin.template_form.new_subtitle")}
         actions={
           <Link
             href="/platform/contract-templates"
             className="inline-flex h-10 items-center rounded-md border-2 border-primary-500 px-4 text-ds-button-s font-ds-button-s font-semibold text-primary-500 transition hover:bg-primary-50"
           >
-            ← Back
+            ← {t("common.back")}
           </Link>
         }
       />
@@ -122,17 +124,17 @@ export default function AdminContractTemplateNewPage() {
       )}
 
       <section className="admin-card p-4">
-        <h2 className="mb-3 text-base font-semibold">Identity</h2>
+        <h2 className="mb-3 text-base font-semibold">{t("admin.template_form.section.identity")}</h2>
         <div className="grid gap-3 sm:grid-cols-2">
-          <FormField label="Name" htmlFor="tpl-name" required className="sm:col-span-2">
+          <FormField label={t("admin.contract_templates.col_name")} htmlFor="tpl-name" required className="sm:col-span-2">
             <Input
               id="tpl-name"
               value={form.name}
               onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-              placeholder="e.g. Tour Operator Platform Agreement"
+              placeholder={t("admin.template_form.name_placeholder")}
             />
           </FormField>
-          <FormField label="Type" htmlFor="tpl-type" required>
+          <FormField label={t("admin.contracts.col_type")} htmlFor="tpl-type" required>
             <Select
               id="tpl-type"
               value={form.type}
@@ -145,7 +147,7 @@ export default function AdminContractTemplateNewPage() {
               ))}
             </Select>
           </FormField>
-          <FormField label="Language" htmlFor="tpl-language" required>
+          <FormField label={t("admin.contract_new.field.language")} htmlFor="tpl-language" required>
             <Select
               id="tpl-language"
               value={form.language}
@@ -158,7 +160,7 @@ export default function AdminContractTemplateNewPage() {
               ))}
             </Select>
           </FormField>
-          <FormField label="Version" htmlFor="tpl-version" helperText="e.g. 1.0, 2.0-draft">
+          <FormField label={t("admin.contract_templates.col_version")} htmlFor="tpl-version" helperText={t("admin.template_form.version_hint")}>
             <Input
               id="tpl-version"
               value={form.version}
@@ -169,12 +171,12 @@ export default function AdminContractTemplateNewPage() {
       </section>
 
       <section className="admin-card p-4">
-        <h2 className="mb-3 text-base font-semibold">Body template</h2>
+        <h2 className="mb-3 text-base font-semibold">{t("admin.template_form.section.body")}</h2>
         <FormField
-          label="Body text"
+          label={t("admin.template_form.body_label")}
           htmlFor="tpl-body"
           required
-          helperText="Use {{variable_name}} placeholders that get replaced when a contract is generated"
+          helperText={t("admin.template_form.body_hint")}
         >
           <Input
             as="textarea"
@@ -183,17 +185,17 @@ export default function AdminContractTemplateNewPage() {
             className="font-mono text-xs"
             value={form.body_template}
             onChange={(e) => setForm((p) => ({ ...p, body_template: e.target.value }))}
-            placeholder={"AGREEMENT BETWEEN {{party_a_name}} AND {{party_b_name}}\n\nThis agreement..."}
+            placeholder={t("admin.template_form.body_placeholder")}
           />
         </FormField>
       </section>
 
       <section className="admin-card p-4">
-        <h2 className="mb-3 text-base font-semibold">Default variables</h2>
+        <h2 className="mb-3 text-base font-semibold">{t("admin.template_form.section.defaults")}</h2>
         <FormField
-          label="JSON map"
+          label={t("admin.template_form.defaults_label")}
           htmlFor="tpl-defaults"
-          helperText="Default values for placeholders — used when the contract create form omits them"
+          helperText={t("admin.template_form.defaults_hint")}
         >
           <Input
             as="textarea"
@@ -208,13 +210,13 @@ export default function AdminContractTemplateNewPage() {
 
       <div className="flex gap-2">
         <Button size="sm" disabled={busy} onClick={() => void handleSubmit()}>
-          {busy ? "Creating…" : "Create template"}
+          {busy ? t("admin.contract_new.btn_creating") : t("admin.template_form.btn_create")}
         </Button>
         <Link
           href="/platform/contract-templates"
           className="inline-flex h-10 items-center rounded-md border-2 border-primary-500 px-4 text-ds-button-s font-ds-button-s font-semibold text-primary-500 transition hover:bg-primary-50"
         >
-          Cancel
+          {t("common.cancel")}
         </Link>
       </div>
     </div>

@@ -7,6 +7,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import {
@@ -28,6 +29,7 @@ export default function AdminContractTemplateDetailPage() {
   const params = useParams();
   const id = String(params.id);
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [tpl, setTpl] = useState<ContractTemplateDetail | null>(null);
   const [form, setForm] = useState<{
@@ -57,7 +59,7 @@ export default function AdminContractTemplateDetailPage() {
         default_variables_json: JSON.stringify(res.data.default_variables ?? {}, null, 2),
       });
     } catch (e) {
-      setErr(e instanceof ApiRequestError ? e.message : "Failed to load template");
+      setErr(e instanceof ApiRequestError ? e.message : t("admin.template_detail.err_load"));
     }
   }, [token, allowed, id]);
 
@@ -67,18 +69,18 @@ export default function AdminContractTemplateDetailPage() {
 
   async function handleSave() {
     if (!token || !form) return;
-    if (!form.name.trim()) return setErr("Name is required");
+    if (!form.name.trim()) return setErr(t("admin.template_form.err_name_required"));
 
     let defaults: Record<string, unknown> = {};
     if (form.default_variables_json.trim() && form.default_variables_json.trim() !== "{}") {
       try {
         const parsed = JSON.parse(form.default_variables_json);
         if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-          return setErr("Default variables must be a JSON object");
+          return setErr(t("admin.template_form.err_defaults_must_be_object"));
         }
         defaults = parsed as Record<string, unknown>;
       } catch {
-        return setErr("Default variables: invalid JSON");
+        return setErr(t("admin.template_form.err_defaults_invalid_json"));
       }
     }
 
@@ -96,7 +98,7 @@ export default function AdminContractTemplateDetailPage() {
       setSavedAt(new Date().toLocaleTimeString());
       await load();
     } catch (e) {
-      setErr(e instanceof ApiRequestError ? e.message : "Save failed");
+      setErr(e instanceof ApiRequestError ? e.message : t("admin.commission.err_save"));
     } finally {
       setBusy(false);
     }
@@ -105,7 +107,7 @@ export default function AdminContractTemplateDetailPage() {
   if (!allowed) {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">Template detail</h1>
+        <h1 className="admin-page-title">{t("admin.template_detail.title")}</h1>
         <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
@@ -116,12 +118,12 @@ export default function AdminContractTemplateDetailPage() {
   if (err && !tpl) {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">Template detail</h1>
+        <h1 className="admin-page-title">{t("admin.template_detail.title")}</h1>
         <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
           {err}
         </div>
         <Link href="/platform/contract-templates" className="text-sm text-primary hover:underline">
-          ← Back
+          ← {t("common.back")}
         </Link>
       </div>
     );
@@ -130,8 +132,8 @@ export default function AdminContractTemplateDetailPage() {
   if (!tpl || !form) {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">Template detail</h1>
-        <div className="admin-card p-4 text-sm text-fg-t6">Loading…</div>
+        <h1 className="admin-page-title">{t("admin.template_detail.title")}</h1>
+        <div className="admin-card p-4 text-sm text-fg-t6">{t("admin.commission.loading")}</div>
       </div>
     );
   }
@@ -146,7 +148,7 @@ export default function AdminContractTemplateDetailPage() {
             href="/platform/contract-templates"
             className="inline-flex h-10 items-center rounded-md border-2 border-primary-500 px-4 text-ds-button-s font-ds-button-s font-semibold text-primary-500 transition hover:bg-primary-50"
           >
-            ← Back
+            ← {t("common.back")}
           </Link>
         }
       />
@@ -159,21 +161,21 @@ export default function AdminContractTemplateDetailPage() {
 
       {savedAt && (
         <div className="rounded-zulu border border-success-200 bg-success-50 px-4 py-2 text-sm text-success-700">
-          Saved at {savedAt}
+          {t("admin.commission.saved_at")} {savedAt}
         </div>
       )}
 
       <section className="admin-card p-4">
-        <h2 className="mb-3 text-base font-semibold">Identity</h2>
+        <h2 className="mb-3 text-base font-semibold">{t("admin.template_form.section.identity")}</h2>
         <div className="grid gap-3 sm:grid-cols-2">
-          <FormField label="Name" htmlFor="tpl-name" required className="sm:col-span-2">
+          <FormField label={t("admin.contract_templates.col_name")} htmlFor="tpl-name" required className="sm:col-span-2">
             <Input
               id="tpl-name"
               value={form.name}
               onChange={(e) => setForm((p) => p && { ...p, name: e.target.value })}
             />
           </FormField>
-          <FormField label="Type" htmlFor="tpl-type" required>
+          <FormField label={t("admin.contracts.col_type")} htmlFor="tpl-type" required>
             <Select
               id="tpl-type"
               value={form.type}
@@ -186,7 +188,7 @@ export default function AdminContractTemplateDetailPage() {
               ))}
             </Select>
           </FormField>
-          <FormField label="Language" htmlFor="tpl-language" required>
+          <FormField label={t("admin.contract_new.field.language")} htmlFor="tpl-language" required>
             <Select
               id="tpl-language"
               value={form.language}
@@ -201,7 +203,7 @@ export default function AdminContractTemplateDetailPage() {
               ))}
             </Select>
           </FormField>
-          <FormField label="Version" htmlFor="tpl-version">
+          <FormField label={t("admin.contract_templates.col_version")} htmlFor="tpl-version">
             <Input
               id="tpl-version"
               value={form.version}
@@ -212,8 +214,8 @@ export default function AdminContractTemplateDetailPage() {
       </section>
 
       <section className="admin-card p-4">
-        <h2 className="mb-3 text-base font-semibold">Body template</h2>
-        <FormField label="Body text" htmlFor="tpl-body">
+        <h2 className="mb-3 text-base font-semibold">{t("admin.template_form.section.body")}</h2>
+        <FormField label={t("admin.template_form.body_label")} htmlFor="tpl-body">
           <Input
             as="textarea"
             id="tpl-body"
@@ -226,8 +228,8 @@ export default function AdminContractTemplateDetailPage() {
       </section>
 
       <section className="admin-card p-4">
-        <h2 className="mb-3 text-base font-semibold">Default variables</h2>
-        <FormField label="JSON map" htmlFor="tpl-defaults">
+        <h2 className="mb-3 text-base font-semibold">{t("admin.template_form.section.defaults")}</h2>
+        <FormField label={t("admin.template_form.defaults_label")} htmlFor="tpl-defaults">
           <Input
             as="textarea"
             id="tpl-defaults"
@@ -243,13 +245,13 @@ export default function AdminContractTemplateDetailPage() {
 
       <div className="flex gap-2">
         <Button size="sm" disabled={busy} onClick={() => void handleSave()}>
-          {busy ? "Saving…" : "Save changes"}
+          {busy ? t("admin.crud.common.saving") : t("admin.template_detail.btn_save")}
         </Button>
         <Link
           href="/platform/contract-templates"
           className="inline-flex h-10 items-center rounded-md border-2 border-primary-500 px-4 text-ds-button-s font-ds-button-s font-semibold text-primary-500 transition hover:bg-primary-50"
         >
-          Cancel
+          {t("common.cancel")}
         </Link>
       </div>
     </div>
