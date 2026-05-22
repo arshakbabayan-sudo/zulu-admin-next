@@ -16,12 +16,15 @@ import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { usePrompt } from "@/contexts/PromptDialogContext";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import {
+  apiAnonymizePlatformUser,
   apiDeactivatePlatformUser,
+  apiHardDeletePlatformUser,
   apiPlatformUsers,
   type PlatformAdminUserRow,
 } from "@/lib/platform-admin-api";
@@ -46,7 +49,9 @@ export default function PlatformUsersPage() {
   const { t } = useLanguage();
   useDocumentTitle(t("admin.users.title"));
   const confirm = useConfirm();
+  const prompt = usePrompt();
   const allowed = canAccessPlatformAdminNav(user);
+  const isSuperAdmin = user?.is_super_admin === true;
   const [rows, setRows] = useState<PlatformAdminUserRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
   const [page, setPage] = useState(1);
@@ -87,6 +92,79 @@ export default function PlatformUsersPage() {
       await load();
     } catch (e) {
       alert(e instanceof ApiRequestError ? e.message : t("admin.users.err_deactivate"));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  // Phase 7.1 — "Ջնջել" (default platform-admin action)
+  // Confirms by requiring the admin to type the user's exact name, then
+  // anonymises PII and soft-deletes.
+  async function anonymize(row: PlatformAdminUserRow) {
+    if (!token) return;
+    const typed = await prompt({
+      title: t("admin.users.anonymize_title").replace("{name}", row.name),
+      description: t("admin.users.anonymize_description"),
+      placeholder: row.name,
+      required: true,
+      variant: "danger",
+      confirmLabel: t("admin.users.btn_anonymize_confirm"),
+    });
+    if (typed === null) return;
+    if (typed.trim() !== row.name.trim()) {
+      alert(t("admin.users.confirm_name_mismatch"));
+      return;
+    }
+    const reason = await prompt({
+      title: t("admin.users.anonymize_reason_title"),
+      description: t("admin.users.anonymize_reason_description"),
+      placeholder: t("admin.users.reason_placeholder"),
+      variant: "default",
+    });
+    if (reason === null) return;
+    setBusyId(row.id);
+    try {
+      await apiAnonymizePlatformUser(token, row.id, reason || null);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : t("admin.users.err_anonymize"));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  // Phase 7.1 — "Ամբողջությամբ ջնջել" (super-admin only)
+  // Two-step confirmation: type name AND mandatory reason.
+  async function hardDelete(row: PlatformAdminUserRow) {
+    if (!token || !isSuperAdmin) return;
+    const typed = await prompt({
+      title: t("admin.users.hard_delete_title").replace("{name}", row.name),
+      description: t("admin.users.hard_delete_description"),
+      placeholder: row.name,
+      required: true,
+      variant: "danger",
+      confirmLabel: t("admin.users.btn_hard_delete_confirm"),
+    });
+    if (typed === null) return;
+    if (typed.trim() !== row.name.trim()) {
+      alert(t("admin.users.confirm_name_mismatch"));
+      return;
+    }
+    const reason = await prompt({
+      title: t("admin.users.hard_delete_reason_title"),
+      description: t("admin.users.hard_delete_reason_description"),
+      placeholder: t("admin.users.reason_placeholder"),
+      required: true,
+      minLength: 3,
+      variant: "danger",
+    });
+    if (reason === null) return;
+    setBusyId(row.id);
+    try {
+      await apiHardDeletePlatformUser(token, row.id, reason);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : t("admin.users.err_hard_delete"));
     } finally {
       setBusyId(null);
     }
@@ -213,10 +291,36 @@ export default function PlatformUsersPage() {
                         e.stopPropagation();
                         deactivate(r.id);
                       }}
-                      className="inline-flex h-8 items-center rounded-zulu border border-error-200 bg-white px-3 text-xs font-medium text-error-700 transition hover:bg-error-50 disabled:opacity-40"
+                      className="inline-flex h-8 items-center rounded-zulu border border-warning-200 bg-white px-3 text-xs font-medium text-warning-700 transition hover:bg-warning-50 disabled:opacity-40"
                     >
                       {t("admin.users.btn_deactivate")}
                     </button>
+                    <button
+                      type="button"
+                      disabled={busyId === r.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        anonymize(r);
+                      }}
+                      title={t("admin.users.btn_anonymize_tooltip")}
+                      className="inline-flex h-8 items-center rounded-zulu border border-error-200 bg-white px-3 text-xs font-medium text-error-700 transition hover:bg-error-50 disabled:opacity-40"
+                    >
+                      {t("admin.users.btn_anonymize")}
+                    </button>
+                    {isSuperAdmin ? (
+                      <button
+                        type="button"
+                        disabled={busyId === r.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          hardDelete(r);
+                        }}
+                        title={t("admin.users.btn_hard_delete_tooltip")}
+                        className="inline-flex h-8 items-center rounded-zulu border border-error-500 bg-error-600 px-3 text-xs font-semibold text-white transition hover:bg-error-700 disabled:opacity-40"
+                      >
+                        {t("admin.users.btn_hard_delete")}
+                      </button>
+                    ) : null}
                   </div>
                 </TD>
               </TR>
@@ -253,7 +357,7 @@ export default function PlatformUsersPage() {
                 ))}
               </div>
             )}
-            <div className="flex gap-2 border-t border-default pt-3">
+            <div className="flex flex-wrap gap-2 border-t border-default pt-3">
               <Link
                 href={`/platform/users/${r.id}`}
                 className="inline-flex h-10 flex-1 items-center justify-center rounded-zulu border border-default bg-white px-3 text-sm font-medium text-primary transition hover:bg-figma-bg-1"
@@ -264,10 +368,28 @@ export default function PlatformUsersPage() {
                 type="button"
                 disabled={busyId === r.id || r.status === "inactive"}
                 onClick={() => deactivate(r.id)}
-                className="inline-flex h-10 flex-1 items-center justify-center rounded-zulu border border-error-200 bg-white px-3 text-sm font-medium text-error-700 transition hover:bg-error-50 disabled:opacity-40"
+                className="inline-flex h-10 flex-1 items-center justify-center rounded-zulu border border-warning-200 bg-white px-3 text-sm font-medium text-warning-700 transition hover:bg-warning-50 disabled:opacity-40"
               >
                 {t("admin.users.btn_deactivate")}
               </button>
+              <button
+                type="button"
+                disabled={busyId === r.id}
+                onClick={() => anonymize(r)}
+                className="inline-flex h-10 flex-1 items-center justify-center rounded-zulu border border-error-200 bg-white px-3 text-sm font-medium text-error-700 transition hover:bg-error-50 disabled:opacity-40"
+              >
+                {t("admin.users.btn_anonymize")}
+              </button>
+              {isSuperAdmin ? (
+                <button
+                  type="button"
+                  disabled={busyId === r.id}
+                  onClick={() => hardDelete(r)}
+                  className="inline-flex h-10 w-full items-center justify-center rounded-zulu border border-error-500 bg-error-600 px-3 text-sm font-semibold text-white transition hover:bg-error-700 disabled:opacity-40"
+                >
+                  {t("admin.users.btn_hard_delete")}
+                </button>
+              ) : null}
             </div>
           </div>
         ))}

@@ -495,6 +495,32 @@ export async function apiDeactivatePlatformUser(
   return apiFetchJson(`${PA}/users/${id}/deactivate`, { method: "PATCH", token, body: {} });
 }
 
+/** Phase 7.1 — "Ջնջել" default action: anonymise PII + soft-delete. */
+export async function apiAnonymizePlatformUser(
+  token: string,
+  id: number,
+  reason?: string | null
+): Promise<ApiSuccessEnvelope<{ id: number }>> {
+  return apiFetchJson(`${PA}/users/${id}/anonymize`, {
+    method: "POST",
+    token,
+    body: { reason: reason ?? null },
+  });
+}
+
+/** Phase 7.1 — "Ամբողջությամբ ջնջել" super-admin action: force-delete row. */
+export async function apiHardDeletePlatformUser(
+  token: string,
+  id: number,
+  reason: string
+): Promise<ApiSuccessEnvelope<null>> {
+  return apiFetchJson(`${PA}/users/${id}/hard`, {
+    method: "DELETE",
+    token,
+    body: { reason },
+  });
+}
+
 export type PlatformAdminUserDetail = PlatformAdminUserRow & {
   phone: string | null;
   preferred_language: string | null;
