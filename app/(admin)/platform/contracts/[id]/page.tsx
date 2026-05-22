@@ -70,7 +70,7 @@ export default function AdminContractDetailPage() {
   const router = useRouter();
   const id = String(params.id);
   const { token, user } = useAdminAuth();
-  const { lang } = useLanguage();
+  const { lang, t } = useLanguage();
   const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);
   const [row, setRow] = useState<ContractDetail | null>(null);
@@ -89,8 +89,8 @@ export default function AdminContractDetailPage() {
       setRow(res.data);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else if (e instanceof ApiRequestError && e.status === 404) setErr("Contract not found");
-      else setErr(e instanceof ApiRequestError ? e.message : "Failed to load contract");
+      else if (e instanceof ApiRequestError && e.status === 404) setErr(t("admin.contract_detail.err_not_found"));
+      else setErr(e instanceof ApiRequestError ? e.message : t("admin.contract_detail.err_load"));
     }
   }, [token, allowed, id]);
 
@@ -107,7 +107,7 @@ export default function AdminContractDetailPage() {
       await apiAdminSendContract(token, row.id);
       await load();
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Send failed");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.contract_detail.err_send"));
     } finally {
       setBusyAction(null);
     }
@@ -122,7 +122,7 @@ export default function AdminContractDetailPage() {
       await apiAdminCountersignContract(token, row.id);
       await load();
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Counter-sign failed");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.contract_detail.err_countersign"));
     } finally {
       setBusyAction(null);
     }
@@ -132,7 +132,7 @@ export default function AdminContractDetailPage() {
     if (!token || !row) return;
     const reason = terminateReason.trim();
     if (reason.length === 0) {
-      alert("Termination reason is required.");
+      alert(t("admin.contract_detail.err_reason_required"));
       return;
     }
     setBusyAction("terminate");
@@ -142,7 +142,7 @@ export default function AdminContractDetailPage() {
       setTerminateReason("");
       await load();
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Terminate failed");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.contract_detail.err_terminate"));
     } finally {
       setBusyAction(null);
     }
@@ -151,7 +151,7 @@ export default function AdminContractDetailPage() {
   if (!allowed || forbidden) {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">Contract detail</h1>
+        <h1 className="admin-page-title">{t("admin.contract_detail.title")}</h1>
         <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
@@ -162,12 +162,12 @@ export default function AdminContractDetailPage() {
   if (err) {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">Contract detail</h1>
+        <h1 className="admin-page-title">{t("admin.contract_detail.title")}</h1>
         <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
           {err}
         </div>
         <Link href="/platform/contracts" className="text-sm text-primary hover:underline">
-          ← Back to contracts
+          ← {t("admin.contract_detail.back_to_contracts")}
         </Link>
       </div>
     );
@@ -176,8 +176,8 @@ export default function AdminContractDetailPage() {
   if (!row) {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">Contract detail</h1>
-        <div className="admin-card p-4 text-sm text-fg-t6">Loading…</div>
+        <h1 className="admin-page-title">{t("admin.contract_detail.title")}</h1>
+        <div className="admin-card p-4 text-sm text-fg-t6">{t("admin.commission.loading")}</div>
       </div>
     );
   }
@@ -197,21 +197,21 @@ export default function AdminContractDetailPage() {
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => router.push("/platform/contracts")}>
-              ← Back
+              ← {t("common.back")}
             </Button>
             {canSend(row.status) && (
               <Button size="sm" disabled={busyAction !== null} onClick={() => void handleSend()}>
-                {busyAction === "send" ? "Sending…" : "Send to partner"}
+                {busyAction === "send" ? t("admin.contract_detail.btn_sending") : t("admin.contract_detail.btn_send")}
               </Button>
             )}
             {canCountersign(row.status) && (
               <Button size="sm" disabled={busyAction !== null} onClick={() => void handleCountersign()}>
-                {busyAction === "countersign" ? "Signing…" : "Counter-sign as ZULU"}
+                {busyAction === "countersign" ? t("admin.contract_detail.btn_signing") : t("admin.contract_detail.btn_countersign")}
               </Button>
             )}
             {canTerminate(row.status) && !terminating && (
               <Button variant="danger" size="sm" onClick={() => setTerminating(true)}>
-                Terminate
+                {t("admin.contract_detail.btn_terminate")}
               </Button>
             )}
           </div>
@@ -220,15 +220,12 @@ export default function AdminContractDetailPage() {
 
       {terminating && (
         <div className="admin-card p-4 space-y-3 border-error-100">
-          <h3 className="text-sm font-semibold text-error-700">Terminate contract</h3>
-          <p className="text-xs text-fg-t6">
-            Provide a reason that will be recorded with the termination. Both parties keep access to the
-            terminated contract; status changes to <code className="rounded bg-figma-bg-1 px-1">terminated</code>.
-          </p>
+          <h3 className="text-sm font-semibold text-error-700">{t("admin.contract_detail.terminate_title")}</h3>
+          <p className="text-xs text-fg-t6">{t("admin.contract_detail.terminate_hint")}</p>
           <textarea
             value={terminateReason}
             onChange={(e) => setTerminateReason(e.target.value)}
-            placeholder="Reason for termination…"
+            placeholder={t("admin.contract_detail.terminate_reason_placeholder")}
             rows={3}
             className="w-full rounded-zulu border border-default bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
           />
@@ -239,7 +236,7 @@ export default function AdminContractDetailPage() {
               disabled={busyAction !== null || terminateReason.trim().length === 0}
               onClick={() => void handleTerminate()}
             >
-              {busyAction === "terminate" ? "Terminating…" : "Confirm termination"}
+              {busyAction === "terminate" ? t("admin.contract_detail.btn_terminating") : t("admin.contract_detail.btn_confirm_terminate")}
             </Button>
             <Button
               variant="outline"
@@ -249,7 +246,7 @@ export default function AdminContractDetailPage() {
                 setTerminateReason("");
               }}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
           </div>
         </div>
@@ -257,20 +254,20 @@ export default function AdminContractDetailPage() {
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="admin-card p-4 space-y-3">
-          <h3 className="text-sm font-semibold text-fg-t8">Parties</h3>
+          <h3 className="text-sm font-semibold text-fg-t8">{t("admin.contract_detail.parties_section")}</h3>
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between gap-3">
-              <dt className="text-fg-t6">Party A</dt>
+              <dt className="text-fg-t6">{t("admin.contracts.col_party_a")}</dt>
               <dd className="text-right text-fg-t8">
                 {row.partyA?.name ?? <span className="text-fg-t6">ZULU</span>}
               </dd>
             </div>
             <div className="flex justify-between gap-3">
-              <dt className="text-fg-t6">Party B</dt>
+              <dt className="text-fg-t6">{t("admin.contracts.col_party_b")}</dt>
               <dd className="text-right text-fg-t8">{row.partyB?.name ?? "—"}</dd>
             </div>
             <div className="flex justify-between gap-3">
-              <dt className="text-fg-t6">Created by</dt>
+              <dt className="text-fg-t6">{t("admin.contract_detail.created_by")}</dt>
               <dd className="text-right text-fg-t8">
                 {row.createdBy ? `${row.createdBy.name} (${row.createdBy.email})` : "—"}
               </dd>
@@ -279,36 +276,36 @@ export default function AdminContractDetailPage() {
         </div>
 
         <div className="admin-card p-4 space-y-3">
-          <h3 className="text-sm font-semibold text-fg-t8">Schedule</h3>
+          <h3 className="text-sm font-semibold text-fg-t8">{t("admin.contract_new.section.schedule")}</h3>
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between gap-3">
-              <dt className="text-fg-t6">Effective</dt>
+              <dt className="text-fg-t6">{t("admin.contracts.col_effective")}</dt>
               <dd className="text-right text-fg-t8">{formatDate(row.effective_date, lang)}</dd>
             </div>
             <div className="flex justify-between gap-3">
-              <dt className="text-fg-t6">Expires</dt>
+              <dt className="text-fg-t6">{t("admin.contracts.col_expires")}</dt>
               <dd className="text-right text-fg-t8">{formatDate(row.expiry_date, lang)}</dd>
             </div>
             <div className="flex justify-between gap-3">
-              <dt className="text-fg-t6">Auto-renew</dt>
-              <dd className="text-right text-fg-t8">{row.auto_renew ? "Yes" : "No"}</dd>
+              <dt className="text-fg-t6">{t("admin.contract_new.field.auto_renew")}</dt>
+              <dd className="text-right text-fg-t8">{row.auto_renew ? t("admin.contract_detail.yes") : t("admin.contract_detail.no")}</dd>
             </div>
             <div className="flex justify-between gap-3">
-              <dt className="text-fg-t6">Notice (days)</dt>
+              <dt className="text-fg-t6">{t("admin.contract_detail.notice_days")}</dt>
               <dd className="text-right text-fg-t8 tabular-nums">{row.termination_notice_days ?? "—"}</dd>
             </div>
             <div className="flex justify-between gap-3">
-              <dt className="text-fg-t6">Language</dt>
+              <dt className="text-fg-t6">{t("admin.contract_new.field.language")}</dt>
               <dd className="text-right text-fg-t8 uppercase">{row.language}</dd>
             </div>
             {row.terminated_at && (
               <>
                 <div className="flex justify-between gap-3 border-t border-default pt-2">
-                  <dt className="text-fg-t6">Terminated at</dt>
+                  <dt className="text-fg-t6">{t("admin.contract_detail.terminated_at")}</dt>
                   <dd className="text-right text-fg-t8">{formatDateTime(row.terminated_at, lang)}</dd>
                 </div>
                 <div className="flex justify-between gap-3">
-                  <dt className="text-fg-t6">Reason</dt>
+                  <dt className="text-fg-t6">{t("admin.contract_detail.reason")}</dt>
                   <dd className="text-right text-fg-t8">{row.termination_reason ?? "—"}</dd>
                 </div>
               </>
@@ -318,50 +315,50 @@ export default function AdminContractDetailPage() {
       </div>
 
       <div className="admin-card p-4 space-y-3">
-        <h3 className="text-sm font-semibold text-fg-t8">Template</h3>
+        <h3 className="text-sm font-semibold text-fg-t8">{t("admin.contracts.col_template")}</h3>
         <dl className="grid grid-cols-2 gap-2 text-sm md:grid-cols-4">
           <div>
-            <dt className="text-xs text-fg-t6">Name</dt>
+            <dt className="text-xs text-fg-t6">{t("admin.contract_templates.col_name")}</dt>
             <dd className="text-fg-t8">{row.template?.name ?? "—"}</dd>
           </div>
           <div>
-            <dt className="text-xs text-fg-t6">Type</dt>
+            <dt className="text-xs text-fg-t6">{t("admin.contracts.col_type")}</dt>
             <dd className="text-fg-t8">{row.template?.type ?? "—"}</dd>
           </div>
           <div>
-            <dt className="text-xs text-fg-t6">Version</dt>
+            <dt className="text-xs text-fg-t6">{t("admin.contract_templates.col_version")}</dt>
             <dd className="text-fg-t8 font-mono">{row.template?.version ?? "—"}</dd>
           </div>
           <div>
-            <dt className="text-xs text-fg-t6">Language</dt>
+            <dt className="text-xs text-fg-t6">{t("admin.contract_new.field.language")}</dt>
             <dd className="text-fg-t8 uppercase">{row.template?.language ?? "—"}</dd>
           </div>
         </dl>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <JsonBlock label="Commission clause" value={row.commission_clause} />
-        <JsonBlock label="Payment terms" value={row.payment_terms} />
-        <JsonBlock label="Cancellation policy" value={row.cancellation_policy} />
+        <JsonBlock label={t("admin.contract_new.field.commission_clause")} value={row.commission_clause} />
+        <JsonBlock label={t("admin.contract_new.field.payment_terms")} value={row.payment_terms} />
+        <JsonBlock label={t("admin.contract_new.field.cancellation_policy")} value={row.cancellation_policy} />
       </div>
 
       {row.signed_pdf_url && (
         <div className="admin-card p-4">
-          <h3 className="mb-2 text-sm font-semibold text-fg-t8">Signed PDF</h3>
+          <h3 className="mb-2 text-sm font-semibold text-fg-t8">{t("admin.contract_detail.signed_pdf")}</h3>
           <a
             href={row.signed_pdf_url}
             target="_blank"
             rel="noreferrer"
             className="text-sm text-primary hover:underline"
           >
-            Download signed PDF →
+            {t("admin.contract_detail.download_signed_pdf")} →
           </a>
         </div>
       )}
 
       {row.versions && row.versions.length > 0 && (
         <div className="admin-card p-4">
-          <h3 className="mb-3 text-sm font-semibold text-fg-t8">Version history</h3>
+          <h3 className="mb-3 text-sm font-semibold text-fg-t8">{t("admin.contract_detail.version_history")}</h3>
           <ul className="space-y-2 text-sm">
             {row.versions.map((v) => (
               <li
@@ -371,7 +368,7 @@ export default function AdminContractDetailPage() {
                 <div>
                   <span className="font-mono text-fg-t8">v{v.version_number}</span>
                   {v.created_by_user_id && (
-                    <span className="ml-2 text-xs text-fg-t6">by user #{v.created_by_user_id}</span>
+                    <span className="ml-2 text-xs text-fg-t6">{t("admin.contract_detail.by_user")} #{v.created_by_user_id}</span>
                   )}
                 </div>
                 <span className="text-xs text-fg-t6">{formatDateTime(v.created_at, lang)}</span>
