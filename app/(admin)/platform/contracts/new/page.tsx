@@ -14,6 +14,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import {
@@ -83,6 +84,7 @@ function tryParseJson(label: string, raw: string): { ok: true; value: Record<str
 export default function AdminContractCreatePage() {
   const router = useRouter();
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [templates, setTemplates] = useState<ContractTemplateRow[]>([]);
@@ -104,7 +106,7 @@ export default function AdminContractCreatePage() {
       setCompanies(coRes.data);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else setErr(e instanceof ApiRequestError ? e.message : "Failed to load options");
+      else setErr(e instanceof ApiRequestError ? e.message : t("admin.contract_new.err_load_options"));
     }
   }, [token, allowed]);
 
@@ -118,15 +120,15 @@ export default function AdminContractCreatePage() {
   async function handleSubmit() {
     if (!token) return;
     if (!form.template_id) {
-      setErr("Pick a template");
+      setErr(t("admin.contract_new.err_pick_template"));
       return;
     }
     if (!form.party_b_company_id) {
-      setErr("Party B (partner) is required");
+      setErr(t("admin.contract_new.err_party_b_required"));
       return;
     }
     if (!isPlatformType && !form.party_a_company_id) {
-      setErr("Party A is required for partner-type contracts");
+      setErr(t("admin.contract_new.err_party_a_required"));
       return;
     }
 
@@ -160,7 +162,7 @@ export default function AdminContractCreatePage() {
       });
       router.push(`/platform/contracts/${res.data.id}`);
     } catch (e) {
-      setErr(e instanceof ApiRequestError ? e.message : "Create failed");
+      setErr(e instanceof ApiRequestError ? e.message : t("admin.contract_new.err_create"));
     } finally {
       setBusy(false);
     }
@@ -169,7 +171,7 @@ export default function AdminContractCreatePage() {
   if (!allowed || forbidden) {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">New contract</h1>
+        <h1 className="admin-page-title">{t("admin.contract_new.title")}</h1>
         <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
@@ -180,14 +182,14 @@ export default function AdminContractCreatePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="New contract"
-        subtitle="Generate a contract from a template and assign both parties"
+        title={t("admin.contract_new.title")}
+        subtitle={t("admin.contract_new.subtitle")}
         actions={
           <Link
             href="/platform/contracts"
             className="inline-flex h-10 items-center rounded-md border-2 border-primary-500 px-4 text-ds-button-s font-ds-button-s font-semibold text-primary-500 transition hover:bg-primary-50"
           >
-            ← Back
+            ← {t("common.back")}
           </Link>
         }
       />
@@ -199,15 +201,15 @@ export default function AdminContractCreatePage() {
       )}
 
       <section className="admin-card p-4">
-        <h2 className="mb-3 text-base font-semibold">Template & parties</h2>
+        <h2 className="mb-3 text-base font-semibold">{t("admin.contract_new.section.template_parties")}</h2>
         <div className="grid gap-3 sm:grid-cols-2">
-          <FormField label="Template" htmlFor="contract-template" required className="sm:col-span-2">
+          <FormField label={t("admin.contract_new.field.template")} htmlFor="contract-template" required className="sm:col-span-2">
             <Select
               id="contract-template"
               value={form.template_id}
               onChange={(e) => setForm((p) => ({ ...p, template_id: e.target.value }))}
             >
-              <option value="">— Pick a template —</option>
+              <option value="">— {t("admin.contract_new.placeholder.pick_template")} —</option>
               {templates.map((tpl) => (
                 <option key={tpl.id} value={tpl.id}>
                   {tpl.name} ({tpl.type}, {tpl.language.toUpperCase()}
@@ -219,24 +221,24 @@ export default function AdminContractCreatePage() {
 
           {selectedTemplate && (
             <div className="sm:col-span-2 rounded-zulu border border-default bg-figma-bg-1/50 px-3 py-2 text-xs text-fg-t7">
-              Template type: <span className="font-semibold">{selectedTemplate.type}</span>.{" "}
+              {t("admin.contract_new.template_type_label")}: <span className="font-semibold">{selectedTemplate.type}</span>.{" "}
               {isPlatformType
-                ? "Party A will be ZULU (skip selection)."
-                : "Both parties are partner companies."}
+                ? t("admin.contract_new.party_a_zulu_note")
+                : t("admin.contract_new.party_both_partners_note")}
             </div>
           )}
 
           {!isPlatformType && (
-            <FormField label="Party A" htmlFor="party-a" required>
+            <FormField label={t("admin.contract_new.field.party_a")} htmlFor="party-a" required>
               <Select
                 id="party-a"
                 value={form.party_a_company_id}
                 onChange={(e) => setForm((p) => ({ ...p, party_a_company_id: e.target.value }))}
               >
-                <option value="">— Pick a company —</option>
+                <option value="">— {t("admin.contract_new.placeholder.pick_company")} —</option>
                 {companies.map((c) => (
                   <option key={c.id} value={c.id}>
-                    #{c.id} — {c.name ?? "(unnamed)"}
+                    #{c.id} — {c.name ?? t("admin.contract_new.unnamed_company")}
                   </option>
                 ))}
               </Select>
@@ -244,7 +246,7 @@ export default function AdminContractCreatePage() {
           )}
 
           <FormField
-            label="Party B (partner)"
+            label={t("admin.contract_new.field.party_b")}
             htmlFor="party-b"
             required
             className={isPlatformType ? "sm:col-span-2" : undefined}
@@ -263,7 +265,7 @@ export default function AdminContractCreatePage() {
             </Select>
           </FormField>
 
-          <FormField label="Language" htmlFor="contract-language">
+          <FormField label={t("admin.contract_new.field.language")} htmlFor="contract-language">
             <Select
               id="contract-language"
               value={form.language}
@@ -280,9 +282,9 @@ export default function AdminContractCreatePage() {
       </section>
 
       <section className="admin-card p-4">
-        <h2 className="mb-3 text-base font-semibold">Schedule</h2>
+        <h2 className="mb-3 text-base font-semibold">{t("admin.contract_new.section.schedule")}</h2>
         <div className="grid gap-3 sm:grid-cols-2">
-          <FormField label="Effective date" htmlFor="effective-date">
+          <FormField label={t("admin.contract_new.field.effective_date")} htmlFor="effective-date">
             <Input
               id="effective-date"
               type="date"
@@ -290,7 +292,7 @@ export default function AdminContractCreatePage() {
               onChange={(e) => setForm((p) => ({ ...p, effective_date: e.target.value }))}
             />
           </FormField>
-          <FormField label="Expiry date" htmlFor="expiry-date">
+          <FormField label={t("admin.contract_new.field.expiry_date")} htmlFor="expiry-date">
             <Input
               id="expiry-date"
               type="date"
@@ -299,9 +301,9 @@ export default function AdminContractCreatePage() {
             />
           </FormField>
           <FormField
-            label="Termination notice (days)"
+            label={t("admin.contract_new.field.termination_notice_days")}
             htmlFor="notice-days"
-            helperText="How many days of notice are required to terminate"
+            helperText={t("admin.contract_new.field.termination_notice_days_hint")}
           >
             <Input
               id="notice-days"
@@ -316,21 +318,18 @@ export default function AdminContractCreatePage() {
             <Checkbox
               checked={form.auto_renew}
               onChange={(e) => setForm((p) => ({ ...p, auto_renew: e.target.checked }))}
-              label="Auto-renew"
-              description="Automatically renew on expiry date"
+              label={t("admin.contract_new.field.auto_renew")}
+              description={t("admin.contract_new.field.auto_renew_hint")}
             />
           </div>
         </div>
       </section>
 
       <section className="admin-card p-4">
-        <h2 className="mb-3 text-base font-semibold">Variables & clauses (JSON)</h2>
-        <p className="mb-3 text-xs text-fg-t6">
-          Provide values as JSON objects. Variables fill template placeholders; commission / payment /
-          cancellation override template defaults for this contract.
-        </p>
+        <h2 className="mb-3 text-base font-semibold">{t("admin.contract_new.section.variables")}</h2>
+        <p className="mb-3 text-xs text-fg-t6">{t("admin.contract_new.section.variables_hint")}</p>
         <div className="grid gap-3 sm:grid-cols-2">
-          <FormField label="Variables" htmlFor="variables-json">
+          <FormField label={t("admin.contract_new.field.variables")} htmlFor="variables-json">
             <Input
               as="textarea"
               id="variables-json"
@@ -340,7 +339,7 @@ export default function AdminContractCreatePage() {
               onChange={(e) => setForm((p) => ({ ...p, variables_json: e.target.value }))}
             />
           </FormField>
-          <FormField label="Commission clause" htmlFor="commission-json">
+          <FormField label={t("admin.contract_new.field.commission_clause")} htmlFor="commission-json">
             <Input
               as="textarea"
               id="commission-json"
@@ -350,7 +349,7 @@ export default function AdminContractCreatePage() {
               onChange={(e) => setForm((p) => ({ ...p, commission_clause_json: e.target.value }))}
             />
           </FormField>
-          <FormField label="Payment terms" htmlFor="payment-json">
+          <FormField label={t("admin.contract_new.field.payment_terms")} htmlFor="payment-json">
             <Input
               as="textarea"
               id="payment-json"
@@ -360,7 +359,7 @@ export default function AdminContractCreatePage() {
               onChange={(e) => setForm((p) => ({ ...p, payment_terms_json: e.target.value }))}
             />
           </FormField>
-          <FormField label="Cancellation policy" htmlFor="cancellation-json">
+          <FormField label={t("admin.contract_new.field.cancellation_policy")} htmlFor="cancellation-json">
             <Input
               as="textarea"
               id="cancellation-json"
@@ -375,13 +374,13 @@ export default function AdminContractCreatePage() {
 
       <div className="flex gap-2">
         <Button size="sm" disabled={busy} onClick={() => void handleSubmit()}>
-          {busy ? "Creating…" : "Create contract"}
+          {busy ? t("admin.contract_new.btn_creating") : t("admin.contract_new.btn_create")}
         </Button>
         <Link
           href="/platform/contracts"
           className="inline-flex h-10 items-center rounded-md border-2 border-primary-500 px-4 text-ds-button-s font-ds-button-s font-semibold text-primary-500 transition hover:bg-primary-50"
         >
-          Cancel
+          {t("common.cancel")}
         </Link>
       </div>
     </div>
