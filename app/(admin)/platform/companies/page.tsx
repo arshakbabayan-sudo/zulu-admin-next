@@ -124,7 +124,7 @@ export default function PlatformCompaniesPage() {
 
   function sortIndicator(field: SortField): string {
     if (sortBy !== field) return "";
-    return sortDir === "asc" ? " в†‘" : " в†“";
+    return sortDir === "asc" ? " ↑" : " ↓";
   }
 
   useEffect(() => {

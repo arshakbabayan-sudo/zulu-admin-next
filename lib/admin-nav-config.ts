@@ -123,9 +123,11 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/operator/excursions", labelKey: "admin.nav.tab.excursions", serviceType: "excursion", moduleKey: "inventory.excursions" },
       { href: "/operator/visas", labelKey: "admin.nav.tab.visas", serviceType: "visa", moduleKey: "inventory.visas" },
       { href: "/operator/packages", labelKey: "admin.nav.tab.packages", serviceType: "package", moduleKey: "inventory.packages" },
+      // Phase 5.1: super-admin packages oversight moved from Bucket3 to here
+      { href: "/platform/packages", labelKey: "admin.nav.tab.packages_oversight", superAdminOnly: true },
       { href: "/operator/offers", labelKey: "admin.nav.tab.offers", moduleKey: "inventory.offers" },
       { href: "/operator/contracts", labelKey: "admin.nav.tab.contracts", moduleKey: "ops.contracts" },
-      { href: "/operator/commission-settings", labelKey: "admin.nav.tab.commission_settings", moduleKey: "ops.finance" },
+      // commission-settings moved to Finance group (Phase 5.2)
       // /operator/external-api hidden from sidebar (Phase 4.1) — placeholder UI, no backend integration.
       // Route still accessible via direct URL until full integration ships.
     ],
@@ -162,6 +164,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/platform/invoices", labelKey: "admin.nav.tab.invoices", moduleKey: "ops.finance" },
       { href: "/platform/payments", labelKey: "admin.nav.tab.payments", moduleKey: "ops.finance" },
       { href: "/platform/commissions", labelKey: "admin.nav.tab.commissions", moduleKey: "ops.finance" },
+      { href: "/operator/commission-settings", labelKey: "admin.nav.tab.commission_settings", moduleKey: "ops.finance" },
       { href: "/platform/finance", labelKey: "admin.nav.tab.transactions", moduleKey: "ops.finance" },
       { href: "/platform/vouchers", labelKey: "admin.nav.tab.vouchers", moduleKey: "ops.finance" },
     ],
@@ -226,7 +229,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     defaultHref: "/bucket3/customers",
     tabs: [
       { href: "/bucket3/customers", labelKey: "admin.nav.tab.bucket3.customers" },
-      { href: "/platform/packages", labelKey: "admin.nav.tab.packages_oversight", superAdminOnly: true },
+      // /platform/packages moved to My Inventory group (Phase 5.1)
       { href: "/bucket3/block-dates", labelKey: "admin.nav.tab.bucket3.block_dates" },
       { href: "/bucket3/per-x-invoicing", labelKey: "admin.nav.tab.bucket3.per_x_invoicing" },
       { href: "/bucket3/custom-fields", labelKey: "admin.nav.tab.bucket3.custom_fields" },
@@ -255,7 +258,11 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/platform/webhooks", labelKey: "admin.nav.tab.webhooks" },
       { href: "/platform/locations", labelKey: "admin.nav.tab.locations", superAdminOnly: true },
       { href: "/platform/audit-logs", labelKey: "admin.nav.tab.audit_logs" },
-      { href: "/platform/api-docs", labelKey: "admin.nav.tab.api_docs" },
+      // /platform/api-docs hidden in production (Phase 5.3) — developer-only Swagger UI.
+      // Set NEXT_PUBLIC_SHOW_API_DOCS=true to show, or access directly via URL.
+      ...(process.env.NEXT_PUBLIC_SHOW_API_DOCS === "true"
+        ? [{ href: "/platform/api-docs", labelKey: "admin.nav.tab.api_docs" }]
+        : []),
       { href: "/platform/settings/brand", labelKey: "admin.nav.tab.brand_settings" },
     ],
     visibility: "super_admin",

@@ -654,7 +654,7 @@ export default function OperatorHotelsPage() {
               <FormField
                 label={t("admin.crud.hotels.field.review_score")}
                 htmlFor="hotel-review-score"
-                helperText=”0–10, optional”
+                helperText="0–10, optional"
               >
                 <Input
                   id="hotel-review-score"
