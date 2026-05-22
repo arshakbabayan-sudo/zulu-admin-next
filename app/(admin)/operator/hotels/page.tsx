@@ -157,7 +157,7 @@ export default function OperatorHotelsPage() {
       setMeta(res.meta);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else setErr(e instanceof ApiRequestError ? e.message : "Failed");
+      else setErr(e instanceof ApiRequestError ? e.message : t("admin.crud.common.failed"));
     }
     // contentLang is intentionally in deps: changing the content preview language
     // must refetch hotel rows so the localized hotel_name / description show up.
@@ -190,7 +190,7 @@ export default function OperatorHotelsPage() {
       if (e instanceof ApiRequestError && e.status === 422 && e.body?.errors) {
         setErr(formatHotelApiValidationErrors(e.body.errors).join(" "));
       } else {
-        setErr(e instanceof ApiRequestError ? e.message : "Failed to load hotel");
+        setErr(e instanceof ApiRequestError ? e.message : t("admin.crud.hotels.err_load_one"));
       }
     } finally {
       setFormLoading(false);
@@ -226,7 +226,7 @@ export default function OperatorHotelsPage() {
       if (e instanceof ApiRequestError && e.status === 422 && e.body?.errors) {
         setFormErrLines(formatHotelApiValidationErrors(e.body.errors));
       } else {
-        setFormErrLines([e instanceof ApiRequestError ? e.message : "Failed"]);
+        setFormErrLines([e instanceof ApiRequestError ? e.message : t("admin.crud.common.failed")]);
       }
     } finally {
       setBusy(false);
@@ -242,7 +242,7 @@ export default function OperatorHotelsPage() {
       await apiDeleteHotel(token, id);
       await load();
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Failed");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.crud.common.failed"));
     } finally {
       setBusy(false);
     }
@@ -257,7 +257,7 @@ export default function OperatorHotelsPage() {
       await apiSubmitOfferForReview(token, offerId);
       await load();
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Submit failed.");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.crud.hotels.err_submit_failed"));
     } finally {
       setBusy(false);
     }
@@ -298,7 +298,7 @@ export default function OperatorHotelsPage() {
                   const blob = await buildHotelsTemplateBlob();
                   downloadBlob("hotels-template.xlsx", blob);
                 } catch (e) {
-                  alert(e instanceof Error ? e.message : "Template download failed");
+                  alert(e instanceof Error ? e.message : t("admin.crud.hotels.err_template_failed"));
                 }
               }}
               onExport={async () => {
@@ -308,7 +308,7 @@ export default function OperatorHotelsPage() {
                   const csv = await exportHotelsCsv(token);
                   downloadCsvFile(csvExportFilename("hotels"), csv);
                 } catch (e) {
-                  alert(e instanceof ApiRequestError ? e.message : "Export failed");
+                  alert(e instanceof ApiRequestError ? e.message : t("admin.crud.hotels.err_export_failed"));
                 } finally {
                   setExportBusy(false);
                 }
@@ -378,7 +378,7 @@ export default function OperatorHotelsPage() {
                 </FormField>
               )
             )}
-            <FormField label="Accommodation type" htmlFor="hotel-accommodation-type">
+            <FormField label={t("admin.crud.hotels.field.accommodation_type")} htmlFor="hotel-accommodation-type">
               <Select
                 id="hotel-accommodation-type"
                 value={form.accommodation_type}
@@ -410,14 +410,14 @@ export default function OperatorHotelsPage() {
               value={form.main_image}
               onChange={(v) => setForm((p) => (p ? { ...p, main_image: v } : p))}
               section="hotels"
-              label="Main image"
-              altText="Hotel preview"
+              label={t("admin.crud.hotels.field.main_image")}
+              altText={t("admin.crud.hotels.main_image_alt")}
             />
             <FormField
               label={
                 <>
-                  Short description{" "}
-                  <span className="text-fg-t6 font-normal">(ХЇХЎЦЂХі Х¶ХЇХЎЦЂХЎХЈЦЂХёЦ‚Х©ХµХёЦ‚Х¶ Х°ХµХёЦ‚ЦЂХЎХ¶ХёЦЃХ« ХґХЎХЅХ«Х¶` ЦЃХёЦ‚ХµЦЃ Х§ ХїЦЂХѕХёЦ‚Хґ &quot;About the hotel&quot; ХўХЎХЄХ¶ХёЦ‚Хґ)</span>
+                  {t("admin.crud.hotels.field.short_description")}{" "}
+                  <span className="text-fg-t6 font-normal">{t("admin.crud.hotels.short_description_hint")}</span>
                 </>
               }
               htmlFor="hotel-short-description"
@@ -427,7 +427,7 @@ export default function OperatorHotelsPage() {
                 as="textarea"
                 id="hotel-short-description"
                 rows={4}
-                placeholder="Royal Manotel, Geneva is just 3.5 mi from the airport..."
+                placeholder={t("admin.crud.hotels.short_description_placeholder")}
                 value={form.short_description}
                 onChange={(e) => setForm((p) => (p ? { ...p, short_description: e.target.value } : p))}
               />
@@ -435,7 +435,7 @@ export default function OperatorHotelsPage() {
             <LocationCascadeSelect
               token={token}
               value={form.location_id === "" ? null : Number(form.location_id)}
-              label="Location (Country -> Region -> City)"
+              label={t("admin.crud.hotels.field.location_label")}
               onChange={(locationId, meta) =>
                 setForm((p) =>
                   p
@@ -484,7 +484,7 @@ export default function OperatorHotelsPage() {
               htmlFor="hotel-star-rating"
               helperText={
                 <>
-                  Optional (1вЂ“5) вЂ” API field <code className="rounded bg-figma-bg-1 px-1">{HOTEL_API_STAR_RATING_KEY}</code>
+                  {t("admin.crud.hotels.star_rating_hint")} <code className="rounded bg-figma-bg-1 px-1">{HOTEL_API_STAR_RATING_KEY}</code>
                 </>
               }
             >
@@ -820,88 +820,88 @@ export default function OperatorHotelsPage() {
 
                       {/* Capacity */}
                       <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                        <FormField label="Max adults" required>{numField("max_adults", 1)}</FormField>
-                        <FormField label="Max children">{numField("max_children", 0)}</FormField>
-                        <FormField label="Max total guests" required>{numField("max_total_guests", 1)}</FormField>
+                        <FormField label={t("admin.crud.hotels.field.max_adults")} required>{numField("max_adults", 1)}</FormField>
+                        <FormField label={t("admin.crud.hotels.field.max_children")}>{numField("max_children", 0)}</FormField>
+                        <FormField label={t("admin.crud.hotels.field.max_total_guests")} required>{numField("max_total_guests", 1)}</FormField>
                       </div>
 
                       {/* Bed + Size */}
                       <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                        <FormField label="Bed type" htmlFor={`room-bed-type-${ri}`}>
+                        <FormField label={t("admin.crud.hotels.field.bed_type")} htmlFor={`room-bed-type-${ri}`}>
                           <Input
                             id={`room-bed-type-${ri}`}
                             value={room.bed_type}
                             onChange={(e) => updateRoom({ bed_type: e.target.value })}
-                            placeholder="double / twin / king"
+                            placeholder={t("admin.crud.hotels.bed_type_placeholder")}
                           />
                         </FormField>
-                        <FormField label="Bed count">{numField("bed_count", 1)}</FormField>
-                        <FormField label="Room size (mВІ)">{txtField("room_size")}</FormField>
+                        <FormField label={t("admin.crud.hotels.field.bed_count")}>{numField("bed_count", 1)}</FormField>
+                        <FormField label={t("admin.crud.hotels.field.room_size")}>{txtField("room_size")}</FormField>
                       </div>
 
                       {/* View + Inventory + Status */}
                       <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                        <FormField label="Room view">{txtField("room_view")}</FormField>
-                        <FormField label="View type" htmlFor={`room-view-type-${ri}`}>
+                        <FormField label={t("admin.crud.hotels.field.room_view")}>{txtField("room_view")}</FormField>
+                        <FormField label={t("admin.crud.hotels.field.view_type")} htmlFor={`room-view-type-${ri}`}>
                           <Input
                             id={`room-view-type-${ri}`}
                             value={room.view_type}
                             onChange={(e) => updateRoom({ view_type: e.target.value })}
-                            placeholder="sea / mountain / city / garden"
+                            placeholder={t("admin.crud.hotels.view_type_placeholder")}
                           />
                         </FormField>
-                        <FormField label="Inventory count">{numField("room_inventory_count", 0)}</FormField>
+                        <FormField label={t("admin.crud.hotels.field.inventory_count")}>{numField("room_inventory_count", 0)}</FormField>
                       </div>
 
                       <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                        <FormField label="Status" htmlFor={`room-status-${ri}`}>
+                        <FormField label={t("admin.crud.common.status")} htmlFor={`room-status-${ri}`}>
                           <Input
                             id={`room-status-${ri}`}
                             value={room.status}
                             onChange={(e) => updateRoom({ status: e.target.value })}
-                            placeholder="active / inactive"
+                            placeholder={t("admin.crud.hotels.room_status_placeholder")}
                           />
                         </FormField>
                       </div>
 
                       {/* Bathroom */}
                       <div className="mt-4 border-t border-default pt-3">
-                        <span className="text-xs font-semibold uppercase text-fg-t6">Bathroom</span>
+                        <span className="text-xs font-semibold uppercase text-fg-t6">{t("admin.crud.hotels.section.bathroom")}</span>
                         <div className="mt-2 grid gap-2 sm:grid-cols-3">
-                          {boolField("private_bathroom", "Private bathroom")}
-                          {boolField("bath", "Bathtub")}
-                          {boolField("shower", "Shower")}
+                          {boolField("private_bathroom", t("admin.crud.hotels.amenity.private_bathroom"))}
+                          {boolField("bath", t("admin.crud.hotels.amenity.bathtub"))}
+                          {boolField("shower", t("admin.crud.hotels.amenity.shower"))}
                         </div>
                       </div>
 
                       {/* Amenities */}
                       <div className="mt-4 border-t border-default pt-3">
-                        <span className="text-xs font-semibold uppercase text-fg-t6">In-room amenities</span>
+                        <span className="text-xs font-semibold uppercase text-fg-t6">{t("admin.crud.hotels.section.in_room_amenities")}</span>
                         <div className="mt-2 grid gap-2 sm:grid-cols-3">
-                          {boolField("air_conditioning", "Air conditioning")}
-                          {boolField("wifi", "Wi-Fi")}
-                          {boolField("tv", "TV")}
-                          {boolField("mini_fridge", "Mini-fridge")}
-                          {boolField("tea_coffee_maker", "Tea/coffee maker")}
-                          {boolField("kettle", "Kettle")}
-                          {boolField("washing_machine", "Washing machine")}
-                          {boolField("soundproofing", "Soundproofing")}
-                          {boolField("terrace_or_balcony", "Terrace / balcony")}
-                          {boolField("patio", "Patio")}
+                          {boolField("air_conditioning", t("admin.crud.hotels.amenity.air_conditioning"))}
+                          {boolField("wifi", t("admin.crud.hotels.amenity.wifi"))}
+                          {boolField("tv", t("admin.crud.hotels.amenity.tv"))}
+                          {boolField("mini_fridge", t("admin.crud.hotels.amenity.mini_fridge"))}
+                          {boolField("tea_coffee_maker", t("admin.crud.hotels.amenity.tea_coffee_maker"))}
+                          {boolField("kettle", t("admin.crud.hotels.amenity.kettle"))}
+                          {boolField("washing_machine", t("admin.crud.hotels.amenity.washing_machine"))}
+                          {boolField("soundproofing", t("admin.crud.hotels.amenity.soundproofing"))}
+                          {boolField("terrace_or_balcony", t("admin.crud.hotels.amenity.terrace_or_balcony"))}
+                          {boolField("patio", t("admin.crud.hotels.amenity.patio"))}
                         </div>
                       </div>
 
                       {/* Policy */}
                       <div className="mt-4 border-t border-default pt-3">
-                        <span className="text-xs font-semibold uppercase text-fg-t6">Policy</span>
+                        <span className="text-xs font-semibold uppercase text-fg-t6">{t("admin.crud.hotels.section.policy")}</span>
                         <div className="mt-2 grid gap-2 sm:grid-cols-3">
-                          {boolField("smoking_allowed", "Smoking allowed")}
+                          {boolField("smoking_allowed", t("admin.crud.hotels.amenity.smoking_allowed"))}
                         </div>
                       </div>
 
                       {/* Images */}
                       <div className="mt-4 border-t border-default pt-3">
-                        <FormField label="Room images (one URL per line)" htmlFor={`room-images-${ri}`}>
+                        <FormField label={t("admin.crud.hotels.field.room_images")} htmlFor={`room-images-${ri}`}>
                           <Input
                             as="textarea"
                             id={`room-images-${ri}`}
@@ -1136,18 +1136,18 @@ export default function OperatorHotelsPage() {
           {editId !== null && (
             <div className="mt-6 rounded-zulu border border-default bg-figma-bg-1 p-3">
               <h3 className="mb-2 text-sm font-medium text-fg-t6">
-                ФІХёХѕХЎХ¶Х¤ХЎХЇХёЦ‚Х©ХµХёЦ‚Х¶ ХўХёХ¬ХёЦЂ Х¬ХҐХ¦ХёЦ‚Х¶ХҐЦЂХёХѕ{" "}
-                <span className="text-fg-t7 font-normal">(ХўХёХ¬ХёЦЂ Х¬ХҐХ¦ХёЦ‚Х¶ХҐЦЂХЁ Х°ХЎХѕХЎХЅХЎЦЂ ХҐХ¶ вЂ” ХЁХ¶ХїЦЂХ«ЦЂ Х¤ЦЂХёХ·ХЎХЇХЁ)</span>
+                {t("admin.crud.hotels.translations_title")}{" "}
+                <span className="text-fg-t7 font-normal">{t("admin.crud.hotels.translations_hint")}</span>
               </h3>
               <TranslationTabs
                 entityType="hotel"
                 entityId={editId}
                 fields={[
-                  { name: "hotel_name", label: "ХЂХµХёЦ‚ЦЂХЎХ¶ХёЦЃХ« ХЎХ¶ХёЦ‚Х¶ХЁ" },
-                  { name: "short_description", label: "ФїХЎЦЂХі Х¶ХЇХЎЦЂХЎХЈЦЂХёЦ‚Х©ХµХёЦ‚Х¶", multiline: true },
-                  { name: "full_address", label: "Ф±ХґХўХёХІХ»ХЎХЇХЎХ¶ Х°ХЎХЅЦЃХҐ" },
-                  { name: "district_or_area", label: "Х‡ЦЂХ»ХЎХ¶ / ХїХЎЦЂХЎХ®Ц„" },
-                  { name: "review_label", label: "ФіХ¶ХЎХ°ХЎХїХґХЎХ¶ ХєХ«ХїХЎХЇ" },
+                  { name: "hotel_name", label: t("admin.crud.hotels.field.hotel_name") },
+                  { name: "short_description", label: t("admin.crud.hotels.field.short_description"), multiline: true },
+                  { name: "full_address", label: t("admin.crud.hotels.field.full_address") },
+                  { name: "district_or_area", label: t("admin.crud.hotels.field.district_or_area") },
+                  { name: "review_label", label: t("admin.crud.hotels.field.review_label") },
                 ]}
               />
             </div>
@@ -1170,7 +1170,7 @@ export default function OperatorHotelsPage() {
             <TH>{t("admin.crud.hotels.col.city")}</TH>
             <TH>{t("admin.crud.hotels.col.country")}</TH>
             <TH>{t("admin.crud.hotels.col.stars")}</TH>
-            <TH>Status</TH>
+            <TH>{t("admin.crud.common.status")}</TH>
             <TH>{t("admin.crud.common.actions")}</TH>
           </TR>
         </THead>
@@ -1204,7 +1204,7 @@ export default function OperatorHotelsPage() {
                       onClick={() => void handleSubmitForReview(r.offer!.id!)}
                       className="self-start"
                     >
-                      Submit for review
+                      {t("admin.crud.common.submit_for_review")}
                     </Button>
                   )}
                   <button
