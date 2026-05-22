@@ -74,7 +74,7 @@ import { useDocumentTitle } from "@/lib/use-document-title";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
 
-// Lazy-load the XLSX import modal вЂ” it pulls in ExcelJS (~200 KB) which is
+// Lazy-load the XLSX import modal — it pulls in ExcelJS (~200 KB) which is
 // only needed when the operator actually clicks "Import". Module + dep
 // download happens on first render of the modal (gated by importOpen).
 const HotelsXlsxImportModal = dynamic(
@@ -654,7 +654,7 @@ export default function OperatorHotelsPage() {
               <FormField
                 label={t("admin.crud.hotels.field.review_score")}
                 htmlFor="hotel-review-score"
-                helperText="0вЂ“10, optional"
+                helperText=”0–10, optional”
               >
                 <Input
                   id="hotel-review-score"

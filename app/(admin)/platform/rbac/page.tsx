@@ -180,11 +180,11 @@ export default function PlatformRbacPage() {
                     <td key={p.permission_id} className="px-2 py-2 text-center">
                       {p.granted ? (
                         <span className="text-success-600 font-bold" title={p.permission_name}>
-                          вњ“
+                          ✓
                         </span>
                       ) : (
                         <span className="text-fg-t7" title={p.permission_name}>
-                          В·
+                          ·
                         </span>
                       )}
                     </td>

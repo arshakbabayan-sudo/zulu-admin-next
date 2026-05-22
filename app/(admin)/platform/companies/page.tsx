@@ -144,7 +144,7 @@ export default function PlatformCompaniesPage() {
       const [permRes, countryRes, allCountriesRes] = await Promise.all([
         apiCompanySellerPermissions(token, row.id),
         apiCompanyCountryPermissions(token, row.id),
-        // Pull all countries from the location tree вЂ” one shot, no auth.
+        // Pull all countries from the location tree — one shot, no auth.
         fetch(
           `${process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8008/api"}/locations/search?types=country&limit=200`,
           { headers: { Accept: "application/json" } }
@@ -455,9 +455,9 @@ export default function PlatformCompaniesPage() {
                       {r.name}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-fg-t7 capitalize">{r.type ?? "вЂ”"}</td>
+                  <td className="px-4 py-3 text-fg-t7 capitalize">{r.type ?? "—"}</td>
                   <td className="px-4 py-3">
-                    {r.status ? <StatusPill status={r.status} /> : <span className="text-fg-t6">вЂ”</span>}
+                    {r.status ? <StatusPill status={r.status} /> : <span className="text-fg-t6">—</span>}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
@@ -618,17 +618,17 @@ export default function PlatformCompaniesPage() {
                     </div>
                   )}
 
-                  {/* Quick filter вЂ” handy for 40+ countries */}
+                  {/* Quick filter — handy for 40+ countries */}
                   <input
                     type="text"
-                    placeholder="Filter listвЂ¦"
+                    placeholder="Filter list…"
                     value={countryFilter}
                     onChange={(e) => setCountryFilter(e.target.value)}
                     className="mb-2 w-full rounded-zulu border border-default bg-white px-3 py-2 text-sm"
                   />
 
                   {countriesAll.length === 0 ? (
-                    <p className="text-xs text-fg-t6">Loading countriesвЂ¦</p>
+                    <p className="text-xs text-fg-t6">Loading countries…</p>
                   ) : (
                     <div className="max-h-64 overflow-y-auto rounded-zulu border border-default bg-white">
                       {countriesAll

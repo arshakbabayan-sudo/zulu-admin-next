@@ -384,7 +384,7 @@ export default function PlatformVouchersPage() {
                 className="rounded p-1 text-fg-t6 hover:bg-figma-bg-1"
                 aria-label={t("common.close")}
               >
-                вњ•
+                ✕
               </button>
             </div>
 
@@ -430,7 +430,7 @@ export default function PlatformVouchersPage() {
               />
               <DetailRow
                 label={t("admin.platform_vouchers.issuer")}
-                value={selected.issuer_company?.name ?? "вЂ”"}
+                value={selected.issuer_company?.name ?? “—"}
               />
               <DetailRow
                 label={t("admin.platform_vouchers.valid")}
@@ -441,7 +441,7 @@ export default function PlatformVouchersPage() {
                           ? " в†’ " + formatDate(selected.valid_to, lang)
                           : ""
                       }`
-                    : "вЂ”"
+                    : “—"
                 }
               />
               <DetailRow
@@ -479,7 +479,7 @@ export default function PlatformVouchersPage() {
                       {logs.map((l) => (
                         <tr key={l.id} className="border-t border-default">
                           <td className="px-2 py-1">{formatDateTime(l.scanned_at, lang)}</td>
-                          <td className="px-2 py-1 font-mono">{l.scanner_ip ?? "вЂ”"}</td>
+                          <td className="px-2 py-1 font-mono">{l.scanner_ip ?? “—"}</td>
                           <td className="px-2 py-1">{l.result}</td>
                         </tr>
                       ))}

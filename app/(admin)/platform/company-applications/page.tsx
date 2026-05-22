@@ -99,7 +99,7 @@ export default function CompanyApplicationsPage() {
               // user pre-registration link is missing (legacy/anonymous
               // submissions).
               const role = r.user?.intended_role ?? r.company_type ?? null;
-              const roleLabel = role === "agent" ? "Tour agent" : role === "operator" ? "Tour operator" : "вЂ”";
+              const roleLabel = role === "agent" ? "Tour agent" : role === "operator" ? "Tour operator" : "—";
               const roleClass =
                 role === "agent"
                   ? "bg-primary-50 text-primary-700 border-primary-200"
@@ -118,13 +118,13 @@ export default function CompanyApplicationsPage() {
                   <td className="px-3 py-2 text-xs">
                     {r.user ? (
                       <span>
-                        {r.user.name ?? "вЂ”"}
+                        {r.user.name ?? "—"}
                         {r.user.email && (
                           <span className="block text-fg-t6">{r.user.email}</span>
                         )}
                       </span>
                     ) : (
-                      <span className="text-fg-t6">вЂ” (anonymous)</span>
+                      <span className="text-fg-t6">— (anonymous)</span>
                     )}
                   </td>
                   <td className="px-3 py-2">{r.business_email}</td>
