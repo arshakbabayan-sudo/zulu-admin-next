@@ -3,6 +3,7 @@
 import { AdminAuthProvider } from "@/contexts/AdminAuthContext";
 import { ConfirmDialogProvider } from "@/contexts/ConfirmDialogContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { PromptDialogProvider } from "@/contexts/PromptDialogContext";
 import type { ReactNode } from "react";
 
 export function Providers({
@@ -15,7 +16,9 @@ export function Providers({
   return (
     <LanguageProvider initialLang={initialLang}>
       <AdminAuthProvider>
-        <ConfirmDialogProvider>{children}</ConfirmDialogProvider>
+        <ConfirmDialogProvider>
+          <PromptDialogProvider>{children}</PromptDialogProvider>
+        </ConfirmDialogProvider>
       </AdminAuthProvider>
     </LanguageProvider>
   );

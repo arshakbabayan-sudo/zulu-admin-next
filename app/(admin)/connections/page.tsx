@@ -22,6 +22,7 @@ import {
   type ConnectionRow,
 } from "@/lib/connections-api";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { usePrompt } from "@/contexts/PromptDialogContext";
 import {
   Button,
   Checkbox,
@@ -52,6 +53,7 @@ function entityLabel(type: string | undefined, id: number | undefined): string {
 export default function ConnectionsPage() {
   const { token, user } = useAdminAuth();
   const { t } = useLanguage();
+  const prompt = usePrompt();
   const allowed = canAccessConnectionsNav(user);
   const isSuper = user?.is_super_admin === true;
   const canCreate = (user?.companies?.length ?? 0) > 0;
@@ -142,29 +144,44 @@ export default function ConnectionsPage() {
     try {
       if (action === "accept") await apiConnectionAccept(token, id);
       else if (action === "reject") {
-        const input = window.prompt(t("admin.connections.prompt_notes_required_reject"), "") ?? null;
-        const notes = input?.trim() ? input.trim() : null;
-        if (!notes) {
-          setErr(t("admin.connections.err_notes_required_reject"));
+        const notes = await prompt({
+          title: t("admin.connections.action.reject"),
+          placeholder: t("admin.connections.prompt_notes_required_reject"),
+          required: true,
+          minLength: 3,
+          variant: "danger",
+        });
+        if (notes === null) {
+          setBusyId(null);
           return;
         }
         await apiConnectionReject(token, id, notes);
       } else {
-        const input = window.prompt(t("admin.connections.prompt_notes_optional"), "") ?? null;
-        const notes = input?.trim() ? input.trim() : undefined;
+        const notes = await prompt({
+          title: t("admin.connections.action.cancel"),
+          placeholder: t("admin.connections.prompt_notes_optional"),
+        });
+        if (notes === null) {
+          setBusyId(null);
+          return;
+        }
         try {
-          await apiConnectionCancel(token, id, notes);
+          await apiConnectionCancel(token, id, notes || undefined);
         } catch (e) {
           if (
             e instanceof ApiRequestError &&
             e.status === 422 &&
             e.message.toLowerCase().includes("notes")
           ) {
-            const retry =
-              window.prompt(t("admin.connections.prompt_notes_required_cancel"), "") ?? null;
-            const retryNotes = retry?.trim() ? retry.trim() : null;
-            if (!retryNotes) {
-              setErr(t("admin.connections.err_notes_required_cancel"));
+            const retryNotes = await prompt({
+              title: t("admin.connections.action.cancel"),
+              placeholder: t("admin.connections.prompt_notes_required_cancel"),
+              required: true,
+              minLength: 3,
+              variant: "danger",
+            });
+            if (retryNotes === null) {
+              setBusyId(null);
               return;
             }
             await apiConnectionCancel(token, id, retryNotes);

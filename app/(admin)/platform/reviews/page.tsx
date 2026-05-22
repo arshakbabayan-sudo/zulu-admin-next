@@ -5,6 +5,7 @@
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { usePrompt } from "@/contexts/PromptDialogContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
@@ -30,6 +31,7 @@ const MOD_STATUSES = ["published", "hidden", "rejected"] as const;
 export default function PlatformReviewsPage() {
   const { token, user } = useAdminAuth();
   const { t } = useLanguage();
+  const prompt = usePrompt();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<PlatformReviewRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -63,7 +65,12 @@ export default function PlatformReviewsPage() {
 
   async function moderate(id: number, status: (typeof MOD_STATUSES)[number]) {
     if (!token) return;
-    const notes = window.prompt(t("admin.reviews.prompt_notes")) ?? "";
+    const notes = await prompt({
+      title: t("admin.reviews.moderate_title"),
+      placeholder: t("admin.reviews.prompt_notes"),
+      variant: status === "rejected" ? "danger" : "default",
+    });
+    if (notes === null) return;
     setBusyId(id);
     try {
       await apiModerateReview(token, id, {
