@@ -76,7 +76,7 @@ export default function OperatorPackagesPage() {
       setMeta(res.meta);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else setErr(e instanceof ApiRequestError ? e.message : "Failed");
+      else setErr(e instanceof ApiRequestError ? e.message : t("admin.crud.common.failed"));
     }
   }, [token, page, statusFilter, contentLang]);
 
@@ -149,7 +149,7 @@ export default function OperatorPackagesPage() {
       closeForm();
       await load();
     } catch (e) {
-      setFormErr(e instanceof ApiRequestError ? e.message : "Failed");
+      setFormErr(e instanceof ApiRequestError ? e.message : t("admin.crud.common.failed"));
     } finally {
       setBusy(false);
     }
@@ -281,7 +281,7 @@ export default function OperatorPackagesPage() {
               />
             </FormField>
             <FormField
-              label="Subtitle"
+              label={t("admin.crud.packages.field.subtitle")}
               htmlFor="pkg-subtitle"
               className="sm:col-span-2"
             >
@@ -291,7 +291,7 @@ export default function OperatorPackagesPage() {
                 onChange={(e) =>
                   setForm((p) => (p ? { ...p, package_subtitle: e.target.value } : p))
                 }
-                placeholder="Short tagline shown under the title (e.g. 'Garni + Sevan + Tucson SUV')"
+                placeholder={t("admin.crud.packages.field.subtitle_placeholder")}
               />
             </FormField>
             <FormField label={t("admin.crud.packages.field.type")} htmlFor="pkg-type">
@@ -316,7 +316,7 @@ export default function OperatorPackagesPage() {
                 (form as { destination_location_id?: number | null })
                   .destination_location_id ?? null
               }
-              label="Destination location"
+              label={t("admin.crud.packages.field.destination_location")}
               onChange={(locationId, meta) =>
                 setForm((p) =>
                   p
@@ -331,7 +331,7 @@ export default function OperatorPackagesPage() {
                 )
               }
             />
-            <FormField label="Base price" htmlFor="pkg-price">
+            <FormField label={t("admin.crud.packages.field.base_price")} htmlFor="pkg-price">
               <Input
                 id="pkg-price"
                 type="number"
@@ -381,7 +381,7 @@ export default function OperatorPackagesPage() {
                 }
               />
             </FormField>
-            <FormField label="Min nights" htmlFor="pkg-mn">
+            <FormField label={t("admin.crud.packages.field.min_nights")} htmlFor="pkg-mn">
               <Input
                 id="pkg-mn"
                 type="number"
@@ -398,10 +398,10 @@ export default function OperatorPackagesPage() {
                       : p
                   )
                 }
-                placeholder="Hotel nights included"
+                placeholder={t("admin.crud.packages.field.min_nights_placeholder")}
               />
             </FormField>
-            <FormField label="Adults" htmlFor="pkg-ad">
+            <FormField label={t("admin.crud.packages.field.adults")} htmlFor="pkg-ad">
               <Input
                 id="pkg-ad"
                 type="number"
@@ -420,7 +420,7 @@ export default function OperatorPackagesPage() {
                 }
               />
             </FormField>
-            <FormField label="Children" htmlFor="pkg-ch">
+            <FormField label={t("admin.crud.packages.field.children")} htmlFor="pkg-ch">
               <Input
                 id="pkg-ch"
                 type="number"
@@ -460,7 +460,7 @@ export default function OperatorPackagesPage() {
                 setForm((p) => (p ? { ...p, short_description: v } : p))
               }
               section="packages"
-              altText="Package preview"
+              altText={t("admin.crud.packages.main_image_alt")}
             />
             <LatLngFields
               latitude={form.latitude != null ? String(form.latitude) : ""}
@@ -488,9 +488,9 @@ export default function OperatorPackagesPage() {
                 entityType="package"
                 entityId={editId}
                 fields={[
-                  { name: "package_title", label: "Package title" },
-                  { name: "package_subtitle", label: "Subtitle" },
-                  { name: "short_description", label: "Short description", multiline: true },
+                  { name: "package_title", label: t("admin.crud.packages.field.package_title") },
+                  { name: "package_subtitle", label: t("admin.crud.packages.field.subtitle") },
+                  { name: "short_description", label: t("admin.crud.packages.field.short_description"), multiline: true },
                 ]}
               />
             </div>
