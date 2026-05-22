@@ -262,7 +262,7 @@ export default function OperatorTransfersPage() {
       setMeta(res.meta);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else setErr(e instanceof ApiRequestError ? e.message : "Failed");
+      else setErr(e instanceof ApiRequestError ? e.message : t("admin.crud.common.failed"));
     }
   }, [token, page, contentLang]);
 
@@ -292,7 +292,7 @@ export default function OperatorTransfersPage() {
       setWizardStep("general");
       setStepErrors([]);
     } catch (e) {
-      setFormErr(e instanceof ApiRequestError ? e.message : "Failed");
+      setFormErr(e instanceof ApiRequestError ? e.message : t("admin.crud.common.failed"));
       setForm(null);
       setEditId(null);
     } finally {
@@ -508,7 +508,7 @@ export default function OperatorTransfersPage() {
         setFormErr(e.message || "Request failed.");
         setFieldErrs(e.body?.errors ?? null);
       } else {
-        setFormErr("Failed");
+        setFormErr(t("admin.crud.common.failed"));
       }
     } finally {
       setBusy(false);
@@ -648,7 +648,7 @@ export default function OperatorTransfersPage() {
           )}
 
           <div className="mb-3 grid gap-3 sm:grid-cols-2">
-            <FormField label="Currency (offer)" htmlFor="transfer-currency">
+            <FormField label={t("admin.crud.transfers.field.currency")} htmlFor="transfer-currency">
               <Input
                 id="transfer-currency"
                 value={form.currency ?? ""}
@@ -662,7 +662,7 @@ export default function OperatorTransfersPage() {
               onMainImageChange={(v) => setForm((p) => p ? { ...p, main_image: v } : p)}
               onShortDescriptionChange={(v) => setForm((p) => p ? { ...p, short_description: v } : p)}
               section="transfers"
-              altText="Transfer preview"
+              altText={t("admin.crud.transfers.main_image_alt")}
             />
           </div>
 
@@ -700,7 +700,7 @@ export default function OperatorTransfersPage() {
                         ? null
                         : Number(form.origin_location_id)
                     }
-                    label="Origin location"
+                    label={t("admin.crud.transfers.field.origin_location")}
                     onChange={(locationId, meta) =>
                       setForm((p) =>
                         p
@@ -721,7 +721,7 @@ export default function OperatorTransfersPage() {
                         ? null
                         : Number(form.destination_location_id)
                     }
-                    label="Destination location"
+                    label={t("admin.crud.transfers.field.destination_location")}
                     onChange={(locationId, meta) =>
                       setForm((p) =>
                         p
@@ -771,14 +771,14 @@ export default function OperatorTransfersPage() {
           {editId !== null && (
             <div className="mt-6 rounded-zulu border border-default bg-figma-bg-1 p-3">
               <h3 className="mb-2 text-sm font-medium text-fg-t6">
-                Translations <span className="text-fg-t7 font-normal">(EN-ից բացի՝ RU / HY)</span>
+                {t("admin.crud.transfers.translations_title")} <span className="text-fg-t7 font-normal">{t("admin.crud.transfers.translations_hint")}</span>
               </h3>
               <TranslationTabs
                 entityType="transfer"
                 entityId={editId}
                 fields={[
-                  { name: "title", label: "Title" },
-                  { name: "description", label: "Description", multiline: true },
+                  { name: "title", label: t("admin.crud.transfers.field.title") },
+                  { name: "description", label: t("admin.crud.transfers.field.description"), multiline: true },
                 ]}
               />
             </div>
@@ -817,7 +817,7 @@ export default function OperatorTransfersPage() {
             <TH>{t("admin.crud.transfers.col.vehicle")}</TH>
             <TH>{t("admin.crud.transfers.col.route")}</TH>
             <TH>{t("admin.crud.transfers.col.price")}</TH>
-            <TH>Status</TH>
+            <TH>{t("admin.crud.common.status")}</TH>
             <TH>{t("admin.crud.common.actions")}</TH>
           </TR>
         </THead>
