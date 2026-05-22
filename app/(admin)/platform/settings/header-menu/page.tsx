@@ -7,6 +7,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import {
@@ -23,6 +24,7 @@ function tempId(): string { return `new-${Math.random().toString(36).slice(2, 9)
 
 export default function PlatformHeaderMenuPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [items, setItems] = useState<EditRow[]>([]);
   const [forbidden, setForbidden] = useState(false);
@@ -38,7 +40,7 @@ export default function PlatformHeaderMenuPage() {
       setItems(res.data.items.map((it) => ({ ...it })));
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else setErr(e instanceof ApiRequestError ? e.message : "Failed to load");
+      else setErr(e instanceof ApiRequestError ? e.message : t("admin.commission.err_load"));
     }
   }, [token, allowed]);
 
@@ -136,7 +138,7 @@ export default function PlatformHeaderMenuPage() {
       setItems(res.data.items);
       setSavedAt(Date.now());
     } catch (e) {
-      setErr(e instanceof ApiRequestError ? e.message : "Save failed");
+      setErr(e instanceof ApiRequestError ? e.message : t("admin.commission.err_save"));
     } finally {
       setSaving(false);
     }
@@ -145,7 +147,7 @@ export default function PlatformHeaderMenuPage() {
   if (!allowed || forbidden) {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">Header menu</h1>
+        <h1 className="admin-page-title">{t("admin.header_menu.title")}</h1>
         <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
@@ -156,15 +158,15 @@ export default function PlatformHeaderMenuPage() {
   return (
     <div className="max-w-4xl space-y-6">
       <PageHeader
-        title="Header menu"
-        actions={<Button variant="outline" size="sm" onClick={addRootItem}>+ Add item</Button>}
+        title={t("admin.header_menu.title")}
+        actions={<Button variant="outline" size="sm" onClick={addRootItem}>{t("admin.header_menu.add_item")}</Button>}
       />
 
       {err && <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
-      {savedAt && <div className="rounded-zulu border border-success-100 bg-success-50 px-4 py-2 text-sm text-success-700">Saved.</div>}
+      {savedAt && <div className="rounded-zulu border border-success-100 bg-success-50 px-4 py-2 text-sm text-success-700">{t("admin.brand.saved")}</div>}
 
       <div className="flex flex-col gap-3">
-        {topLevel.length === 0 && <p className="text-sm text-fg-t6">No items.</p>}
+        {topLevel.length === 0 && <p className="text-sm text-fg-t6">{t("admin.header_menu.empty")}</p>}
         {topLevel.map((parent, parentIdx) => {
           const key = parent.id || parent._tempId!;
           const children = items
@@ -184,7 +186,7 @@ export default function PlatformHeaderMenuPage() {
 
               {children.length > 0 && (
                 <div className="mt-3 ml-6 border-l-2 border-primary-200 pl-3">
-                  <p className="mb-2 text-xs font-medium text-fg-t6">Children</p>
+                  <p className="mb-2 text-xs font-medium text-fg-t6">{t("admin.header_menu.children")}</p>
                   {children.map((child, childIdx) => {
                     const childKey = child.id || child._tempId!;
                     return (
@@ -210,7 +212,7 @@ export default function PlatformHeaderMenuPage() {
                   onClick={() => addChild(key)}
                   className="text-xs text-primary-500 underline hover:text-primary-700"
                 >
-                  + Add child
+                  {t("admin.header_menu.add_child")}
                 </button>
               </div>
             </div>
@@ -220,7 +222,7 @@ export default function PlatformHeaderMenuPage() {
 
       <div className="sticky bottom-0 flex justify-end gap-2 border-t border-default bg-white py-3 -mx-4 px-4">
         <Button size="sm" disabled={saving} onClick={() => void handleSave()}>
-          {saving ? "Saving…" : "Save all"}
+          {saving ? t("admin.crud.common.saving") : t("admin.header_menu.save_all")}
         </Button>
       </div>
     </div>
@@ -246,23 +248,24 @@ function ItemEditor({
   onRemove: (rowKey: number | string) => void;
   isChild?: boolean;
 }) {
+  const { t } = useLanguage();
   return (
     <div className={isChild ? "mb-3 rounded-zulu border border-default bg-figma-bg-1 p-2" : ""}>
       <div className="grid gap-2 md:grid-cols-3">
-        <FormField label="Label (EN)" htmlFor={`hm-en-${rowKey}`}>
+        <FormField label={t("admin.header_menu.label_en")} htmlFor={`hm-en-${rowKey}`}>
           <Input id={`hm-en-${rowKey}`} value={row.label_en} onChange={(e) => onChange(rowKey, { label_en: e.target.value })} />
         </FormField>
-        <FormField label="Label (RU)" htmlFor={`hm-ru-${rowKey}`}>
+        <FormField label={t("admin.header_menu.label_ru")} htmlFor={`hm-ru-${rowKey}`}>
           <Input id={`hm-ru-${rowKey}`} value={row.label_ru ?? ""} onChange={(e) => onChange(rowKey, { label_ru: e.target.value === "" ? null : e.target.value })} />
         </FormField>
-        <FormField label="Label (HY)" htmlFor={`hm-hy-${rowKey}`}>
+        <FormField label={t("admin.header_menu.label_hy")} htmlFor={`hm-hy-${rowKey}`}>
           <Input id={`hm-hy-${rowKey}`} value={row.label_hy ?? ""} onChange={(e) => onChange(rowKey, { label_hy: e.target.value === "" ? null : e.target.value })} />
         </FormField>
         <FormField label="URL" htmlFor={`hm-url-${rowKey}`} className="md:col-span-2">
-          <Input id={`hm-url-${rowKey}`} value={row.url} onChange={(e) => onChange(rowKey, { url: e.target.value })} placeholder="/about or https://..." className="font-mono" />
+          <Input id={`hm-url-${rowKey}`} value={row.url} onChange={(e) => onChange(rowKey, { url: e.target.value })} placeholder={t("admin.header_menu.url_placeholder")} className="font-mono" />
         </FormField>
-        <FormField label="Icon (optional)" htmlFor={`hm-icon-${rowKey}`}>
-          <Input id={`hm-icon-${rowKey}`} value={row.icon ?? ""} onChange={(e) => onChange(rowKey, { icon: e.target.value === "" ? null : e.target.value })} placeholder="lucide name (e.g. phone)" className="font-mono" />
+        <FormField label={t("admin.header_menu.icon_optional")} htmlFor={`hm-icon-${rowKey}`}>
+          <Input id={`hm-icon-${rowKey}`} value={row.icon ?? ""} onChange={(e) => onChange(rowKey, { icon: e.target.value === "" ? null : e.target.value })} placeholder={t("admin.header_menu.icon_placeholder")} className="font-mono" />
         </FormField>
       </div>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
@@ -270,18 +273,18 @@ function ItemEditor({
           <Checkbox
             checked={row.is_visible}
             onChange={(e) => onChange(rowKey, { is_visible: e.target.checked })}
-            label="Visible"
+            label={t("admin.header_menu.visible")}
           />
           <Checkbox
             checked={row.open_in_new_tab}
             onChange={(e) => onChange(rowKey, { open_in_new_tab: e.target.checked })}
-            label="New tab"
+            label={t("admin.header_menu.new_tab")}
           />
         </div>
         <div className="flex items-center gap-1">
-          <button type="button" disabled={isFirst} onClick={() => onMove(rowKey, -1)} className="rounded-zulu border border-default px-2 py-1 text-xs disabled:opacity-30 hover:bg-figma-bg-1" aria-label="Move up">↑</button>
-          <button type="button" disabled={isLast} onClick={() => onMove(rowKey, 1)} className="rounded-zulu border border-default px-2 py-1 text-xs disabled:opacity-30 hover:bg-figma-bg-1" aria-label="Move down">↓</button>
-          <button type="button" onClick={() => onRemove(rowKey)} className="rounded-zulu border border-error-200 bg-error-50 px-2 py-1 text-xs text-error-700 hover:bg-error-100">Remove</button>
+          <button type="button" disabled={isFirst} onClick={() => onMove(rowKey, -1)} className="rounded-zulu border border-default px-2 py-1 text-xs disabled:opacity-30 hover:bg-figma-bg-1" aria-label={t("admin.header_menu.move_up")}>↑</button>
+          <button type="button" disabled={isLast} onClick={() => onMove(rowKey, 1)} className="rounded-zulu border border-default px-2 py-1 text-xs disabled:opacity-30 hover:bg-figma-bg-1" aria-label={t("admin.header_menu.move_down")}>↓</button>
+          <button type="button" onClick={() => onRemove(rowKey)} className="rounded-zulu border border-error-200 bg-error-50 px-2 py-1 text-xs text-error-700 hover:bg-error-100">{t("admin.commission.btn_remove")}</button>
         </div>
       </div>
     </div>
