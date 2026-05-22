@@ -237,7 +237,13 @@ export type PlatformCompanyRow = {
   active_seller_permissions_count?: number;
   created_at?: string | null;
   updated_at?: string | null;
+  // Phase 7.2 — admin archive markers
+  archived_at?: string | null;
+  archived_by_user_id?: number | null;
+  archived_reason?: string | null;
 };
+
+export type CompanyArchiveFilter = "active" | "archived" | "all";
 
 export async function apiPlatformCompany(
   token: string,
@@ -257,6 +263,7 @@ export async function apiPlatformCompanies(
     type?: string;
     sort_by?: string;
     sort_dir?: "asc" | "desc";
+    archive_filter?: CompanyArchiveFilter;
   }
 ): Promise<ApiSuccessEnvelope<PlatformCompanyRow[]> & { meta: ApiListMeta }> {
   const q = new URLSearchParams();
@@ -269,8 +276,34 @@ export async function apiPlatformCompanies(
   if (params.type) q.set("type", params.type);
   if (params.sort_by) q.set("sort_by", params.sort_by);
   if (params.sort_dir) q.set("sort_dir", params.sort_dir);
+  if (params.archive_filter) q.set("archive_filter", params.archive_filter);
   const qs = q.toString();
   return apiFetchJson(`${PA}/companies${qs ? `?${qs}` : ""}`, { method: "GET", token });
+}
+
+/** Phase 7.2 — super-admin only. Reason required (min 3, max 500 chars). */
+export async function apiArchiveCompany(
+  token: string,
+  companyId: number,
+  reason: string
+): Promise<ApiSuccessEnvelope<{ id: number }>> {
+  return apiFetchJson(`${PA}/companies/${companyId}/archive`, {
+    method: "POST",
+    token,
+    body: { reason },
+  });
+}
+
+/** Phase 7.2 — super-admin only. */
+export async function apiRestoreCompany(
+  token: string,
+  companyId: number
+): Promise<ApiSuccessEnvelope<{ id: number }>> {
+  return apiFetchJson(`${PA}/companies/${companyId}/restore`, {
+    method: "POST",
+    token,
+    body: {},
+  });
 }
 
 export async function apiPatchCompanyGovernance(

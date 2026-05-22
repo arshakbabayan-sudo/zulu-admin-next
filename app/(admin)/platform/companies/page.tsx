@@ -19,19 +19,23 @@ import { TranslationsModal } from "@/components/TranslationsModal";
 import { StatusPill, autoStatusTone } from "@/components/ui/StatusPill";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
+import { usePrompt } from "@/contexts/PromptDialogContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import {
+  apiArchiveCompany,
   apiCompanyCountryPermissions,
   apiCompanySellerPermissions,
   apiPatchCompanyGovernance,
   apiPatchCompanySellerPermissions,
   apiPlatformCompanies,
+  apiRestoreCompany,
   apiSyncCompanyCountryPermissions,
   apiToggleCompanySeller,
+  type CompanyArchiveFilter,
   SELLER_SERVICE_TYPES,
   type PlatformCompanyRow,
 } from "@/lib/platform-admin-api";
@@ -51,7 +55,10 @@ export default function PlatformCompaniesPage() {
   useDocumentTitle(t("admin.companies.title"));
   const { token, user } = useAdminAuth();
   const confirm = useConfirm();
+  const prompt = usePrompt();
   const allowed = canAccessPlatformAdminNav(user);
+  const isSuperAdmin = user?.is_super_admin === true;
+  const [archiveFilter, setArchiveFilter] = useState<CompanyArchiveFilter>("active");
   const [rows, setRows] = useState<PlatformCompanyRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
   const [page, setPage] = useState(1);
@@ -96,6 +103,7 @@ export default function PlatformCompaniesPage() {
         is_seller: sellerParam,
         sort_by: sortBy,
         sort_dir: sortDir,
+        archive_filter: archiveFilter,
       });
       setRows(res.data);
       setMeta(res.meta);
@@ -110,7 +118,7 @@ export default function PlatformCompaniesPage() {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
       else setErr(e instanceof ApiRequestError ? e.message : t("admin.platform_companies.err_load"));
     }
-  }, [token, allowed, page, search, governanceFilter, sellerParam, sortBy, sortDir, t]);
+  }, [token, allowed, page, search, governanceFilter, sellerParam, sortBy, sortDir, archiveFilter, t]);
 
   function toggleSort(field: SortField) {
     if (sortBy === field) {
@@ -214,6 +222,62 @@ export default function PlatformCompaniesPage() {
       await load();
     } catch (e) {
       alert(e instanceof ApiRequestError ? e.message : t("admin.platform_companies.err_update"));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  // Phase 7.2 — archive (super-admin only)
+  // 2-step confirmation: type exact company name + mandatory reason.
+  async function archive(row: PlatformCompanyRow) {
+    if (!token || !isSuperAdmin) return;
+    const typed = await prompt({
+      title: t("admin.platform_companies.archive_title").replace("{name}", row.name),
+      description: t("admin.platform_companies.archive_description"),
+      placeholder: row.name,
+      required: true,
+      variant: "danger",
+      confirmLabel: t("admin.platform_companies.btn_archive_confirm"),
+    });
+    if (typed === null) return;
+    if (typed.trim() !== row.name.trim()) {
+      alert(t("admin.platform_companies.confirm_name_mismatch"));
+      return;
+    }
+    const reason = await prompt({
+      title: t("admin.platform_companies.archive_reason_title"),
+      description: t("admin.platform_companies.archive_reason_description"),
+      placeholder: t("admin.platform_companies.reason_placeholder"),
+      required: true,
+      minLength: 3,
+      variant: "danger",
+    });
+    if (reason === null) return;
+    setBusyId(row.id);
+    try {
+      await apiArchiveCompany(token, row.id, reason);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : t("admin.platform_companies.err_archive"));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  // Phase 7.2 — restore archived company (super-admin only)
+  async function restore(row: PlatformCompanyRow) {
+    if (!token || !isSuperAdmin) return;
+    const ok = await confirm({
+      message: t("admin.platform_companies.confirm_restore").replace("{name}", row.name),
+      variant: "default",
+    });
+    if (!ok) return;
+    setBusyId(row.id);
+    try {
+      await apiRestoreCompany(token, row.id);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : t("admin.platform_companies.err_restore"));
     } finally {
       setBusyId(null);
     }
@@ -354,6 +418,24 @@ export default function PlatformCompaniesPage() {
               <option value="0">{t("admin.platform_companies.no")}</option>
             </select>
           </label>
+          {/* Phase 7.2 — archive filter (super-admin only) */}
+          {isSuperAdmin ? (
+            <label className="flex items-center gap-2 text-sm text-fg-t6">
+              <span className="font-medium text-fg-t7">{t("admin.platform_companies.archive")}</span>
+              <select
+                value={archiveFilter}
+                onChange={(e) => {
+                  setPage(1);
+                  setArchiveFilter(e.target.value as CompanyArchiveFilter);
+                }}
+                className="h-10 rounded-zulu border border-default bg-white px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+              >
+                <option value="active">{t("admin.platform_companies.archive_active")}</option>
+                <option value="archived">{t("admin.platform_companies.archive_only")}</option>
+                <option value="all">{t("admin.platform_companies.archive_all")}</option>
+              </select>
+            </label>
+          ) : null}
         </div>
       </div>
 
@@ -535,6 +617,29 @@ export default function PlatformCompaniesPage() {
                       >
                         {t("admin.platform_companies.translations")}
                       </button>
+                      {/* Phase 7.2 — archive / restore (super-admin only) */}
+                      {isSuperAdmin && !r.archived_at ? (
+                        <button
+                          type="button"
+                          disabled={busyId === r.id}
+                          onClick={() => void archive(r)}
+                          title={t("admin.platform_companies.btn_archive_tooltip")}
+                          className="inline-flex h-8 items-center rounded-zulu border border-error-200 bg-white px-2.5 text-xs font-medium text-error-700 transition hover:bg-error-50 disabled:opacity-40"
+                        >
+                          {t("admin.platform_companies.btn_archive")}
+                        </button>
+                      ) : null}
+                      {isSuperAdmin && r.archived_at ? (
+                        <button
+                          type="button"
+                          disabled={busyId === r.id}
+                          onClick={() => void restore(r)}
+                          title={r.archived_reason ?? undefined}
+                          className="inline-flex h-8 items-center rounded-zulu border border-warning-200 bg-warning-50 px-2.5 text-xs font-medium text-warning-700 transition hover:bg-warning-100 disabled:opacity-40"
+                        >
+                          {t("admin.platform_companies.btn_restore")}
+                        </button>
+                      ) : null}
                     </div>
                   </td>
                 </tr>
