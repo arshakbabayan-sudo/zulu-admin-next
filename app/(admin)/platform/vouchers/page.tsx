@@ -1,10 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
+import {
+  apiListVouchers,
+  apiVoucherDetail,
+  apiVoidVoucher,
+  apiReissueVoucher,
+} from "@/lib/vouchers-api";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { formatDate, formatDateTime } from "@/lib/format";
@@ -104,11 +110,7 @@ export default function PlatformVouchersPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const baseURL = useMemo(
-    () => process.env.NEXT_PUBLIC_API_URL || "https://api.zulu.am",
-    []
-  );
-
+  // Phase 8.5 — typed API client (replaces raw fetch + manual error parsing)
   useEffect(() => {
     if (!allowed || !token) return;
     let cancelled = false;
@@ -118,36 +120,24 @@ export default function PlatformVouchersPage() {
 
     (async () => {
       try {
-        const params = new URLSearchParams();
-        params.set("page", String(page));
-        params.set("per_page", "25");
-        if (status) params.set("status", status);
-        if (serviceType) params.set("service_type", serviceType);
-        if (q.trim()) params.set("q", q.trim());
-
-        const res = await fetch(`${baseURL}/platform-admin/vouchers?${params.toString()}`, {
-          headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+        const res = await apiListVouchers(token, {
+          page,
+          per_page: 25,
+          status: status || undefined,
+          service_type: serviceType || undefined,
+          q: q.trim() || undefined,
         });
-        if (res.status === 403) {
-          if (!cancelled) setForbidden(true);
-          return;
-        }
-        const json = await res.json();
         if (cancelled) return;
-        if (json?.success) {
-          setRows(json.data ?? []);
-          setMeta(json.meta ?? null);
-        } else if (res.status === 404 || json?.message === "Not found") {
-          // Treat backend "Not found" as empty list, not as an error
-          setRows([]);
-          setMeta(null);
-        } else {
-          setError(json?.message ?? t("admin.platform_vouchers.err_load"));
-        }
+        setRows(res.data ?? []);
+        setMeta((res.meta as unknown as Meta) ?? null);
       } catch (e) {
         if (cancelled) return;
         if (e instanceof ApiRequestError && e.status === 403) {
           setForbidden(true);
+        } else if (e instanceof ApiRequestError && (e.status === 404 || /not found/i.test(e.message))) {
+          // Treat backend "Not found" as empty list, not as an error
+          setRows([]);
+          setMeta(null);
         } else {
           setError(e instanceof Error ? e.message : t("admin.platform_vouchers.err_load"));
         }
@@ -159,7 +149,7 @@ export default function PlatformVouchersPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, allowed, baseURL, page, appliedFilters, t]);
+  }, [token, allowed, page, appliedFilters, status, serviceType, q, t]);
 
   const applyFilters = () => {
     setPage(1);
@@ -175,18 +165,14 @@ export default function PlatformVouchersPage() {
   };
 
   const openDetail = async (row: VoucherRow) => {
+    if (!token) return;
     setSelected(row);
     setLogs([]);
     setDetailLoading(true);
     try {
-      const res = await fetch(`${baseURL}/platform-admin/vouchers/${row.id}`, {
-        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-      });
-      const json = await res.json();
-      if (json?.success) {
-        setSelected(json.data.voucher);
-        setLogs(json.data.verification_logs ?? []);
-      }
+      const res = await apiVoucherDetail(token, row.id);
+      setSelected(res.data.voucher as unknown as VoucherRow);
+      setLogs((res.data.verification_logs as unknown as VerificationLog[]) ?? []);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("admin.platform_vouchers.err_load_detail"));
     } finally {
@@ -195,21 +181,14 @@ export default function PlatformVouchersPage() {
   };
 
   const voidVoucher = async (id: number) => {
+    if (!token) return;
     const ok = await confirm({ messageKey: "admin.platform_vouchers.confirm_void", variant: "danger" });
     if (!ok) return;
     setActionLoading("void");
     try {
-      const res = await fetch(`${baseURL}/platform-admin/vouchers/${id}/void`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-      });
-      const json = await res.json();
-      if (json?.success) {
-        setSelected(json.data);
-        setAppliedFilters((n) => n + 1);
-      } else {
-        setError(json?.message ?? t("admin.platform_vouchers.err_void"));
-      }
+      const res = await apiVoidVoucher(token, id);
+      setSelected(res.data as unknown as VoucherRow);
+      setAppliedFilters((n) => n + 1);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("admin.platform_vouchers.err_void"));
     } finally {
@@ -218,26 +197,14 @@ export default function PlatformVouchersPage() {
   };
 
   const reissueVoucher = async (id: number) => {
+    if (!token) return;
     const ok = await confirm({ messageKey: "admin.platform_vouchers.confirm_reissue" });
     if (!ok) return;
     setActionLoading("reissue");
     try {
-      const res = await fetch(`${baseURL}/platform-admin/vouchers/${id}/reissue`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({}),
-      });
-      const json = await res.json();
-      if (json?.success) {
-        setSelected(json.data);
-        setAppliedFilters((n) => n + 1);
-      } else {
-        setError(json?.message ?? t("admin.platform_vouchers.err_reissue"));
-      }
+      const res = await apiReissueVoucher(token, id);
+      setSelected(res.data as unknown as VoucherRow);
+      setAppliedFilters((n) => n + 1);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("admin.platform_vouchers.err_reissue"));
     } finally {

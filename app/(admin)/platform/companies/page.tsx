@@ -680,6 +680,7 @@ export default function PlatformCompaniesPage() {
                       <button
                         type="button"
                         onClick={() => setTranslateRow(r)}
+                        title={t("admin.platform_companies.translations_tooltip")}
                         className="inline-flex h-8 items-center rounded-zulu border border-default bg-white px-2.5 text-xs font-medium text-fg-t7 transition hover:bg-figma-bg-1"
                       >
                         {t("admin.platform_companies.translations")}

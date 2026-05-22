@@ -5,6 +5,7 @@
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { usePrompt } from "@/contexts/PromptDialogContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
@@ -33,6 +34,7 @@ import {
 export default function SellerApplicationsPage() {
   const { token, user } = useAdminAuth();
   const { t } = useLanguage();
+  const prompt = usePrompt();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<SellerApplicationRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -78,14 +80,20 @@ export default function SellerApplicationsPage() {
 
   async function reject(id: number) {
     if (!token) return;
-    const rejection_reason = window.prompt(t("admin.seller_applications.prompt_rejection_reason")) ?? "";
-    if (!rejection_reason.trim()) {
-      alert(t("admin.seller_applications.err_reason_required"));
-      return;
-    }
+    // Phase 8.6 — reason is now OPTIONAL via the ZULU PromptModal (the
+    // legacy window.prompt + alert+abort flow forced a reason; the user
+    // wanted the ability to reject without a reason for low-info cases).
+    const rejection_reason = await prompt({
+      title: t("admin.seller_applications.prompt_rejection_reason"),
+      description: t("admin.seller_applications.reject_reason_optional_hint"),
+      placeholder: t("admin.seller_applications.reject_reason_placeholder"),
+      variant: "danger",
+      confirmLabel: t("admin.seller_applications.btn_reject"),
+    });
+    if (rejection_reason === null) return; // user cancelled
     setBusyId(id);
     try {
-      await apiRejectSellerApplication(token, id, rejection_reason.trim());
+      await apiRejectSellerApplication(token, id, rejection_reason.trim() || "");
       await load();
     } catch (e) {
       alert(e instanceof ApiRequestError ? e.message : t("admin.seller_applications.err_reject"));
