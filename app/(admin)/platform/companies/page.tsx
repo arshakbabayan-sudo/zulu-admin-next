@@ -229,6 +229,52 @@ export default function PlatformCompaniesPage() {
 
   // Phase 7.2 — archive (super-admin only)
   // 2-step confirmation: type exact company name + mandatory reason.
+  // Phase 6.1 — inline approve/reject for pending governance_status rows.
+  // Reuses apiPatchCompanyGovernance — no new endpoint needed.
+  async function inlineApprove(row: PlatformCompanyRow) {
+    if (!token) return;
+    const ok = await confirm({
+      message: t("admin.platform_companies.confirm_inline_approve").replace("{name}", row.name),
+      variant: "default",
+    });
+    if (!ok) return;
+    setBusyId(row.id);
+    try {
+      await apiPatchCompanyGovernance(token, row.id, { governance_status: "active" });
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : t("admin.platform_companies.err_update"));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function inlineReject(row: PlatformCompanyRow) {
+    if (!token) return;
+    const reason = await prompt({
+      title: t("admin.platform_companies.inline_reject_title").replace("{name}", row.name),
+      description: t("admin.platform_companies.inline_reject_description"),
+      placeholder: t("admin.platform_companies.reject_reason_placeholder"),
+      required: true,
+      minLength: 3,
+      variant: "danger",
+      confirmLabel: t("admin.platform_companies.btn_reject"),
+    });
+    if (reason === null) return;
+    setBusyId(row.id);
+    try {
+      await apiPatchCompanyGovernance(token, row.id, {
+        governance_status: "rejected",
+        reason,
+      });
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : t("admin.platform_companies.err_update"));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   async function archive(row: PlatformCompanyRow) {
     if (!token || !isSuperAdmin) return;
     const typed = await prompt({
@@ -573,6 +619,27 @@ export default function PlatformCompaniesPage() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex flex-wrap justify-end gap-1.5">
+                      {/* Phase 6.1 — inline approve/reject for pending rows */}
+                      {r.governance_status === "pending" ? (
+                        <>
+                          <button
+                            type="button"
+                            disabled={busyId === r.id}
+                            onClick={() => void inlineApprove(r)}
+                            className="inline-flex h-8 items-center rounded-zulu border border-success-300 bg-success-50 px-2.5 text-xs font-semibold text-success-800 transition hover:bg-success-100 disabled:opacity-40"
+                          >
+                            {t("admin.platform_companies.btn_approve")}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busyId === r.id}
+                            onClick={() => void inlineReject(r)}
+                            className="inline-flex h-8 items-center rounded-zulu border border-error-300 bg-error-50 px-2.5 text-xs font-semibold text-error-800 transition hover:bg-error-100 disabled:opacity-40"
+                          >
+                            {t("admin.platform_companies.btn_reject")}
+                          </button>
+                        </>
+                      ) : null}
                       <button
                         type="button"
                         disabled={busyId === r.id}
