@@ -19,6 +19,7 @@ import { formatDateTime } from "@/lib/format";
 import {
   ActiveFiltersChips,
   Button,
+  Drawer,
   FormField,
   Input,
   PageHeader,
@@ -449,26 +450,27 @@ export default function Bucket3CasesPage() {
         />
       )}
 
-      {/* Detail modal */}
+      {/* A5 — Detail drawer (was: full-screen modal) */}
       {selected && (
-        <div
-          className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/40 p-4"
-          onClick={() => setSelected(null)}
-        >
-          <div
-            className="my-12 w-full max-w-2xl rounded-zulu bg-white p-6 shadow-zulu-card space-y-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="font-mono text-xs text-fg-t6">{selected.case_number}</div>
-                <h2 className="text-lg font-semibold">{selected.title}</h2>
-              </div>
-              <div className="flex gap-2">
-                <StatusPill status={statusTier(selected.status)}>{selected.status}</StatusPill>
-                <StatusPill status={priorityTier(selected.priority)}>{selected.priority}</StatusPill>
-              </div>
+        <Drawer
+          open
+          onClose={() => setSelected(null)}
+          size="xl"
+          title={
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-xs text-fg-t6">{selected.case_number}</span>
+              <span>{selected.title}</span>
             </div>
+          }
+          subtitle={
+            <div className="flex gap-2">
+              <StatusPill status={statusTier(selected.status)}>{selected.status}</StatusPill>
+              <StatusPill status={priorityTier(selected.priority)}>{selected.priority}</StatusPill>
+            </div>
+          }
+        >
+          <div className="space-y-4">
+            {/* Legacy header content (StatusPill x2) moved into Drawer title/subtitle props above */}
             <p className="whitespace-pre-wrap rounded-zulu border border-default bg-figma-bg-1/50 p-3 text-sm text-fg-t8">
               {selected.description}
             </p>
@@ -622,7 +624,7 @@ export default function Bucket3CasesPage() {
               </Button>
             </div>
           </div>
-        </div>
+        </Drawer>
       )}
 
       {/* Compose modal */}
