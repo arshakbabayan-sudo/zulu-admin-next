@@ -541,7 +541,7 @@ export default function OperatorCarsPage() {
       setMeta(res.meta);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else setErr(e instanceof ApiRequestError ? e.message : "Failed");
+      else setErr(e instanceof ApiRequestError ? e.message : t("admin.crud.common.failed"));
     }
   }, [token, page, contentLang]);
 
@@ -696,7 +696,7 @@ export default function OperatorCarsPage() {
         setFormErr(e.message || "Request failed.");
         setFieldErrs(e.body?.errors ?? null);
       } else {
-        setFormErr("Failed");
+        setFormErr(t("admin.crud.common.failed"));
       }
     } finally {
       setBusy(false);
@@ -834,7 +834,7 @@ export default function OperatorCarsPage() {
               onMainImageChange={(v) => setForm((p) => p ? { ...p, main_image: v } : p)}
               onShortDescriptionChange={(v) => setForm((p) => p ? { ...p, short_description: v } : p)}
               section="cars"
-              altText="Car preview"
+              altText={t("admin.crud.cars.main_image_alt")}
             />
             <LatLngFields
               latitude={form.latitude}
@@ -891,7 +891,7 @@ export default function OperatorCarsPage() {
             <LocationCascadeSelect
               token={token}
               value={form.location_id === "" ? null : Number(form.location_id)}
-              label="Location"
+              label={t("admin.crud.cars.field.location")}
               onChange={(locationId) =>
                 setForm((p) => (p ? { ...p, location_id: locationId ?? "" } : p))
               }
@@ -1467,7 +1467,7 @@ export default function OperatorCarsPage() {
               >
                 {CAR_MILEAGE_MODES.map((m) => (
                   <option key={m} value={m}>
-                    {m === "unlimited" ? "Unlimited" : "Limited (included km)"}
+                    {m === "unlimited" ? t("admin.crud.cars.mileage.unlimited") : t("admin.crud.cars.mileage.limited")}
                   </option>
                 ))}
               </select>
@@ -1629,7 +1629,7 @@ export default function OperatorCarsPage() {
                 type="number"
                 min={1}
                 max={50000}
-                placeholder="Leave empty = no radius limit"
+                placeholder={t("admin.crud.cars.radius_placeholder")}
                 value={form.advanced_options.pricing_rules.radius.service_radius_km ?? ""}
                 onChange={(e) => {
                   const v = e.target.value;
@@ -1702,12 +1702,12 @@ export default function OperatorCarsPage() {
                       {CAR_OUT_OF_RADIUS_MODES_WITH_RADIUS.map((m) => (
                         <option key={m} value={m}>
                           {m === "flat_fee"
-                            ? "Extra flat fee"
+                            ? t("admin.crud.cars.out_mode.flat_fee")
                             : m === "per_km"
-                              ? "Extra per km"
+                              ? t("admin.crud.cars.out_mode.per_km")
                               : m === "not_allowed"
-                                ? "Not allowed"
-                                : "Quote only"}
+                                ? t("admin.crud.cars.out_mode.not_allowed")
+                                : t("admin.crud.cars.out_mode.quote_only")}
                         </option>
                       ))}
                     </select>
@@ -1804,8 +1804,8 @@ export default function OperatorCarsPage() {
                 entityType="car"
                 entityId={editId}
                 fields={[
-                  { name: "title", label: "Title" },
-                  { name: "description", label: "Description", multiline: true },
+                  { name: "title", label: t("admin.crud.cars.field.title") },
+                  { name: "description", label: t("admin.crud.cars.field.description"), multiline: true },
                 ]}
               />
             </div>
@@ -1829,7 +1829,7 @@ export default function OperatorCarsPage() {
             <TH>{t("admin.crud.cars.col.dropoff")}</TH>
             <TH>{t("admin.crud.cars.col.class")}</TH>
             <TH>{t("admin.crud.cars.col.offer")}</TH>
-            <TH>Status</TH>
+            <TH>{t("admin.crud.common.status")}</TH>
             <TH>{t("admin.crud.common.actions")}</TH>
           </TR>
         </THead>
