@@ -38,17 +38,34 @@ export type CommissionPayload = {
   notes?: string | null;
 };
 
+/**
+ * Phase 7.3 — platform-admin viewing a specific company's commission settings
+ * passes companyId; the backend scopes to that company. Without companyId the
+ * endpoint falls back to the caller's own active operator company (legacy
+ * Phase 6B behaviour, kept for the /operator/commission-settings page).
+ */
+function withCompanyQuery(path: string, companyId?: number): string {
+  if (!companyId) return path;
+  const sep = path.includes("?") ? "&" : "?";
+  return `${path}${sep}company_id=${companyId}`;
+}
+
 export async function apiCommissionSettings(
-  token: string
+  token: string,
+  companyId?: number
 ): Promise<ApiSuccessEnvelope<CommissionSettingsResponse>> {
-  return apiFetchJson(`/operator/commission-settings`, { method: "GET", token });
+  return apiFetchJson(withCompanyQuery(`/operator/commission-settings`, companyId), {
+    method: "GET",
+    token,
+  });
 }
 
 export async function apiUpsertCommissionDefault(
   token: string,
-  body: CommissionPayload
+  body: CommissionPayload,
+  companyId?: number
 ): Promise<ApiSuccessEnvelope<CommissionSettingsResponse>> {
-  return apiFetchJson(`/operator/commission-settings`, {
+  return apiFetchJson(withCompanyQuery(`/operator/commission-settings`, companyId), {
     method: "PATCH",
     token,
     body: body as unknown as Record<string, unknown>,
@@ -58,23 +75,31 @@ export async function apiUpsertCommissionDefault(
 export async function apiUpsertCommissionOverride(
   token: string,
   agentCompanyId: number,
-  body: CommissionPayload
+  body: CommissionPayload,
+  companyId?: number
 ): Promise<ApiSuccessEnvelope<CommissionSettingsResponse>> {
-  return apiFetchJson(`/operator/commission-settings/agents/${agentCompanyId}`, {
-    method: "PATCH",
-    token,
-    body: body as unknown as Record<string, unknown>,
-  });
+  return apiFetchJson(
+    withCompanyQuery(`/operator/commission-settings/agents/${agentCompanyId}`, companyId),
+    {
+      method: "PATCH",
+      token,
+      body: body as unknown as Record<string, unknown>,
+    },
+  );
 }
 
 export async function apiDeleteCommissionOverride(
   token: string,
-  agentCompanyId: number
+  agentCompanyId: number,
+  companyId?: number
 ): Promise<ApiSuccessEnvelope<CommissionSettingsResponse>> {
-  return apiFetchJson(`/operator/commission-settings/agents/${agentCompanyId}`, {
-    method: "DELETE",
-    token,
-  });
+  return apiFetchJson(
+    withCompanyQuery(`/operator/commission-settings/agents/${agentCompanyId}`, companyId),
+    {
+      method: "DELETE",
+      token,
+    },
+  );
 }
 
 export function calculationBaseLabel(base: CalculationBase): string {

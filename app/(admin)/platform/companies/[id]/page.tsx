@@ -19,6 +19,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { PartnerSettingsModal } from "@/components/PartnerSettingsModal";
 import { TranslationsModal } from "@/components/TranslationsModal";
+import CompanyCommissionTab from "@/components/CompanyCommissionTab";
 import { StatusPill, autoStatusTone } from "@/components/ui/StatusPill";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
@@ -33,7 +34,7 @@ import {
 } from "@/lib/platform-admin-api";
 
 const GOVERNANCE_STATUSES = ["pending", "active", "suspended", "rejected"] as const;
-type Tab = "profile" | "permissions" | "partner" | "translations";
+type Tab = "profile" | "permissions" | "partner" | "commission" | "translations";
 
 export default function PlatformCompanyDetailPage() {
   const params = useParams<{ id: string }>();
@@ -175,6 +176,11 @@ export default function PlatformCompanyDetailPage() {
             label={t("admin.platform_companies.tab_partner")}
           />
           <TabButton
+            active={tab === "commission"}
+            onClick={() => setTab("commission")}
+            label={t("admin.platform_companies.tab_commission")}
+          />
+          <TabButton
             active={tab === "translations"}
             onClick={() => setTab("translations")}
             label={t("admin.platform_companies.tab_translations")}
@@ -232,6 +238,10 @@ export default function PlatformCompanyDetailPage() {
                 {t("admin.platform_companies.edit")}
               </button>
             </div>
+          )}
+
+          {tab === "commission" && token && (
+            <CompanyCommissionTab token={token} companyId={company.id} />
           )}
 
           {tab === "translations" && (
