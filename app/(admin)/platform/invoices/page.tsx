@@ -9,7 +9,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
-import { apiInvoices, apiIssueInvoice, apiCancelInvoice, type InvoiceRow } from "@/lib/invoices-api";
+import { apiInvoices, apiIssueInvoice, apiCancelInvoice, downloadInvoicesCsv, type InvoiceRow } from "@/lib/invoices-api";
 import { formatDate } from "@/lib/format";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -39,6 +39,10 @@ export default function PlatformInvoicesPage() {
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("");
+  // Phase 7.6 — date range filters (ISO YYYY-MM-DD)
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [exporting, setExporting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -48,14 +52,37 @@ export default function PlatformInvoicesPage() {
     setErr(null);
     setForbidden(false);
     try {
-      const res = await apiInvoices(token, { page, per_page: 20, status: statusFilter || undefined });
+      const res = await apiInvoices(token, {
+        page,
+        per_page: 20,
+        status: statusFilter || undefined,
+        from: fromDate || undefined,
+        to: toDate || undefined,
+      });
       setRows(res.data);
       setMeta(res.meta);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
       else setErr(e instanceof ApiRequestError ? e.message : t("admin.invoices.err_load"));
     }
-  }, [token, allowed, page, statusFilter, t]);
+  }, [token, allowed, page, statusFilter, fromDate, toDate, t]);
+
+  // Phase 7.6 — CSV export with same filters
+  async function handleExport() {
+    if (!token) return;
+    setExporting(true);
+    try {
+      await downloadInvoicesCsv(token, {
+        status: statusFilter || undefined,
+        from: fromDate || undefined,
+        to: toDate || undefined,
+      });
+    } catch (e) {
+      alert(e instanceof Error ? e.message : t("admin.invoices.err_export"));
+    } finally {
+      setExporting(false);
+    }
+  }
 
   useEffect(() => { load(); }, [load]);
 
@@ -92,7 +119,19 @@ export default function PlatformInvoicesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t("admin.invoices.title")} />
+      <PageHeader
+        title={t("admin.invoices.title")}
+        actions={
+          <button
+            type="button"
+            disabled={exporting}
+            onClick={() => void handleExport()}
+            className="inline-flex h-10 items-center rounded-zulu border border-default bg-white px-4 text-sm font-semibold text-fg-t8 transition hover:bg-figma-bg-1 disabled:opacity-40"
+          >
+            {exporting ? t("admin.invoices.exporting") : t("admin.invoices.btn_export_csv")}
+          </button>
+        }
+      />
 
       <div className="admin-card p-4">
         <div className="flex flex-wrap items-end gap-3">
@@ -106,6 +145,39 @@ export default function PlatformInvoicesPage() {
               {STATUSES.map((s) => <option key={s} value={s}>{s || t("common.all")}</option>)}
             </Select>
           </FormField>
+          {/* Phase 7.6 — date range pickers */}
+          <FormField label={t("admin.invoices.filter_from")} htmlFor="inv-from" className="max-w-xs">
+            <input
+              id="inv-from"
+              type="date"
+              value={fromDate}
+              onChange={(e) => { setPage(1); setFromDate(e.target.value); }}
+              className="h-9 rounded-zulu border border-default px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+            />
+          </FormField>
+          <FormField label={t("admin.invoices.filter_to")} htmlFor="inv-to" className="max-w-xs">
+            <input
+              id="inv-to"
+              type="date"
+              value={toDate}
+              onChange={(e) => { setPage(1); setToDate(e.target.value); }}
+              className="h-9 rounded-zulu border border-default px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+            />
+          </FormField>
+          {(statusFilter || fromDate || toDate) && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setPage(1);
+                setStatusFilter("");
+                setFromDate("");
+                setToDate("");
+              }}
+            >
+              {t("admin.invoices.btn_clear_filters")}
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={load}>{t("admin.finance_summary.btn_refresh")}</Button>
         </div>
       </div>
