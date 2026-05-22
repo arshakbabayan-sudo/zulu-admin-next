@@ -157,13 +157,11 @@ const SECTION_KEYS: Record<SectionKey, string> = {
 };
 
 function Section({
-  sectionKey,
   label,
   open,
   onToggle,
   children,
 }: {
-  sectionKey: SectionKey;
   label: string;
   open: boolean;
   onToggle: () => void;
@@ -521,7 +519,7 @@ export default function OperatorFlightsPage() {
           </div>
 
           {/* 1 — GENERAL */}
-          <Section sectionKey="general" label={t(SECTION_KEYS.general)} open={openSection.general} onToggle={() => toggleSection("general")}>
+          <Section label={t(SECTION_KEYS.general)} open={openSection.general} onToggle={() => toggleSection("general")}>
             <div className="grid gap-3 sm:grid-cols-2">
               {editId == null && (
                 <Field label={t("admin.crud.flights.field.offer_id")} required hint={t("admin.crud.flights.field.offer_id_hint")}>
@@ -594,7 +592,7 @@ export default function OperatorFlightsPage() {
           </Section>
 
           {/* 2 — DEPARTURE */}
-          <Section sectionKey="departure" label={t(SECTION_KEYS.departure)} open={openSection.departure} onToggle={() => toggleSection("departure")}>
+          <Section label={t(SECTION_KEYS.departure)} open={openSection.departure} onToggle={() => toggleSection("departure")}>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <LocationCascadeSelect
@@ -656,7 +654,7 @@ export default function OperatorFlightsPage() {
           </Section>
 
           {/* 3 — ARRIVAL */}
-          <Section sectionKey="arrival" label={t(SECTION_KEYS.arrival)} open={openSection.arrival} onToggle={() => toggleSection("arrival")}>
+          <Section label={t(SECTION_KEYS.arrival)} open={openSection.arrival} onToggle={() => toggleSection("arrival")}>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <LocationCascadeSelect
@@ -717,7 +715,7 @@ export default function OperatorFlightsPage() {
           </Section>
 
           {/* 4 — SCHEDULE */}
-          <Section sectionKey="schedule" label={t(SECTION_KEYS.schedule)} open={openSection.schedule} onToggle={() => toggleSection("schedule")}>
+          <Section label={t(SECTION_KEYS.schedule)} open={openSection.schedule} onToggle={() => toggleSection("schedule")}>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label={t("admin.crud.flights.field.departure_at")} required>
                 <input
@@ -815,7 +813,7 @@ export default function OperatorFlightsPage() {
           </Section>
 
           {/* 5 — AGE TIERS */}
-          <Section sectionKey="ages" label={t(SECTION_KEYS.ages)} open={openSection.ages} onToggle={() => toggleSection("ages")}>
+          <Section label={t(SECTION_KEYS.ages)} open={openSection.ages} onToggle={() => toggleSection("ages")}>
             <div className="grid gap-3 sm:grid-cols-3">
               <Field label={t("admin.crud.flights.field.adult_age_from")} required>
                 <input
@@ -871,7 +869,7 @@ export default function OperatorFlightsPage() {
           </Section>
 
           {/* 6 — CABIN CLASSES (nested rows) */}
-          <Section sectionKey="cabins" label={t(SECTION_KEYS.cabins)} open={openSection.cabins} onToggle={() => toggleSection("cabins")}>
+          <Section label={t(SECTION_KEYS.cabins)} open={openSection.cabins} onToggle={() => toggleSection("cabins")}>
             <p className="mb-3 text-xs text-fg-t6">{t("admin.crud.flights.cabins_intro")}</p>
             <div className="flex flex-col gap-3">
               {form.cabins.map((cabin, idx) => (
@@ -1041,7 +1039,7 @@ export default function OperatorFlightsPage() {
           </Section>
 
           {/* 7 — POLICIES */}
-          <Section sectionKey="policies" label={t(SECTION_KEYS.policies)} open={openSection.policies} onToggle={() => toggleSection("policies")}>
+          <Section label={t(SECTION_KEYS.policies)} open={openSection.policies} onToggle={() => toggleSection("policies")}>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label={t("admin.crud.flights.field.cancellation_policy")} required>
                 <select
@@ -1131,7 +1129,7 @@ export default function OperatorFlightsPage() {
           </Section>
 
           {/* 8 — VISIBILITY */}
-          <Section sectionKey="visibility" label={t(SECTION_KEYS.visibility)} open={openSection.visibility} onToggle={() => toggleSection("visibility")}>
+          <Section label={t(SECTION_KEYS.visibility)} open={openSection.visibility} onToggle={() => toggleSection("visibility")}>
             <div className="flex flex-col gap-2">
               <label className="flex items-center gap-2 text-sm">
                 <input
