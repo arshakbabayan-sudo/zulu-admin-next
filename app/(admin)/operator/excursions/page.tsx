@@ -64,57 +64,58 @@ import {
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const EXCURSION_FIELD_LABELS: Record<string, string> = {
-  "": "Form",
-  offer_id: "Offer",
-  company_id: "Company",
-  location: "Location",
-  country: "Country",
-  city: "City",
-  general_category: "General category",
-  category: "Category",
-  excursion_type: "Excursion type",
-  tour_name: "Tour name",
-  overview: "Overview",
-  duration: "Duration",
-  starts_at: "Start time",
-  ends_at: "End time",
-  language: "Language",
-  group_size: "Group size",
-  ticket_max_count: "Max tickets",
-  status: "Status",
-  is_available: "Available",
-  is_bookable: "Bookable",
-  meeting_pickup: "Meeting / pickup",
-  additional_info: "Additional info",
-  cancellation_policy: "Cancellation policy",
-  includes: "Includes",
-  photos: "Photos",
-  price_by_dates: "Price by dates",
-  visibility_rule: "Visibility rule",
-  appears_in_web: "Show on web",
-  appears_in_admin: "Show in operator admin",
-  appears_in_zulu_admin: "Show in Zulu admin inventory",
+const EXCURSION_FIELD_LABEL_KEYS: Record<string, string> = {
+  "": "admin.crud.excursions.field.form",
+  offer_id: "admin.crud.excursions.field.offer",
+  company_id: "admin.crud.excursions.field.company",
+  location: "admin.crud.excursions.field.location",
+  country: "admin.crud.excursions.field.country",
+  city: "admin.crud.excursions.field.city",
+  general_category: "admin.crud.excursions.field.general_category",
+  category: "admin.crud.excursions.field.category",
+  excursion_type: "admin.crud.excursions.field.excursion_type",
+  tour_name: "admin.crud.excursions.field.tour_name",
+  overview: "admin.crud.excursions.field.overview",
+  duration: "admin.crud.excursions.field.duration",
+  starts_at: "admin.crud.excursions.field.starts_at",
+  ends_at: "admin.crud.excursions.field.ends_at",
+  language: "admin.crud.excursions.field.language",
+  group_size: "admin.crud.excursions.field.group_size",
+  ticket_max_count: "admin.crud.excursions.field.ticket_max_count",
+  status: "admin.crud.common.status",
+  is_available: "admin.crud.excursions.field.is_available",
+  is_bookable: "admin.crud.excursions.field.is_bookable",
+  meeting_pickup: "admin.crud.excursions.field.meeting_pickup",
+  additional_info: "admin.crud.excursions.field.additional_info",
+  cancellation_policy: "admin.crud.excursions.field.cancellation_policy",
+  includes: "admin.crud.excursions.field.includes",
+  photos: "admin.crud.excursions.field.photos",
+  price_by_dates: "admin.crud.excursions.field.price_by_dates",
+  visibility_rule: "admin.crud.excursions.field.visibility_rule",
+  appears_in_web: "admin.crud.excursions.field.appears_in_web",
+  appears_in_admin: "admin.crud.excursions.field.appears_in_admin",
+  appears_in_zulu_admin: "admin.crud.excursions.field.appears_in_zulu_admin",
 };
 
-function labelForField(field: string): string {
-  return EXCURSION_FIELD_LABELS[field] ?? field.replace(/_/g, " ");
-}
-
 function renderApiFieldErrors(
-  errors: FieldErrors | undefined
+  errors: FieldErrors | undefined,
+  tFn: (key: string) => string
 ): { title: string; items: { field: string; label: string; msg: string }[] } | null {
   if (!errors) return null;
   const items: { field: string; label: string; msg: string }[] = [];
+  const labelForField = (field: string) => {
+    const key = EXCURSION_FIELD_LABEL_KEYS[field];
+    return key ? tFn(key) : field.replace(/_/g, " ");
+  };
   for (const [field, msgs] of Object.entries(errors)) {
     if (!Array.isArray(msgs) || msgs.length === 0) continue;
     for (const m of msgs) {
-      const t = String(m ?? "").trim();
-      if (t) items.push({ field, label: labelForField(field), msg: t });
+      const txt = String(m ?? "").trim();
+      if (txt) items.push({ field, label: labelForField(field), msg: txt });
     }
   }
   if (items.length === 0) return null;
-  return { title: "Please fix the highlighted fields.", items };
+  return { title: tFn("admin.crud.excursions.fix_highlighted"), items };
 }
 
 function hasFieldErr(fieldErrs: FieldErrors | null, key: string): boolean {
@@ -171,7 +172,7 @@ export default function OperatorExcursionsPage() {
       setMeta(res.meta);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else setErr(e instanceof ApiRequestError ? e.message : "Failed");
+      else setErr(e instanceof ApiRequestError ? e.message : t("admin.crud.common.failed"));
     }
   }, [token, page, contentLang]);
 
@@ -347,7 +348,7 @@ export default function OperatorExcursionsPage() {
         setFormErr(e.message || "Request failed.");
         setFieldErrs(e.body?.errors ?? null);
       } else {
-        setFormErr("Failed");
+        setFormErr(t("admin.crud.common.failed"));
       }
     } finally {
       setBusy(false);
@@ -397,7 +398,7 @@ export default function OperatorExcursionsPage() {
 
   const isCreate = editId == null;
   const editRow = editId != null ? rows.find((x) => x.id === editId) : undefined;
-  const fieldSummary = renderApiFieldErrors(fieldErrs ?? undefined);
+  const fieldSummary = renderApiFieldErrors(fieldErrs ?? undefined, t);
   const fieldMsgs = (key: string) => (fieldErrs && Array.isArray(fieldErrs[key]) ? fieldErrs[key] : []);
   const fieldError = (key: string): string | null => {
     const msgs = fieldMsgs(key);
@@ -511,7 +512,7 @@ export default function OperatorExcursionsPage() {
                     onMainImageChange={(v) => setForm((p) => p ? { ...p, main_image: v } : p)}
                     onShortDescriptionChange={(v) => setForm((p) => p ? { ...p, short_description: v } : p)}
                     section="excursions"
-                    altText="Excursion preview"
+                    altText={t("admin.crud.excursions.main_image_alt")}
                   />
                   <LatLngFields
                     latitude={form.latitude}
@@ -522,7 +523,7 @@ export default function OperatorExcursionsPage() {
                   <LocationCascadeSelect
                     token={token}
                     value={form.location_id === "" || form.location_id == null ? null : Number(form.location_id)}
-                    label="Location (Country -> Region -> City)"
+                    label={t("admin.crud.excursions.field.location_full")}
                     onChange={(locationId, meta) =>
                       setForm((p) =>
                         p
@@ -950,7 +951,7 @@ export default function OperatorExcursionsPage() {
                             return { ...p, price_by_dates: next };
                           })
                         }
-                        placeholder="Price"
+                        placeholder={t("admin.crud.excursions.field.price")}
                         className={`${inputClass(`price_by_dates.${i}.price`)} w-28`}
                       />
                       <button
@@ -1044,9 +1045,9 @@ export default function OperatorExcursionsPage() {
                 entityType="excursion"
                 entityId={editId}
                 fields={[
-                  { name: "title", label: "Title" },
-                  { name: "description", label: "Description", multiline: true },
-                  { name: "highlights", label: "Highlights", multiline: true },
+                  { name: "title", label: t("admin.crud.excursions.field.title") },
+                  { name: "description", label: t("admin.crud.excursions.field.description"), multiline: true },
+                  { name: "highlights", label: t("admin.crud.excursions.field.highlights"), multiline: true },
                 ]}
               />
             </div>
