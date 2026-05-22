@@ -1056,6 +1056,24 @@ export async function apiApproveOffer(
   return apiFetchJson(`/admin/offers/${offerId}/approve`, { method: "POST", token, body: {} });
 }
 
+/** Phase 7.5 — bulk-approve multiple pending-review offers in one call. */
+export type BulkApproveResult = {
+  approved_count: number;
+  total: number;
+  results: Array<{ id: number; status: "approved" | "failed" | "not_found"; error?: string }>;
+};
+
+export async function apiBulkApproveOffers(
+  token: string,
+  ids: number[]
+): Promise<ApiSuccessEnvelope<BulkApproveResult>> {
+  return apiFetchJson(`/admin/offers/bulk-approve`, {
+    method: "POST",
+    token,
+    body: { ids },
+  });
+}
+
 export async function apiRejectOffer(
   token: string,
   offerId: number,

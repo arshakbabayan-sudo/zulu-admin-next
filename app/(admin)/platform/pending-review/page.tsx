@@ -10,6 +10,7 @@ import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import {
   apiApproveOffer,
+  apiBulkApproveOffers,
   apiPendingReviewOffers,
   apiRejectOffer,
   type PendingReviewOfferRow,
@@ -52,6 +53,9 @@ export default function PendingReviewPage() {
 
   const [rejectModalOffer, setRejectModalOffer] = useState<PendingReviewOfferRow | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  // Phase 7.5 — bulk approve selection
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!token || !allowed) return;
@@ -97,6 +101,55 @@ export default function PendingReviewPage() {
     setRejectReason("");
   }
 
+  // Phase 7.5 — bulk approve selected pending offers
+  function toggleSelected(id: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAllOnPage() {
+    setSelectedIds((prev) => {
+      const allOnPage = rows.map((r) => r.id);
+      const allSelected = allOnPage.every((id) => prev.has(id));
+      const next = new Set(prev);
+      if (allSelected) {
+        // Deselect all on this page
+        for (const id of allOnPage) next.delete(id);
+      } else {
+        for (const id of allOnPage) next.add(id);
+      }
+      return next;
+    });
+  }
+
+  async function handleBulkApprove() {
+    if (!token || selectedIds.size === 0) return;
+    const ids = Array.from(selectedIds);
+    if (!confirm(t("admin.pending_review.confirm_bulk_approve").replace("{count}", String(ids.length)))) {
+      return;
+    }
+    setBulkBusy(true);
+    try {
+      const res = await apiBulkApproveOffers(token, ids);
+      const r = res.data;
+      alert(
+        t("admin.pending_review.bulk_approve_result")
+          .replace("{approved}", String(r.approved_count))
+          .replace("{total}", String(r.total)),
+      );
+      setSelectedIds(new Set());
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : t("admin.pending_review.err_approve"));
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
   async function submitReject() {
     if (!token || !rejectModalOffer) return;
     if (rejectReason.trim().length < 3) {
@@ -119,7 +172,24 @@ export default function PendingReviewPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t("admin.pending_review.title")} subtitle={t("admin.pending_review.subtitle")} />
+      <PageHeader
+        title={t("admin.pending_review.title")}
+        subtitle={t("admin.pending_review.subtitle")}
+        actions={
+          selectedIds.size > 0 ? (
+            <button
+              type="button"
+              disabled={bulkBusy}
+              onClick={() => void handleBulkApprove()}
+              className="inline-flex h-10 items-center rounded-zulu bg-success-600 px-4 text-sm font-semibold text-white transition hover:bg-success-700 disabled:opacity-40"
+            >
+              {bulkBusy
+                ? t("admin.pending_review.bulk_approving")
+                : t("admin.pending_review.btn_bulk_approve").replace("{count}", String(selectedIds.size))}
+            </button>
+          ) : undefined
+        }
+      />
 
       <div className="admin-card p-4">
         <div className="flex flex-wrap items-end gap-3">
@@ -160,6 +230,15 @@ export default function PendingReviewPage() {
       <Table>
         <THead>
           <TR>
+            <TH>
+              <input
+                type="checkbox"
+                aria-label={t("admin.pending_review.select_all_on_page")}
+                checked={rows.length > 0 && rows.every((r) => selectedIds.has(r.id))}
+                onChange={toggleSelectAllOnPage}
+                className="h-4 w-4 cursor-pointer"
+              />
+            </TH>
             <TH>{t("admin.pending_review.col_id")}</TH>
             <TH>{t("admin.pending_review.col_type")}</TH>
             <TH>{t("admin.pending_review.col_title")}</TH>
@@ -170,9 +249,18 @@ export default function PendingReviewPage() {
           </TR>
         </THead>
         <TBody>
-          {rows.length === 0 ? <TEmpty colSpan={7}>{t("admin.pending_review.empty")}</TEmpty> : null}
+          {rows.length === 0 ? <TEmpty colSpan={8}>{t("admin.pending_review.empty")}</TEmpty> : null}
           {rows.map((r) => (
             <TR key={r.id}>
+              <TD>
+                <input
+                  type="checkbox"
+                  aria-label={`Select offer #${r.id}`}
+                  checked={selectedIds.has(r.id)}
+                  onChange={() => toggleSelected(r.id)}
+                  className="h-4 w-4 cursor-pointer"
+                />
+              </TD>
               <TD className="tabular-nums">#{r.id}</TD>
               <TD className="capitalize">{r.type}</TD>
               <TD className="font-medium text-fg-t8">{r.title}</TD>
