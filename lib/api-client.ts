@@ -111,15 +111,22 @@ export async function apiFetchJson<T>(
     let msg: string = `HTTP ${res.status}`;
     if (isApiError(json)) {
       msg = json.message ?? msg;
-      const errors = (json as { errors?: Record<string, string[] | string> }).errors;
-      if (errors && typeof errors === "object") {
-        const firstFieldMsg = Object.values(errors)
-          .map((v) => (Array.isArray(v) ? v[0] : v))
-          .find((v) => typeof v === "string" && v.length > 0);
-        if (firstFieldMsg && (msg === "Validation failed" || !msg)) {
-          msg = String(firstFieldMsg);
-        } else if (firstFieldMsg && msg !== firstFieldMsg) {
-          msg = `${msg}: ${firstFieldMsg}`;
+      // A3 — surface subscription-plan limit info with a friendlier message
+      // when the backend includes a `plan_limit` envelope on 422.
+      const planLimit = (json as { plan_limit?: { feature: string; limit: number; current: number } }).plan_limit;
+      if (planLimit && typeof planLimit === "object") {
+        msg = `Reached your subscription plan limit (${planLimit.feature}: ${planLimit.current}/${planLimit.limit}). Contact a super-admin to upgrade.`;
+      } else {
+        const errors = (json as { errors?: Record<string, string[] | string> }).errors;
+        if (errors && typeof errors === "object") {
+          const firstFieldMsg = Object.values(errors)
+            .map((v) => (Array.isArray(v) ? v[0] : v))
+            .find((v) => typeof v === "string" && v.length > 0);
+          if (firstFieldMsg && (msg === "Validation failed" || !msg)) {
+            msg = String(firstFieldMsg);
+          } else if (firstFieldMsg && msg !== firstFieldMsg) {
+            msg = `${msg}: ${firstFieldMsg}`;
+          }
         }
       }
     }
