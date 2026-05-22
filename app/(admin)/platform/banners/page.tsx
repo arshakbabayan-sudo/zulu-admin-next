@@ -10,9 +10,11 @@ import { canAccessPlatformAdminNav } from "@/lib/access";
 import { getApiPublicOrigin } from "@/lib/api-base";
 import { ApiRequestError } from "@/lib/api-client";
 import {
+  apiBulkDeleteBanners,
   apiCreatePlatformBanner,
   apiDeletePlatformBanner,
   apiPlatformBanners,
+  apiReorderBanners,
   apiUpdatePlatformBanner,
   type PlatformBannerRow,
 } from "@/lib/platform-admin-api";
@@ -64,6 +66,9 @@ export default function PlatformBannersPage() {
   const [editTitleHy, setEditTitleHy] = useState("");
   const [editLink, setEditLink] = useState("");
   const [editSort, setEditSort] = useState("0");
+  // Phase 7.8 — bulk selection
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!token || !allowed) return;
@@ -140,6 +145,74 @@ export default function PlatformBannersPage() {
     }
   }
 
+  // Phase 7.8 — bulk delete + reorder
+  function toggleSelected(id: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    setSelectedIds((prev) => {
+      const all = rows.map((r) => r.id);
+      const allSelected = all.every((id) => prev.has(id));
+      if (allSelected) return new Set();
+      return new Set(all);
+    });
+  }
+
+  async function handleBulkDelete() {
+    if (!token || selectedIds.size === 0) return;
+    const ok = await confirm({
+      message: t("admin.banners.confirm_bulk_delete").replace("{count}", String(selectedIds.size)),
+      variant: "danger",
+    });
+    if (!ok) return;
+    setBulkBusy(true);
+    try {
+      const res = await apiBulkDeleteBanners(token, Array.from(selectedIds));
+      setSelectedIds(new Set());
+      alert(
+        t("admin.banners.bulk_delete_result")
+          .replace("{deleted}", String(res.data.deleted_count))
+          .replace("{total}", String(res.data.requested_count)),
+      );
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : t("admin.banners.err_delete"));
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
+  async function moveBanner(id: number, direction: "up" | "down") {
+    if (!token) return;
+    const idx = rows.findIndex((r) => r.id === id);
+    if (idx < 0) return;
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= rows.length) return;
+    const next = rows.slice();
+    const a = next[idx];
+    const b = next[swapIdx];
+    if (!a || !b) return;
+    next[idx] = b;
+    next[swapIdx] = a;
+    setRows(next); // optimistic
+    try {
+      await apiReorderBanners(
+        token,
+        next.map((r) => r.id),
+      );
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : t("admin.banners.err_reorder"));
+      await load(); // rollback
+    }
+  }
+
   async function remove(id: number) {
     if (!token) return;
     const ok = await confirm({ messageKey: "admin.banners.confirm_delete", variant: "danger" });
@@ -169,7 +242,24 @@ export default function PlatformBannersPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t("admin.banners.title_long")} subtitle={t("admin.banners.subtitle")} />
+      <PageHeader
+        title={t("admin.banners.title_long")}
+        subtitle={t("admin.banners.subtitle")}
+        actions={
+          selectedIds.size > 0 ? (
+            <button
+              type="button"
+              disabled={bulkBusy}
+              onClick={() => void handleBulkDelete()}
+              className="inline-flex h-10 items-center rounded-zulu bg-error-600 px-4 text-sm font-semibold text-white transition hover:bg-error-700 disabled:opacity-40"
+            >
+              {bulkBusy
+                ? t("admin.banners.bulk_deleting")
+                : t("admin.banners.btn_bulk_delete").replace("{count}", String(selectedIds.size))}
+            </button>
+          ) : undefined
+        }
+      />
 
       {err && <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
 
@@ -251,6 +341,15 @@ export default function PlatformBannersPage() {
       <Table>
         <THead>
           <TR>
+            <TH>
+              <input
+                type="checkbox"
+                aria-label={t("admin.banners.select_all")}
+                checked={rows.length > 0 && rows.every((r) => selectedIds.has(r.id))}
+                onChange={toggleSelectAll}
+                className="h-4 w-4 cursor-pointer"
+              />
+            </TH>
             <TH>{t("admin.banners.col_id")}</TH>
             <TH>{t("admin.banners.col_preview")}</TH>
             <TH>{t("admin.banners.col_titles")}</TH>
@@ -261,12 +360,43 @@ export default function PlatformBannersPage() {
           </TR>
         </THead>
         <TBody>
-          {rows.length === 0 ? <TEmpty colSpan={7}>{t("admin.banners.empty") || "No banners."}</TEmpty> : null}
-          {rows.map((r) => {
+          {rows.length === 0 ? <TEmpty colSpan={8}>{t("admin.banners.empty") || "No banners."}</TEmpty> : null}
+          {rows.map((r, idx) => {
             const src = resolveBannerImageSrc(r);
             return (
               <TR key={r.id}>
-                <TD className="tabular-nums">{r.id}</TD>
+                <TD>
+                  <input
+                    type="checkbox"
+                    aria-label={`Select banner #${r.id}`}
+                    checked={selectedIds.has(r.id)}
+                    onChange={() => toggleSelected(r.id)}
+                    className="h-4 w-4 cursor-pointer"
+                  />
+                </TD>
+                <TD className="tabular-nums">
+                  <div className="flex flex-col items-center gap-0.5">
+                    <button
+                      type="button"
+                      disabled={idx === 0 || busyId !== null}
+                      onClick={() => void moveBanner(r.id, "up")}
+                      className="text-[10px] text-fg-t6 disabled:opacity-20 hover:text-primary"
+                      aria-label={t("admin.banners.move_up")}
+                    >
+                      ▲
+                    </button>
+                    <span>{r.id}</span>
+                    <button
+                      type="button"
+                      disabled={idx === rows.length - 1 || busyId !== null}
+                      onClick={() => void moveBanner(r.id, "down")}
+                      className="text-[10px] text-fg-t6 disabled:opacity-20 hover:text-primary"
+                      aria-label={t("admin.banners.move_down")}
+                    >
+                      ▼
+                    </button>
+                  </div>
+                </TD>
                 <TD>
                   {src ? (
                     // eslint-disable-next-line @next/next/no-img-element

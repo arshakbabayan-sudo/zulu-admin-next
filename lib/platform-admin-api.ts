@@ -1033,6 +1033,30 @@ export async function apiCreatePlatformBanner(
   return apiFetchJson(`${PA}/banners`, { method: "POST", token, body: formData });
 }
 
+/** Phase 7.8 — bulk delete multiple banners in one call. */
+export async function apiBulkDeleteBanners(
+  token: string,
+  ids: number[]
+): Promise<ApiSuccessEnvelope<{ deleted_count: number; requested_count: number }>> {
+  return apiFetchJson(`${PA}/banners/bulk-delete`, {
+    method: "POST",
+    token,
+    body: { ids },
+  });
+}
+
+/** Phase 7.8 — persist new sort order from drag&drop reorder. */
+export async function apiReorderBanners(
+  token: string,
+  orderedIds: number[]
+): Promise<ApiSuccessEnvelope<{ count: number }>> {
+  return apiFetchJson(`${PA}/banners/reorder`, {
+    method: "POST",
+    token,
+    body: { ordered_ids: orderedIds },
+  });
+}
+
 export async function apiUpdatePlatformBanner(
   token: string,
   bannerId: number,
