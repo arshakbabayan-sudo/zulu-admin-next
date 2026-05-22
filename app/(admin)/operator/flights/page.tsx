@@ -145,24 +145,26 @@ type SectionKey =
   | "policies"
   | "visibility";
 
-const SECTION_LABELS: Record<SectionKey, string> = {
-  general: "1) General",
-  departure: "2) Departure",
-  arrival: "3) Arrival",
-  schedule: "4) Schedule & route",
-  ages: "5) Passenger age tiers",
-  cabins: "6) Cabin classes & pricing",
-  policies: "7) Booking policies",
-  visibility: "8) Visibility & lifecycle",
+const SECTION_KEYS: Record<SectionKey, string> = {
+  general: "admin.crud.flights.section.general",
+  departure: "admin.crud.flights.section.departure",
+  arrival: "admin.crud.flights.section.arrival",
+  schedule: "admin.crud.flights.section.schedule",
+  ages: "admin.crud.flights.section.ages",
+  cabins: "admin.crud.flights.section.cabins",
+  policies: "admin.crud.flights.section.policies",
+  visibility: "admin.crud.flights.section.visibility",
 };
 
 function Section({
   sectionKey,
+  label,
   open,
   onToggle,
   children,
 }: {
   sectionKey: SectionKey;
+  label: string;
   open: boolean;
   onToggle: () => void;
   children: React.ReactNode;
@@ -174,7 +176,7 @@ function Section({
         onClick={onToggle}
         className="flex w-full items-center justify-between px-4 py-2.5 text-left hover:bg-figma-bg-1/40"
       >
-        <span className="text-sm font-semibold text-fg-t11">{SECTION_LABELS[sectionKey]}</span>
+        <span className="text-sm font-semibold text-fg-t11">{label}</span>
         <svg
           viewBox="0 0 24 24"
           className={`h-4 w-4 transition-transform ${open ? "rotate-90" : ""}`}
@@ -256,7 +258,7 @@ export default function OperatorFlightsPage() {
       setMeta(res.meta);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else setErr(e instanceof ApiRequestError ? e.message : "Failed");
+      else setErr(e instanceof ApiRequestError ? e.message : t("admin.crud.common.failed"));
     }
   }, [token, page, contentLang]);
 
@@ -297,7 +299,7 @@ export default function OperatorFlightsPage() {
       if (e instanceof ApiRequestError && e.status === 422 && e.body?.errors) {
         setErr(formatFlightApiValidationErrors(e.body.errors).join(" "));
       } else {
-        setErr(e instanceof ApiRequestError ? e.message : "Failed to load flight");
+        setErr(e instanceof ApiRequestError ? e.message : t("admin.crud.flights.err_load_one"));
       }
     } finally {
       setFormLoading(false);
@@ -412,7 +414,7 @@ export default function OperatorFlightsPage() {
       if (e instanceof ApiRequestError && e.status === 422 && e.body?.errors) {
         setFormErrLines(formatFlightApiValidationErrors(e.body.errors));
       } else {
-        setFormErrLines([e instanceof ApiRequestError ? e.message : "Failed"]);
+        setFormErrLines([e instanceof ApiRequestError ? e.message : t("admin.crud.common.failed")]);
       }
     } finally {
       setBusy(false);
@@ -428,7 +430,7 @@ export default function OperatorFlightsPage() {
       await apiDeleteFlight(token, id);
       await load();
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Failed");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.crud.common.failed"));
     } finally {
       setBusy(false);
     }
@@ -443,7 +445,7 @@ export default function OperatorFlightsPage() {
       await apiSubmitOfferForReview(token, offerId);
       await load();
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Submit failed.");
+      alert(e instanceof ApiRequestError ? e.message : t("admin.crud.flights.err_submit_failed"));
     } finally {
       setBusy(false);
     }
@@ -485,7 +487,7 @@ export default function OperatorFlightsPage() {
                   const csv = await exportFlightsCsv(token);
                   downloadCsvFile(csvExportFilename("flights"), csv);
                 } catch (e) {
-                  alert(e instanceof ApiRequestError ? e.message : "Export failed");
+                  alert(e instanceof ApiRequestError ? e.message : t("admin.crud.flights.err_export_failed"));
                 } finally {
                   setExportBusy(false);
                 }
@@ -504,25 +506,25 @@ export default function OperatorFlightsPage() {
       )}
 
       {formLoading && editId != null && !form && (
-        <div className="admin-card p-4 text-sm text-fg-t6">Loading flight…</div>
+        <div className="admin-card p-4 text-sm text-fg-t6">{t("admin.crud.flights.loading")}</div>
       )}
 
       {form && (
         <section className="admin-card p-4">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold">
-              {editId ? "Edit flight" : "New flight"}
+              {editId ? t("admin.crud.flights.form_edit") : t("admin.crud.flights.form_new")}
             </h2>
             <Button variant="outline" size="sm" onClick={closeForm}>
-              Cancel
+              {t("common.cancel")}
             </Button>
           </div>
 
           {/* 1 — GENERAL */}
-          <Section sectionKey="general" open={openSection.general} onToggle={() => toggleSection("general")}>
+          <Section sectionKey="general" label={t(SECTION_KEYS.general)} open={openSection.general} onToggle={() => toggleSection("general")}>
             <div className="grid gap-3 sm:grid-cols-2">
               {editId == null && (
-                <Field label="Offer ID" required hint="Must be an existing offer of type=flight">
+                <Field label={t("admin.crud.flights.field.offer_id")} required hint={t("admin.crud.flights.field.offer_id_hint")}>
                   <input
                     type="number"
                     min={1}
@@ -534,14 +536,14 @@ export default function OperatorFlightsPage() {
                   />
                 </Field>
               )}
-              <Field label="Flight code (internal)" required hint="e.g. SU1869 / W6361">
+              <Field label={t("admin.crud.flights.field.flight_code")} required hint={t("admin.crud.flights.field.flight_code_hint")}>
                 <input
                   value={form.flight_code_internal}
                   onChange={(e) => updateForm("flight_code_internal", e.target.value)}
                   className={inputCls}
                 />
               </Field>
-              <Field label="Service type" required>
+              <Field label={t("admin.crud.flights.field.service_type")} required>
                 <select
                   value={form.service_type}
                   onChange={(e) => updateForm("service_type", e.target.value)}
@@ -554,7 +556,7 @@ export default function OperatorFlightsPage() {
                   ))}
                 </select>
               </Field>
-              <Field label="Lifecycle status" required>
+              <Field label={t("admin.crud.flights.field.lifecycle_status")} required>
                 <select
                   value={form.status}
                   onChange={(e) => updateForm("status", e.target.value)}
@@ -572,33 +574,33 @@ export default function OperatorFlightsPage() {
                   value={form.main_image}
                   onChange={(v) => updateForm("main_image", v)}
                   section="flights"
-                  label="Main image"
-                  altText="Flight preview"
+                  label={t("admin.crud.flights.field.main_image")}
+                  altText={t("admin.crud.flights.main_image_alt")}
                 />
               </div>
               <Field
-                label="Short description"
-                hint="(կարճ նկարագրություն թռիչքի մասին` ցույց է տրվում card / detail էջում)"
+                label={t("admin.crud.flights.field.short_description")}
+                hint={t("admin.crud.flights.field.short_description_hint")}
               >
                 <textarea
                   rows={3}
                   value={form.short_description}
                   onChange={(e) => updateForm("short_description", e.target.value)}
                   className={inputCls}
-                  placeholder="Direct flight from Yerevan to Moscow, Aeroflot operated."
+                  placeholder={t("admin.crud.flights.field.short_description_placeholder")}
                 />
               </Field>
             </div>
           </Section>
 
           {/* 2 — DEPARTURE */}
-          <Section sectionKey="departure" open={openSection.departure} onToggle={() => toggleSection("departure")}>
+          <Section sectionKey="departure" label={t(SECTION_KEYS.departure)} open={openSection.departure} onToggle={() => toggleSection("departure")}>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <LocationCascadeSelect
                   token={token}
                   value={form.departure_location_id === "" ? null : Number(form.departure_location_id)}
-                  label="Departure location (Country → Region → City) ★"
+                  label={t("admin.crud.flights.field.departure_location")}
                   onChange={(locationId, meta) =>
                     setForm((p) =>
                       p
@@ -614,14 +616,14 @@ export default function OperatorFlightsPage() {
                   }
                 />
               </div>
-              <Field label="Departure airport" required hint="e.g. Zvartnots International Airport">
+              <Field label={t("admin.crud.flights.field.departure_airport")} required hint={t("admin.crud.flights.field.departure_airport_hint")}>
                 <input
                   value={form.departure_airport}
                   onChange={(e) => updateForm("departure_airport", e.target.value)}
                   className={inputCls}
                 />
               </Field>
-              <Field label="Airport IATA code" hint="e.g. EVN, SVO, DXB">
+              <Field label={t("admin.crud.flights.field.airport_iata")} hint={t("admin.crud.flights.field.airport_iata_hint")}>
                 <input
                   maxLength={8}
                   value={form.departure_airport_code}
@@ -629,21 +631,21 @@ export default function OperatorFlightsPage() {
                   className={inputCls}
                 />
               </Field>
-              <Field label="Departure terminal">
+              <Field label={t("admin.crud.flights.field.departure_terminal")}>
                 <input
                   value={form.departure_terminal}
                   onChange={(e) => updateForm("departure_terminal", e.target.value)}
                   className={inputCls}
                 />
               </Field>
-              <Field label="Departure city (override)">
+              <Field label={t("admin.crud.flights.field.departure_city_override")}>
                 <input
                   value={form.departure_city}
                   onChange={(e) => updateForm("departure_city", e.target.value)}
                   className={inputCls}
                 />
               </Field>
-              <Field label="Departure country (override)">
+              <Field label={t("admin.crud.flights.field.departure_country_override")}>
                 <input
                   value={form.departure_country}
                   onChange={(e) => updateForm("departure_country", e.target.value)}
@@ -654,13 +656,13 @@ export default function OperatorFlightsPage() {
           </Section>
 
           {/* 3 — ARRIVAL */}
-          <Section sectionKey="arrival" open={openSection.arrival} onToggle={() => toggleSection("arrival")}>
+          <Section sectionKey="arrival" label={t(SECTION_KEYS.arrival)} open={openSection.arrival} onToggle={() => toggleSection("arrival")}>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <LocationCascadeSelect
                   token={token}
                   value={form.arrival_location_id === "" ? null : Number(form.arrival_location_id)}
-                  label="Arrival location (Country → Region → City) ★"
+                  label={t("admin.crud.flights.field.arrival_location")}
                   onChange={(locationId, meta) =>
                     setForm((p) =>
                       p
@@ -675,14 +677,14 @@ export default function OperatorFlightsPage() {
                   }
                 />
               </div>
-              <Field label="Arrival airport" required>
+              <Field label={t("admin.crud.flights.field.arrival_airport")} required>
                 <input
                   value={form.arrival_airport}
                   onChange={(e) => updateForm("arrival_airport", e.target.value)}
                   className={inputCls}
                 />
               </Field>
-              <Field label="Airport IATA code">
+              <Field label={t("admin.crud.flights.field.airport_iata")}>
                 <input
                   maxLength={8}
                   value={form.arrival_airport_code}
@@ -690,21 +692,21 @@ export default function OperatorFlightsPage() {
                   className={inputCls}
                 />
               </Field>
-              <Field label="Arrival terminal">
+              <Field label={t("admin.crud.flights.field.arrival_terminal")}>
                 <input
                   value={form.arrival_terminal}
                   onChange={(e) => updateForm("arrival_terminal", e.target.value)}
                   className={inputCls}
                 />
               </Field>
-              <Field label="Arrival city (override)">
+              <Field label={t("admin.crud.flights.field.arrival_city_override")}>
                 <input
                   value={form.arrival_city}
                   onChange={(e) => updateForm("arrival_city", e.target.value)}
                   className={inputCls}
                 />
               </Field>
-              <Field label="Arrival country (override)">
+              <Field label={t("admin.crud.flights.field.arrival_country_override")}>
                 <input
                   value={form.arrival_country}
                   onChange={(e) => updateForm("arrival_country", e.target.value)}
@@ -715,9 +717,9 @@ export default function OperatorFlightsPage() {
           </Section>
 
           {/* 4 — SCHEDULE */}
-          <Section sectionKey="schedule" open={openSection.schedule} onToggle={() => toggleSection("schedule")}>
+          <Section sectionKey="schedule" label={t(SECTION_KEYS.schedule)} open={openSection.schedule} onToggle={() => toggleSection("schedule")}>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Departure at" required>
+              <Field label={t("admin.crud.flights.field.departure_at")} required>
                 <input
                   type="datetime-local"
                   value={form.departure_at}
@@ -725,7 +727,7 @@ export default function OperatorFlightsPage() {
                   className={inputCls}
                 />
               </Field>
-              <Field label="Arrival at" required>
+              <Field label={t("admin.crud.flights.field.arrival_at")} required>
                 <input
                   type="datetime-local"
                   value={form.arrival_at}
@@ -733,7 +735,7 @@ export default function OperatorFlightsPage() {
                   className={inputCls}
                 />
               </Field>
-              <Field label="Duration (minutes)" required>
+              <Field label={t("admin.crud.flights.field.duration_minutes")} required>
                 <input
                   type="number"
                   min={1}
@@ -744,14 +746,14 @@ export default function OperatorFlightsPage() {
                   className={inputCls}
                 />
               </Field>
-              <Field label="Timezone context" hint="e.g. Europe/Moscow → useful for displaying arrival in local time">
+              <Field label={t("admin.crud.flights.field.timezone_context")} hint={t("admin.crud.flights.field.timezone_context_hint")}>
                 <input
                   value={form.timezone_context}
                   onChange={(e) => updateForm("timezone_context", e.target.value)}
                   className={inputCls}
                 />
               </Field>
-              <Field label="Check-in closes at">
+              <Field label={t("admin.crud.flights.field.check_in_close_at")}>
                 <input
                   type="datetime-local"
                   value={form.check_in_close_at}
@@ -759,7 +761,7 @@ export default function OperatorFlightsPage() {
                   className={inputCls}
                 />
               </Field>
-              <Field label="Boarding closes at">
+              <Field label={t("admin.crud.flights.field.boarding_close_at")}>
                 <input
                   type="datetime-local"
                   value={form.boarding_close_at}
@@ -767,7 +769,7 @@ export default function OperatorFlightsPage() {
                   className={inputCls}
                 />
               </Field>
-              <Field label="Connection type" required>
+              <Field label={t("admin.crud.flights.field.connection_type")} required>
                 <select
                   value={form.connection_type}
                   onChange={(e) => updateForm("connection_type", e.target.value)}
@@ -780,7 +782,7 @@ export default function OperatorFlightsPage() {
                   ))}
                 </select>
               </Field>
-              <Field label="Stops count" required>
+              <Field label={t("admin.crud.flights.field.stops_count")} required>
                 <input
                   type="number"
                   min={0}
@@ -793,14 +795,14 @@ export default function OperatorFlightsPage() {
               </Field>
               {form.connection_type !== "direct" && (
                 <>
-                  <Field label="Connection notes">
+                  <Field label={t("admin.crud.flights.field.connection_notes")}>
                     <input
                       value={form.connection_notes}
                       onChange={(e) => updateForm("connection_notes", e.target.value)}
                       className={inputCls}
                     />
                   </Field>
-                  <Field label="Layover summary">
+                  <Field label={t("admin.crud.flights.field.layover_summary")}>
                     <input
                       value={form.layover_summary}
                       onChange={(e) => updateForm("layover_summary", e.target.value)}
@@ -813,9 +815,9 @@ export default function OperatorFlightsPage() {
           </Section>
 
           {/* 5 — AGE TIERS */}
-          <Section sectionKey="ages" open={openSection.ages} onToggle={() => toggleSection("ages")}>
+          <Section sectionKey="ages" label={t(SECTION_KEYS.ages)} open={openSection.ages} onToggle={() => toggleSection("ages")}>
             <div className="grid gap-3 sm:grid-cols-3">
-              <Field label="Adult age from" required>
+              <Field label={t("admin.crud.flights.field.adult_age_from")} required>
                 <input
                   type="number"
                   min={0}
@@ -825,7 +827,7 @@ export default function OperatorFlightsPage() {
                   className={inputCls}
                 />
               </Field>
-              <Field label="Child age from" required>
+              <Field label={t("admin.crud.flights.field.child_age_from")} required>
                 <input
                   type="number"
                   min={0}
@@ -835,7 +837,7 @@ export default function OperatorFlightsPage() {
                   className={inputCls}
                 />
               </Field>
-              <Field label="Child age to" required>
+              <Field label={t("admin.crud.flights.field.child_age_to")} required>
                 <input
                   type="number"
                   min={0}
@@ -845,7 +847,7 @@ export default function OperatorFlightsPage() {
                   className={inputCls}
                 />
               </Field>
-              <Field label="Infant age from" required>
+              <Field label={t("admin.crud.flights.field.infant_age_from")} required>
                 <input
                   type="number"
                   min={0}
@@ -855,7 +857,7 @@ export default function OperatorFlightsPage() {
                   className={inputCls}
                 />
               </Field>
-              <Field label="Infant age to" required>
+              <Field label={t("admin.crud.flights.field.infant_age_to")} required>
                 <input
                   type="number"
                   min={0}
@@ -869,18 +871,15 @@ export default function OperatorFlightsPage() {
           </Section>
 
           {/* 6 — CABIN CLASSES (nested rows) */}
-          <Section sectionKey="cabins" open={openSection.cabins} onToggle={() => toggleSection("cabins")}>
-            <p className="mb-3 text-xs text-fg-t6">
-              Add one row per cabin class (Economy, Business, …). The first row is the primary
-              cabin and is shown as the default price on the card.
-            </p>
+          <Section sectionKey="cabins" label={t(SECTION_KEYS.cabins)} open={openSection.cabins} onToggle={() => toggleSection("cabins")}>
+            <p className="mb-3 text-xs text-fg-t6">{t("admin.crud.flights.cabins_intro")}</p>
             <div className="flex flex-col gap-3">
               {form.cabins.map((cabin, idx) => (
                 <div key={cabin.client_key} className="rounded border border-default bg-figma-bg-1 p-3">
                   <div className="mb-2 flex items-center justify-between">
                     <span className="text-xs font-semibold uppercase text-fg-t6">
-                      Cabin #{idx + 1}
-                      {idx === 0 ? " · primary" : ""}
+                      {t("admin.crud.flights.cabin_n").replace("{n}", String(idx + 1))}
+                      {idx === 0 ? ` · ${t("admin.crud.flights.cabin_primary")}` : ""}
                     </span>
                     {form.cabins.length > 1 ? (
                       <button
@@ -888,12 +887,12 @@ export default function OperatorFlightsPage() {
                         onClick={() => removeCabin(idx)}
                         className="text-xs text-error-600 hover:underline"
                       >
-                        Remove
+                        {t("admin.crud.hotels.remove")}
                       </button>
                     ) : null}
                   </div>
                   <div className="grid gap-3 sm:grid-cols-3">
-                    <Field label="Cabin class" required>
+                    <Field label={t("admin.crud.flights.field.cabin_class")} required>
                       <select
                         value={cabin.cabin_class}
                         onChange={(e) => updateCabin(idx, { cabin_class: e.target.value })}
@@ -906,7 +905,7 @@ export default function OperatorFlightsPage() {
                         ))}
                       </select>
                     </Field>
-                    <Field label="Seats total" required>
+                    <Field label={t("admin.crud.flights.field.seats_total")} required>
                       <input
                         type="number"
                         min={0}
@@ -919,7 +918,7 @@ export default function OperatorFlightsPage() {
                         className={inputCls}
                       />
                     </Field>
-                    <Field label="Seats available" required>
+                    <Field label={t("admin.crud.flights.field.seats_available")} required>
                       <input
                         type="number"
                         min={0}
@@ -932,7 +931,7 @@ export default function OperatorFlightsPage() {
                         className={inputCls}
                       />
                     </Field>
-                    <Field label="Adult price (USD)" required>
+                    <Field label={t("admin.crud.flights.field.adult_price")} required>
                       <input
                         type="number"
                         step="0.01"
@@ -944,7 +943,7 @@ export default function OperatorFlightsPage() {
                         className={inputCls}
                       />
                     </Field>
-                    <Field label="Child price (USD)" required>
+                    <Field label={t("admin.crud.flights.field.child_price")} required>
                       <input
                         type="number"
                         step="0.01"
@@ -956,7 +955,7 @@ export default function OperatorFlightsPage() {
                         className={inputCls}
                       />
                     </Field>
-                    <Field label="Infant price (USD)" required>
+                    <Field label={t("admin.crud.flights.field.infant_price")} required>
                       <input
                         type="number"
                         step="0.01"
@@ -968,28 +967,28 @@ export default function OperatorFlightsPage() {
                         className={inputCls}
                       />
                     </Field>
-                    <Field label="Fare family">
+                    <Field label={t("admin.crud.flights.field.fare_family")}>
                       <input
                         value={cabin.fare_family}
                         onChange={(e) => updateCabin(idx, { fare_family: e.target.value })}
                         className={inputCls}
-                        placeholder="e.g. Lite, Standard, Flex"
+                        placeholder={t("admin.crud.flights.field.fare_family_placeholder")}
                       />
                     </Field>
-                    <Field label="Hand baggage weight">
+                    <Field label={t("admin.crud.flights.field.hand_baggage_weight")}>
                       <input
                         value={cabin.hand_baggage_weight}
                         onChange={(e) => updateCabin(idx, { hand_baggage_weight: e.target.value })}
                         className={inputCls}
-                        placeholder="e.g. 8kg"
+                        placeholder={t("admin.crud.flights.field.hand_baggage_weight_placeholder")}
                       />
                     </Field>
-                    <Field label="Checked baggage weight">
+                    <Field label={t("admin.crud.flights.field.checked_baggage_weight")}>
                       <input
                         value={cabin.checked_baggage_weight}
                         onChange={(e) => updateCabin(idx, { checked_baggage_weight: e.target.value })}
                         className={inputCls}
-                        placeholder="e.g. 23kg"
+                        placeholder={t("admin.crud.flights.field.checked_baggage_weight_placeholder")}
                       />
                     </Field>
                   </div>
@@ -1000,7 +999,7 @@ export default function OperatorFlightsPage() {
                         checked={cabin.hand_baggage_included}
                         onChange={(e) => updateCabin(idx, { hand_baggage_included: e.target.checked })}
                       />
-                      Hand baggage included
+                      {t("admin.crud.flights.cabin.hand_baggage_included")}
                     </label>
                     <label className="flex items-center gap-2 text-sm">
                       <input
@@ -1008,7 +1007,7 @@ export default function OperatorFlightsPage() {
                         checked={cabin.checked_baggage_included}
                         onChange={(e) => updateCabin(idx, { checked_baggage_included: e.target.checked })}
                       />
-                      Checked baggage included
+                      {t("admin.crud.flights.cabin.checked_baggage_included")}
                     </label>
                     <label className="flex items-center gap-2 text-sm">
                       <input
@@ -1016,7 +1015,7 @@ export default function OperatorFlightsPage() {
                         checked={cabin.extra_baggage_allowed}
                         onChange={(e) => updateCabin(idx, { extra_baggage_allowed: e.target.checked })}
                       />
-                      Extra baggage allowed
+                      {t("admin.crud.flights.cabin.extra_baggage_allowed")}
                     </label>
                     <label className="flex items-center gap-2 text-sm">
                       <input
@@ -1024,7 +1023,7 @@ export default function OperatorFlightsPage() {
                         checked={cabin.seat_map_available}
                         onChange={(e) => updateCabin(idx, { seat_map_available: e.target.checked })}
                       />
-                      Seat map available
+                      {t("admin.crud.flights.cabin.seat_map_available")}
                     </label>
                   </div>
                 </div>
@@ -1035,16 +1034,16 @@ export default function OperatorFlightsPage() {
                   onClick={addCabin}
                   className="self-start rounded border border-default bg-white px-3 py-1.5 text-sm hover:bg-figma-bg-1"
                 >
-                  + Add cabin class
+                  {t("admin.crud.flights.add_cabin")}
                 </button>
               ) : null}
             </div>
           </Section>
 
           {/* 7 — POLICIES */}
-          <Section sectionKey="policies" open={openSection.policies} onToggle={() => toggleSection("policies")}>
+          <Section sectionKey="policies" label={t(SECTION_KEYS.policies)} open={openSection.policies} onToggle={() => toggleSection("policies")}>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Cancellation policy" required>
+              <Field label={t("admin.crud.flights.field.cancellation_policy")} required>
                 <select
                   value={form.cancellation_policy_type}
                   onChange={(e) => updateForm("cancellation_policy_type", e.target.value)}
@@ -1057,7 +1056,7 @@ export default function OperatorFlightsPage() {
                   ))}
                 </select>
               </Field>
-              <Field label="Change policy" required>
+              <Field label={t("admin.crud.flights.field.change_policy")} required>
                 <select
                   value={form.change_policy_type}
                   onChange={(e) => updateForm("change_policy_type", e.target.value)}
@@ -1070,7 +1069,7 @@ export default function OperatorFlightsPage() {
                   ))}
                 </select>
               </Field>
-              <Field label="Reservation deadline">
+              <Field label={t("admin.crud.flights.field.reservation_deadline")}>
                 <input
                   type="datetime-local"
                   value={form.reservation_deadline_at}
@@ -1078,7 +1077,7 @@ export default function OperatorFlightsPage() {
                   className={inputCls}
                 />
               </Field>
-              <Field label="Cancellation deadline">
+              <Field label={t("admin.crud.flights.field.cancellation_deadline")}>
                 <input
                   type="datetime-local"
                   value={form.cancellation_deadline_at}
@@ -1086,7 +1085,7 @@ export default function OperatorFlightsPage() {
                   className={inputCls}
                 />
               </Field>
-              <Field label="Change deadline">
+              <Field label={t("admin.crud.flights.field.change_deadline")}>
                 <input
                   type="datetime-local"
                   value={form.change_deadline_at}
@@ -1094,7 +1093,7 @@ export default function OperatorFlightsPage() {
                   className={inputCls}
                 />
               </Field>
-              <Field label="Policy notes">
+              <Field label={t("admin.crud.flights.field.policy_notes")}>
                 <textarea
                   rows={2}
                   value={form.policy_notes}
@@ -1109,7 +1108,7 @@ export default function OperatorFlightsPage() {
                     checked={form.reservation_allowed}
                     onChange={(e) => updateForm("reservation_allowed", e.target.checked)}
                   />
-                  Reservation allowed
+                  {t("admin.crud.flights.policy.reservation_allowed")}
                 </label>
                 <label className="flex items-center gap-2 text-sm">
                   <input
@@ -1117,7 +1116,7 @@ export default function OperatorFlightsPage() {
                     checked={form.online_checkin_allowed}
                     onChange={(e) => updateForm("online_checkin_allowed", e.target.checked)}
                   />
-                  Online check-in allowed
+                  {t("admin.crud.flights.policy.online_checkin_allowed")}
                 </label>
                 <label className="flex items-center gap-2 text-sm">
                   <input
@@ -1125,14 +1124,14 @@ export default function OperatorFlightsPage() {
                     checked={form.airport_checkin_allowed}
                     onChange={(e) => updateForm("airport_checkin_allowed", e.target.checked)}
                   />
-                  Airport check-in allowed
+                  {t("admin.crud.flights.policy.airport_checkin_allowed")}
                 </label>
               </div>
             </div>
           </Section>
 
           {/* 8 — VISIBILITY */}
-          <Section sectionKey="visibility" open={openSection.visibility} onToggle={() => toggleSection("visibility")}>
+          <Section sectionKey="visibility" label={t(SECTION_KEYS.visibility)} open={openSection.visibility} onToggle={() => toggleSection("visibility")}>
             <div className="flex flex-col gap-2">
               <label className="flex items-center gap-2 text-sm">
                 <input
@@ -1140,7 +1139,7 @@ export default function OperatorFlightsPage() {
                   checked={form.is_package_eligible}
                   onChange={(e) => updateForm("is_package_eligible", e.target.checked)}
                 />
-                Eligible for use inside packages
+                {t("admin.crud.flights.visibility.package_eligible")}
               </label>
               <label className="flex items-center gap-2 text-sm">
                 <input
@@ -1148,7 +1147,7 @@ export default function OperatorFlightsPage() {
                   checked={form.appears_in_web}
                   onChange={(e) => updateForm("appears_in_web", e.target.checked)}
                 />
-                Appears on public website (zulu.am)
+                {t("admin.crud.flights.visibility.appears_in_web")}
               </label>
               <label className="flex items-center gap-2 text-sm">
                 <input
@@ -1156,7 +1155,7 @@ export default function OperatorFlightsPage() {
                   checked={form.appears_in_admin}
                   onChange={(e) => updateForm("appears_in_admin", e.target.checked)}
                 />
-                Appears in operator admin lists
+                {t("admin.crud.flights.visibility.appears_in_admin")}
               </label>
               <label className="flex items-center gap-2 text-sm">
                 <input
@@ -1164,14 +1163,14 @@ export default function OperatorFlightsPage() {
                   checked={form.appears_in_zulu_admin}
                   onChange={(e) => updateForm("appears_in_zulu_admin", e.target.checked)}
                 />
-                Appears in ZULU super-admin lists
+                {t("admin.crud.flights.visibility.appears_in_zulu_admin")}
               </label>
             </div>
           </Section>
 
           {formErrLines.length > 0 && (
             <div className="mt-3 rounded border border-error-200 bg-error-50 p-3 text-sm text-error-700">
-              <p className="mb-1 font-semibold">Please fix the following:</p>
+              <p className="mb-1 font-semibold">{t("admin.crud.common.fix_following")}</p>
               <ul className="ml-4 list-disc">
                 {formErrLines.slice(0, 8).map((line, i) => (
                   <li key={i}>{line}</li>
@@ -1183,14 +1182,14 @@ export default function OperatorFlightsPage() {
           {editId !== null && (
             <div className="mt-6 rounded-zulu border border-default bg-figma-bg-1 p-3">
               <h3 className="mb-2 text-sm font-medium text-fg-t6">
-                Translations <span className="text-fg-t7 font-normal">(EN-ից բացի՝ RU / HY)</span>
+                {t("admin.crud.flights.translations_title")} <span className="text-fg-t7 font-normal">{t("admin.crud.flights.translations_hint")}</span>
               </h3>
               <TranslationTabs
                 entityType="flight"
                 entityId={editId}
                 fields={[
-                  { name: "title", label: "Title" },
-                  { name: "description", label: "Description", multiline: true },
+                  { name: "title", label: t("admin.crud.flights.field.title") },
+                  { name: "description", label: t("admin.crud.flights.field.description"), multiline: true },
                 ]}
               />
             </div>
@@ -1198,10 +1197,10 @@ export default function OperatorFlightsPage() {
 
           <div className="mt-4 flex gap-2">
             <Button size="sm" disabled={busy} onClick={() => void handleSubmit()}>
-              {busy ? "Saving…" : "Save"}
+              {busy ? t("admin.crud.common.saving") : t("common.save")}
             </Button>
             <Button variant="outline" size="sm" onClick={closeForm}>
-              Cancel
+              {t("common.cancel")}
             </Button>
           </div>
         </section>
@@ -1211,18 +1210,18 @@ export default function OperatorFlightsPage() {
       <Table>
         <THead>
           <TR>
-            <TH>ID</TH>
-            <TH>Code</TH>
-            <TH>Route</TH>
-            <TH>Departure</TH>
-            <TH>Review</TH>
-            <TH>Status</TH>
-            <TH>Actions</TH>
+            <TH>{t("admin.crud.common.id")}</TH>
+            <TH>{t("admin.crud.flights.col.code")}</TH>
+            <TH>{t("admin.crud.flights.col.route")}</TH>
+            <TH>{t("admin.crud.flights.col.departure")}</TH>
+            <TH>{t("admin.crud.flights.col.review")}</TH>
+            <TH>{t("admin.crud.common.status")}</TH>
+            <TH>{t("admin.crud.common.actions")}</TH>
           </TR>
         </THead>
         <TBody>
           {rows.length === 0 ? (
-            <TEmpty colSpan={7}>No flights yet.</TEmpty>
+            <TEmpty colSpan={7}>{t("admin.crud.flights.empty")}</TEmpty>
           ) : null}
           {rows.map((r) => (
             <TR key={r.id}>
@@ -1246,7 +1245,7 @@ export default function OperatorFlightsPage() {
                     onClick={() => void openEdit(r)}
                     className="text-left text-xs text-info-700 hover:underline"
                   >
-                    Edit
+                    {t("admin.crud.common.edit")}
                   </button>
                   {r.offer?.id && isSubmittableStatus(r.offer.status) && (
                     <Button
@@ -1256,7 +1255,7 @@ export default function OperatorFlightsPage() {
                       onClick={() => void handleSubmitForReview(r.offer!.id!)}
                       className="self-start"
                     >
-                      Submit for review
+                      {t("admin.crud.common.submit_for_review")}
                     </Button>
                   )}
                   <button
@@ -1265,7 +1264,7 @@ export default function OperatorFlightsPage() {
                     onClick={() => void handleDelete(r.id)}
                     className="text-left text-xs text-error-600 hover:underline disabled:opacity-40"
                   >
-                    Delete
+                    {t("admin.crud.common.delete")}
                   </button>
                 </div>
               </TD>
@@ -1283,7 +1282,7 @@ export default function OperatorFlightsPage() {
             return {
               success: 0,
               failed: csvRows.length,
-              errors: [{ rowNumber: rowLineNumbers[0] ?? 2, message: "Not signed in." }],
+              errors: [{ rowNumber: rowLineNumbers[0] ?? 2, message: t("admin.crud.common.not_signed_in") }],
             };
           }
           const res = await runFlightCsvImport(token, csvRows, rowLineNumbers);
