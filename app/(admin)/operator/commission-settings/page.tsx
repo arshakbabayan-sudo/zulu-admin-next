@@ -13,6 +13,7 @@
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessOperatorToolsNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import {
@@ -66,6 +67,7 @@ function configToDraft(c: CommissionConfig | null): DraftRow {
 
 export default function OperatorCommissionSettingsPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const confirm = useConfirm();
   const allowed = canAccessOperatorToolsNav(user);
   const [data, setData] = useState<CommissionSettingsResponse | null>(null);
@@ -90,8 +92,8 @@ export default function OperatorCommissionSettingsPage() {
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
       else if (e instanceof ApiRequestError && e.status === 404) {
-        setErr("No active operator company on this user.");
-      } else setErr(e instanceof ApiRequestError ? e.message : "Failed to load");
+        setErr(t("admin.commission.err_no_operator"));
+      } else setErr(e instanceof ApiRequestError ? e.message : t("admin.commission.err_load"));
     }
   }, [token, allowed]);
 
@@ -123,7 +125,7 @@ export default function OperatorCommissionSettingsPage() {
       setSavedAt(new Date().toLocaleTimeString());
       await load();
     } catch (e) {
-      setErr(e instanceof ApiRequestError ? e.message : "Save failed");
+      setErr(e instanceof ApiRequestError ? e.message : t("admin.commission.err_save"));
     } finally {
       setBusy(false);
     }
@@ -133,7 +135,7 @@ export default function OperatorCommissionSettingsPage() {
     if (!token) return;
     const id = Number(overrideAgentId.trim());
     if (!Number.isFinite(id) || id <= 0) {
-      setErr("Pick a valid agent company id");
+      setErr(t("admin.commission.err_invalid_agent_id"));
       return;
     }
     setBusy(true);
@@ -145,7 +147,7 @@ export default function OperatorCommissionSettingsPage() {
       setOverrideDraft(configToDraft(null));
       await load();
     } catch (e) {
-      setErr(e instanceof ApiRequestError ? e.message : "Save failed");
+      setErr(e instanceof ApiRequestError ? e.message : t("admin.commission.err_save"));
     } finally {
       setBusy(false);
     }
@@ -162,7 +164,7 @@ export default function OperatorCommissionSettingsPage() {
       setSavedAt(new Date().toLocaleTimeString());
       await load();
     } catch (e) {
-      setErr(e instanceof ApiRequestError ? e.message : "Remove failed");
+      setErr(e instanceof ApiRequestError ? e.message : t("admin.commission.err_remove"));
     } finally {
       setBusy(false);
     }
@@ -171,7 +173,7 @@ export default function OperatorCommissionSettingsPage() {
   if (!allowed || forbidden) {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">Agent commission</h1>
+        <h1 className="admin-page-title">{t("admin.commission.title")}</h1>
         <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
@@ -182,8 +184,8 @@ export default function OperatorCommissionSettingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Agent commission"
-        subtitle="Configure how much commission your downstream agents earn on referred bookings."
+        title={t("admin.commission.title")}
+        subtitle={t("admin.commission.subtitle")}
       />
 
       {err && (
@@ -193,23 +195,21 @@ export default function OperatorCommissionSettingsPage() {
       )}
       {savedAt && (
         <div className="rounded-zulu border border-success-200 bg-success-50 px-4 py-2 text-sm text-success-700">
-          Saved at {savedAt}
+          {t("admin.commission.saved_at")} {savedAt}
         </div>
       )}
 
       {!data ? (
-        <div className="admin-card p-4 text-sm text-fg-t6">Loading…</div>
+        <div className="admin-card p-4 text-sm text-fg-t6">{t("admin.commission.loading")}</div>
       ) : (
         <>
           <section className="admin-card p-4 space-y-3">
             <div>
-              <h2 className="text-base font-semibold">Default for all agents</h2>
-              <p className="text-xs text-fg-t6">
-                Applied to every agent under your company unless an override below changes their rate.
-              </p>
+              <h2 className="text-base font-semibold">{t("admin.commission.default_section")}</h2>
+              <p className="text-xs text-fg-t6">{t("admin.commission.default_section_hint")}</p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <FormField label="Calculation base" htmlFor="default-base" required>
+              <FormField label={t("admin.commission.field.calculation_base")} htmlFor="default-base" required>
                 <Select
                   id="default-base"
                   value={defaultDraft.calculation_base}
@@ -225,9 +225,9 @@ export default function OperatorCommissionSettingsPage() {
                 </Select>
               </FormField>
               <FormField
-                label="Agent commission %"
+                label={t("admin.commission.field.agent_percentage")}
                 htmlFor="default-percentage"
-                helperText="e.g. 5.0 means agent gets 5% of the calculation base"
+                helperText={t("admin.commission.field.agent_percentage_hint")}
               >
                 <Input
                   id="default-percentage"
@@ -244,9 +244,9 @@ export default function OperatorCommissionSettingsPage() {
               </FormField>
               {defaultDraft.calculation_base === "custom" && (
                 <FormField
-                  label="Custom base % of gross"
+                  label={t("admin.commission.field.custom_base")}
                   htmlFor="default-custom-base"
-                  helperText="Use only with the 'Custom' base. e.g. 80 = agent's commission is calculated against 80% of the gross."
+                  helperText={t("admin.commission.field.custom_base_hint")}
                   className="sm:col-span-2"
                 >
                   <Input
@@ -262,7 +262,7 @@ export default function OperatorCommissionSettingsPage() {
                   />
                 </FormField>
               )}
-              <FormField label="Notes" htmlFor="default-notes" className="sm:col-span-2">
+              <FormField label={t("admin.commission.field.notes")} htmlFor="default-notes" className="sm:col-span-2">
                 <Input
                   as="textarea"
                   id="default-notes"
@@ -274,32 +274,30 @@ export default function OperatorCommissionSettingsPage() {
             </div>
             <div>
               <Button size="sm" disabled={busy} onClick={() => void saveDefault()}>
-                {busy ? "Saving…" : "Save default"}
+                {busy ? t("admin.crud.common.saving") : t("admin.commission.btn_save_default")}
               </Button>
             </div>
           </section>
 
           <section className="admin-card p-4 space-y-3">
             <div>
-              <h2 className="text-base font-semibold">Per-agent overrides</h2>
-              <p className="text-xs text-fg-t6">
-                Override the default for specific agents (e.g. a strategic partner gets a higher %).
-              </p>
+              <h2 className="text-base font-semibold">{t("admin.commission.overrides_section")}</h2>
+              <p className="text-xs text-fg-t6">{t("admin.commission.overrides_section_hint")}</p>
             </div>
 
             <Table>
               <THead>
                 <TR>
-                  <TH>Agent</TH>
-                  <TH>Base</TH>
-                  <TH>Percentage</TH>
-                  <TH>Notes</TH>
-                  <TH align="right">Actions</TH>
+                  <TH>{t("admin.commission.col.agent")}</TH>
+                  <TH>{t("admin.commission.col.base")}</TH>
+                  <TH>{t("admin.commission.col.percentage")}</TH>
+                  <TH>{t("admin.commission.field.notes")}</TH>
+                  <TH align="right">{t("admin.crud.common.actions")}</TH>
                 </TR>
               </THead>
               <TBody>
                 {data.overrides.length === 0 ? (
-                  <TEmpty colSpan={5}>No overrides yet — every agent uses the default rate.</TEmpty>
+                  <TEmpty colSpan={5}>{t("admin.commission.empty_overrides")}</TEmpty>
                 ) : null}
                 {data.overrides.map((row) => (
                   <TR key={row.id}>
@@ -312,7 +310,7 @@ export default function OperatorCommissionSettingsPage() {
                       {row.default_percentage != null ? `${row.default_percentage}%` : "—"}
                       {row.calculation_base === "custom" && row.custom_base_percentage != null && (
                         <span className="ml-1 text-xs text-fg-t6">
-                          (base {row.custom_base_percentage}%)
+                          ({t("admin.commission.col.base").toLowerCase()} {row.custom_base_percentage}%)
                         </span>
                       )}
                     </TD>
@@ -324,7 +322,7 @@ export default function OperatorCommissionSettingsPage() {
                         disabled={busy}
                         onClick={() => void removeOverride(row.agent_company_id!)}
                       >
-                        Remove
+                        {t("admin.commission.btn_remove")}
                       </Button>
                     </TD>
                   </TR>
@@ -334,9 +332,9 @@ export default function OperatorCommissionSettingsPage() {
           </section>
 
           <section className="admin-card p-4 space-y-3">
-            <h2 className="text-base font-semibold">Add a per-agent override</h2>
+            <h2 className="text-base font-semibold">{t("admin.commission.add_override")}</h2>
             <div className="grid gap-3 sm:grid-cols-2">
-              <FormField label="Agent company ID" htmlFor="override-agent-id" required>
+              <FormField label={t("admin.commission.field.agent_company_id")} htmlFor="override-agent-id" required>
                 <Input
                   id="override-agent-id"
                   type="number"
@@ -346,7 +344,7 @@ export default function OperatorCommissionSettingsPage() {
                   placeholder="e.g. 42"
                 />
               </FormField>
-              <FormField label="Calculation base" htmlFor="override-base" required>
+              <FormField label={t("admin.commission.field.calculation_base")} htmlFor="override-base" required>
                 <Select
                   id="override-base"
                   value={overrideDraft.calculation_base}
@@ -361,7 +359,7 @@ export default function OperatorCommissionSettingsPage() {
                   ))}
                 </Select>
               </FormField>
-              <FormField label="Agent commission %" htmlFor="override-percentage">
+              <FormField label={t("admin.commission.field.agent_percentage")} htmlFor="override-percentage">
                 <Input
                   id="override-percentage"
                   type="number"
@@ -375,7 +373,7 @@ export default function OperatorCommissionSettingsPage() {
                 />
               </FormField>
               {overrideDraft.calculation_base === "custom" && (
-                <FormField label="Custom base % of gross" htmlFor="override-custom-base">
+                <FormField label={t("admin.commission.field.custom_base")} htmlFor="override-custom-base">
                   <Input
                     id="override-custom-base"
                     type="number"
@@ -389,7 +387,7 @@ export default function OperatorCommissionSettingsPage() {
                   />
                 </FormField>
               )}
-              <FormField label="Notes" htmlFor="override-notes" className="sm:col-span-2">
+              <FormField label={t("admin.commission.field.notes")} htmlFor="override-notes" className="sm:col-span-2">
                 <Input
                   as="textarea"
                   id="override-notes"
@@ -401,7 +399,7 @@ export default function OperatorCommissionSettingsPage() {
             </div>
             <div>
               <Button size="sm" disabled={busy || !overrideAgentId.trim()} onClick={() => void saveOverride()}>
-                {busy ? "Saving…" : "Save override"}
+                {busy ? t("admin.crud.common.saving") : t("admin.commission.btn_save_override")}
               </Button>
             </div>
           </section>

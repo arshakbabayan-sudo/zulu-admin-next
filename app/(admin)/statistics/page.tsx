@@ -86,7 +86,7 @@ export default function OperatorStatisticsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Operator statistics" />
+      <PageHeader title={t("admin.operator_statistics.title")} />
 
       {isSuper && (
         <div className="admin-card p-4">
