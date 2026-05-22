@@ -126,7 +126,8 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/operator/offers", labelKey: "admin.nav.tab.offers", moduleKey: "inventory.offers" },
       { href: "/operator/contracts", labelKey: "admin.nav.tab.contracts", moduleKey: "ops.contracts" },
       { href: "/operator/commission-settings", labelKey: "admin.nav.tab.commission_settings", moduleKey: "ops.finance" },
-      { href: "/operator/external-api", labelKey: "admin.nav.tab.external_api" },
+      // /operator/external-api hidden from sidebar (Phase 4.1) — placeholder UI, no backend integration.
+      // Route still accessible via direct URL until full integration ships.
     ],
     visibility: "operator_tools",
   },
@@ -203,7 +204,8 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/connections", labelKey: "admin.nav.tab.connections", moduleKey: "ops.connections" },
       { href: "/support/tickets", labelKey: "admin.nav.tab.support" },
       { href: "/platform/reviews", labelKey: "admin.nav.tab.reviews", moduleKey: "ops.reviews" },
-      { href: "/statistics", labelKey: "admin.nav.tab.statistics", moduleKey: "ops.statistics" },
+      // /statistics hidden from sidebar (Phase 4.2) — current page shows raw JSON dump, not a usable visualization.
+      // Will be brought back as HF-2 (parking lot) with proper charts/KPI cards.
     ],
     visibility: "platform_admin",
   },
