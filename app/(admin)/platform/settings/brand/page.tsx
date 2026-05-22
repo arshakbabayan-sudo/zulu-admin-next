@@ -10,6 +10,7 @@
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { ImageUploadField } from "@/components/ImageUploadField";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import {
@@ -30,6 +31,7 @@ function emptyCustomField(): BrandCustomField {
 
 export default function PlatformBrandSettingsPage() {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [data, setData] = useState<BrandSettings | null>(null);
   const [forbidden, setForbidden] = useState(false);
@@ -46,7 +48,7 @@ export default function PlatformBrandSettingsPage() {
       setData(res.data);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else setErr(e instanceof ApiRequestError ? e.message : "Failed to load");
+      else setErr(e instanceof ApiRequestError ? e.message : t("admin.commission.err_load"));
     }
   }, [allowed]);
 
@@ -61,7 +63,7 @@ export default function PlatformBrandSettingsPage() {
       setData(res.data);
       setSavedAt(Date.now());
     } catch (e) {
-      setErr(e instanceof ApiRequestError ? e.message : "Save failed");
+      setErr(e instanceof ApiRequestError ? e.message : t("admin.commission.err_save"));
     } finally {
       setSaving(false);
     }
@@ -96,7 +98,7 @@ export default function PlatformBrandSettingsPage() {
   if (!allowed || forbidden) {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">Brand settings</h1>
+        <h1 className="admin-page-title">{t("admin.brand.title")}</h1>
         <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
@@ -107,8 +109,8 @@ export default function PlatformBrandSettingsPage() {
   if (!data) {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">Brand settings</h1>
-        <p className="text-sm text-fg-t7">Loading…</p>
+        <h1 className="admin-page-title">{t("admin.brand.title")}</h1>
+        <p className="text-sm text-fg-t7">{t("admin.commission.loading")}</p>
       </div>
     );
   }
@@ -116,45 +118,45 @@ export default function PlatformBrandSettingsPage() {
   return (
     <div className="max-w-3xl space-y-6">
       <PageHeader
-        title="Brand settings"
-        subtitle="Կայքի logo, contact և social link-ները խմբագրելու համար"
+        title={t("admin.brand.title")}
+        subtitle={t("admin.brand.subtitle")}
       />
 
       {err && <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
-      {savedAt && <div className="rounded-zulu border border-success-100 bg-success-50 px-4 py-2 text-sm text-success-700">Saved.</div>}
+      {savedAt && <div className="rounded-zulu border border-success-100 bg-success-50 px-4 py-2 text-sm text-success-700">{t("admin.brand.saved")}</div>}
 
       <section className="admin-card p-4">
-        <h2 className="text-base font-semibold text-fg-t11">Brand imagery</h2>
-        <p className="mt-1 mb-3 text-xs text-fg-t7">Logo / emblem / favicon (browser tab-ի icon)</p>
+        <h2 className="text-base font-semibold text-fg-t11">{t("admin.brand.section.imagery")}</h2>
+        <p className="mt-1 mb-3 text-xs text-fg-t7">{t("admin.brand.section.imagery_hint")}</p>
         <div className="grid gap-4 md:grid-cols-2">
           <ImageUploadField
             value={data.logo_url ?? ""}
             onChange={(v) => updateField("logo_url", v === "" ? null : v)}
             section="banners"
-            label="Logo (lull wordmark)"
+            label={t("admin.brand.field.logo")}
             altText="ZULU logo"
           />
           <ImageUploadField
             value={data.emblem_url ?? ""}
             onChange={(v) => updateField("emblem_url", v === "" ? null : v)}
             section="banners"
-            label="Emblem (compact icon)"
+            label={t("admin.brand.field.emblem")}
             altText="ZULU emblem"
           />
           <ImageUploadField
             value={data.favicon_url ?? ""}
             onChange={(v) => updateField("favicon_url", v === "" ? null : v)}
             section="banners"
-            label="Favicon (browser tab)"
+            label={t("admin.brand.field.favicon")}
             altText="Favicon"
           />
         </div>
       </section>
 
       <section className="admin-card p-4">
-        <h2 className="text-base font-semibold text-fg-t11">Contact info</h2>
+        <h2 className="text-base font-semibold text-fg-t11">{t("admin.brand.section.contact")}</h2>
         <div className="mt-3 grid gap-3 md:grid-cols-2">
-          <FormField label="Phone" htmlFor="br-phone">
+          <FormField label={t("admin.brand.field.phone")} htmlFor="br-phone">
             <Input
               id="br-phone"
               value={data.phone ?? ""}
@@ -162,7 +164,7 @@ export default function PlatformBrandSettingsPage() {
               placeholder="+374 11 123 456"
             />
           </FormField>
-          <FormField label="Email" htmlFor="br-email">
+          <FormField label={t("admin.brand.field.email")} htmlFor="br-email">
             <Input
               id="br-email"
               type="email"
@@ -171,22 +173,22 @@ export default function PlatformBrandSettingsPage() {
               placeholder="info@zulu.am"
             />
           </FormField>
-          <FormField label="Address (street + building)" htmlFor="br-addr" className="md:col-span-2">
+          <FormField label={t("admin.brand.field.address")} htmlFor="br-addr" className="md:col-span-2">
             <Input
               id="br-addr"
               value={data.address ?? ""}
               onChange={(e) => updateField("address", e.target.value === "" ? null : e.target.value)}
-              placeholder="Mashtots Ave 1"
+              placeholder={t("admin.brand.field.address_placeholder")}
             />
           </FormField>
-          <FormField label="City" htmlFor="br-city">
+          <FormField label={t("admin.brand.field.city")} htmlFor="br-city">
             <Input
               id="br-city"
               value={data.address_city ?? ""}
               onChange={(e) => updateField("address_city", e.target.value === "" ? null : e.target.value)}
             />
           </FormField>
-          <FormField label="Country" htmlFor="br-country">
+          <FormField label={t("admin.brand.field.country")} htmlFor="br-country">
             <Input
               id="br-country"
               value={data.address_country ?? ""}
@@ -197,8 +199,8 @@ export default function PlatformBrandSettingsPage() {
       </section>
 
       <section className="admin-card p-4">
-        <h2 className="text-base font-semibold text-fg-t11">Social links</h2>
-        <p className="mt-1 mb-3 text-xs text-fg-t7">Դատարկ թողնելու դեպքում` footer-ում չի երևա</p>
+        <h2 className="text-base font-semibold text-fg-t11">{t("admin.brand.section.social")}</h2>
+        <p className="mt-1 mb-3 text-xs text-fg-t7">{t("admin.brand.section.social_hint")}</p>
         <div className="grid gap-3 md:grid-cols-2">
           {BRAND_SOCIAL_PLATFORMS.map((p) => (
             <FormField key={p.key} label={p.label} htmlFor={`br-soc-${p.key}`}>
@@ -217,19 +219,19 @@ export default function PlatformBrandSettingsPage() {
       <section className="admin-card p-4">
         <div className="flex items-baseline justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold text-fg-t11">Custom fields</h2>
-            <p className="text-xs text-fg-t7">Հատուկ դաշտեր (օրինակ` Office hours, Telegram URL, ևն)</p>
+            <h2 className="text-base font-semibold text-fg-t11">{t("admin.brand.section.custom_fields")}</h2>
+            <p className="text-xs text-fg-t7">{t("admin.brand.section.custom_fields_hint")}</p>
           </div>
-          <Button variant="outline" size="sm" onClick={addCustomField}>+ Add field</Button>
+          <Button variant="outline" size="sm" onClick={addCustomField}>{t("admin.brand.add_field")}</Button>
         </div>
         {data.custom_fields.length === 0 ? (
-          <p className="mt-3 text-xs text-fg-t6">No custom fields yet.</p>
+          <p className="mt-3 text-xs text-fg-t6">{t("admin.brand.empty_custom_fields")}</p>
         ) : (
           <div className="mt-3 flex flex-col gap-3">
             {data.custom_fields.map((f, i) => (
               <div key={i} className="rounded-zulu border border-default bg-figma-bg-1 p-3">
                 <div className="grid gap-2 md:grid-cols-4">
-                  <FormField label="Key (no spaces)" htmlFor={`cf-key-${i}`}>
+                  <FormField label={t("admin.brand.field.cf_key")} htmlFor={`cf-key-${i}`}>
                     <Input
                       id={`cf-key-${i}`}
                       value={f.key}
@@ -240,15 +242,15 @@ export default function PlatformBrandSettingsPage() {
                       className="font-mono"
                     />
                   </FormField>
-                  <FormField label="Label (display name)" htmlFor={`cf-lab-${i}`}>
+                  <FormField label={t("admin.brand.field.cf_label")} htmlFor={`cf-lab-${i}`}>
                     <Input
                       id={`cf-lab-${i}`}
                       value={f.label}
                       onChange={(e) => updateCustomField(i, { label: e.target.value })}
-                      placeholder="Office hours"
+                      placeholder={t("admin.brand.field.cf_label_placeholder")}
                     />
                   </FormField>
-                  <FormField label="Type" htmlFor={`cf-type-${i}`}>
+                  <FormField label={t("admin.contracts.col_type")} htmlFor={`cf-type-${i}`}>
                     <Select
                       id={`cf-type-${i}`}
                       fieldSize="sm"
@@ -258,7 +260,7 @@ export default function PlatformBrandSettingsPage() {
                       {CUSTOM_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                     </Select>
                   </FormField>
-                  <FormField label="Value" htmlFor={`cf-val-${i}`}>
+                  <FormField label={t("admin.brand.field.cf_value")} htmlFor={`cf-val-${i}`}>
                     <Input
                       id={`cf-val-${i}`}
                       value={f.value ?? ""}
@@ -272,7 +274,7 @@ export default function PlatformBrandSettingsPage() {
                     onClick={() => removeCustomField(i)}
                     className="text-xs text-error-600 underline hover:text-error-800"
                   >
-                    Remove
+                    {t("admin.commission.btn_remove")}
                   </button>
                 </div>
               </div>
@@ -283,7 +285,7 @@ export default function PlatformBrandSettingsPage() {
 
       <div className="sticky bottom-0 flex justify-end gap-2 border-t border-default bg-white py-3 -mx-4 px-4">
         <Button size="sm" disabled={saving} onClick={() => void handleSave()}>
-          {saving ? "Saving…" : "Save changes"}
+          {saving ? t("admin.crud.common.saving") : t("admin.template_detail.btn_save")}
         </Button>
       </div>
     </div>
