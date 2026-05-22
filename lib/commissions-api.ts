@@ -1,16 +1,36 @@
 import { apiFetchJson } from "./api-client";
 import type { ApiListMeta, ApiSuccessEnvelope } from "./api-envelope";
 
+/** Backend rule shape after `transformRuleToPolicyShape`. The id is a UUID string. */
 export type CommissionPolicyRow = {
-  id: number;
+  id: string;
   name?: string | null;
-  rate: number;
-  type: string;
+  rate?: number | null;
+  /** Phase 7.4 — backend exposes `percent` (number|null) for percentage rules. */
+  percent?: number | null;
+  type?: string | null;
   status: string;
   service_type?: string | null;
   company_id?: number | null;
+  commission_mode?: string | null;
+  effective_from?: string | null;
+  effective_to?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
+};
+
+/** Phase 7.4 — payload accepted by POST /commissions. */
+export type CommissionPolicyCreate = {
+  company_id: number;
+  service_type?: string | null;
+  type: "percentage" | "fixed";
+  percent?: number | null;
+  fixed_value?: number | null;
+  fixed_currency?: string | null;
+  effective_from?: string | null;
+  effective_to?: string | null;
+  status?: "active" | "inactive" | "scheduled";
+  notes?: string | null;
 };
 
 export type CommissionRecordRow = {
@@ -48,7 +68,19 @@ export async function apiCommissionRecords(
 
 export async function apiDeactivateCommission(
   token: string,
-  id: number
+  id: string
 ): Promise<ApiSuccessEnvelope<CommissionPolicyRow>> {
   return apiFetchJson(`/commissions/${id}/deactivate`, { method: "POST", token, body: {} });
+}
+
+/** Phase 7.4 — POST /commissions creates a seller-scoped policy. */
+export async function apiCreateCommission(
+  token: string,
+  body: CommissionPolicyCreate
+): Promise<ApiSuccessEnvelope<CommissionPolicyRow>> {
+  return apiFetchJson(`/commissions`, {
+    method: "POST",
+    token,
+    body: body as unknown as Record<string, unknown>,
+  });
 }

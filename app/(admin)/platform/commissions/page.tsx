@@ -13,7 +13,9 @@ import { formatDate } from "@/lib/format";
 import {
   apiCommissions,
   apiCommissionRecords,
+  apiCreateCommission,
   apiDeactivateCommission,
+  type CommissionPolicyCreate,
   type CommissionPolicyRow,
   type CommissionRecordRow,
 } from "@/lib/commissions-api";
@@ -51,7 +53,18 @@ export default function CommissionsPage() {
 
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
-  const [busyId, setBusyId] = useState<number | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  // Phase 7.4 — "+ New" modal state
+  const [newOpen, setNewOpen] = useState(false);
+  const [newDraft, setNewDraft] = useState<CommissionPolicyCreate>({
+    company_id: 0,
+    service_type: "",
+    type: "percentage",
+    percent: 0,
+    status: "active",
+    notes: "",
+  });
+  const [newSaving, setNewSaving] = useState(false);
 
   const loadPolicies = useCallback(async () => {
     if (!token || !allowed) return;
@@ -84,7 +97,7 @@ export default function CommissionsPage() {
   useEffect(() => { if (tab === "policies") loadPolicies(); }, [tab, loadPolicies]);
   useEffect(() => { if (tab === "records") loadRecords(); }, [tab, loadRecords]);
 
-  async function handleDeactivate(id: number) {
+  async function handleDeactivate(id: string) {
     if (!token) return;
     const ok = await confirm({ messageKey: "admin.platform_commissions.confirm_deactivate" });
     if (!ok) return;
@@ -96,6 +109,45 @@ export default function CommissionsPage() {
       alert(e instanceof ApiRequestError ? e.message : t("admin.platform_commissions.err_failed"));
     } finally {
       setBusyId(null);
+    }
+  }
+
+  // Phase 7.4 — Create new commission policy
+  async function handleCreatePolicy() {
+    if (!token) return;
+    if (!newDraft.company_id || newDraft.company_id <= 0) {
+      alert(t("admin.platform_commissions.err_company_required"));
+      return;
+    }
+    if (newDraft.type === "percentage" && (newDraft.percent == null || newDraft.percent < 0 || newDraft.percent > 100)) {
+      alert(t("admin.platform_commissions.err_percent_invalid"));
+      return;
+    }
+    if (newDraft.type === "fixed" && (newDraft.fixed_value == null || newDraft.fixed_value < 0)) {
+      alert(t("admin.platform_commissions.err_fixed_invalid"));
+      return;
+    }
+    setNewSaving(true);
+    try {
+      await apiCreateCommission(token, {
+        ...newDraft,
+        service_type: newDraft.service_type?.trim() || null,
+        notes: newDraft.notes?.trim() || null,
+      });
+      setNewOpen(false);
+      setNewDraft({
+        company_id: 0,
+        service_type: "",
+        type: "percentage",
+        percent: 0,
+        status: "active",
+        notes: "",
+      });
+      await loadPolicies();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : t("admin.platform_commissions.err_failed"));
+    } finally {
+      setNewSaving(false);
     }
   }
 
@@ -112,7 +164,18 @@ export default function CommissionsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t("admin.platform_commissions.title")} />
+      <PageHeader
+        title={t("admin.platform_commissions.title")}
+        actions={
+          <button
+            type="button"
+            onClick={() => setNewOpen(true)}
+            className="inline-flex h-10 items-center rounded-zulu bg-primary px-4 text-sm font-semibold text-white transition hover:opacity-90"
+          >
+            {t("admin.platform_commissions.btn_new")}
+          </button>
+        }
+      />
 
       <Tabs
         value={tab}
@@ -216,6 +279,164 @@ export default function CommissionsPage() {
             <Pagination page={recordsMeta.current_page} lastPage={recordsMeta.last_page} onPage={setRecordsPage} />
           ) : null}
         </>
+      )}
+
+      {/* Phase 7.4 — "+ New" commission policy modal */}
+      {newOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-4 sm:items-center"
+          role="dialog"
+          aria-modal="true"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setNewOpen(false);
+          }}
+        >
+          <div className="w-full max-w-zulu-modal overflow-hidden rounded-t-zulu-modal bg-white shadow-zulu-modal sm:rounded-zulu-modal">
+            <div className="flex items-start justify-between gap-3 border-b border-default p-5">
+              <h2 className="text-lg font-semibold text-fg-t8">
+                {t("admin.platform_commissions.new_modal_title")}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setNewOpen(false)}
+                className="text-fg-t6 transition hover:text-fg-t8"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="space-y-4 p-5">
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-medium text-fg-t7">{t("admin.platform_commissions.field_company_id")}</span>
+                <input
+                  type="number"
+                  min="1"
+                  value={newDraft.company_id || ""}
+                  onChange={(e) => setNewDraft({ ...newDraft, company_id: Number(e.target.value) || 0 })}
+                  className="h-10 rounded-zulu border border-default px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+                  placeholder={t("admin.platform_commissions.field_company_id_placeholder")}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-medium text-fg-t7">{t("admin.platform_commissions.field_service_type")}</span>
+                <select
+                  value={newDraft.service_type ?? ""}
+                  onChange={(e) => setNewDraft({ ...newDraft, service_type: e.target.value || null })}
+                  className="h-10 rounded-zulu border border-default bg-white px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+                >
+                  <option value="">{t("common.all")}</option>
+                  <option value="hotel">Hotel</option>
+                  <option value="flight">Flight</option>
+                  <option value="transfer">Transfer</option>
+                  <option value="excursion">Excursion</option>
+                  <option value="car">Car</option>
+                  <option value="visa">Visa</option>
+                  <option value="package">Package</option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-medium text-fg-t7">{t("admin.platform_commissions.field_type")}</span>
+                <select
+                  value={newDraft.type}
+                  onChange={(e) =>
+                    setNewDraft({
+                      ...newDraft,
+                      type: e.target.value as "percentage" | "fixed",
+                      percent: e.target.value === "percentage" ? newDraft.percent : null,
+                      fixed_value: e.target.value === "fixed" ? newDraft.fixed_value : null,
+                    })
+                  }
+                  className="h-10 rounded-zulu border border-default bg-white px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+                >
+                  <option value="percentage">{t("admin.platform_commissions.type_percentage")}</option>
+                  <option value="fixed">{t("admin.platform_commissions.type_fixed")}</option>
+                </select>
+              </label>
+              {newDraft.type === "percentage" ? (
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="font-medium text-fg-t7">{t("admin.platform_commissions.field_percent")}</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    value={newDraft.percent ?? ""}
+                    onChange={(e) => setNewDraft({ ...newDraft, percent: Number(e.target.value) })}
+                    className="h-10 rounded-zulu border border-default px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+                    placeholder="0.00"
+                  />
+                </label>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="flex flex-col gap-1 text-sm">
+                    <span className="font-medium text-fg-t7">{t("admin.platform_commissions.field_fixed_value")}</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={newDraft.fixed_value ?? ""}
+                      onChange={(e) => setNewDraft({ ...newDraft, fixed_value: Number(e.target.value) })}
+                      className="h-10 rounded-zulu border border-default px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+                      placeholder="0.00"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-sm">
+                    <span className="font-medium text-fg-t7">{t("admin.platform_commissions.field_currency")}</span>
+                    <select
+                      value={newDraft.fixed_currency ?? "AMD"}
+                      onChange={(e) => setNewDraft({ ...newDraft, fixed_currency: e.target.value })}
+                      className="h-10 rounded-zulu border border-default bg-white px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+                    >
+                      <option value="AMD">AMD</option>
+                      <option value="USD">USD</option>
+                      <option value="EUR">EUR</option>
+                      <option value="RUB">RUB</option>
+                    </select>
+                  </label>
+                </div>
+              )}
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-medium text-fg-t7">{t("admin.platform_commissions.field_status")}</span>
+                <select
+                  value={newDraft.status ?? "active"}
+                  onChange={(e) =>
+                    setNewDraft({ ...newDraft, status: e.target.value as "active" | "inactive" | "scheduled" })
+                  }
+                  className="h-10 rounded-zulu border border-default bg-white px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+                >
+                  <option value="active">{t("admin.platform_commissions.status_active")}</option>
+                  <option value="inactive">{t("admin.platform_commissions.status_inactive")}</option>
+                  <option value="scheduled">{t("admin.platform_commissions.status_scheduled")}</option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-medium text-fg-t7">{t("admin.platform_commissions.field_notes")}</span>
+                <textarea
+                  value={newDraft.notes ?? ""}
+                  onChange={(e) => setNewDraft({ ...newDraft, notes: e.target.value })}
+                  className="min-h-[60px] rounded-zulu border border-default px-2 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+                />
+              </label>
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-default p-5">
+              <button
+                type="button"
+                onClick={() => setNewOpen(false)}
+                className="inline-flex h-10 items-center rounded-zulu border border-default bg-white px-4 text-sm font-medium text-fg-t8 transition hover:bg-figma-bg-1"
+              >
+                {t("common.cancel")}
+              </button>
+              <button
+                type="button"
+                disabled={newSaving}
+                onClick={() => void handleCreatePolicy()}
+                className="inline-flex h-10 items-center rounded-zulu bg-primary px-4 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
+              >
+                {newSaving ? t("common.saving") : t("admin.platform_commissions.btn_create")}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
