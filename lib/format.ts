@@ -19,7 +19,6 @@ type DateInput = string | number | Date | null | undefined;
 type NumberInput = number | string | null | undefined;
 
 const EMPTY = "—";
-const DEFAULT_CURRENCY = "USD";
 
 function toDate(input: DateInput): Date | null {
   if (input == null || input === "") return null;
