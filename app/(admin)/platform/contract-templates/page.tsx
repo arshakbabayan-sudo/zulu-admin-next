@@ -38,7 +38,7 @@ import { useCallback, useEffect, useState } from "react";
 
 export default function PlatformContractTemplatesPage() {
   const { token, user } = useAdminAuth();
-  const { lang } = useLanguage();
+  const { lang, t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<ContractTemplateRow[]>([]);
   const [typeFilter, setTypeFilter] = useState<ContractType | "">("");
@@ -59,9 +59,9 @@ export default function PlatformContractTemplatesPage() {
       setRows(res.data);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
-      else setErr(e instanceof ApiRequestError ? e.message : "Failed to load templates");
+      else setErr(e instanceof ApiRequestError ? e.message : t("admin.contract_templates.err_load_failed"));
     }
-  }, [token, allowed, typeFilter, langFilter]);
+  }, [token, allowed, typeFilter, langFilter, t]);
 
   useEffect(() => {
     void load();
@@ -70,7 +70,7 @@ export default function PlatformContractTemplatesPage() {
   if (!allowed || forbidden) {
     return (
       <div className="space-y-4">
-        <h1 className="admin-page-title">Contract templates</h1>
+        <h1 className="admin-page-title">{t("admin.contract_templates.title")}</h1>
         <div className="admin-card p-4">
           <ForbiddenNotice />
         </div>
@@ -81,15 +81,15 @@ export default function PlatformContractTemplatesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Contract templates"
-        subtitle={`${rows.length} template${rows.length === 1 ? "" : "s"}`}
+        title={t("admin.contract_templates.title")}
+        subtitle={`${rows.length} ${t("admin.contract_templates.meta_count_suffix")}`}
         actions={
           <Link
             href="/platform/contract-templates/new"
             className="inline-flex h-10 items-center gap-2 rounded-md bg-primary-500 px-4 text-ds-button-s font-ds-button-s font-semibold text-white transition hover:bg-purple-dark"
           >
             <Plus className="h-4 w-4" aria-hidden />
-            New template
+            {t("admin.contract_templates.btn_new")}
           </Link>
         }
       />
@@ -97,14 +97,14 @@ export default function PlatformContractTemplatesPage() {
       <div className="admin-card p-4">
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-sm text-fg-t6">
-            <span className="font-medium text-fg-t7">Type</span>
+            <span className="font-medium text-fg-t7">{t("admin.contract_templates.filter_type")}</span>
             <Select
               fieldSize="sm"
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value as ContractType | "")}
               className="!w-auto min-w-[200px]"
             >
-              <option value="">All</option>
+              <option value="">{t("common.all")}</option>
               {CONTRACT_TYPES.map((tp) => (
                 <option key={tp} value={tp}>
                   {contractTypeLabel(tp)}
@@ -113,14 +113,14 @@ export default function PlatformContractTemplatesPage() {
             </Select>
           </label>
           <label className="flex items-center gap-2 text-sm text-fg-t6">
-            <span className="font-medium text-fg-t7">Language</span>
+            <span className="font-medium text-fg-t7">{t("admin.contract_templates.filter_language")}</span>
             <Select
               fieldSize="sm"
               value={langFilter}
               onChange={(e) => setLangFilter(e.target.value as ContractLanguage | "")}
               className="!w-auto min-w-[120px]"
             >
-              <option value="">All</option>
+              <option value="">{t("common.all")}</option>
               {CONTRACT_LANGUAGES.map((l) => (
                 <option key={l} value={l}>
                   {l.toUpperCase()}
@@ -130,7 +130,7 @@ export default function PlatformContractTemplatesPage() {
           </label>
           <Button variant="outline" size="sm" onClick={() => void load()}>
             <RefreshCw className="h-4 w-4" aria-hidden />
-            Refresh
+            {t("admin.crud.common.refresh")}
           </Button>
         </div>
       </div>
@@ -144,20 +144,20 @@ export default function PlatformContractTemplatesPage() {
       <Table>
         <THead>
           <TR>
-            <TH>Name</TH>
-            <TH>Type</TH>
-            <TH>Language</TH>
-            <TH>Version</TH>
-            <TH>Published</TH>
-            <TH>Updated</TH>
+            <TH>{t("admin.contract_templates.col_name")}</TH>
+            <TH>{t("admin.contract_templates.col_type")}</TH>
+            <TH>{t("admin.contract_templates.col_language")}</TH>
+            <TH>{t("admin.contract_templates.col_version")}</TH>
+            <TH>{t("admin.contract_templates.col_published")}</TH>
+            <TH>{t("admin.contract_templates.col_updated")}</TH>
           </TR>
         </THead>
         <TBody>
           {rows.length === 0 ? (
             <TEmpty colSpan={6}>
-              No templates yet.{" "}
+              {t("admin.contract_templates.empty_state")}{" "}
               <Link href="/platform/contract-templates/new" className="text-primary hover:underline">
-                Create the first one →
+                {t("admin.contract_templates.empty_state_cta")} →
               </Link>
             </TEmpty>
           ) : null}
@@ -169,9 +169,9 @@ export default function PlatformContractTemplatesPage() {
               <TD className="font-mono text-xs text-fg-t8">{tpl.version ?? "—"}</TD>
               <TD>
                 {tpl.is_published ? (
-                  <span className="text-xs font-medium text-success-700">Published</span>
+                  <span className="text-xs font-medium text-success-700">{t("admin.contract_templates.status_published")}</span>
                 ) : (
-                  <span className="text-xs text-fg-t6">Draft</span>
+                  <span className="text-xs text-fg-t6">{t("admin.contract_templates.status_draft")}</span>
                 )}
               </TD>
               <TD className="text-xs text-fg-t6">{formatDate(tpl.updated_at, lang)}</TD>
