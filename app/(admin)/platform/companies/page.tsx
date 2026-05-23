@@ -26,15 +26,19 @@ import type { ApiListMeta } from "@/lib/api-envelope";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import {
+  apiApproveCompanyApplication,
   apiArchiveCompany,
+  apiCompanyApplications,
   apiCompanyCountryPermissions,
   apiCompanySellerPermissions,
   apiPatchCompanyGovernance,
   apiPatchCompanySellerPermissions,
   apiPlatformCompanies,
+  apiRejectCompanyApplication,
   apiRestoreCompany,
   apiSyncCompanyCountryPermissions,
   apiToggleCompanySeller,
+  type CompanyApplicationRow,
   type CompanyArchiveFilter,
   SELLER_SERVICE_TYPES,
   type PlatformCompanyRow,
@@ -60,6 +64,7 @@ export default function PlatformCompaniesPage() {
   const isSuperAdmin = user?.is_super_admin === true;
   const [archiveFilter, setArchiveFilter] = useState<CompanyArchiveFilter>("active");
   const [rows, setRows] = useState<PlatformCompanyRow[]>([]);
+  const [pendingApps, setPendingApps] = useState<CompanyApplicationRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -95,21 +100,33 @@ export default function PlatformCompaniesPage() {
     setErr(null);
     setForbidden(false);
     try {
-      const res = await apiPlatformCompanies(token, {
-        page,
-        per_page: 20,
-        search: search || undefined,
-        governance_status: governanceFilter || undefined,
-        is_seller: sellerParam,
-        sort_by: sortBy,
-        sort_dir: sortDir,
-        archive_filter: archiveFilter,
-      });
-      setRows(res.data);
-      setMeta(res.meta);
+      // Phase 6.1 (extended) — load companies + pending applications in
+      // parallel. Pending applications surface as additional rows at the
+      // top of the table so super-admin doesn't have to navigate between
+      // pages to approve/reject incoming registrations.
+      const [companiesRes, appsRes] = await Promise.all([
+        apiPlatformCompanies(token, {
+          page,
+          per_page: 20,
+          search: search || undefined,
+          governance_status: governanceFilter || undefined,
+          is_seller: sellerParam,
+          sort_by: sortBy,
+          sort_dir: sortDir,
+          archive_filter: archiveFilter,
+        }),
+        // Only fetch pending apps on page 1 + no filters that would hide
+        // them (so the union view doesn't get confusing when paginating).
+        page === 1 && !search && !governanceFilter && !sellerParam
+          ? apiCompanyApplications(token, { status: "pending" })
+          : Promise.resolve({ data: [] as CompanyApplicationRow[] }),
+      ]);
+      setRows(companiesRes.data);
+      setMeta(companiesRes.meta);
+      setPendingApps(appsRes.data ?? []);
       setDraftGovernance((prev) => {
         const next = { ...prev };
-        for (const r of res.data) {
+        for (const r of companiesRes.data) {
           next[r.id] = r.governance_status;
         }
         return next;
@@ -119,6 +136,48 @@ export default function PlatformCompaniesPage() {
       else setErr(e instanceof ApiRequestError ? e.message : t("admin.platform_companies.err_load"));
     }
   }, [token, allowed, page, search, governanceFilter, sellerParam, sortBy, sortDir, archiveFilter, t]);
+
+  // Approve a pending company_applications row inline from the list.
+  async function approveApplication(app: CompanyApplicationRow) {
+    if (!token) return;
+    const ok = await confirm({
+      message: t("admin.platform_companies.confirm_approve_app").replace("{name}", app.company_name),
+      variant: "default",
+    });
+    if (!ok) return;
+    setBusyId(-app.id); // negative id namespace to avoid collision with company ids
+    try {
+      await apiApproveCompanyApplication(token, app.id);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : t("admin.platform_companies.err_approve_app"));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function rejectApplication(app: CompanyApplicationRow) {
+    if (!token) return;
+    const reason = await prompt({
+      title: t("admin.platform_companies.inline_reject_title").replace("{name}", app.company_name),
+      description: t("admin.platform_companies.inline_reject_description"),
+      placeholder: t("admin.platform_companies.reject_reason_placeholder"),
+      required: true,
+      minLength: 3,
+      variant: "danger",
+      confirmLabel: t("admin.platform_companies.btn_reject"),
+    });
+    if (reason === null) return;
+    setBusyId(-app.id);
+    try {
+      await apiRejectCompanyApplication(token, app.id, reason);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : t("admin.platform_companies.err_reject_app"));
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   function toggleSort(field: SortField) {
     if (sortBy === field) {
@@ -396,6 +455,14 @@ export default function PlatformCompaniesPage() {
                 .replace("{total}", String(meta.total))
                 .replace("{page}", String(meta.current_page))
                 .replace("{lastPage}", String(meta.last_page))}
+              {pendingApps.length > 0 && (
+                <span className="ml-2 inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                  {t("admin.platform_companies.pending_apps_count").replace(
+                    "{count}",
+                    String(pendingApps.length),
+                  )}
+                </span>
+              )}
             </p>
           )}
         </div>
@@ -558,13 +625,73 @@ export default function PlatformCompaniesPage() {
               </tr>
             </thead>
             <tbody>
-              {rows.length === 0 && (
+              {rows.length === 0 && pendingApps.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-4 py-12 text-center text-sm text-fg-t6">
                     {t("admin.platform_companies.empty")}
                   </td>
                 </tr>
               )}
+              {/* Pending applications — rendered above company rows. Each has
+                  a distinct visual treatment (amber band + "Pending application"
+                  badge) + inline Approve / Reject / Open-detail actions. */}
+              {pendingApps.map((a) => (
+                <tr
+                  key={`app-${a.id}`}
+                  className="border-b border-default bg-amber-50/40 transition hover:bg-amber-50"
+                >
+                  <td className="px-4 py-3 tabular-nums text-fg-t7">
+                    <Link
+                      href={`/platform/company-applications/${a.id}`}
+                      className="text-amber-700 transition hover:underline"
+                      title={t("admin.platform_companies.app_id_tooltip")}
+                    >
+                      A-{a.id}
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3 font-medium text-fg-t8">
+                    <Link
+                      href={`/platform/company-applications/${a.id}`}
+                      className="text-fg-t8 transition hover:text-primary hover:underline"
+                    >
+                      {a.company_name}
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3 text-fg-t7 capitalize">{a.company_type ?? "—"}</td>
+                  <td className="px-4 py-3" colSpan={3}>
+                    <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+                      {t("admin.platform_companies.pending_application")}
+                    </span>
+                    <span className="ml-2 text-xs text-fg-t6">{a.business_email}</span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex flex-wrap justify-end gap-1.5">
+                      <button
+                        type="button"
+                        disabled={busyId === -a.id}
+                        onClick={() => void approveApplication(a)}
+                        className="inline-flex h-8 items-center rounded-zulu border border-success-300 bg-success-50 px-2.5 text-xs font-semibold text-success-800 transition hover:bg-success-100 disabled:opacity-40"
+                      >
+                        {t("admin.platform_companies.btn_approve")}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busyId === -a.id}
+                        onClick={() => void rejectApplication(a)}
+                        className="inline-flex h-8 items-center rounded-zulu border border-error-300 bg-error-50 px-2.5 text-xs font-semibold text-error-800 transition hover:bg-error-100 disabled:opacity-40"
+                      >
+                        {t("admin.platform_companies.btn_reject")}
+                      </button>
+                      <Link
+                        href={`/platform/company-applications/${a.id}`}
+                        className="inline-flex h-8 items-center rounded-zulu border border-default bg-white px-2.5 text-xs font-medium text-fg-t7 transition hover:bg-figma-bg-1"
+                      >
+                        {t("admin.company_applications.btn_open")}
+                      </Link>
+                    </div>
+                  </td>
+                </tr>
+              ))}
               {rows.map((r) => (
                 <tr key={r.id} className="border-b border-default last:border-0 transition hover:bg-figma-bg-1">
                   <td className="px-4 py-3 tabular-nums text-fg-t7">
