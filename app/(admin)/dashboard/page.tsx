@@ -202,7 +202,7 @@ function WidgetCard({
   bodyClassName?: string;
 }) {
   return (
-    <div className="overflow-hidden rounded-zulu-card border border-default bg-white shadow-zulu-card">
+    <div className="min-w-0 overflow-hidden rounded-zulu-card border border-default bg-white shadow-zulu-card">
       <div className="flex items-center justify-between gap-3 border-b border-default bg-figma-bg-1 px-5 py-3.5">
         <div className="flex min-w-0 items-center gap-2.5">
           <span
@@ -828,12 +828,18 @@ export default function DashboardPage() {
       </div>
 
       {/* Row 3 — order summary (1col) + recent activity (2col on desktop).
-          On tablet, donut sits beside activity (1+1 split). On mobile, stacked. */}
+          On tablet, donut sits beside activity (1+1 split). On mobile, stacked.
+          `min-w-0` on grid items lets a child <Table> with min-w-[640px]
+          trigger its own overflow-x-auto INSIDE the widget instead of
+          forcing the whole page to scroll horizontally (CSS Grid items
+          default to min-width: auto which is content-size). */}
       <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
-        <WidgetCard title={t("admin.dashboard.order_summary")} icon={PieChart}>
-          <OrderSummaryDonut stats={stats} />
-        </WidgetCard>
-        <div className="lg:col-span-2">
+        <div className="min-w-0">
+          <WidgetCard title={t("admin.dashboard.order_summary")} icon={PieChart}>
+            <OrderSummaryDonut stats={stats} />
+          </WidgetCard>
+        </div>
+        <div className="min-w-0 lg:col-span-2">
           <WidgetCard
             title={t("admin.dashboard.recent_activity")}
             icon={Activity}
@@ -856,7 +862,7 @@ export default function DashboardPage() {
       {/* Row 4 — top operators (2col on desktop) + active offers (1col).
           Tablet shows 1+1; mobile stacks. */}
       <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+        <div className="min-w-0 lg:col-span-2">
           <WidgetCard
             title={t("admin.dashboard.top_operators_by_revenue")}
             icon={ArrowUpRight}
@@ -865,9 +871,11 @@ export default function DashboardPage() {
             <TopOperatorsByRevenue />
           </WidgetCard>
         </div>
-        <WidgetCard title={t("admin.dashboard.active_offers")} icon={Layers}>
-          <ActiveOffers stats={stats} />
-        </WidgetCard>
+        <div className="min-w-0">
+          <WidgetCard title={t("admin.dashboard.active_offers")} icon={Layers}>
+            <ActiveOffers stats={stats} />
+          </WidgetCard>
+        </div>
       </div>
     </div>
   );
