@@ -65,7 +65,7 @@ export default function PlatformPackagesGovernancePage() {
   }, [token, allowed, page, statusFilter, companyId, t]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   function applyCompanyFilter() {

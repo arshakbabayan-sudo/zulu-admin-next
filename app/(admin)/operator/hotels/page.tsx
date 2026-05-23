@@ -164,7 +164,7 @@ export default function OperatorHotelsPage() {
   }, [token, page, contentLang]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   function openCreate() {

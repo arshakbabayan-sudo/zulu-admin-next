@@ -267,7 +267,7 @@ export default function OperatorTransfersPage() {
   }, [token, page, contentLang]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   function openCreate() {

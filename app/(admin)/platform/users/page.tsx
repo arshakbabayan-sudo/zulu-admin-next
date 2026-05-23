@@ -84,7 +84,7 @@ export default function PlatformUsersPage() {
   }, [token, allowed, page, search, typeFilter, t]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   async function deactivate(id: number) {

@@ -120,7 +120,7 @@ export default function ConnectionsPage() {
   }, [token, allowed, page, statusFilter, sourceTypeFilter, targetTypeFilter, companyIdParam, t]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   useEffect(() => {

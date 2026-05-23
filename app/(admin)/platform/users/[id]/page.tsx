@@ -96,7 +96,7 @@ export default function PlatformUserDetailPage() {
   }, [token, allowed, userId, t]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   useEffect(() => {

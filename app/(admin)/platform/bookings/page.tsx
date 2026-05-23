@@ -70,7 +70,7 @@ export default function PlatformBookingsPage() {
   }, [token, allowed, page, statusFilter, t]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   async function handleConfirm(id: number) {

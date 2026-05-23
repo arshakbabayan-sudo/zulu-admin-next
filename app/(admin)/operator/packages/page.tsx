@@ -81,7 +81,7 @@ export default function OperatorPackagesPage() {
   }, [token, page, statusFilter, contentLang]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   function openCreate() {

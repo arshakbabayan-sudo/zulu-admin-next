@@ -84,7 +84,7 @@ export default function PlatformPaymentsPage() {
   }
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   if (!allowed || forbidden) {

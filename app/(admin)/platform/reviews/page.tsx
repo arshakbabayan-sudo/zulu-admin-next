@@ -60,7 +60,7 @@ export default function PlatformReviewsPage() {
   }, [token, allowed, page, statusFilter, t]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   async function moderate(id: number, status: (typeof MOD_STATUSES)[number]) {

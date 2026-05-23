@@ -387,7 +387,7 @@ export default function LocalizationLanguagesPage() {
   }, [token, allowed, t]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   async function handleSetDefault(row: LocalizationLanguageRow) {

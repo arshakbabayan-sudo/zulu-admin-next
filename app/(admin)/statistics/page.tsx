@@ -70,7 +70,7 @@ export default function OperatorStatisticsPage() {
   useEffect(() => {
     if (!allowed) return;
     if (isSuper) return;
-    load();
+    void load();
   }, [allowed, isSuper, load]);
 
   if (!allowed) {

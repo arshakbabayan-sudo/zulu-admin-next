@@ -41,7 +41,7 @@ export default function CompanyApplicationsPage() {
   }, [token, allowed, page, statusFilter, t]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   if (!allowed || forbidden) {

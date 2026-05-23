@@ -136,7 +136,7 @@ export default function PlatformCompaniesPage() {
   }
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   async function openPermissionsModal(row: PlatformCompanyRow) {

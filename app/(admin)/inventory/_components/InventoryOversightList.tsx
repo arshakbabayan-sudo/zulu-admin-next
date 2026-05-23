@@ -89,7 +89,7 @@ export function InventoryOversightList({
   }, [token, allowed, segment, page, queryParams]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   if (!allowed || forbidden) {

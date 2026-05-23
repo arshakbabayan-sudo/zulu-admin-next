@@ -61,7 +61,7 @@ export default function PlatformPackageOrdersPage() {
   }, [token, allowed, page, statusFilter, paymentStatusFilter, companyId, t]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   function applyCompanyFilter() {

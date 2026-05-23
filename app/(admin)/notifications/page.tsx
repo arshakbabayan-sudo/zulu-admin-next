@@ -62,7 +62,7 @@ export default function NotificationsPage() {
   }, [token, allowed, page]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   const refreshUnread = useCallback(async () => {

@@ -124,7 +124,7 @@ export default function SupportTicketDetailPage() {
   }, [token, allowed, id, companyIdParam]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   async function sendReply() {

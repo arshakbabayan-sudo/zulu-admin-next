@@ -48,7 +48,7 @@ export default function CompanyApplicationDetailPage() {
   }, [token, allowed, id, t]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   async function approve() {
