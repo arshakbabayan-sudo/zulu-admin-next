@@ -27,14 +27,26 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import {
+  apiCompanyApplications,
   apiPatchCompanyGovernance,
   apiPlatformCompany,
+  apiPlatformUsers,
   apiToggleCompanySeller,
+  type CompanyApplicationRow,
+  type PlatformAdminUserRow,
   type PlatformCompanyRow,
 } from "@/lib/platform-admin-api";
+import { StatusPill as _StatusPill } from "@/components/ui/StatusPill";
 
 const GOVERNANCE_STATUSES = ["pending", "active", "suspended", "rejected"] as const;
-type Tab = "profile" | "permissions" | "partner" | "commission" | "translations";
+type Tab =
+  | "profile"
+  | "users"
+  | "applications"
+  | "permissions"
+  | "partner"
+  | "commission"
+  | "translations";
 
 export default function PlatformCompanyDetailPage() {
   const params = useParams<{ id: string }>();
@@ -53,6 +65,12 @@ export default function PlatformCompanyDetailPage() {
   const [partnerOpen, setPartnerOpen] = useState(false);
   const [translateOpen, setTranslateOpen] = useState(false);
 
+  // Phase 2 — lazy-loaded data for the new tabs.
+  const [linkedUsers, setLinkedUsers] = useState<PlatformAdminUserRow[] | null>(null);
+  const [linkedUsersErr, setLinkedUsersErr] = useState<string | null>(null);
+  const [appsHistory, setAppsHistory] = useState<CompanyApplicationRow[] | null>(null);
+  const [appsHistoryErr, setAppsHistoryErr] = useState<string | null>(null);
+
   const load = useCallback(async () => {
     if (!token || !allowed || !Number.isFinite(companyId)) return;
     setErr(null);
@@ -70,6 +88,57 @@ export default function PlatformCompanyDetailPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Phase 2 — fetch the Users tab content the first time it's opened.
+  useEffect(() => {
+    if (tab !== "users" || !token || !company || linkedUsers !== null) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiPlatformUsers(token, { type: "staff", per_page: 100 });
+        if (cancelled) return;
+        const matches = res.data.filter((u) =>
+          u.companies?.some((c) => c.id === company.id),
+        );
+        setLinkedUsers(matches);
+      } catch (e) {
+        if (cancelled) return;
+        setLinkedUsersErr(
+          e instanceof ApiRequestError ? e.message : t("admin.platform_companies.err_users_load"),
+        );
+        setLinkedUsers([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, token, company, linkedUsers, t]);
+
+  // Phase 2 — fetch the Applications history tab content the first time it's opened.
+  useEffect(() => {
+    if (tab !== "applications" || !token || !company || appsHistory !== null) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        // No FK from companies→applications. Best-effort match by company_name.
+        const res = await apiCompanyApplications(token, {});
+        if (cancelled) return;
+        const matches = res.data.filter(
+          (a) => a.company_name.trim().toLowerCase() === company.name.trim().toLowerCase(),
+        );
+        setAppsHistory(matches);
+      } catch (e) {
+        if (cancelled) return;
+        setAppsHistoryErr(
+          e instanceof ApiRequestError ? e.message : t("admin.platform_companies.err_apps_load"),
+        );
+        setAppsHistory([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, token, company, appsHistory, t]);
 
   async function saveGovernance() {
     if (!token || !company) return;
@@ -159,11 +228,21 @@ export default function PlatformCompanyDetailPage() {
 
       {/* Horizontal tab bar (Admin Profile pattern) */}
       <div className="admin-card overflow-hidden">
-        <nav className="flex border-b border-default" role="tablist">
+        <nav className="flex flex-wrap border-b border-default" role="tablist">
           <TabButton
             active={tab === "profile"}
             onClick={() => setTab("profile")}
             label={t("admin.platform_companies.tab_profile")}
+          />
+          <TabButton
+            active={tab === "users"}
+            onClick={() => setTab("users")}
+            label={t("admin.platform_companies.tab_users")}
+          />
+          <TabButton
+            active={tab === "applications"}
+            onClick={() => setTab("applications")}
+            label={t("admin.platform_companies.tab_applications")}
           />
           <TabButton
             active={tab === "permissions"}
@@ -203,6 +282,23 @@ export default function PlatformCompanyDetailPage() {
               onSaveGovernance={() => void saveGovernance()}
               onToggleSeller={() => void toggleSeller()}
               busy={busy}
+            />
+          )}
+
+          {tab === "users" && (
+            <UsersTab
+              companyId={companyId}
+              users={linkedUsers}
+              errMsg={linkedUsersErr}
+              t={t}
+            />
+          )}
+
+          {tab === "applications" && (
+            <ApplicationsTab
+              apps={appsHistory}
+              errMsg={appsHistoryErr}
+              t={t}
             />
           )}
 
@@ -496,6 +592,142 @@ function PlaceholderTab({ text, hint }: { text: string; hint?: string }) {
     <div className="rounded-zulu border border-dashed border-default bg-figma-bg-1 p-6 text-sm text-fg-t6">
       <p className="font-medium text-fg-t7">{text}</p>
       {hint && <p className="mt-1 text-xs">{hint}</p>}
+    </div>
+  );
+}
+
+/**
+ * Users tab — staff users linked to this company. Read-only here; the
+ * full edit/delete flow lives at `/platform/users` (link out from each
+ * row). Showing only staff (operator_admin + agent + staff roles), not
+ * customers — customers don't belong to companies in this model.
+ */
+function UsersTab({
+  companyId: _companyId,
+  users,
+  errMsg,
+  t,
+}: {
+  companyId: number;
+  users: PlatformAdminUserRow[] | null;
+  errMsg: string | null;
+  t: (k: string) => string;
+}) {
+  if (errMsg) {
+    return (
+      <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
+        {errMsg}
+      </div>
+    );
+  }
+  if (users === null) {
+    return <PlaceholderTab text={t("admin.platform_companies.loading")} />;
+  }
+  if (users.length === 0) {
+    return <PlaceholderTab text={t("admin.platform_companies.users_empty")} />;
+  }
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[640px] text-left text-sm">
+        <thead className="border-b border-default bg-figma-bg-1 text-xs font-medium uppercase tracking-wide text-fg-t6">
+          <tr>
+            <th scope="col" className="px-4 py-2">{t("admin.crud.common.id")}</th>
+            <th scope="col" className="px-4 py-2">{t("admin.users.col_name")}</th>
+            <th scope="col" className="px-4 py-2">{t("admin.users.col_email")}</th>
+            <th scope="col" className="px-4 py-2">{t("admin.users.col_role")}</th>
+            <th scope="col" className="px-4 py-2">{t("admin.users.col_status")}</th>
+            <th scope="col" className="px-4 py-2 text-right"> </th>
+          </tr>
+        </thead>
+        <tbody>
+          {users.map((u) => {
+            const role = u.companies.find((c) => c.id === _companyId)?.role ?? "—";
+            return (
+              <tr key={u.id} className="border-b border-default last:border-0">
+                <td className="px-4 py-2 tabular-nums text-fg-t7">{u.id}</td>
+                <td className="px-4 py-2 font-medium text-fg-t8">{u.name}</td>
+                <td className="px-4 py-2 text-fg-t7">{u.email}</td>
+                <td className="px-4 py-2 text-fg-t7 capitalize">{role.replace(/_/g, " ")}</td>
+                <td className="px-4 py-2">
+                  <_StatusPill status={u.status} />
+                </td>
+                <td className="px-4 py-2 text-right">
+                  <Link
+                    href={`/platform/users/${u.id}`}
+                    className="text-xs text-primary underline-offset-2 hover:underline"
+                  >
+                    {t("admin.users.btn_edit")}
+                  </Link>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/**
+ * Applications tab — original submission + any re-submissions. Matched
+ * by company_name since there's no FK from companies to applications
+ * (intentional — application is pre-company-creation).
+ */
+function ApplicationsTab({
+  apps,
+  errMsg,
+  t,
+}: {
+  apps: CompanyApplicationRow[] | null;
+  errMsg: string | null;
+  t: (k: string) => string;
+}) {
+  if (errMsg) {
+    return (
+      <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
+        {errMsg}
+      </div>
+    );
+  }
+  if (apps === null) {
+    return <PlaceholderTab text={t("admin.platform_companies.loading")} />;
+  }
+  if (apps.length === 0) {
+    return <PlaceholderTab text={t("admin.platform_companies.apps_empty")} />;
+  }
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[640px] text-left text-sm">
+        <thead className="border-b border-default bg-figma-bg-1 text-xs font-medium uppercase tracking-wide text-fg-t6">
+          <tr>
+            <th scope="col" className="px-4 py-2">{t("admin.crud.common.id")}</th>
+            <th scope="col" className="px-4 py-2">{t("admin.company_applications.col_email")}</th>
+            <th scope="col" className="px-4 py-2">{t("admin.company_applications.col_status")}</th>
+            <th scope="col" className="px-4 py-2">{t("admin.company_applications.col_submitted")}</th>
+            <th scope="col" className="px-4 py-2 text-right"> </th>
+          </tr>
+        </thead>
+        <tbody>
+          {apps.map((a) => (
+            <tr key={a.id} className="border-b border-default last:border-0">
+              <td className="px-4 py-2 tabular-nums text-fg-t7">A-{a.id}</td>
+              <td className="px-4 py-2 text-fg-t7">{a.business_email}</td>
+              <td className="px-4 py-2">
+                <_StatusPill status={a.status} />
+              </td>
+              <td className="px-4 py-2 text-xs text-fg-t6">{a.submitted_at ?? "—"}</td>
+              <td className="px-4 py-2 text-right">
+                <Link
+                  href={`/platform/company-applications/${a.id}`}
+                  className="text-xs text-primary underline-offset-2 hover:underline"
+                >
+                  {t("admin.company_applications.btn_open")}
+                </Link>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
