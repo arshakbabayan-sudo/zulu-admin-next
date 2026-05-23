@@ -260,11 +260,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/platform/webhooks", labelKey: "admin.nav.tab.webhooks" },
       { href: "/platform/locations", labelKey: "admin.nav.tab.locations", superAdminOnly: true },
       { href: "/platform/audit-logs", labelKey: "admin.nav.tab.audit_logs" },
-      // /platform/api-docs hidden in production (Phase 5.3) — developer-only Swagger UI.
-      // Set NEXT_PUBLIC_SHOW_API_DOCS=true to show, or access directly via URL.
-      ...(process.env.NEXT_PUBLIC_SHOW_API_DOCS === "true"
-        ? [{ href: "/platform/api-docs", labelKey: "admin.nav.tab.api_docs" }]
-        : []),
+      { href: "/platform/api-docs", labelKey: "admin.nav.tab.api_docs" },
       { href: "/platform/settings/brand", labelKey: "admin.nav.tab.brand_settings" },
     ],
     visibility: "super_admin",
