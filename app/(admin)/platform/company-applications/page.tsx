@@ -85,7 +85,6 @@ export default function CompanyApplicationsPage() {
               <th scope="col" className="px-3 py-2">{t("admin.company_applications.col_id")}</th>
               <th scope="col" className="px-3 py-2">{t("admin.company_applications.col_company")}</th>
               <th scope="col" className="px-3 py-2">Role</th>
-              <th scope="col" className="px-3 py-2">Applicant</th>
               <th scope="col" className="px-3 py-2">{t("admin.company_applications.col_email")}</th>
               <th scope="col" className="px-3 py-2">{t("admin.company_applications.col_status")}</th>
               <th scope="col" className="px-3 py-2">{t("admin.company_applications.col_submitted")}</th>
@@ -94,10 +93,9 @@ export default function CompanyApplicationsPage() {
           </thead>
           <tbody>
             {rows.map((r) => {
-              // Prefer the intended_role set at /register (Phase-8 onwards).
-              // Falls back to the application's own company_type when the
-              // user pre-registration link is missing (legacy/anonymous
-              // submissions).
+              // Prefer the intended_role set at /register (Phase-8 onwards);
+              // fall back to the application's own company_type when the
+              // pre-registration user link isn't present.
               const role = r.user?.intended_role ?? r.company_type ?? null;
               const roleLabel = role === "agent" ? "Tour agent" : role === "operator" ? "Tour operator" : "—";
               const roleClass =
@@ -114,18 +112,6 @@ export default function CompanyApplicationsPage() {
                     <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${roleClass}`}>
                       {roleLabel}
                     </span>
-                  </td>
-                  <td className="px-3 py-2 text-xs">
-                    {r.user ? (
-                      <span>
-                        {r.user.name ?? "—"}
-                        {r.user.email && (
-                          <span className="block text-fg-t6">{r.user.email}</span>
-                        )}
-                      </span>
-                    ) : (
-                      <span className="text-fg-t6">— (anonymous)</span>
-                    )}
                   </td>
                   <td className="px-3 py-2">{r.business_email}</td>
                   <td className="px-3 py-2"><StatusPill status={r.status} /></td>
