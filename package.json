@@ -6,6 +6,7 @@
     "dev": "next dev -p 3002",
     "dev:3001": "next dev -p 3001",
     "build": "next build",
+    "analyze": "ANALYZE=true next build",
     "start": "next start",
     "lint": "next lint",
     "test:e2e": "playwright test --config=tests-e2e/playwright.config.ts",
@@ -27,6 +28,7 @@
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^16.2.6",
     "@playwright/test": "^1.59.1",
     "@types/node": "^20",
     "@types/react": "^18",
