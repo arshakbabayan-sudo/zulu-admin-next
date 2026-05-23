@@ -44,7 +44,7 @@ function SsoInner() {
     }
 
     let cancelled = false;
-    (async () => {
+    void (async () => {
       try {
         const res = await apiMe(token);
         const user = res.data;

@@ -107,7 +107,7 @@ export default function PlatformNotificationsPage() {
     setError(null);
     setForbidden(false);
 
-    (async () => {
+    void (async () => {
       try {
         const params = new URLSearchParams();
         params.set("page", String(page));

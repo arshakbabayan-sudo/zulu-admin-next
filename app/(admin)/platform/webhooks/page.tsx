@@ -77,7 +77,7 @@ export default function PlatformWebhooksPage() {
     setError(null);
     setForbidden(false);
 
-    (async () => {
+    void (async () => {
       try {
         const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" };
         const baseURL = process.env.NEXT_PUBLIC_API_URL || "https://api.zulu.am";

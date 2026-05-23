@@ -107,9 +107,9 @@ export default function FinancePage() {
     if (initialCompanyId != null) setCompanyId(initialCompanyId);
   }, [companyId, initialCompanyId]);
 
-  useEffect(() => { if (tab === "summary") loadSummary(); }, [tab, loadSummary]);
-  useEffect(() => { if (tab === "entitlements") loadEntitlements(); }, [tab, loadEntitlements]);
-  useEffect(() => { if (tab === "settlements") loadSettlements(); }, [tab, loadSettlements]);
+  useEffect(() => { if (tab === "summary") void loadSummary(); }, [tab, loadSummary]);
+  useEffect(() => { if (tab === "entitlements") void loadEntitlements(); }, [tab, loadEntitlements]);
+  useEffect(() => { if (tab === "settlements") void loadSettlements(); }, [tab, loadSettlements]);
 
   async function handleMarkPayable() {
     if (!token || selectedEnt.size === 0 || !hasValidCompanyId) return;

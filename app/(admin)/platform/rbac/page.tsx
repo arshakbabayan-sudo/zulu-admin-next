@@ -54,7 +54,7 @@ export default function PlatformRbacPage() {
     setLoading(true);
     setError(null);
 
-    (async () => {
+    void (async () => {
       try {
         const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" };
         const [s, m] = await Promise.all([

@@ -102,7 +102,7 @@ export default function PlatformLoyaltyPage() {
     setError(null);
     setForbidden(false);
 
-    (async () => {
+    void (async () => {
       try {
         const params = new URLSearchParams();
         params.set("page", String(page));

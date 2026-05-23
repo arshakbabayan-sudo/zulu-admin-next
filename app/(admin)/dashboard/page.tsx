@@ -407,7 +407,7 @@ function RecentActivity({ token, allowed }: { token: string | null; allowed: boo
   useEffect(() => {
     if (!allowed || !token) return;
     let cancelled = false;
-    (async () => {
+    void (async () => {
       try {
         const res = await apiFetchJson<{ success: boolean; data: AuditLogRow[] }>(
           "/platform-admin/audit-logs?per_page=5",
@@ -548,7 +548,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!allowed || !token) return;
     let cancelled = false;
-    (async () => {
+    void (async () => {
       try {
         const res = await apiPlatformStats(token);
         if (!cancelled) setStats(res.data);

@@ -94,8 +94,8 @@ export default function CommissionsPage() {
     }
   }, [token, allowed, recordsPage, t]);
 
-  useEffect(() => { if (tab === "policies") loadPolicies(); }, [tab, loadPolicies]);
-  useEffect(() => { if (tab === "records") loadRecords(); }, [tab, loadRecords]);
+  useEffect(() => { if (tab === "policies") void loadPolicies(); }, [tab, loadPolicies]);
+  useEffect(() => { if (tab === "records") void loadRecords(); }, [tab, loadRecords]);
 
   async function handleDeactivate(id: string) {
     if (!token) return;

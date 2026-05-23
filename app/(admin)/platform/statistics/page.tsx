@@ -122,7 +122,7 @@ export default function PlatformStatisticsPage() {
     setError(null);
     setForbidden(false);
 
-    (async () => {
+    void (async () => {
       try {
         const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" };
         const [sRes, rRes, oRes, tRes] = await Promise.all([

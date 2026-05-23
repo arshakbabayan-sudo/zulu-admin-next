@@ -118,7 +118,7 @@ export default function PlatformVouchersPage() {
     setError(null);
     setForbidden(false);
 
-    (async () => {
+    void (async () => {
       try {
         const res = await apiListVouchers(token, {
           page,
