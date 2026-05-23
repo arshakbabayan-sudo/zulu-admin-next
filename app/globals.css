@@ -315,6 +315,79 @@
   --font-caption-12-regular-size: 12px;
   --font-caption-12-regular-line-height: 18px;
   --font-caption-12-regular-weight: 400;
+
+  /* ─────────────────────────────────────────────────────────────────────
+   * Handoff aliases (Phase 1 visual refresh — 2026-05-23)
+   * Map ZuluSpin handoff design-tokens.css names to the canonical
+   * Figma variables already defined above. DRY — no duplicate hex
+   * values. New components may use either naming; legacy callers
+   * keep working unchanged.
+   * ─────────────────────────────────────────────────────────────── */
+
+  /* Primary aliases (handoff uses 600 as canonical brand) */
+  --color-primary: var(--color-primary-600);
+  --color-primary-dark: var(--color-primary-900);
+  --color-primary-light: var(--color-primary-50);
+
+  /* Semantic canonical aliases */
+  --color-success: var(--color-success-900);
+  --color-success-light: var(--color-success-50);
+  --color-warning: var(--color-warning-700);
+  --color-warning-light: var(--color-warning-50);
+  --color-error: var(--color-error-900);
+  --color-error-light: var(--color-error-50);
+  --color-info: var(--color-info-700);
+  --color-info-light: var(--color-info-50);
+  --color-danger: var(--color-error);
+  --color-danger-light: var(--color-error-light);
+
+  /* Text aliases */
+  --color-text-primary: var(--text-t9);
+  --color-text-secondary: var(--text-t6);
+  --color-text-tertiary: #9ca0b0;
+  --color-text-inverse: #ffffff;
+
+  /* Background aliases */
+  --color-bg-primary: var(--bg-2);
+  --color-bg-secondary: var(--bg-1);
+  --color-bg-tertiary: #f4f5f7;
+
+  /* Border aliases — point to existing --border-default so dark-mode picks up the swap automatically */
+  --color-border: var(--border-default);
+  --color-border-hover: var(--text-t4);
+  --color-border-focus: var(--color-primary);
+
+  /* Spacing — 8-point grid (Tailwind utilities already cover most uses,
+     but expose tokens so non-Tailwind code paths stay consistent). */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Radius scale (mockup uses 6/8/12/16/full) */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* Shadow naming aliases (Phase 1 stat-card hover) */
+  --shadow-sm: 0 1px 2px rgba(22, 19, 67, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(22, 19, 67, 0.1), 0 2px 4px -1px rgba(22, 19, 67, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(22, 19, 67, 0.1), 0 4px 6px -2px rgba(22, 19, 67, 0.05);
+
+  /* Layout — sidebar width matches existing AdminShell, header matches mockup */
+  --sidebar-width: 240px;
+  --header-height: 60px;
+
+  /* Font-family alias (Inter — already loaded via next/font in layout.tsx) */
+  --font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 .dark {
@@ -628,6 +701,12 @@ html.dark {
   --bg-1: #0a0614;
   --bg-2: #14102a;
   --border-default: #2c2750;
+
+  /* Handoff alias dark overrides (Phase 1 — only for values that don't
+     inherit through Figma vars above). bg-tertiary becomes a third
+     elevated surface, text-tertiary becomes mid-gray. */
+  --color-bg-tertiary: #1b1638;
+  --color-text-tertiary: #7e7a93;
 }
 
 html.dark body {

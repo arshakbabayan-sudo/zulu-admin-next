@@ -26,7 +26,7 @@ import { apiPlatformStats, type PlatformStats } from "@/lib/platform-admin-api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { formatNumber } from "@/lib/format";
-import { PageHeader } from "@/components/ui";
+import { PageHeader, Table, THead, TBody, TR, TH, TD, Badge, type BadgeTone } from "@/components/ui";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
@@ -49,25 +49,94 @@ function formatValue(n: number | undefined | null, lang: string = "en"): string 
   return formatNumber(n, lang);
 }
 
+/**
+ * Translation helper — returns translated string, or fallback when the key
+ * isn't in the bundle (t() returns the key itself in that case). Used for
+ * Phase 1 visual refresh strings that haven't been seeded into ui_translations
+ * yet so the dashboard renders English headers instead of raw keys.
+ */
+function tx(t: (k: string) => string, key: string, fallback: string): string {
+  const r = t(key);
+  return r === key ? fallback : r;
+}
+
 /* ─── small building blocks ─────────────────────────────────────────── */
 
+/**
+ * HeroStatCard — Phase 1 visual refresh (2026-05-23).
+ *
+ * Two render modes:
+ *   - `tone` set ("primary" | "success" | "warning") → solid colored card
+ *     matching ZuluSpin handoff mockup (white text on full brand fill).
+ *     Used for the 3 hero metrics on the dashboard.
+ *   - `tone` omitted → original white-bg card with soft icon chip. Kept
+ *     for backwards-compat in case any callers add new stat cards later
+ *     without the colored treatment.
+ *
+ * Responsive: padding scales p-5 → p-6 across the `sm:` breakpoint so
+ * mobile (≤600px) gets tighter cards.
+ */
 function HeroStatCard({
   label,
   value,
   icon: Icon,
   trend,
   subRow,
+  tone,
 }: {
   label: string;
   value: string;
   icon: typeof Briefcase;
   trend?: { sign: "up" | "down" | "flat"; pct: string };
   subRow?: { left: { label: string; value: string }; right: { label: string; value: string } };
+  tone?: "primary" | "success" | "warning";
 }) {
+  if (tone) {
+    // ── Solid-colored variant (mockup `.stat-card.purple|green|amber|coral`) ──
+    const bgClass = {
+      primary: "bg-primary-600",
+      success: "bg-success-900",
+      warning: "bg-warning-700",
+    }[tone];
+    return (
+      <div className={`rounded-2xl ${bgClass} p-5 text-white shadow-zulu-card sm:p-6`}>
+        <div className="flex items-start justify-between">
+          <span
+            className="inline-flex size-10 items-center justify-center rounded-lg bg-white/20 text-white"
+            aria-hidden
+          >
+            <Icon className="size-5" />
+          </span>
+          {trend ? (
+            <span className="inline-flex items-center gap-0.5 rounded-md bg-white/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+              <TrendingUp className="size-3" aria-hidden />
+              {trend.pct}
+            </span>
+          ) : null}
+        </div>
+        <div className="mt-4 text-3xl font-semibold tabular-nums sm:text-[28px]">{value}</div>
+        <div className="mt-0.5 text-xs text-white/85">{label}</div>
+        {subRow ? (
+          <div className="mt-5 flex items-center justify-between border-t border-white/20 pt-3 text-xs text-white/85">
+            <div className="flex flex-col">
+              <span className="font-medium text-white">{subRow.left.label}</span>
+              <span className="mt-0.5 tabular-nums text-white/85">{subRow.left.value}</span>
+            </div>
+            <div className="flex flex-col text-right">
+              <span className="font-medium text-white">{subRow.right.label}</span>
+              <span className="mt-0.5 tabular-nums text-white/85">{subRow.right.value}</span>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  // ── Original white-bg variant (no tone — backwards compat) ──
   const trendColor =
     trend?.sign === "up" ? "text-success-700" : trend?.sign === "down" ? "text-error-600" : "text-fg-t6";
   return (
-    <div className="rounded-2xl border border-default bg-white p-6 shadow-zulu-card">
+    <div className="rounded-2xl border border-default bg-white p-5 shadow-zulu-card sm:p-6">
       <div className="flex items-center gap-3 text-sm font-medium text-fg-t6">
         <span
           className="inline-flex size-9 items-center justify-center rounded-lg"
@@ -102,32 +171,54 @@ function HeroStatCard({
   );
 }
 
+/**
+ * WidgetCard — Phase 1 visual refresh (2026-05-23).
+ *
+ * Card chrome now matches the ZuluSpin handoff mockup pattern:
+ *   ┌─────────────────────────────────────────────┐
+ *   │ [icon] Title          subtitle?     action? │  ← header (bg-figma-bg-1, separator below)
+ *   ├─────────────────────────────────────────────┤
+ *   │ body content                                │  ← body (p-5)
+ *   └─────────────────────────────────────────────┘
+ *
+ * Optional props:
+ *   - `subtitle` — small caption under the title
+ *   - `bodyClassName` — override default body padding (set to "p-0" when
+ *     embedding a component that brings its own border, e.g. <Table>).
+ */
 function WidgetCard({
   title,
+  subtitle,
   icon: Icon,
   children,
   action,
+  bodyClassName = "p-5",
 }: {
   title: string;
+  subtitle?: string;
   icon: typeof PieChart;
   children: React.ReactNode;
   action?: React.ReactNode;
+  bodyClassName?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-default bg-white p-6 shadow-zulu-card">
-      <div className="mb-5 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
+    <div className="overflow-hidden rounded-zulu-card border border-default bg-white shadow-zulu-card">
+      <div className="flex items-center justify-between gap-3 border-b border-default bg-figma-bg-1 px-5 py-3.5">
+        <div className="flex min-w-0 items-center gap-2.5">
           <span
-            className="inline-flex size-8 items-center justify-center rounded-lg"
+            className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg"
             style={{ backgroundColor: "var(--admin-primary-soft)", color: "var(--admin-primary)" }}
           >
             <Icon className="size-4" aria-hidden />
           </span>
-          <h3 className="text-sm font-semibold text-fg-t11">{title}</h3>
+          <div className="min-w-0">
+            <h3 className="truncate text-sm font-semibold text-fg-t11">{title}</h3>
+            {subtitle ? <p className="truncate text-[11px] text-fg-t6">{subtitle}</p> : null}
+          </div>
         </div>
-        {action}
+        {action ? <div className="shrink-0">{action}</div> : null}
       </div>
-      {children}
+      <div className={bodyClassName}>{children}</div>
     </div>
   );
 }
@@ -376,27 +467,32 @@ function timeAgo(iso: string): string {
   return `${Math.floor(month / 12)} year${Math.floor(month / 12) > 1 ? "s" : ""} ago`;
 }
 
-/** Per-category accent color for the leading bullet. */
-function categoryColor(cat: string): string {
+/** Map an audit-log category to a Badge tone for the activity table. */
+function categoryTone(cat: string): BadgeTone {
   switch (cat) {
-    case "auth": return "#3B82F6";
-    case "approval": return "var(--admin-primary)";
-    case "financial": return "#10B981";
-    case "data_change": return "#F59E0B";
-    case "security": return "#EF4444";
-    case "admin_actions": return "#A855F7";
-    default: return "#94A3B8";
+    case "auth":
+    case "data_change":
+      return "info";
+    case "approval":
+    case "admin_actions":
+      return "primary";
+    case "financial":
+      return "success";
+    case "security":
+      return "danger";
+    default:
+      return "gray";
   }
 }
 
-/** Compact human-friendly headline for an audit log row. */
-function humanHeadline(row: AuditLogRow): string {
-  const subject = row.subject_type
-    ? `${row.subject_type}${row.subject_id ? ` #${row.subject_id}` : ""}`
-    : row.category;
-  const actor = row.actor_name_snapshot || "system";
-  const action = row.action.replace(/_/g, " ");
-  return `${actor} ${action} ${subject}`;
+/** Initials for the actor avatar — first letter of first two name parts. */
+function actorInitials(name: string | null | undefined): string {
+  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
+  const first = parts[0];
+  if (!first) return "?";
+  if (parts.length === 1) return first.slice(0, 2).toUpperCase();
+  const second = parts[1];
+  return `${first[0] ?? ""}${second?.[0] ?? ""}`.toUpperCase() || first.slice(0, 2).toUpperCase();
 }
 
 function RecentActivity({ token, allowed }: { token: string | null; allowed: boolean }) {
@@ -428,19 +524,47 @@ function RecentActivity({ token, allowed }: { token: string | null; allowed: boo
     };
   }, [token, allowed]);
 
+  // ── Loading skeleton — table rows ──
   if (rows === null && !error) {
     return (
-      <ul className="space-y-4">
-        {[1, 2, 3, 4].map((i) => (
-          <li key={i} className="flex items-start gap-3 border-b border-default pb-3 last:border-b-0 last:pb-0">
-            <span className="mt-1 size-2 shrink-0 animate-pulse rounded-full bg-slate-200" aria-hidden />
-            <div className="min-w-0 flex-1 space-y-1.5">
-              <div className="h-3 w-20 animate-pulse rounded bg-slate-100" aria-hidden />
-              <div className="h-4 w-3/4 animate-pulse rounded bg-slate-100" aria-hidden />
-            </div>
-          </li>
-        ))}
-      </ul>
+      <Table>
+        <THead>
+          <TR>
+            <TH>{tx(t, "admin.dashboard.activity_col_user", "User")}</TH>
+            <TH>{tx(t, "admin.dashboard.activity_col_action", "Action")}</TH>
+            <TH>{tx(t, "admin.dashboard.activity_col_resource", "Resource")}</TH>
+            <TH>{tx(t, "admin.dashboard.activity_col_time", "Time")}</TH>
+            <TH align="right">{tx(t, "admin.dashboard.activity_col_status", "Status")}</TH>
+          </TR>
+        </THead>
+        <TBody>
+          {[1, 2, 3, 4].map((i) => (
+            <TR key={i}>
+              <TD>
+                <div className="flex items-center gap-2.5">
+                  <span className="size-8 shrink-0 animate-pulse rounded-full bg-slate-100" aria-hidden />
+                  <div className="space-y-1.5">
+                    <div className="h-3 w-24 animate-pulse rounded bg-slate-100" aria-hidden />
+                    <div className="h-2.5 w-32 animate-pulse rounded bg-slate-100" aria-hidden />
+                  </div>
+                </div>
+              </TD>
+              <TD>
+                <div className="h-3 w-20 animate-pulse rounded bg-slate-100" aria-hidden />
+              </TD>
+              <TD>
+                <div className="h-3 w-28 animate-pulse rounded bg-slate-100" aria-hidden />
+              </TD>
+              <TD>
+                <div className="h-3 w-16 animate-pulse rounded bg-slate-100" aria-hidden />
+              </TD>
+              <TD align="right">
+                <div className="ml-auto h-4 w-14 animate-pulse rounded bg-slate-100" aria-hidden />
+              </TD>
+            </TR>
+          ))}
+        </TBody>
+      </Table>
     );
   }
 
@@ -465,27 +589,53 @@ function RecentActivity({ token, allowed }: { token: string | null; allowed: boo
   }
 
   return (
-    <ul className="space-y-4">
-      {rows!.map((row) => (
-        <li
-          key={row.id}
-          className="flex items-start gap-3 border-b border-default pb-3 last:border-b-0 last:pb-0"
-        >
-          <span
-            className="mt-1.5 size-2 shrink-0 rounded-full"
-            style={{ backgroundColor: categoryColor(row.category) }}
-            aria-hidden
-          />
-          <div className="min-w-0 flex-1">
-            <p className="text-xs uppercase tracking-wide text-fg-t6">{timeAgo(row.created_at)}</p>
-            <p className="mt-0.5 truncate text-sm font-medium text-fg-t11">
-              {humanHeadline(row)}
-            </p>
-            <p className="mt-0.5 text-xs text-fg-t6 capitalize">{row.category.replace(/_/g, " ")}</p>
-          </div>
-        </li>
-      ))}
-    </ul>
+    <Table>
+      <THead>
+        <TR>
+          <TH>{tx(t, "admin.dashboard.activity_col_user", "User")}</TH>
+          <TH>{tx(t, "admin.dashboard.activity_col_action", "Action")}</TH>
+          <TH>{tx(t, "admin.dashboard.activity_col_resource", "Resource")}</TH>
+          <TH>{tx(t, "admin.dashboard.activity_col_time", "Time")}</TH>
+          <TH align="right">{tx(t, "admin.dashboard.activity_col_status", "Status")}</TH>
+        </TR>
+      </THead>
+      <TBody>
+        {rows!.map((row) => {
+          const tone = categoryTone(row.category);
+          const subject = row.subject_type
+            ? `${row.subject_type}${row.subject_id ? ` #${row.subject_id}` : ""}`
+            : "—";
+          return (
+            <TR key={row.id}>
+              <TD>
+                <div className="flex items-center gap-2.5">
+                  <span
+                    className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-50 text-[11px] font-semibold text-primary-900"
+                    aria-hidden
+                  >
+                    {actorInitials(row.actor_name_snapshot)}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-fg-t11">
+                      {row.actor_name_snapshot || "system"}
+                    </p>
+                    <p className="truncate text-xs capitalize text-fg-t6">
+                      {row.category.replace(/_/g, " ")}
+                    </p>
+                  </div>
+                </div>
+              </TD>
+              <TD className="text-fg-t7">{row.action.replace(/_/g, " ")}</TD>
+              <TD className="text-fg-t7">{subject}</TD>
+              <TD className="text-fg-t6">{timeAgo(row.created_at)}</TD>
+              <TD align="right">
+                <Badge tone={tone}>{row.category.replace(/_/g, " ")}</Badge>
+              </TD>
+            </TR>
+          );
+        })}
+      </TBody>
+    </Table>
   );
 }
 
@@ -610,9 +760,9 @@ export default function DashboardPage() {
     return (
       <div className="space-y-6">
         <PageHeader title={greeting} subtitle={t("admin.dashboard.loading_stats")} />
-        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="rounded-2xl border border-default bg-white p-6">
+            <div key={i} className="rounded-2xl border border-default bg-white p-5 sm:p-6">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-9 animate-pulse rounded-lg bg-slate-100" />
                 <div className="h-4 w-32 animate-pulse rounded bg-slate-100" />
@@ -629,9 +779,11 @@ export default function DashboardPage() {
     <div className="space-y-5">
       <PageHeader title={greeting} subtitle={t("admin.dashboard.platform_overview")} />
 
-      {/* Row 1 — three hero stat cards */}
-      <div className="grid gap-5 lg:grid-cols-3">
+      {/* Row 1 — three hero stat cards (Phase 1 visual refresh: solid colors per mockup).
+          Grid: 1 col on mobile (default), 2 cols on tablet (sm: 600px+), 3 cols on desktop (lg: 1280px+). */}
+      <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
         <HeroStatCard
+          tone="primary"
           label={t("admin.dashboard.total_bookings")}
           value={formatValue((stats.bookings_total ?? 0) + (stats.package_orders_total ?? 0), lang)}
           icon={Briefcase}
@@ -641,6 +793,7 @@ export default function DashboardPage() {
           }}
         />
         <HeroStatCard
+          tone="success"
           label={t("admin.dashboard.total_operators")}
           value={formatValue(stats.companies_total, lang)}
           icon={Building2}
@@ -650,6 +803,7 @@ export default function DashboardPage() {
           }}
         />
         <HeroStatCard
+          tone="warning"
           label={t("admin.dashboard.daily_revenue")}
           value="$0"
           icon={DollarSign}
@@ -660,8 +814,8 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Row 2 — three widgets */}
-      <div className="grid gap-5 lg:grid-cols-3">
+      {/* Row 2 — three widgets. Mobile 1col → tablet 2col → desktop 3col. */}
+      <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
         <WidgetCard title={t("admin.dashboard.booking_overview")} icon={Layers}>
           <BookingOverview stats={stats} />
         </WidgetCard>
@@ -673,8 +827,9 @@ export default function DashboardPage() {
         </WidgetCard>
       </div>
 
-      {/* Row 3 — order summary + recent activity */}
-      <div className="grid gap-5 lg:grid-cols-3">
+      {/* Row 3 — order summary (1col) + recent activity (2col on desktop).
+          On tablet, donut sits beside activity (1+1 split). On mobile, stacked. */}
+      <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
         <WidgetCard title={t("admin.dashboard.order_summary")} icon={PieChart}>
           <OrderSummaryDonut stats={stats} />
         </WidgetCard>
@@ -682,12 +837,14 @@ export default function DashboardPage() {
           <WidgetCard
             title={t("admin.dashboard.recent_activity")}
             icon={Activity}
+            bodyClassName="p-0"
             action={
               <Link
                 href="/platform/audit-logs"
-                className="text-xs font-medium text-primary-500 hover:text-primary-700"
+                className="inline-flex items-center gap-0.5 text-xs font-medium text-primary-600 hover:text-primary-800"
               >
                 {t("admin.dashboard.view_all")}
+                <ArrowRight className="size-3" aria-hidden />
               </Link>
             }
           >
@@ -696,8 +853,9 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Row 4 — top operators + active offers */}
-      <div className="grid gap-5 lg:grid-cols-3">
+      {/* Row 4 — top operators (2col on desktop) + active offers (1col).
+          Tablet shows 1+1; mobile stacks. */}
+      <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <WidgetCard
             title={t("admin.dashboard.top_operators_by_revenue")}
