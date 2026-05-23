@@ -549,7 +549,26 @@ html.dark input[type="radio"] {
   .admin-content input,
   .admin-content select,
   .admin-content textarea {
-    @apply rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none ring-0 transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-100;
+    @apply rounded-lg border border-slate-300 bg-white text-sm text-slate-700 outline-none ring-0 transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-100;
+  }
+
+  /*
+   * Default padding for form controls — only applied when the element
+   * doesn't carry an explicit padding utility (pl-*, pr-*, px-*, py-*).
+   * Search inputs with leading icons set their own pl-9 / pl-10; the
+   * old blanket `px-3 py-2` was overriding those, causing the icon to
+   * sit on top of the placeholder text (caught 2026-05-23).
+   */
+  .admin-content input:not([class*="pl-"]):not([class*="pr-"]):not([class*="px-"]),
+  .admin-content select:not([class*="pl-"]):not([class*="pr-"]):not([class*="px-"]),
+  .admin-content textarea:not([class*="pl-"]):not([class*="pr-"]):not([class*="px-"]) {
+    @apply px-3;
+  }
+
+  .admin-content input:not([class*="pt-"]):not([class*="pb-"]):not([class*="py-"]),
+  .admin-content select:not([class*="pt-"]):not([class*="pb-"]):not([class*="py-"]),
+  .admin-content textarea:not([class*="pt-"]):not([class*="pb-"]):not([class*="py-"]) {
+    @apply py-2;
   }
 
   .admin-content button {
