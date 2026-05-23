@@ -76,8 +76,12 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     icon: "/icons/menu/company.svg",
     defaultHref: "/platform/companies",
     tabs: [
+      // Phase 3 consolidation (2026-05-23) — Applications hidden from sidebar:
+      // pending applications now surface on /platform/companies inline (Phase 1),
+      // and approved/rejected history lives on the Company detail page
+      // Applications tab (Phase 2). The route /platform/company-applications
+      // is preserved for direct linking + the legacy entry point.
       { href: "/platform/companies", labelKey: "admin.nav.tab.active_companies" },
-      { href: "/platform/company-applications", labelKey: "admin.nav.tab.applications" },
       { href: "/platform/seller-applications", labelKey: "admin.nav.tab.seller_applications" },
       { href: "/platform/users", labelKey: "admin.nav.tab.users" },
       { href: "/platform/contracts", labelKey: "admin.nav.tab.contracts", moduleKey: "ops.contracts" },
