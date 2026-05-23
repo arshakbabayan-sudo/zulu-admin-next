@@ -467,21 +467,6 @@ function timeAgo(iso: string): string {
   return `${Math.floor(month / 12)} year${Math.floor(month / 12) > 1 ? "s" : ""} ago`;
 }
 
-/** Per-category accent color for the leading bullet (legacy — kept for any
- *  callers that still want a raw hex). New code should prefer
- *  {@link categoryTone} which maps to a Badge tone. */
-function categoryColor(cat: string): string {
-  switch (cat) {
-    case "auth": return "#3B82F6";
-    case "approval": return "var(--admin-primary)";
-    case "financial": return "#10B981";
-    case "data_change": return "#F59E0B";
-    case "security": return "#EF4444";
-    case "admin_actions": return "#A855F7";
-    default: return "#94A3B8";
-  }
-}
-
 /** Map an audit-log category to a Badge tone for the activity table. */
 function categoryTone(cat: string): BadgeTone {
   switch (cat) {
@@ -508,16 +493,6 @@ function actorInitials(name: string | null | undefined): string {
   if (parts.length === 1) return first.slice(0, 2).toUpperCase();
   const second = parts[1];
   return `${first[0] ?? ""}${second?.[0] ?? ""}`.toUpperCase() || first.slice(0, 2).toUpperCase();
-}
-
-/** Compact human-friendly headline for an audit log row. */
-function humanHeadline(row: AuditLogRow): string {
-  const subject = row.subject_type
-    ? `${row.subject_type}${row.subject_id ? ` #${row.subject_id}` : ""}`
-    : row.category;
-  const actor = row.actor_name_snapshot || "system";
-  const action = row.action.replace(/_/g, " ");
-  return `${actor} ${action} ${subject}`;
 }
 
 function RecentActivity({ token, allowed }: { token: string | null; allowed: boolean }) {
