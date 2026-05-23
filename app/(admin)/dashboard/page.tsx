@@ -592,11 +592,11 @@ function RecentActivity({ token, allowed }: { token: string | null; allowed: boo
     <Table>
       <THead>
         <TR>
-          <TH>{t("admin.dashboard.activity_col_user")}</TH>
-          <TH>{t("admin.dashboard.activity_col_action")}</TH>
-          <TH>{t("admin.dashboard.activity_col_resource")}</TH>
-          <TH>{t("admin.dashboard.activity_col_time")}</TH>
-          <TH align="right">{t("admin.dashboard.activity_col_status")}</TH>
+          <TH>{tx(t, "admin.dashboard.activity_col_user", "User")}</TH>
+          <TH>{tx(t, "admin.dashboard.activity_col_action", "Action")}</TH>
+          <TH>{tx(t, "admin.dashboard.activity_col_resource", "Resource")}</TH>
+          <TH>{tx(t, "admin.dashboard.activity_col_time", "Time")}</TH>
+          <TH align="right">{tx(t, "admin.dashboard.activity_col_status", "Status")}</TH>
         </TR>
       </THead>
       <TBody>
