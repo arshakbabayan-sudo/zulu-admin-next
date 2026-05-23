@@ -1,0 +1,37 @@
+name: Lint + Type-check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# K1 safeguard: GitHub Actions catches lint/type errors before Vercel
+# auto-deploys. Belt and suspenders alongside next.config.mjs's
+# eslint.ignoreDuringBuilds:false + typescript.ignoreBuildErrors:false.
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: TypeScript
+        run: npx tsc --noEmit
