@@ -20,5 +20,6 @@ export { Tabs, type TabItem, type TabsProps } from "./Tabs";
 export { Pagination, type PaginationProps } from "./Pagination";
 export { PageHeader, type PageHeaderProps } from "./PageHeader";
 export { StatusPill } from "./StatusPill";
+export { Badge, StatusDot, type BadgeTone, type BadgeProps } from "./Badge";
 export { ActiveFiltersChips, type FilterChip } from "./ActiveFiltersChips";
 export { Drawer, DrawerSection, type DrawerProps } from "./Drawer";
