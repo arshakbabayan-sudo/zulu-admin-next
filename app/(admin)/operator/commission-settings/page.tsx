@@ -67,7 +67,7 @@ function configToDraft(c: CommissionConfig | null): DraftRow {
 
 export default function OperatorCommissionSettingsPage() {
   const { token, user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const confirm = useConfirm();
   const allowed = canAccessOperatorToolsNav(user);
   const [data, setData] = useState<CommissionSettingsResponse | null>(null);
@@ -122,7 +122,7 @@ export default function OperatorCommissionSettingsPage() {
     setErr(null);
     try {
       await apiUpsertCommissionDefault(token, parseDraft(defaultDraft));
-      setSavedAt(new Date().toLocaleTimeString());
+      setSavedAt(new Date().toLocaleTimeString(lang));
       await load();
     } catch (e) {
       setErr(e instanceof ApiRequestError ? e.message : t("admin.commission.err_save"));
@@ -142,7 +142,7 @@ export default function OperatorCommissionSettingsPage() {
     setErr(null);
     try {
       await apiUpsertCommissionOverride(token, id, parseDraft(overrideDraft));
-      setSavedAt(new Date().toLocaleTimeString());
+      setSavedAt(new Date().toLocaleTimeString(lang));
       setOverrideAgentId("");
       setOverrideDraft(configToDraft(null));
       await load();
@@ -161,7 +161,7 @@ export default function OperatorCommissionSettingsPage() {
     setErr(null);
     try {
       await apiDeleteCommissionOverride(token, agentCompanyId);
-      setSavedAt(new Date().toLocaleTimeString());
+      setSavedAt(new Date().toLocaleTimeString(lang));
       await load();
     } catch (e) {
       setErr(e instanceof ApiRequestError ? e.message : t("admin.commission.err_remove"));

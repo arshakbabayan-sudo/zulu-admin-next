@@ -10,6 +10,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessSuperAdminOnlyPlatformNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import {
@@ -40,6 +41,7 @@ export default function CompanyModulePermissionsPage() {
   const params = useParams();
   const companyId = Number(params.id);
   const { token, user } = useAdminAuth();
+  const { lang } = useLanguage();
   const allowed = canAccessSuperAdminOnlyPlatformNav(user);
   const [data, setData] = useState<CompanyModulePermissionsResponse | null>(null);
   // Local edit state — map of module_key → is_allowed.
@@ -110,11 +112,11 @@ export default function CompanyModulePermissionsPage() {
       if (payload.length === 0) {
         // Edge case: no explicit rows to persist.
         await load();
-        setSavedAt(new Date().toLocaleTimeString());
+        setSavedAt(new Date().toLocaleTimeString(lang));
         return;
       }
       await apiPatchCompanyModulePermissions(token, companyId, payload);
-      setSavedAt(new Date().toLocaleTimeString());
+      setSavedAt(new Date().toLocaleTimeString(lang));
       await load();
     } catch (e) {
       setErr(e instanceof ApiRequestError ? e.message : "Save failed");

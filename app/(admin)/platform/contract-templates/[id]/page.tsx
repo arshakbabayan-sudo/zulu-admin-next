@@ -29,7 +29,7 @@ export default function AdminContractTemplateDetailPage() {
   const params = useParams();
   const id = String(params.id);
   const { token, user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [tpl, setTpl] = useState<ContractTemplateDetail | null>(null);
   const [form, setForm] = useState<{
@@ -95,7 +95,7 @@ export default function AdminContractTemplateDetailPage() {
         body_template: form.body_template,
         default_variables: defaults,
       });
-      setSavedAt(new Date().toLocaleTimeString());
+      setSavedAt(new Date().toLocaleTimeString(lang));
       await load();
     } catch (e) {
       setErr(e instanceof ApiRequestError ? e.message : t("admin.commission.err_save"));

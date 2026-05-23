@@ -95,7 +95,7 @@ export default function Bucket3PinSettingsPage() {
         token,
         body,
       });
-      setSavedAt(new Date().toLocaleTimeString());
+      setSavedAt(new Date().toLocaleTimeString(lang));
       setPassword("");
       setCurrentPin("");
       setNewPin("");
@@ -149,7 +149,7 @@ export default function Bucket3PinSettingsPage() {
         body: { password: clearPassword },
       });
       setClearPassword("");
-      setSavedAt(new Date().toLocaleTimeString());
+      setSavedAt(new Date().toLocaleTimeString(lang));
       await load();
     } catch (e) {
       setErr(e instanceof ApiRequestError ? e.message : "Failed to clear PIN");
