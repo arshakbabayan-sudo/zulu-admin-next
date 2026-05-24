@@ -17,7 +17,6 @@ import {
 
   Pagination,
   Select,
-  StatusPill,
   Table,
   TBody,
   TD,
@@ -33,7 +32,9 @@ import {
   FilterField,
   V2Card,
   V2Button,
+  IconButton,
 } from "@/components/ui/v2";
+import { Download, Languages } from "lucide-react";
 
 const STATUSES = ["", "draft", "published", "archived"];
 
@@ -112,6 +113,11 @@ export default function OperatorOffersPage() {
             <ContentLanguagePill />
           </span>
         }
+        actions={
+          <V2Button variant="default" size="sm" icon={<Download className="h-4 w-4" />}>
+            Export
+          </V2Button>
+        }
       />
 
       <SectionTabs
@@ -162,32 +168,79 @@ export default function OperatorOffersPage() {
         </THead>
         <TBody>
           {rows.length === 0 ? <TEmpty colSpan={7}>{t("admin.crud.offers.empty")}</TEmpty> : null}
-          {rows.map((r) => (
+          {rows.map((r) => {
+            const tone = pickAvatarTone(r.id);
+            const initials = getInitials(r.title ?? "?");
+            return (
             <TR key={r.id}>
-              <TD className="tabular-nums">{r.id}</TD>
-              <TD className="font-medium max-w-[200px] truncate">{r.title}</TD>
-              <TD className="text-xs">{r.type}</TD>
-              <TD className="tabular-nums">
+              <TD className="tabular-nums font-mono text-xs text-fg-t7">#{r.id}</TD>
+              <TD>
+                <div className="flex items-center gap-3">
+                  <span
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[11px] font-semibold"
+                    style={avatarStyle(tone)}
+                    aria-hidden
+                  >
+                    {initials || "?"}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="font-medium text-fg-t8 truncate">{r.title ?? "—"}</div>
+                    {r.company?.name ? (
+                      <div className="text-[11px] text-fg-t6 truncate">{r.company.name}</div>
+                    ) : null}
+                  </div>
+                </div>
+              </TD>
+              <TD>
+                <span
+                  className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                  style={{ backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }}
+                >
+                  {r.type ?? "—"}
+                </span>
+              </TD>
+              <TD className="tabular-nums text-xs">
                 {r.price != null ? `${r.currency ?? ""} ${Number(r.price).toFixed(2)}` : "—"}
               </TD>
-              <TD><StatusPill status={r.status} /></TD>
-              <TD className="text-xs">{r.company?.name ?? r.company_id ?? "—"}</TD>
               <TD>
-                <div className="flex flex-col gap-1">
+                <span
+                  className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                  style={statusBadgeStyle(r.status ?? "")}
+                >
+                  {r.status ?? "—"}
+                </span>
+              </TD>
+              <TD className="text-xs text-fg-t6">{r.company?.name ?? r.company_id ?? "—"}</TD>
+              <TD align="right">
+                <div className="flex justify-end items-center gap-1">
                   {r.status === "draft" && (
-                    <button type="button" disabled={busyId === r.id} onClick={() => void handlePublish(r.id)}
-                      className="text-left text-xs text-success-700 underline disabled:opacity-40">{t("admin.crud.common.publish")}</button>
+                    <V2Button
+                      size="sm"
+                      variant="default"
+                      disabled={busyId === r.id}
+                      onClick={() => void handlePublish(r.id)}
+                    >
+                      {t("admin.crud.common.publish")}
+                    </V2Button>
                   )}
                   {r.status === "published" && (
-                    <button type="button" disabled={busyId === r.id} onClick={() => void handleArchive(r.id)}
-                      className="text-left text-xs text-warning-700 underline disabled:opacity-40">{t("admin.crud.common.archive")}</button>
+                    <V2Button
+                      size="sm"
+                      variant="default"
+                      disabled={busyId === r.id}
+                      onClick={() => void handleArchive(r.id)}
+                    >
+                      {t("admin.crud.common.archive")}
+                    </V2Button>
                   )}
-                  <button type="button" onClick={() => setTranslateRow(r)}
-                    className="text-left text-xs text-info-700 underline">Translations</button>
+                  <IconButton onClick={() => setTranslateRow(r)} aria-label="Translations">
+                    <Languages className="h-4 w-4" />
+                  </IconButton>
                 </div>
               </TD>
             </TR>
-          ))}
+            );
+          })}
         </TBody>
       </Table>
       </V2Card>
@@ -210,4 +263,42 @@ export default function OperatorOffersPage() {
       />
     </div>
   );
+}
+
+// v2 admin-redesign helpers — avatar tone, status badge, initials.
+function getInitials(name: string): string {
+  return (name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+}
+
+function pickAvatarTone(id: number | string): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  const n = typeof id === "number" ? id : id.length;
+  return tones[n % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
+}
+
+function statusBadgeStyle(status: string): React.CSSProperties {
+  switch (status) {
+    case "published":
+    case "active":
+      return { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" };
+    case "draft":
+    case "pending":
+      return { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" };
+    case "archived":
+    case "expired":
+    case "rejected":
+      return { backgroundColor: "var(--admin-danger-light)", color: "var(--admin-danger-dark)" };
+    default:
+      return { backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" };
+  }
 }

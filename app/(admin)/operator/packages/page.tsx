@@ -46,7 +46,9 @@ import {
   FilterField,
   V2Card,
   V2Button,
+  IconButton,
 } from "@/components/ui/v2";
+import { Download, Plus, Edit3, Trash2, Power } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -240,9 +242,14 @@ export default function OperatorPackagesPage() {
           </span>
         }
         actions={
-          <V2Button variant="primary" size="sm" onClick={openCreate}>
-            + {t("admin.crud.packages.new_btn")}
-          </V2Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <V2Button variant="default" size="sm" icon={<Download className="h-4 w-4" />}>
+              Export
+            </V2Button>
+            <V2Button variant="primary" size="sm" icon={<Plus className="h-4 w-4" />} onClick={openCreate}>
+              {t("admin.crud.packages.new_btn")}
+            </V2Button>
+          </div>
         }
       />
 
@@ -546,66 +553,89 @@ export default function OperatorPackagesPage() {
           {rows.length === 0 ? (
             <TEmpty colSpan={8}>{t("admin.crud.packages.empty")}</TEmpty>
           ) : null}
-          {rows.map((r) => (
+          {rows.map((r) => {
+            const tone = pickAvatarTone(r.id);
+            const initials = getInitials(r.package_title ?? "?");
+            const destination = [r.destination_city, r.destination_country].filter(Boolean).join(", ");
+            return (
             <TR key={r.id}>
-              <TD className="tabular-nums text-fg-t7">{r.id}</TD>
-              <TD className="font-medium max-w-[180px] truncate">
-                {r.package_title ?? "-"}
+              <TD className="tabular-nums font-mono text-xs text-fg-t7">#{r.id}</TD>
+              <TD>
+                <div className="flex items-center gap-3">
+                  <span
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[11px] font-semibold"
+                    style={avatarStyle(tone)}
+                    aria-hidden
+                  >
+                    {initials || "?"}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="font-medium text-fg-t8 truncate max-w-[180px]">{r.package_title ?? "—"}</div>
+                    {destination ? (
+                      <div className="text-[11px] text-fg-t6 truncate max-w-[180px]">{destination}</div>
+                    ) : null}
+                  </div>
+                </div>
               </TD>
-              <TD className="text-xs">{r.package_type ?? "-"}</TD>
-              <TD className="text-xs">
-                {[r.destination_city, r.destination_country].filter(Boolean).join(", ") ||
-                  "-"}
+              <TD>
+                <span
+                  className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                  style={{ backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }}
+                >
+                  {r.package_type ?? "—"}
+                </span>
               </TD>
-              <TD className="tabular-nums">{r.duration_days ?? "-"}</TD>
+              <TD>
+                {r.destination_country ? (
+                  <span
+                    className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                    style={{ backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }}
+                  >
+                    {r.destination_country}
+                  </span>
+                ) : (
+                  <span className="text-xs text-fg-t6">—</span>
+                )}
+              </TD>
+              <TD className="tabular-nums text-xs">{r.duration_days ?? "—"}</TD>
               <TD>
                 <OfferStatusBadge status={r.offer?.status ?? null} />
               </TD>
-              <TD className="text-xs">{r.company?.name ?? r.company_id ?? "-"}</TD>
-              <TD>
-                <div className="flex flex-col gap-1">
-                  <button
-                    type="button"
-                    onClick={() => openEdit(r)}
-                    className="text-left text-xs text-info-700 hover:underline"
-                  >
-                    {t("admin.crud.common.edit")}
-                  </button>
+              <TD className="text-xs text-fg-t6">{r.company?.name ?? r.company_id ?? "—"}</TD>
+              <TD align="right">
+                <div className="flex justify-end items-center gap-1">
                   {r.offer?.id && isSubmittableStatus(r.offer.status) && (
-                    <Button
+                    <V2Button
                       size="sm"
                       variant="primary"
                       disabled={busyId === r.offer.id}
                       onClick={() => void handleSubmitForReview(r.offer!.id!)}
-                      className="self-start"
                     >
                       Submit for review
-                    </Button>
+                    </V2Button>
                   )}
-                  <button
-                    type="button"
-                    disabled={busyId === r.id}
+                  <IconButton
                     onClick={() => void handleToggle(r)}
-                    className={`text-left text-xs hover:underline disabled:opacity-40 ${
-                      r.status === "active" ? "text-warning-600" : "text-success-700"
-                    }`}
-                  >
-                    {r.status === "active"
-                      ? t("admin.crud.common.deactivate")
-                      : t("admin.crud.common.activate")}
-                  </button>
-                  <button
-                    type="button"
                     disabled={busyId === r.id}
-                    onClick={() => void handleDelete(r.id)}
-                    className="text-left text-xs text-error-600 hover:underline disabled:opacity-40"
+                    aria-label={r.status === "active" ? t("admin.crud.common.deactivate") : t("admin.crud.common.activate")}
                   >
-                    {t("admin.crud.common.delete")}
-                  </button>
+                    <Power className="h-4 w-4" />
+                  </IconButton>
+                  <IconButton onClick={() => openEdit(r)} aria-label={t("admin.crud.common.edit")}>
+                    <Edit3 className="h-4 w-4" />
+                  </IconButton>
+                  <IconButton
+                    onClick={() => void handleDelete(r.id)}
+                    disabled={busyId === r.id}
+                    aria-label={t("admin.crud.common.delete")}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </IconButton>
                 </div>
               </TD>
             </TR>
-          ))}
+            );
+          })}
         </TBody>
       </Table>
       </V2Card>
@@ -613,4 +643,25 @@ export default function OperatorPackagesPage() {
       {meta && <PaginationBar meta={meta} onPage={setPage} />}
     </div>
   );
+}
+
+// v2 admin-redesign helpers — avatar tone, initials.
+function getInitials(name: string): string {
+  return (name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+}
+
+function pickAvatarTone(id: number | string): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  const n = typeof id === "number" ? id : id.length;
+  return tones[n % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
 }

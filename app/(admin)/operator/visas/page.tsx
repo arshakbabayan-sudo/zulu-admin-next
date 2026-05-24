@@ -28,7 +28,9 @@ import {
   SectionTabs,
   V2Card,
   V2Button,
+  IconButton,
 } from "@/components/ui/v2";
+import { Edit3, Trash2 } from "lucide-react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { canAccessOperatorToolsNav, userHasSellerServiceType } from "@/lib/access";
@@ -854,62 +856,106 @@ export default function OperatorVisasPage() {
           {rows.length === 0 ? (
             <TEmpty colSpan={8}>{t("admin.crud.visas.empty")}</TEmpty>
           ) : null}
-          {rows.map((r) => (
+          {rows.map((r) => {
+            const tone = pickAvatarTone(r.id);
+            const country = (r.country ?? "").trim();
+            const initials = getInitials(country || "?");
+            return (
             <TR key={r.id}>
-              <TD className="tabular-nums text-fg-t7">{r.id}</TD>
-              <TD className="font-medium text-fg-t11">
-                {(r.country ?? "").trim() ? r.country : "—"}
+              <TD className="tabular-nums font-mono text-xs text-fg-t7">#{r.id}</TD>
+              <TD>
+                <div className="flex items-center gap-3">
+                  <span
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[11px] font-semibold"
+                    style={avatarStyle(tone)}
+                    aria-hidden
+                  >
+                    {initials || "?"}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="font-medium text-fg-t8 truncate">{country || "—"}</div>
+                    {(r.visa_type ?? "").trim() ? (
+                      <div className="text-[11px] text-fg-t6 truncate">{r.visa_type}</div>
+                    ) : null}
+                  </div>
+                </div>
               </TD>
-              <TD className="text-fg-t7">{(r.visa_type ?? "").trim() ? r.visa_type : "—"}</TD>
+              <TD>
+                <span
+                  className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                  style={{ backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }}
+                >
+                  {(r.visa_type ?? "").trim() ? r.visa_type : "—"}
+                </span>
+              </TD>
               <TD className="tabular-nums font-medium text-fg-t11">
                 {visaMoneyCell(r.visa_price != null ? r.visa_price : r.price ?? null, r.currency)}
               </TD>
               <TD className="tabular-nums text-sm text-fg-t6">
                 {visaMoneyCell(r.offer_price ?? null, r.currency)}
               </TD>
-              <TD className="text-fg-t7">
+              <TD className="text-xs text-fg-t6">
                 {r.processing_days != null ? `${r.processing_days} days` : "—"}
               </TD>
               <TD>
                 <OfferStatusBadge status={r.status ?? null} />
               </TD>
-              <TD>
-                <div className="flex flex-col gap-1">
-                  <button
-                    type="button"
-                    onClick={() => void openEdit(r)}
-                    disabled={busy}
-                    className="text-left text-xs text-info-700 hover:underline disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    {t("admin.crud.common.edit")}
-                  </button>
+              <TD align="right">
+                <div className="flex justify-end items-center gap-1">
                   {r.offer_id && isSubmittableStatus(r.status) && (
-                    <Button
+                    <V2Button
                       size="sm"
                       variant="primary"
                       disabled={busy}
                       onClick={() => void handleSubmitForReview(r.offer_id!)}
-                      className="self-start"
                     >
                       Submit for review
-                    </Button>
+                    </V2Button>
                   )}
-                  <button
-                    type="button"
+                  <IconButton
+                    onClick={() => void openEdit(r)}
+                    disabled={busy}
+                    aria-label={t("admin.crud.common.edit")}
+                  >
+                    <Edit3 className="h-4 w-4" />
+                  </IconButton>
+                  <IconButton
                     onClick={() => void handleDelete(r.id)}
                     disabled={busy}
-                    className="text-left text-xs text-error-600 hover:underline disabled:cursor-not-allowed disabled:opacity-40"
+                    aria-label={t("admin.crud.common.delete")}
                   >
-                    {t("admin.crud.common.delete")}
-                  </button>
+                    <Trash2 className="h-4 w-4" />
+                  </IconButton>
                 </div>
               </TD>
             </TR>
-          ))}
+            );
+          })}
         </TBody>
       </Table>
       </V2Card>
       {meta && <PaginationBar meta={meta} onPage={setPage} />}
     </div>
   );
+}
+
+// v2 admin-redesign helpers — avatar tone, initials.
+function getInitials(name: string): string {
+  return (name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+}
+
+function pickAvatarTone(id: number | string): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  const n = typeof id === "number" ? id : id.length;
+  return tones[n % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
 }
