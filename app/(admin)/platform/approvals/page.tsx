@@ -197,39 +197,62 @@ export default function GenericApprovalsPage() {
             <TH>{t("admin.approvals.col_priority")}</TH>
             <TH>{t("admin.approvals.col_requested_by")}</TH>
             <TH>{t("admin.approvals.col_created")}</TH>
-            <TH>{t("admin.approvals.col_actions")}</TH>
+            <TH align="right">{t("admin.approvals.col_actions")}</TH>
           </TR>
         </THead>
         <TBody>
           {rows.length === 0 ? <TEmpty colSpan={7}>{t("admin.approvals.empty") || "No approvals."}</TEmpty> : null}
           {rows.map((r) => (
             <TR key={r.id}>
-              <TD className="tabular-nums">{r.id}</TD>
+              <TD className="tabular-nums font-mono text-xs text-fg-t7">#{r.id}</TD>
               <TD>
-                <span className="font-mono text-xs">{r.entity_type}</span> #{r.entity_id}
+                <span className="font-mono text-xs">{r.entity_type}</span>
+                <span className="ml-1 font-mono text-xs text-fg-t6">#{r.entity_id}</span>
               </TD>
-              <TD><StatusPill status={r.status} /></TD>
-              <TD>{r.priority ?? "—"}</TD>
+              <TD>
+                <span
+                  className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                  style={statusBadgeStyle(r.status)}
+                >
+                  {r.status}
+                </span>
+              </TD>
+              <TD>
+                {r.priority ? (
+                  <span
+                    className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                    style={priorityBadgeStyle(r.priority)}
+                  >
+                    {r.priority}
+                  </span>
+                ) : (
+                  <span className="text-fg-t6">—</span>
+                )}
+              </TD>
               <TD className="text-xs">
                 {r.requested_by ? (
-                  <>
-                    {r.requested_by.name}
-                    <br />
-                    <span className="text-fg-t6">{r.requested_by.email}</span>
-                  </>
+                  <div>
+                    <div className="font-medium text-fg-t8">{r.requested_by.name}</div>
+                    <div className="text-[11px] text-fg-t6">{r.requested_by.email}</div>
+                  </div>
                 ) : (
                   "—"
                 )}
               </TD>
-              <TD className="text-xs text-fg-t6">{r.created_at ?? "—"}</TD>
-              <TD className="space-x-2">
+              <TD className="text-xs text-fg-t6">{formatRelativeTime(r.created_at)}</TD>
+              <TD align="right">
                 {canActOnApproval(r.status) ? (
-                  <>
+                  <div className="flex justify-end gap-2">
                     <button
                       type="button"
                       disabled={busyId === r.id}
                       onClick={() => approve(r.id)}
-                      className="text-xs text-success-700 underline disabled:opacity-40 hover:text-success-800"
+                      className="inline-flex h-7 items-center rounded-md border px-2.5 text-[11px] font-medium transition disabled:opacity-40"
+                      style={{
+                        color: "var(--admin-success)",
+                        borderColor: "var(--admin-success-light)",
+                        backgroundColor: "transparent",
+                      }}
                     >
                       {t("admin.approvals.btn_approve")}
                     </button>
@@ -237,11 +260,16 @@ export default function GenericApprovalsPage() {
                       type="button"
                       disabled={busyId === r.id}
                       onClick={() => reject(r.id)}
-                      className="text-xs text-error-700 underline disabled:opacity-40 hover:text-error-800"
+                      className="inline-flex h-7 items-center rounded-md border px-2.5 text-[11px] font-medium transition disabled:opacity-40"
+                      style={{
+                        color: "var(--admin-danger)",
+                        borderColor: "var(--admin-danger-light)",
+                        backgroundColor: "transparent",
+                      }}
                     >
                       {t("admin.approvals.btn_reject")}
                     </button>
-                  </>
+                  </div>
                 ) : (
                   <span className="text-xs text-fg-t6">—</span>
                 )}
@@ -257,4 +285,50 @@ export default function GenericApprovalsPage() {
       ) : null}
     </div>
   );
+}
+
+// v2 admin-redesign helpers — status/priority pill colors + relative time.
+function statusBadgeStyle(status: string): React.CSSProperties {
+  switch (status) {
+    case "approved":
+      return { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" };
+    case "rejected":
+      return { backgroundColor: "var(--admin-danger-light)", color: "var(--admin-danger-dark)" };
+    case "under_review":
+      return { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" };
+    case "pending":
+    default:
+      return { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" };
+  }
+}
+
+function priorityBadgeStyle(priority: string): React.CSSProperties {
+  switch (priority?.toLowerCase()) {
+    case "high":
+    case "urgent":
+      return { backgroundColor: "var(--admin-danger-light)", color: "var(--admin-danger-dark)" };
+    case "med":
+    case "medium":
+    case "normal":
+      return { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" };
+    case "low":
+    default:
+      return { backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" };
+  }
+}
+
+function formatRelativeTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "—";
+  const diff = Date.now() - t;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  return new Date(iso).toLocaleDateString();
 }
