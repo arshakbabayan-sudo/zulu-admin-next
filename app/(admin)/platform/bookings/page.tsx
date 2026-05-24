@@ -33,6 +33,14 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  FilterCard,
+  FilterField,
+  V2Card,
+  V2Button,
+} from "@/components/ui/v2";
 
 const STATUSES = ["", "pending", "confirmed", "cancelled", "completed"];
 
@@ -127,59 +135,103 @@ export default function PlatformBookingsPage() {
       })
     : rows;
 
+  const subtitleText = meta
+    ? t("admin.platform_bookings.meta")
+        .replace("{total}", String(meta.total))
+        .replace("{page}", String(meta.current_page))
+        .replace("{lastPage}", String(meta.last_page))
+    : undefined;
+
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      {/* v2 admin-redesign (2026-05-24) — PageHeader with breadcrumb + Export action.
+          Matches docs/zulu-admin-v2.html page-view#bookings (lines 526-533). */}
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: t("admin.platform_bookings.title") },
+        ]}
         title={t("admin.platform_bookings.title")}
-        subtitle={
-          meta
-            ? t("admin.platform_bookings.meta")
-                .replace("{total}", String(meta.total))
-                .replace("{page}", String(meta.current_page))
-                .replace("{lastPage}", String(meta.last_page))
-            : undefined
+        subtitle={subtitleText}
+        actions={
+          <V2Button
+            icon={
+              <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            }
+          >
+            {t("admin.platform_bookings.export_csv") !== "admin.platform_bookings.export_csv"
+              ? t("admin.platform_bookings.export_csv")
+              : "Export CSV"}
+          </V2Button>
         }
       />
 
-      <div className="admin-card p-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[200px]">
+      {/* v2 section-tabs — All bookings vs Package orders. Package orders is a
+          separate route (/platform/package-orders); link out via SectionTabs. */}
+      <SectionTabs
+        activeHref="/platform/bookings"
+        items={[
+          {
+            href: "/platform/bookings",
+            label:
+              t("admin.nav.tab.all_bookings") !== "admin.nav.tab.all_bookings"
+                ? t("admin.nav.tab.all_bookings")
+                : "All bookings",
+            count: meta?.total,
+          },
+          {
+            href: "/platform/package-orders",
+            label:
+              t("admin.nav.tab.package_orders") !== "admin.nav.tab.package_orders"
+                ? t("admin.nav.tab.package_orders")
+                : "Package orders",
+          },
+        ]}
+      />
+
+      <FilterCard>
+        <FilterField label={t("common.search") !== "common.search" ? t("common.search") : "Search"} minWidth={240}>
+          <div className="relative">
             <Search
               aria-hidden
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-t6"
+              className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2"
+              style={{ color: "var(--admin-text-tertiary)" }}
             />
             <input
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t("admin.platform_bookings.search_placeholder")}
-              className="h-10 w-full rounded-zulu border border-default bg-white pl-9 pr-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+              className="h-[34px] w-full rounded-md border bg-white pl-8 pr-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+              style={{ borderColor: "var(--admin-border)" }}
             />
           </div>
-          <label className="flex items-center gap-2 text-sm text-fg-t6">
-            <span className="font-medium text-fg-t7">{t("admin.platform_bookings.status")}</span>
-            <Select
-              fieldSize="sm"
-              value={statusFilter}
-              onChange={(e) => {
-                setPage(1);
-                setStatusFilter(e.target.value);
-              }}
-              className="!w-auto min-w-[140px]"
-            >
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s ? t(`admin.platform_bookings.status_${s}`) : t("common.all")}
-                </option>
-              ))}
-            </Select>
-          </label>
-          <Button variant="outline" size="sm" onClick={load}>
-            <RefreshCw className="h-4 w-4" aria-hidden />
-            {t("admin.platform_bookings.refresh")}
-          </Button>
-        </div>
-      </div>
+        </FilterField>
+        <FilterField label={t("admin.platform_bookings.status")}>
+          <Select
+            fieldSize="sm"
+            value={statusFilter}
+            onChange={(e) => {
+              setPage(1);
+              setStatusFilter(e.target.value);
+            }}
+            className="!h-[34px] !min-w-[140px]"
+          >
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s ? t(`admin.platform_bookings.status_${s}`) : t("common.all")}
+              </option>
+            ))}
+          </Select>
+        </FilterField>
+        <V2Button size="sm" onClick={load} icon={<RefreshCw className="h-3.5 w-3.5" aria-hidden />}>
+          {t("admin.platform_bookings.refresh")}
+        </V2Button>
+      </FilterCard>
 
       {err && (
         <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
@@ -187,8 +239,8 @@ export default function PlatformBookingsPage() {
         </div>
       )}
 
-      {/* Desktop table */}
-      <div className="hidden md:block">
+      {/* Desktop table — wrapped in v2 Card for rounded border + uniform v2 chrome */}
+      <V2Card className="hidden md:block mt-4">
         <Table>
           <THead>
             <TR>
@@ -266,10 +318,10 @@ export default function PlatformBookingsPage() {
             ))}
           </TBody>
         </Table>
-      </div>
+      </V2Card>
 
       {/* Mobile card list */}
-      <div className="space-y-3 md:hidden">
+      <div className="mt-4 space-y-3 md:hidden">
         {filteredRows.length === 0 && (
           <div className="admin-card p-6 text-center text-sm text-fg-t6">
             {search.trim() ? t("admin.platform_bookings.no_match") : t("admin.platform_bookings.empty")}
