@@ -20,7 +20,6 @@ import {
 
   Pagination,
   Select,
-  StatusPill,
   Table,
   TBody,
   TD,
@@ -35,7 +34,10 @@ import {
   FilterCard,
   FilterField,
   V2Card,
+  V2Button,
+  IconButton,
 } from "@/components/ui/v2";
+import { Download, Eye, Plus } from "lucide-react";
 
 export default function SellerApplicationsPage() {
   const { token, user } = useAdminAuth();
@@ -129,6 +131,14 @@ export default function SellerApplicationsPage() {
           { label: t("admin.seller_applications.title") },
         ]}
         title={t("admin.seller_applications.title")}
+        actions={
+          <>
+            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
+              New application
+            </V2Button>
+          </>
+        }
       />
 
       <SectionTabs
@@ -174,38 +184,92 @@ export default function SellerApplicationsPage() {
             <TH>{t("admin.seller_applications.col_service")}</TH>
             <TH>{t("admin.seller_applications.col_status")}</TH>
             <TH>{t("admin.seller_applications.col_applied")}</TH>
-            <TH>{t("admin.seller_applications.col_actions")}</TH>
+            <TH align="right">{t("admin.seller_applications.col_actions")}</TH>
           </TR>
         </THead>
         <TBody>
           {rows.length === 0 ? <TEmpty colSpan={6}>{t("admin.seller_applications.empty") || "No applications."}</TEmpty> : null}
-          {rows.map((r) => (
-            <TR key={r.id}>
-              <TD className="tabular-nums">{r.id}</TD>
-              <TD>{r.company_name ?? r.company_id}</TD>
-              <TD>{r.service_type}</TD>
-              <TD><StatusPill status={r.status} /></TD>
-              <TD className="text-xs text-fg-t6">{r.applied_at ?? "—"}</TD>
-              <TD className="space-x-2">
-                <button
-                  type="button"
-                  disabled={busyId === r.id}
-                  onClick={() => approve(r.id)}
-                  className="text-xs text-success-700 underline disabled:opacity-40 hover:text-success-800"
-                >
-                  {t("admin.seller_applications.btn_approve")}
-                </button>
-                <button
-                  type="button"
-                  disabled={busyId === r.id}
-                  onClick={() => reject(r.id)}
-                  className="text-xs text-error-700 underline disabled:opacity-40 hover:text-error-800"
-                >
-                  {t("admin.seller_applications.btn_reject")}
-                </button>
-              </TD>
-            </TR>
-          ))}
+          {rows.map((r) => {
+            const companyName = r.company_name ?? `Company #${r.company_id}`;
+            const initials = getInitials(companyName);
+            const tone = pickAvatarTone(r.id);
+            return (
+              <TR key={r.id}>
+                <TD className="tabular-nums font-mono text-xs text-fg-t7">APP-{String(r.id).padStart(3, "0")}</TD>
+                <TD>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                      style={avatarStyle(tone)}
+                      aria-hidden
+                    >
+                      {initials}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="font-medium text-fg-t8 truncate">{companyName}</div>
+                      <div className="text-[11px] text-fg-t6 truncate">#{r.company_id}</div>
+                    </div>
+                  </div>
+                </TD>
+                <TD>
+                  <span
+                    className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                    style={{ backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }}
+                  >
+                    {r.service_type}
+                  </span>
+                </TD>
+                <TD>
+                  <span
+                    className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                    style={statusBadgeStyle(r.status)}
+                  >
+                    {r.status}
+                  </span>
+                </TD>
+                <TD className="text-xs text-fg-t6" title={r.applied_at ?? undefined}>
+                  {formatRelativeTime(r.applied_at)}
+                </TD>
+                <TD align="right">
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      disabled={busyId === r.id}
+                      onClick={() => approve(r.id)}
+                      className="inline-flex h-7 items-center rounded-md border px-2.5 text-[11px] font-medium transition disabled:opacity-40"
+                      style={{
+                        color: "var(--admin-success)",
+                        borderColor: "var(--admin-success-light)",
+                        backgroundColor: "transparent",
+                      }}
+                    >
+                      {t("admin.seller_applications.btn_approve")}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busyId === r.id}
+                      onClick={() => reject(r.id)}
+                      className="inline-flex h-7 items-center rounded-md border px-2.5 text-[11px] font-medium transition disabled:opacity-40"
+                      style={{
+                        color: "var(--admin-danger)",
+                        borderColor: "var(--admin-danger-light)",
+                        backgroundColor: "transparent",
+                      }}
+                    >
+                      {t("admin.seller_applications.btn_reject")}
+                    </button>
+                    <IconButton
+                      as="link"
+                      href={`/platform/companies/${r.company_id}`}
+                      aria-label="View company"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </IconButton>
+                  </div>
+                </TD>
+              </TR>
+            );
+          })}
         </TBody>
       </Table>
       </V2Card>
@@ -215,4 +279,60 @@ export default function SellerApplicationsPage() {
       ) : null}
     </div>
   );
+}
+
+// v2 admin-redesign helpers — deterministic avatar tones + status pills + relative time.
+function getInitials(name: string): string {
+  return (name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+}
+
+function pickAvatarTone(id: number | string): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  const n = typeof id === "number" ? id : id.length;
+  return tones[n % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
+}
+
+function statusBadgeStyle(status: string): React.CSSProperties {
+  switch (status) {
+    case "approved":
+    case "active":
+    case "published":
+      return { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" };
+    case "pending":
+    case "under_review":
+    case "draft":
+      return { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" };
+    case "rejected":
+    case "expired":
+    case "archived":
+      return { backgroundColor: "var(--admin-danger-light)", color: "var(--admin-danger-dark)" };
+    default:
+      return { backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" };
+  }
+}
+
+function formatRelativeTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "—";
+  const diff = Date.now() - t;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  return new Date(iso).toLocaleDateString();
 }

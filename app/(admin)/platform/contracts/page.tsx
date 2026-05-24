@@ -30,7 +30,6 @@ import {
 
   Pagination,
   Select,
-  StatusPill,
   Table,
   TBody,
   TD,
@@ -46,8 +45,9 @@ import {
   FilterField,
   V2Card,
   V2Button,
+  IconButton,
 } from "@/components/ui/v2";
-import { Plus, RefreshCw, Search } from "lucide-react";
+import { Download, Eye, Plus, RefreshCw, Search } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
@@ -115,13 +115,16 @@ export default function PlatformContractsPage() {
             : t("admin.contracts.subtitle")
         }
         actions={
-          <Link
-            href="/platform/contracts/new"
-            className="inline-flex h-10 items-center gap-2 rounded-md bg-primary-500 px-4 text-ds-button-s font-ds-button-s font-semibold text-white transition hover:bg-purple-dark"
-          >
-            <Plus className="h-4 w-4" aria-hidden />
-            {t("admin.contracts.btn_new")}
-          </Link>
+          <>
+            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <Link
+              href="/platform/contracts/new"
+              className="inline-flex h-10 items-center gap-2 rounded-md bg-primary-500 px-4 text-ds-button-s font-ds-button-s font-semibold text-white transition hover:bg-purple-dark"
+            >
+              <Plus className="h-4 w-4" aria-hidden />
+              {t("admin.contracts.btn_new")}
+            </Link>
+          </>
         }
       />
 
@@ -221,34 +224,88 @@ export default function PlatformContractsPage() {
             <TH>{t("admin.contracts.col_effective")}</TH>
             <TH>{t("admin.contracts.col_expires")}</TH>
             <TH>{t("admin.contracts.col_created")}</TH>
+            <TH align="right">Actions</TH>
           </TR>
         </THead>
         <TBody>
           {rows.length === 0 ? (
-            <TEmpty colSpan={9}>{t("admin.contracts.empty_state")}</TEmpty>
+            <TEmpty colSpan={10}>{t("admin.contracts.empty_state")}</TEmpty>
           ) : null}
-          {rows.map((r) => (
-            <TR key={r.id} href={`/platform/contracts/${r.id}`}>
-              <TD className="font-mono text-xs text-fg-t8">{r.contract_number}</TD>
-              <TD className="text-xs text-fg-t7">{contractTypeLabel(r.type)}</TD>
-              <TD>
-                <StatusPill status={contractStatusTier(r.status)}>
-                  {contractStatusLabel(r.status)}
-                </StatusPill>
-              </TD>
-              <TD>{r.partyA?.name ?? <span className="text-fg-t6">ZULU</span>}</TD>
-              <TD>{r.partyB?.name ?? "—"}</TD>
-              <TD className="text-xs text-fg-t7">
-                {r.template?.name ?? "—"}
-                {r.template?.language ? (
-                  <span className="ml-1 text-fg-t6">({r.template.language.toUpperCase()})</span>
-                ) : null}
-              </TD>
-              <TD className="text-xs text-fg-t6">{formatDate(r.effective_date, lang)}</TD>
-              <TD className="text-xs text-fg-t6">{formatDate(r.expiry_date, lang)}</TD>
-              <TD className="text-xs text-fg-t6">{formatDate(r.created_at, lang)}</TD>
-            </TR>
-          ))}
+          {rows.map((r) => {
+            const partyAName = r.partyA?.name ?? "ZULU";
+            const partyBName = r.partyB?.name ?? null;
+            return (
+              <TR key={r.id} href={`/platform/contracts/${r.id}`}>
+                <TD className="tabular-nums font-mono text-xs text-fg-t7">{r.contract_number}</TD>
+                <TD>
+                  <span
+                    className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                    style={{ backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }}
+                  >
+                    {contractTypeLabel(r.type)}
+                  </span>
+                </TD>
+                <TD>
+                  <span
+                    className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                    style={contractStatusBadgeStyle(contractStatusTier(r.status))}
+                  >
+                    {contractStatusLabel(r.status)}
+                  </span>
+                </TD>
+                <TD>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                      style={avatarStyle(pickAvatarTone(`a-${r.id}`))}
+                      aria-hidden
+                    >
+                      {getInitials(partyAName)}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="font-medium text-fg-t8 truncate">{partyAName}</div>
+                    </div>
+                  </div>
+                </TD>
+                <TD>
+                  {partyBName ? (
+                    <div className="flex items-center gap-3">
+                      <span
+                        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                        style={avatarStyle(pickAvatarTone(`b-${r.id}`))}
+                        aria-hidden
+                      >
+                        {getInitials(partyBName)}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="font-medium text-fg-t8 truncate">{partyBName}</div>
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-fg-t6">—</span>
+                  )}
+                </TD>
+                <TD className="text-xs text-fg-t7">
+                  {r.template?.name ?? "—"}
+                  {r.template?.language ? (
+                    <span className="ml-1 text-fg-t6">({r.template.language.toUpperCase()})</span>
+                  ) : null}
+                </TD>
+                <TD className="text-xs text-fg-t6">{formatDate(r.effective_date, lang)}</TD>
+                <TD className="text-xs text-fg-t6">{formatDate(r.expiry_date, lang)}</TD>
+                <TD className="text-xs text-fg-t6" title={r.created_at ?? undefined}>
+                  {formatRelativeTime(r.created_at)}
+                </TD>
+                <TD align="right">
+                  <div className="flex justify-end gap-1">
+                    <IconButton as="link" href={`/platform/contracts/${r.id}`} aria-label="View">
+                      <Eye className="h-4 w-4" />
+                    </IconButton>
+                  </div>
+                </TD>
+              </TR>
+            );
+          })}
         </TBody>
       </Table>
       </V2Card>
@@ -262,4 +319,57 @@ export default function PlatformContractsPage() {
       )}
     </div>
   );
+}
+
+// v2 admin-redesign helpers — avatar / status pill / relative-time.
+function getInitials(name: string): string {
+  return (name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+}
+
+function pickAvatarTone(id: number | string): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  const n = typeof id === "number" ? id : id.length;
+  return tones[n % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
+}
+
+function contractStatusBadgeStyle(tier: "neutral" | "info" | "success" | "warning" | "danger"): React.CSSProperties {
+  switch (tier) {
+    case "success":
+      return { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" };
+    case "warning":
+      return { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" };
+    case "danger":
+      return { backgroundColor: "var(--admin-danger-light)", color: "var(--admin-danger-dark)" };
+    case "info":
+      return { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" };
+    case "neutral":
+    default:
+      return { backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" };
+  }
+}
+
+function formatRelativeTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "—";
+  const diff = Date.now() - t;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  return new Date(iso).toLocaleDateString();
 }

@@ -40,7 +40,9 @@ import {
   FilterField,
   V2Card,
   V2Button,
+  IconButton,
 } from "@/components/ui/v2";
+import { Download, Eye, Plus } from "lucide-react";
 
 const TYPE_FILTERS = ["", "hotel", "car", "transfer", "excursion", "flight", "package", "visa"] as const;
 
@@ -201,7 +203,14 @@ export default function PendingReviewPage() {
                 ? t("admin.pending_review.bulk_approving")
                 : t("admin.pending_review.btn_bulk_approve").replace("{count}", String(selectedIds.size))}
             </button>
-          ) : undefined
+          ) : (
+            <>
+              <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+              <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
+                Review
+              </V2Button>
+            </>
+          )
         }
       />
 
@@ -280,47 +289,92 @@ export default function PendingReviewPage() {
         </THead>
         <TBody>
           {rows.length === 0 ? <TEmpty colSpan={8}>{t("admin.pending_review.empty")}</TEmpty> : null}
-          {rows.map((r) => (
-            <TR key={r.id}>
-              <TD>
-                <input
-                  type="checkbox"
-                  aria-label={`Select offer #${r.id}`}
-                  checked={selectedIds.has(r.id)}
-                  onChange={() => toggleSelected(r.id)}
-                  className="h-4 w-4 cursor-pointer"
-                />
-              </TD>
-              <TD className="tabular-nums">#{r.id}</TD>
-              <TD className="capitalize">{r.type}</TD>
-              <TD className="font-medium text-fg-t8">{r.title}</TD>
-              <TD>{r.company?.name ?? "—"}</TD>
-              <TD>{r.company?.country ?? "—"}</TD>
-              <TD className="text-xs text-fg-t6">
-                {formatDateTime(r.submitted_for_review_at, lang)}
-              </TD>
-              <TD align="right">
-                <div className="flex justify-end gap-2">
-                  <button
-                    type="button"
-                    disabled={busyId === r.id}
-                    onClick={() => void handleApprove(r)}
-                    className="rounded-zulu bg-success-500 px-3 py-1 text-xs font-medium text-white hover:bg-success-600 disabled:opacity-40"
+          {rows.map((r) => {
+            const opName = r.company?.name ?? "—";
+            const initials = getInitials(opName);
+            const tone = pickAvatarTone(r.id);
+            return (
+              <TR key={r.id}>
+                <TD>
+                  <input
+                    type="checkbox"
+                    aria-label={`Select offer #${r.id}`}
+                    checked={selectedIds.has(r.id)}
+                    onChange={() => toggleSelected(r.id)}
+                    className="h-4 w-4 cursor-pointer"
+                  />
+                </TD>
+                <TD className="tabular-nums font-mono text-xs text-fg-t7">#{r.id}</TD>
+                <TD>
+                  <span
+                    className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                    style={{ backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }}
                   >
-                    {t("admin.pending_review.btn_approve")}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busyId === r.id}
-                    onClick={() => openRejectModal(r)}
-                    className="rounded-zulu border border-error-200 bg-white px-3 py-1 text-xs font-medium text-error-600 hover:bg-error-50 disabled:opacity-40"
-                  >
-                    {t("admin.pending_review.btn_reject")}
-                  </button>
-                </div>
-              </TD>
-            </TR>
-          ))}
+                    {r.type}
+                  </span>
+                </TD>
+                <TD className="font-medium text-fg-t8">{r.title}</TD>
+                <TD>
+                  {r.company ? (
+                    <div className="flex items-center gap-3">
+                      <span
+                        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                        style={avatarStyle(tone)}
+                        aria-hidden
+                      >
+                        {initials}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="font-medium text-fg-t8 truncate">{opName}</div>
+                        {r.company.country ? (
+                          <div className="text-[11px] text-fg-t6 truncate">{r.company.country}</div>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-fg-t6">—</span>
+                  )}
+                </TD>
+                <TD className="text-xs">{r.company?.country ?? "—"}</TD>
+                <TD className="text-xs text-fg-t6" title={r.submitted_for_review_at ?? undefined}>
+                  {formatRelativeTime(r.submitted_for_review_at) || formatDateTime(r.submitted_for_review_at, lang)}
+                </TD>
+                <TD align="right">
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      disabled={busyId === r.id}
+                      onClick={() => void handleApprove(r)}
+                      className="inline-flex h-7 items-center rounded-md border px-2.5 text-[11px] font-medium transition disabled:opacity-40"
+                      style={{
+                        color: "var(--admin-success)",
+                        borderColor: "var(--admin-success-light)",
+                        backgroundColor: "transparent",
+                      }}
+                    >
+                      {t("admin.pending_review.btn_approve")}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busyId === r.id}
+                      onClick={() => openRejectModal(r)}
+                      className="inline-flex h-7 items-center rounded-md border px-2.5 text-[11px] font-medium transition disabled:opacity-40"
+                      style={{
+                        color: "var(--admin-danger)",
+                        borderColor: "var(--admin-danger-light)",
+                        backgroundColor: "transparent",
+                      }}
+                    >
+                      {t("admin.pending_review.btn_reject")}
+                    </button>
+                    <IconButton as="link" href={`/platform/offers/${r.id}`} aria-label="View">
+                      <Eye className="h-4 w-4" />
+                    </IconButton>
+                  </div>
+                </TD>
+              </TR>
+            );
+          })}
         </TBody>
       </Table>
       </V2Card>
@@ -368,4 +422,41 @@ export default function PendingReviewPage() {
       </Modal>
     </div>
   );
+}
+
+// v2 admin-redesign helpers — deterministic avatar tones + relative time.
+function getInitials(name: string): string {
+  return (name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+}
+
+function pickAvatarTone(id: number | string): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  const n = typeof id === "number" ? id : id.length;
+  return tones[n % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
+}
+
+function formatRelativeTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "—";
+  const diff = Date.now() - t;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  return new Date(iso).toLocaleDateString();
 }

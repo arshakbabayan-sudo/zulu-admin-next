@@ -24,7 +24,6 @@ import {
   FormField,
   Input,
 
-  StatusPill,
   Table,
   TBody,
   TD,
@@ -38,7 +37,9 @@ import {
   SectionTabs,
   V2Card,
   V2Button,
+  IconButton,
 } from "@/components/ui/v2";
+import { Download, Edit3, Plus, Trash2 } from "lucide-react";
 
 function resolveBannerImageSrc(row: PlatformBannerRow): string | null {
   const u = row.image_url;
@@ -268,7 +269,14 @@ export default function PlatformBannersPage() {
                 ? t("admin.banners.bulk_deleting")
                 : t("admin.banners.btn_bulk_delete").replace("{count}", String(selectedIds.size))}
             </V2Button>
-          ) : undefined
+          ) : (
+            <>
+              <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+              <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
+                New banner
+              </V2Button>
+            </>
+          )
         }
       />
 
@@ -393,7 +401,7 @@ export default function PlatformBannersPage() {
             <TH>{t("admin.banners.col_link")}</TH>
             <TH>{t("admin.banners.col_sort")}</TH>
             <TH>{t("admin.banners.col_active")}</TH>
-            <TH>{t("admin.banners.col_actions")}</TH>
+            <TH align="right">{t("admin.banners.col_actions")}</TH>
           </TR>
         </THead>
         <TBody>
@@ -411,7 +419,7 @@ export default function PlatformBannersPage() {
                     className="h-4 w-4 cursor-pointer"
                   />
                 </TD>
-                <TD className="tabular-nums">
+                <TD className="tabular-nums font-mono text-xs text-fg-t7">
                   <div className="flex flex-col items-center gap-0.5">
                     <button
                       type="button"
@@ -422,7 +430,7 @@ export default function PlatformBannersPage() {
                     >
                       ▲
                     </button>
-                    <span>{r.id}</span>
+                    <span>#{r.id}</span>
                     <button
                       type="button"
                       disabled={idx === rows.length - 1 || busyId !== null}
@@ -450,28 +458,31 @@ export default function PlatformBannersPage() {
                 <TD className="max-w-[140px] truncate text-xs">{r.link_url ?? "—"}</TD>
                 <TD className="tabular-nums">{r.sort_order}</TD>
                 <TD>
-                  <StatusPill status={r.is_active ? "active" : "inactive"}>
-                    {r.is_active ? t("admin.banners.yes") : t("admin.banners.no")}
-                  </StatusPill>
+                  <span className="inline-flex items-center gap-1.5 text-[12px]">
+                    <span
+                      aria-hidden
+                      className="inline-block h-1.5 w-1.5 rounded-full"
+                      style={{ backgroundColor: r.is_active ? "var(--admin-success)" : "var(--admin-text-tertiary)" }}
+                    />
+                    <span className="capitalize">{r.is_active ? t("admin.banners.yes") : t("admin.banners.no")}</span>
+                  </span>
                 </TD>
-                <TD>
-                  <div className="flex flex-col gap-1">
-                    <button
-                      type="button"
-                      disabled={busyId !== null}
+                <TD align="right">
+                  <div className="flex justify-end gap-1">
+                    <IconButton
                       onClick={() => openEdit(r)}
-                      className="text-left text-xs text-primary-500 underline disabled:opacity-40 hover:text-primary-700"
+                      aria-label={t("admin.banners.btn_edit")}
+                      disabled={busyId !== null}
                     >
-                      {t("admin.banners.btn_edit")}
-                    </button>
-                    <button
-                      type="button"
+                      <Edit3 className="h-4 w-4" />
+                    </IconButton>
+                    <IconButton
+                      onClick={() => void remove(r.id)}
+                      aria-label={t("admin.banners.btn_delete")}
                       disabled={busyId === r.id}
-                      onClick={() => remove(r.id)}
-                      className="text-left text-xs text-error-700 underline disabled:opacity-40 hover:text-error-800"
                     >
-                      {t("admin.banners.btn_delete")}
-                    </button>
+                      <Trash2 className="h-4 w-4" />
+                    </IconButton>
                   </div>
                 </TD>
               </TR>
