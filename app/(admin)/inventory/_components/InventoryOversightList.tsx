@@ -14,7 +14,6 @@ import type { OperatorInventorySegment } from "@/lib/operator-inventory-api";
 import { apiOperatorInventoryList } from "@/lib/operator-inventory-api";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  PageHeader,
   Pagination,
   Table,
   TBody,

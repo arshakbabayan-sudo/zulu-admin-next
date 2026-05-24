@@ -5,7 +5,6 @@ import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
-import { PageHeader } from "@/components/ui";
 import {
   PageHeader as V2PageHeader,
   SectionTabs,

@@ -14,7 +14,7 @@ import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { apiPatchPlatformSetting, apiPlatformSettings, type PlatformSettingRow } from "@/lib/platform-admin-api";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Button, Input, PageHeader } from "@/components/ui";
+import { Button, Input} from "@/components/ui";
 import {
   PageHeader as V2PageHeader,
   SectionTabs,

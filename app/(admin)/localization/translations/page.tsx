@@ -18,7 +18,7 @@ import {
   type LocalizationLanguageRow,
 } from "@/lib/localization-api";
 import { useCallback, useRef, useState } from "react";
-import { Button, FormField, Input, PageHeader, Select } from "@/components/ui";
+import { Button, FormField, Input, Select } from "@/components/ui";
 import {
   PageHeader as V2PageHeader,
   SectionTabs,
