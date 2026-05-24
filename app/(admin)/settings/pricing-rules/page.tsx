@@ -7,6 +7,7 @@ import { isSuperAdminRole } from "@/lib/access";
 import {
   apiPricingRuleCreate,
   apiPricingRuleDelete,
+  apiPricingRuleTest,
   apiPricingRuleUpdate,
   apiPricingRulesList,
   type PricingRuleCreate,
@@ -14,6 +15,7 @@ import {
   type PricingRuleScope,
   type PricingRuleMarkupType,
   type PricingRuleServiceCategory,
+  type PricingRuleTestResult,
 } from "@/lib/pricing-rules-api";
 import {
   Badge,
@@ -129,6 +131,17 @@ export default function PricingRulesPage() {
   const [pendingDelete, setPendingDelete] = useState<PricingRuleRow | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // D.4 — Test panel state
+  const [testPanelOpen, setTestPanelOpen] = useState(false);
+  const [testOfferId, setTestOfferId] = useState("");
+  const [testQuantity, setTestQuantity] = useState("1");
+  const [testAgentId, setTestAgentId] = useState("");
+  const [testDestinationId, setTestDestinationId] = useState("");
+  const [testPriceOverride, setTestPriceOverride] = useState("");
+  const [testResult, setTestResult] = useState<PricingRuleTestResult | null>(null);
+  const [testLoading, setTestLoading] = useState(false);
+  const [testError, setTestError] = useState<string | null>(null);
+
   const fetchRows = useCallback(async () => {
     if (!token || !isSuper) return;
     setLoading(true);
@@ -220,6 +233,30 @@ export default function PricingRulesPage() {
     }
   };
 
+  const runTest = async () => {
+    if (!token || !testOfferId) {
+      setTestError("Offer id is required");
+      return;
+    }
+    setTestLoading(true);
+    setTestError(null);
+    setTestResult(null);
+    try {
+      const res = await apiPricingRuleTest(token, {
+        offer_id: Number(testOfferId),
+        quantity: testQuantity ? Number(testQuantity) : 1,
+        agent_id: testAgentId ? Number(testAgentId) : undefined,
+        destination_id: testDestinationId ? Number(testDestinationId) : undefined,
+        price_override: testPriceOverride ? Number(testPriceOverride) : undefined,
+      });
+      setTestResult(res.data);
+    } catch (e) {
+      setTestError(e instanceof Error ? e.message : "Test failed");
+    } finally {
+      setTestLoading(false);
+    }
+  };
+
   const confirmDelete = async () => {
     if (!token || !pendingDelete) return;
     setDeleting(true);
@@ -273,9 +310,14 @@ export default function PricingRulesPage() {
           "Unified Markup + Commission rules table"
         )}
         actions={
-          <Button onClick={openCreate} variant="primary">
-            + {tr("admin.settings.pricing_rules.new", "New rule")}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setTestPanelOpen(true)} variant="outline">
+              🧪 {tr("admin.settings.pricing_rules.test_panel", "Test a rule")}
+            </Button>
+            <Button onClick={openCreate} variant="primary">
+              + {tr("admin.settings.pricing_rules.new", "New rule")}
+            </Button>
+          </div>
         }
       />
 
@@ -622,6 +664,137 @@ export default function PricingRulesPage() {
           <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
             {saveError}
           </div>
+        )}
+      </Drawer>
+
+      {/* D.4 — Test panel: dry-run a hypothetical booking against the resolver */}
+      <Drawer
+        open={testPanelOpen}
+        onClose={() => setTestPanelOpen(false)}
+        title="Test a pricing rule"
+        subtitle="Pick an offer; see which rule the resolver picks and the prices it produces"
+        size="md"
+        footer={
+          <div className="flex justify-between gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setTestOfferId("");
+                setTestQuantity("1");
+                setTestAgentId("");
+                setTestDestinationId("");
+                setTestPriceOverride("");
+                setTestResult(null);
+                setTestError(null);
+              }}
+            >
+              Reset
+            </Button>
+            <Button onClick={runTest} disabled={testLoading || !testOfferId} variant="primary">
+              {testLoading ? "Resolving…" : "Run test"}
+            </Button>
+          </div>
+        }
+      >
+        <DrawerSection title="Inputs">
+          <FormField label="Offer ID" htmlFor="test-offer" required>
+            <Input
+              id="test-offer"
+              type="number"
+              value={testOfferId}
+              onChange={(e) => setTestOfferId(e.target.value)}
+              placeholder="e.g. 12 (the Atlantis The Palm hotel offer)"
+              required
+            />
+          </FormField>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Quantity" htmlFor="test-qty">
+              <Input
+                id="test-qty"
+                type="number"
+                min="1"
+                value={testQuantity}
+                onChange={(e) => setTestQuantity(e.target.value)}
+              />
+            </FormField>
+            <FormField label="Agent company id (optional)" htmlFor="test-agent">
+              <Input
+                id="test-agent"
+                type="number"
+                value={testAgentId}
+                onChange={(e) => setTestAgentId(e.target.value)}
+                placeholder="for partnership rules"
+              />
+            </FormField>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Destination id (optional)" htmlFor="test-dest">
+              <Input
+                id="test-dest"
+                type="number"
+                value={testDestinationId}
+                onChange={(e) => setTestDestinationId(e.target.value)}
+              />
+            </FormField>
+            <FormField label="Price override (optional)" htmlFor="test-override">
+              <Input
+                id="test-override"
+                type="number"
+                step="0.01"
+                value={testPriceOverride}
+                onChange={(e) => setTestPriceOverride(e.target.value)}
+                placeholder="replaces supplier net"
+              />
+            </FormField>
+          </div>
+        </DrawerSection>
+
+        {testError && (
+          <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
+            {testError}
+          </div>
+        )}
+
+        {testResult && (
+          <DrawerSection title="Resolver output">
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between border-b border-default pb-2">
+                <span className="text-fg-t6">Supplier net</span>
+                <span className="font-mono font-medium">
+                  {testResult.supplier_net.toFixed(2)} {testResult.currency}
+                </span>
+              </div>
+              <div className="flex justify-between border-b border-default pb-2">
+                <span className="text-fg-t6">Customer pays (per unit)</span>
+                <span className="font-mono font-medium" style={{ color: "var(--admin-primary)" }}>
+                  {testResult.customer_price.toFixed(2)} {testResult.currency}
+                </span>
+              </div>
+              <div className="flex justify-between border-b border-default pb-2">
+                <span className="text-fg-t6">Line total ({testResult.quantity} × unit)</span>
+                <span className="font-mono font-bold text-lg">
+                  {testResult.line_total.toFixed(2)} {testResult.currency}
+                </span>
+              </div>
+              <div className="flex justify-between border-b border-default pb-2">
+                <span className="text-fg-t6">Rule applied</span>
+                <span className="font-mono text-xs">
+                  {testResult.rule_id_applied ?? (
+                    <Badge tone="warning">Fallback (no rule matched)</Badge>
+                  )}
+                </span>
+              </div>
+            </div>
+
+            <details className="mt-3 rounded-zulu border border-default p-3">
+              <summary className="cursor-pointer text-xs font-semibold text-fg-t7">
+                Resolver snapshot (raw JSON)
+              </summary>
+              <pre className="mt-2 overflow-x-auto text-[10px] font-mono text-fg-t6">
+                {JSON.stringify(testResult.snapshot, null, 2)}
+              </pre>
+            </details>
+          </DrawerSection>
         )}
       </Drawer>
 
