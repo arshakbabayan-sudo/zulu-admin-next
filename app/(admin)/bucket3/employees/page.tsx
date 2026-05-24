@@ -37,10 +37,12 @@ import {
   FilterCard,
   FilterField,
   V2Card,
+  V2Button,
+  IconButton,
 } from "@/components/ui/v2";
-import { Search } from "lucide-react";
+import { Search, Eye, Edit3, Download, Plus } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type EmployeeRow = {
   id: number;
@@ -125,6 +127,14 @@ export default function Bucket3EmployeesPage() {
             ? t("admin.bucket3.employees.subtitle_count").replace("{count}", String(meta.total))
             : t("admin.bucket3.employees.subtitle")
         }
+        actions={
+          <>
+            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
+              Add employee
+            </V2Button>
+          </>
+        }
       />
 
       <SectionTabs
@@ -201,38 +211,96 @@ export default function Bucket3EmployeesPage() {
             <TH>{t("admin.bucket3.employees.col.status")}</TH>
             <TH>{t("admin.bucket3.employees.col.companies")}</TH>
             <TH>{t("admin.bucket3.employees.col.joined")}</TH>
+            <TH align="right">Actions</TH>
           </TR>
         </THead>
         <TBody>
           {rows.length === 0 ? (
-            <TEmpty colSpan={6}>{t("admin.bucket3.employees.empty")}</TEmpty>
+            <TEmpty colSpan={7}>{t("admin.bucket3.employees.empty")}</TEmpty>
           ) : null}
-          {rows.map((e) => (
-            <TR key={e.id} href={`/platform/users/${e.id}`}>
-              <TD className="tabular-nums text-fg-t7">{e.id}</TD>
-              <TD className="font-medium text-fg-t8">{e.name}</TD>
-              <TD className="text-xs">{e.email}</TD>
-              <TD>
-                <StatusPill status={e.status}>{e.status}</StatusPill>
-              </TD>
-              <TD>
-                <div className="flex flex-wrap gap-1">
-                  {e.companies.map((c) => (
-                    <Link
-                      key={c.id}
-                      href={`/platform/companies/${c.id}`}
-                      onClick={(ev) => ev.stopPropagation()}
-                      className="inline-flex items-center rounded-md border border-default bg-figma-bg-1 px-2 py-0.5 text-xs text-fg-t7 hover:bg-figma-bg-1/60"
+          {rows.map((e) => {
+            const initials = (e.name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+            const tone = pickAvatarTone(e.id);
+            const primaryCompany = e.companies[0];
+            const statusColor =
+              e.status === "active"
+                ? "var(--admin-success)"
+                : e.status === "pending"
+                  ? "var(--admin-warning)"
+                  : e.status === "suspended"
+                    ? "var(--admin-danger)"
+                    : "var(--admin-text-tertiary)";
+            return (
+              <TR key={e.id}>
+                <TD className="tabular-nums text-fg-t7 font-mono text-xs">EMP-{String(e.id).padStart(3, "0")}</TD>
+                <TD>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                      style={avatarStyle(tone)}
+                      aria-hidden
                     >
-                      {c.name}
-                      <span className="ml-1 text-fg-t6">· {c.role}</span>
-                    </Link>
-                  ))}
-                </div>
-              </TD>
-              <TD className="text-xs text-fg-t6">{formatDate(e.created_at, lang)}</TD>
-            </TR>
-          ))}
+                      {initials}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="font-medium text-fg-t8 truncate">{e.name}</div>
+                      {primaryCompany ? (
+                        <div className="text-[11px] text-fg-t6 truncate">{primaryCompany.role}</div>
+                      ) : null}
+                    </div>
+                  </div>
+                </TD>
+                <TD className="text-xs">{e.email}</TD>
+                <TD>
+                  <span className="inline-flex items-center gap-1.5 text-[12px]">
+                    <span
+                      aria-hidden
+                      className="inline-block h-1.5 w-1.5 rounded-full"
+                      style={{ backgroundColor: statusColor }}
+                    />
+                    <span className="capitalize">{e.status}</span>
+                  </span>
+                </TD>
+                <TD>
+                  <div className="flex flex-wrap gap-1">
+                    {e.companies.map((c) => (
+                      <Link
+                        key={c.id}
+                        href={`/platform/companies/${c.id}`}
+                        onClick={(ev) => ev.stopPropagation()}
+                        className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px] transition"
+                        style={{
+                          backgroundColor: "var(--admin-bg-tertiary)",
+                          color: "var(--admin-text-secondary)",
+                        }}
+                      >
+                        {c.name}
+                      </Link>
+                    ))}
+                  </div>
+                </TD>
+                <TD className="text-xs text-fg-t6">{formatDate(e.created_at, lang)}</TD>
+                <TD align="right">
+                  <div className="flex justify-end gap-1">
+                    <IconButton
+                      as="link"
+                      href={`/platform/users/${e.id}`}
+                      aria-label="View"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </IconButton>
+                    <IconButton
+                      as="link"
+                      href={`/platform/users/${e.id}`}
+                      aria-label="Edit"
+                    >
+                      <Edit3 className="h-4 w-4" />
+                    </IconButton>
+                  </div>
+                </TD>
+              </TR>
+            );
+          })}
         </TBody>
       </Table>
       </V2Card>
@@ -246,4 +314,21 @@ export default function Bucket3EmployeesPage() {
       )}
     </div>
   );
+}
+
+// v2 admin-redesign — deterministic avatar tone picker so same user
+// always gets same color (purple/teal/amber/blue rotation).
+function pickAvatarTone(id: number): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  return tones[id % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
 }
