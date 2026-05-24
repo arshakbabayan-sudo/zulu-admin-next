@@ -25,7 +25,6 @@ import {
 
   Pagination,
   Select,
-  StatusPill,
   Table,
   TBody,
   TD,
@@ -37,7 +36,11 @@ import {
 import {
   PageHeader as V2PageHeader,
   SectionTabs,
+  V2Card,
+  V2Button,
+  IconButton,
 } from "@/components/ui/v2";
+import { Download, Eye, Plus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 const STATUSES = ["draft", "finalized", "paid"] as const;
@@ -64,17 +67,6 @@ type PayrollRow = {
   notes: string | null;
   created_at: string | null;
 };
-
-function statusTier(s: Status): "neutral" | "info" | "success" {
-  switch (s) {
-    case "draft":
-      return "neutral";
-    case "finalized":
-      return "info";
-    case "paid":
-      return "success";
-  }
-}
 
 async function fetchPayroll(
   token: string,
@@ -250,6 +242,16 @@ export default function Bucket3PayrollPage() {
             ? t("admin.bucket3.payroll.subtitle_count").replace("{count}", String(meta.total))
             : t("admin.bucket3.payroll.subtitle")
         }
+        actions={
+          <>
+            <V2Button icon={<Download className="h-4 w-4" />} onClick={() => void exportBankBatch()}>
+              {t("admin.bucket3.payroll.export_bank_batch")}
+            </V2Button>
+            <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
+              {t("admin.bucket3.payroll.add_record")}
+            </V2Button>
+          </>
+        }
       />
 
       <SectionTabs
@@ -416,6 +418,7 @@ export default function Bucket3PayrollPage() {
         </Button>
       </div>
 
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -433,33 +436,61 @@ export default function Bucket3PayrollPage() {
           {rows.length === 0 ? (
             <TEmpty colSpan={8}>{t("admin.bucket3.payroll.empty")}</TEmpty>
           ) : null}
-          {rows.map((r) => (
+          {rows.map((r) => {
+            const userName = r.user?.name ?? "—";
+            const initials = (userName !== "—" ? userName : "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+            const tone = pickAvatarTone(r.id);
+            const statusColor =
+              r.status === "paid"
+                ? "var(--admin-success)"
+                : r.status === "finalized"
+                  ? "var(--admin-info)"
+                  : "var(--admin-text-tertiary)";
+            return (
             <TR key={r.id}>
-              <TD className="tabular-nums text-fg-t7">{r.id}</TD>
+              <TD className="tabular-nums font-mono text-xs text-fg-t7">PR-{String(r.id).padStart(4, "0")}</TD>
               <TD>
-                <div className="font-medium text-fg-t8">{r.user?.name ?? "—"}</div>
-                <div className="text-xs text-fg-t6">{r.user?.email ?? ""}</div>
+                <div className="flex items-center gap-3">
+                  <span
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                    style={avatarStyle(tone)}
+                    aria-hidden
+                  >
+                    {initials}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="font-medium text-fg-t8 truncate">{userName}</div>
+                    <div className="text-[11px] text-fg-t6 truncate">{r.user?.email ?? ""}</div>
+                  </div>
+                </div>
               </TD>
-              <TD className="text-xs">
+              <TD className="text-xs text-fg-t6">
                 {formatDate(r.period_start, lang)} → {formatDate(r.period_end, lang)}
               </TD>
-              <TD className="tabular-nums">
+              <TD className="tabular-nums text-xs">
                 {r.currency} {r.gross_pay.toFixed(2)}
               </TD>
-              <TD className="tabular-nums text-fg-t6">
+              <TD className="tabular-nums text-xs text-fg-t6">
                 {r.currency} {r.deductions_amount.toFixed(2)}
               </TD>
               <TD className="tabular-nums font-medium text-fg-t8">
                 {r.currency} {r.net_pay.toFixed(2)}
               </TD>
               <TD>
-                <StatusPill status={statusTier(r.status)}>{r.status}</StatusPill>
+                <span className="inline-flex items-center gap-1.5 text-[12px]">
+                  <span
+                    aria-hidden
+                    className="inline-block h-1.5 w-1.5 rounded-full"
+                    style={{ backgroundColor: statusColor }}
+                  />
+                  <span className="capitalize">{r.status}</span>
+                </span>
               </TD>
               <TD align="right">
-                <div className="flex justify-end gap-2 flex-wrap">
-                  <Button size="sm" variant="ghost" onClick={() => void downloadPayslip(r.id)}>
-                    {t("admin.bucket3.payroll.payslip")}
-                  </Button>
+                <div className="flex justify-end gap-2 flex-wrap items-center">
+                  <IconButton onClick={() => void downloadPayslip(r.id)} aria-label="Payslip">
+                    <Eye className="h-4 w-4" />
+                  </IconButton>
                   {r.status === "draft" && (
                     <Button size="sm" variant="outline" disabled={busy} onClick={() => void changeStatus(r.id, "finalized")}>
                       {t("admin.bucket3.payroll.finalize")}
@@ -476,9 +507,11 @@ export default function Bucket3PayrollPage() {
                 </div>
               </TD>
             </TR>
-          ))}
+            );
+          })}
         </TBody>
       </Table>
+      </V2Card>
 
       {meta && meta.last_page > 1 && (
         <Pagination
@@ -490,4 +523,20 @@ export default function Bucket3PayrollPage() {
       </div>
     </div>
   );
+}
+
+// v2 admin-redesign helpers — avatar tone picker.
+function pickAvatarTone(id: number): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  return tones[id % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
 }

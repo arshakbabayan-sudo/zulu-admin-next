@@ -41,7 +41,11 @@ import {
 import {
   PageHeader as V2PageHeader,
   SectionTabs,
+  V2Card,
+  V2Button,
+  IconButton,
 } from "@/components/ui/v2";
+import { Download, Edit3, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 export default function PlatformLocationsPage() {
@@ -354,6 +358,9 @@ export default function PlatformLocationsPage() {
         ]}
         title={t("admin.locations.title_long")}
         subtitle={t("admin.locations.subtitle")}
+        actions={
+          <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+        }
       />
 
       <SectionTabs
@@ -421,7 +428,7 @@ export default function PlatformLocationsPage() {
           </div>
         </div>
         <div className="mt-4">
-          <Table>
+          <V2Card><Table>
             <THead>
               <TR>
                 <TH>{t("admin.locations.col_id")}</TH>
@@ -435,51 +442,66 @@ export default function PlatformLocationsPage() {
               {countries.length === 0 ? (
                 <TEmpty colSpan={5}>{t("admin.locations.empty_countries")}</TEmpty>
               ) : null}
-              {countries.map((c) => (
+              {countries.map((c) => {
+                const initials = (c.name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+                const tone = pickAvatarTone(c.id);
+                return (
                 <TR
                   key={c.id}
                   className={selectedCountryId === c.id ? "bg-figma-bg-1" : undefined}
                 >
-                  <TD className="tabular-nums">{c.id}</TD>
-                  <TD>{c.name}</TD>
-                  <TD>{c.code}</TD>
-                  <TD className="text-xs text-fg-t6">
-                    {c.regions_count ?? "-"} / {c.cities_count ?? "-"}
-                  </TD>
+                  <TD className="tabular-nums font-mono text-xs text-fg-t7">#{c.id}</TD>
                   <TD>
                     <div className="flex items-center gap-3">
+                      <span
+                        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                        style={avatarStyle(tone)}
+                        aria-hidden
+                      >
+                        {c.flag_emoji || initials}
+                      </span>
+                      <div className="font-medium text-fg-t8 truncate">{c.name}</div>
+                    </div>
+                  </TD>
+                  <TD>
+                    <span
+                      className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px] font-mono"
+                      style={{
+                        backgroundColor: "var(--admin-bg-tertiary)",
+                        color: "var(--admin-text-secondary)",
+                      }}
+                    >
+                      {c.code}
+                    </span>
+                  </TD>
+                  <TD className="text-xs text-fg-t6 tabular-nums">
+                    {c.regions_count ?? "-"} / {c.cities_count ?? "-"}
+                  </TD>
+                  <TD align="right">
+                    <div className="flex justify-end items-center gap-1">
                       <button
                         type="button"
                         onClick={() => {
                           setSelectedCountryId(c.id);
                           setSelectedRegionId(null);
                         }}
-                        className="text-xs text-primary-500 hover:underline"
+                        className="text-xs text-primary-500 hover:underline mr-1"
                       >
                         {t("admin.locations.btn_select")}
                       </button>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => updCountry(c)}
-                        className="text-xs text-fg-t7 hover:underline disabled:opacity-40"
-                      >
-                        {t("admin.locations.btn_edit")}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => delCountry(c.id)}
-                        className="text-xs text-error-700 hover:underline disabled:opacity-40"
-                      >
-                        {t("admin.locations.btn_delete")}
-                      </button>
+                      <IconButton onClick={() => updCountry(c)} disabled={busy} aria-label={t("admin.locations.btn_edit")}>
+                        <Edit3 className="h-4 w-4" />
+                      </IconButton>
+                      <IconButton onClick={() => delCountry(c.id)} disabled={busy} aria-label={t("admin.locations.btn_delete")}>
+                        <Trash2 className="h-4 w-4" />
+                      </IconButton>
                     </div>
                   </TD>
                 </TR>
-              ))}
+                );
+              })}
             </TBody>
-          </Table>
+          </Table></V2Card>
         </div>
       </section>
 
@@ -511,7 +533,7 @@ export default function PlatformLocationsPage() {
             </div>
           </div>
           <div className="mt-4">
-            <Table>
+            <V2Card><Table>
               <THead>
                 <TR>
                   <TH>{t("admin.locations.col_id")}</TH>
@@ -524,45 +546,50 @@ export default function PlatformLocationsPage() {
                 {regions.length === 0 ? (
                   <TEmpty colSpan={4}>{t("admin.locations.empty_regions")}</TEmpty>
                 ) : null}
-                {regions.map((r) => (
+                {regions.map((r) => {
+                  const initials = (r.name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+                  const tone = pickAvatarTone(r.id);
+                  return (
                   <TR
                     key={r.id}
                     className={selectedRegionId === r.id ? "bg-figma-bg-1" : undefined}
                   >
-                    <TD className="tabular-nums">{r.id}</TD>
-                    <TD>{r.name}</TD>
-                    <TD className="tabular-nums">{r.cities_count ?? "-"}</TD>
+                    <TD className="tabular-nums font-mono text-xs text-fg-t7">#{r.id}</TD>
                     <TD>
                       <div className="flex items-center gap-3">
+                        <span
+                          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold"
+                          style={avatarStyle(tone)}
+                          aria-hidden
+                        >
+                          {initials}
+                        </span>
+                        <div className="font-medium text-fg-t8 truncate">{r.name}</div>
+                      </div>
+                    </TD>
+                    <TD className="tabular-nums text-xs">{r.cities_count ?? "-"}</TD>
+                    <TD align="right">
+                      <div className="flex justify-end items-center gap-1">
                         <button
                           type="button"
                           onClick={() => setSelectedRegionId(r.id)}
-                          className="text-xs text-primary-500 hover:underline"
+                          className="text-xs text-primary-500 hover:underline mr-1"
                         >
                           {t("admin.locations.btn_select")}
                         </button>
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => updRegion(r)}
-                          className="text-xs text-fg-t7 hover:underline disabled:opacity-40"
-                        >
-                          {t("admin.locations.btn_edit")}
-                        </button>
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => delRegion(r.id)}
-                          className="text-xs text-error-700 hover:underline disabled:opacity-40"
-                        >
-                          {t("admin.locations.btn_delete")}
-                        </button>
+                        <IconButton onClick={() => updRegion(r)} disabled={busy} aria-label={t("admin.locations.btn_edit")}>
+                          <Edit3 className="h-4 w-4" />
+                        </IconButton>
+                        <IconButton onClick={() => delRegion(r.id)} disabled={busy} aria-label={t("admin.locations.btn_delete")}>
+                          <Trash2 className="h-4 w-4" />
+                        </IconButton>
                       </div>
                     </TD>
                   </TR>
-                ))}
+                  );
+                })}
               </TBody>
-            </Table>
+            </Table></V2Card>
           </div>
         </section>
       )}
@@ -612,7 +639,7 @@ export default function PlatformLocationsPage() {
             </div>
           </div>
           <div className="mt-4">
-            <Table>
+            <V2Card><Table>
               <THead>
                 <TR>
                   <TH>{t("admin.locations.col_id")}</TH>
@@ -624,38 +651,59 @@ export default function PlatformLocationsPage() {
                 {cities.length === 0 ? (
                   <TEmpty colSpan={3}>{t("admin.locations.empty_cities")}</TEmpty>
                 ) : null}
-                {cities.map((x) => (
+                {cities.map((x) => {
+                  const initials = (x.name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+                  const tone = pickAvatarTone(x.id);
+                  return (
                   <TR key={x.id}>
-                    <TD className="tabular-nums">{x.id}</TD>
-                    <TD>{x.name}</TD>
+                    <TD className="tabular-nums font-mono text-xs text-fg-t7">#{x.id}</TD>
                     <TD>
                       <div className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => updCity(x)}
-                          className="text-xs text-fg-t7 hover:underline disabled:opacity-40"
+                        <span
+                          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold"
+                          style={avatarStyle(tone)}
+                          aria-hidden
                         >
-                          {t("admin.locations.btn_edit")}
-                        </button>
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => delCity(x.id)}
-                          className="text-xs text-error-700 hover:underline disabled:opacity-40"
-                        >
-                          {t("admin.locations.btn_delete")}
-                        </button>
+                          {initials}
+                        </span>
+                        <div className="font-medium text-fg-t8 truncate">{x.name}</div>
+                      </div>
+                    </TD>
+                    <TD align="right">
+                      <div className="flex justify-end items-center gap-1">
+                        <IconButton onClick={() => updCity(x)} disabled={busy} aria-label={t("admin.locations.btn_edit")}>
+                          <Edit3 className="h-4 w-4" />
+                        </IconButton>
+                        <IconButton onClick={() => delCity(x.id)} disabled={busy} aria-label={t("admin.locations.btn_delete")}>
+                          <Trash2 className="h-4 w-4" />
+                        </IconButton>
                       </div>
                     </TD>
                   </TR>
-                ))}
+                  );
+                })}
               </TBody>
-            </Table>
+            </Table></V2Card>
           </div>
         </section>
       )}
       </div>
     </div>
   );
+}
+
+// v2 admin-redesign helpers — avatar tone picker.
+function pickAvatarTone(id: number): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  return tones[id % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
 }

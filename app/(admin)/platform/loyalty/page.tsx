@@ -28,7 +28,10 @@ import {
   PageHeader as V2PageHeader,
   SectionTabs,
   V2Card,
+  V2Button,
+  IconButton,
 } from "@/components/ui/v2";
+import { Download, Eye } from "lucide-react";
 
 /**
  * Platform-admin loyalty oversight (Sprint 58, PART 27).
@@ -241,6 +244,9 @@ export default function PlatformLoyaltyPage() {
         ]}
         title={t("admin.platform_loyalty.title")}
         subtitle={t("admin.platform_loyalty.subtitle")}
+        actions={
+          <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+        }
       />
 
       <SectionTabs
@@ -372,32 +378,46 @@ export default function PlatformLoyaltyPage() {
           ) : accounts.length === 0 ? (
             <TEmpty colSpan={5}>{t("admin.platform_loyalty.empty")}</TEmpty>
           ) : null}
-          {accounts.map((a) => (
+          {accounts.map((a) => {
+            const userName = a.user?.name ?? `#${a.user_id}`;
+            const initials = (userName !== "?" ? userName : "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+            const tone = pickAvatarTone(a.id);
+            return (
             <TR key={a.id} onClick={() => openDetail(a)}>
-              <TD className="text-xs">
-                {a.user?.name ?? `#${a.user_id}`}
-                {a.user?.email && <div className="text-fg-t6">{a.user.email}</div>}
+              <TD>
+                <div className="flex items-center gap-3">
+                  <span
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                    style={avatarStyle(tone)}
+                    aria-hidden
+                  >
+                    {initials}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="font-medium text-fg-t8 truncate">{userName}</div>
+                    {a.user?.email && <div className="text-[11px] text-fg-t6 truncate">{a.user.email}</div>}
+                  </div>
+                </div>
               </TD>
               <TD>
                 <TierBadge tier={a.tier} />
               </TD>
-              <TD align="right" className="tabular-nums">
+              <TD align="right" className="tabular-nums font-medium text-fg-t8">
                 {formatNumber(a.points_balance, lang)}
               </TD>
-              <TD align="right" className="tabular-nums">
+              <TD align="right" className="tabular-nums text-xs text-fg-t6">
                 {formatNumber(a.lifetime_points, lang)}
               </TD>
               <TD align="right" onClick={(e) => e.stopPropagation()}>
-                <button
-                  type="button"
-                  onClick={() => openDetail(a)}
-                  className="text-xs text-primary-500 hover:underline"
-                >
-                  {t("admin.platform_loyalty.manage")}
-                </button>
+                <div className="flex justify-end gap-1">
+                  <IconButton onClick={() => openDetail(a)} aria-label={t("admin.platform_loyalty.manage")}>
+                    <Eye className="h-4 w-4" />
+                  </IconButton>
+                </div>
               </TD>
             </TR>
-          ))}
+            );
+          })}
         </TBody>
       </Table>
       </V2Card>
@@ -617,4 +637,20 @@ function TierBadge({ tier }: { tier: string }) {
       {t(`admin.platform_loyalty.tier_${tier}`)}
     </span>
   );
+}
+
+// v2 admin-redesign helpers — avatar tone picker.
+function pickAvatarTone(id: number): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  return tones[id % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
 }

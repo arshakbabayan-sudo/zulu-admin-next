@@ -16,7 +16,6 @@ import {
   apiPatchAdminPageStatus,
   type AdminPageRow,
 } from "@/lib/pages-api";
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Button,
@@ -25,7 +24,6 @@ import {
   Modal,
 
   Pagination,
-  StatusPill,
   Switch,
   Table,
   TBody,
@@ -39,7 +37,10 @@ import {
   PageHeader as V2PageHeader,
   SectionTabs,
   V2Card,
+  V2Button,
+  IconButton,
 } from "@/components/ui/v2";
+import { Download, Edit3, Eye, Plus, Trash2 } from "lucide-react";
 
 function slugify(input: string): string {
   return input
@@ -49,13 +50,6 @@ function slugify(input: string): string {
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
-}
-
-function formatDate(value?: string | null): string {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("en-GB", { year: "numeric", month: "short", day: "2-digit" }).format(date);
 }
 
 function AddPageModal({
@@ -242,9 +236,12 @@ export default function AdminPagesListPage() {
         ]}
         title={t("admin.pages.title")}
         actions={
-          <Button size="sm" onClick={() => setShowAddModal(true)}>
-            {t("admin.pages.add_new")}
-          </Button>
+          <>
+            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button variant="primary" icon={<Plus className="h-4 w-4" />} onClick={() => setShowAddModal(true)}>
+              {t("admin.pages.add_new")}
+            </V2Button>
+          </>
         }
       />
 
@@ -291,17 +288,38 @@ export default function AdminPagesListPage() {
             {rows.length === 0 ? <TEmpty colSpan={6}>{t("admin.pages.empty")}</TEmpty> : null}
             {rows.map((row, index) => {
               const isActive = row.status === 1;
+              const initials = (row.page_name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+              const tone = pickAvatarTone(row.id);
+              const statusColor = isActive ? "var(--admin-success)" : "var(--admin-text-tertiary)";
               return (
                 <TR key={row.id}>
-                  <TD className="tabular-nums">{snStart + index + 1}</TD>
+                  <TD className="tabular-nums font-mono text-xs text-fg-t7">#{snStart + index + 1}</TD>
                   <TD>
-                    <div className="font-medium text-fg-t11">{row.page_name}</div>
-                    <div className="text-xs text-fg-t6">/{row.page_slug}</div>
+                    <div className="flex items-center gap-3">
+                      <span
+                        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[11px] font-semibold"
+                        style={avatarStyle(tone)}
+                        aria-hidden
+                      >
+                        {initials || "?"}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="font-medium text-fg-t8 truncate">{row.page_name}</div>
+                        <div className="text-[11px] text-fg-t6 truncate font-mono">/{row.page_slug}</div>
+                      </div>
+                    </div>
                   </TD>
                   <TD>
-                    <StatusPill status={isActive ? "active" : "inactive"}>
-                      {isActive ? t("admin.pages.status.active") : t("admin.pages.status.inactive")}
-                    </StatusPill>
+                    <span className="inline-flex items-center gap-1.5 text-[12px]">
+                      <span
+                        aria-hidden
+                        className="inline-block h-1.5 w-1.5 rounded-full"
+                        style={{ backgroundColor: statusColor }}
+                      />
+                      <span className="capitalize">
+                        {isActive ? t("admin.pages.status.active") : t("admin.pages.status.inactive")}
+                      </span>
+                    </span>
                   </TD>
                   <TD>
                     <Switch
@@ -311,23 +329,22 @@ export default function AdminPagesListPage() {
                       aria-label={isActive ? "Set page inactive" : "Set page active"}
                     />
                   </TD>
-                  <TD className="text-xs text-fg-t6">{formatDate(row.created_at)}</TD>
-                  <TD>
-                    <div className="flex items-center gap-3 text-xs">
-                      <Link href={`/pages/${row.id}/edit?mode=view`} className="text-info-700 underline hover:text-info-800">
-                        {t("admin.pages.action.view")}
-                      </Link>
-                      <Link href={`/pages/${row.id}/edit`} className="text-primary-500 underline hover:text-primary-700">
-                        {t("admin.pages.action.edit")}
-                      </Link>
-                      <button
-                        type="button"
-                        disabled={busyId === row.id}
+                  <TD className="text-xs text-fg-t6">{formatRelativeTime(row.created_at)}</TD>
+                  <TD align="right">
+                    <div className="flex justify-end gap-1">
+                      <IconButton as="link" href={`/pages/${row.id}/edit?mode=view`} aria-label={t("admin.pages.action.view")}>
+                        <Eye className="h-4 w-4" />
+                      </IconButton>
+                      <IconButton as="link" href={`/pages/${row.id}/edit`} aria-label={t("admin.pages.action.edit")}>
+                        <Edit3 className="h-4 w-4" />
+                      </IconButton>
+                      <IconButton
                         onClick={() => void handleDelete(row)}
-                        className="text-error-700 underline disabled:opacity-40 hover:text-error-800"
+                        aria-label={t("admin.pages.action.delete")}
+                        disabled={busyId === row.id}
                       >
-                        {t("admin.pages.action.delete")}
-                      </button>
+                        <Trash2 className="h-4 w-4" />
+                      </IconButton>
                     </div>
                   </TD>
                 </TR>
@@ -343,4 +360,36 @@ export default function AdminPagesListPage() {
       ) : null}
     </div>
   );
+}
+
+// v2 admin-redesign helpers — avatar tone + relative time.
+function pickAvatarTone(id: number): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  return tones[id % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
+}
+
+function formatRelativeTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "—";
+  const diff = Date.now() - t;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  return new Date(iso).toLocaleDateString();
 }

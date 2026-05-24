@@ -14,7 +14,6 @@ import { useCallback, useEffect, useState } from "react";
 import {
   Pagination,
   Select,
-  StatusPill,
   Table,
   TBody,
   TD,
@@ -28,7 +27,9 @@ import {
   FilterCard,
   FilterField,
   V2Card,
+  V2Button,
 } from "@/components/ui/v2";
+import { Download, Star } from "lucide-react";
 
 const MOD_STATUSES = ["published", "hidden", "rejected"] as const;
 
@@ -110,6 +111,9 @@ export default function PlatformReviewsPage() {
           { label: t("admin.reviews.title") },
         ]}
         title={t("admin.reviews.title")}
+        actions={
+          <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+        }
       />
 
       <FilterCard>
@@ -154,21 +158,74 @@ export default function PlatformReviewsPage() {
           {rows.length === 0 ? (
             <TEmpty colSpan={7}>{t("admin.reviews.empty") || "No reviews."}</TEmpty>
           ) : null}
-          {rows.map((r) => (
+          {rows.map((r) => {
+            const userName = r.user?.name ?? "—";
+            const initials = (userName !== "—" ? userName : "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+            const tone = pickAvatarTone(r.id);
+            const statusColor =
+              r.status === "published"
+                ? "var(--admin-success)"
+                : r.status === "pending"
+                  ? "var(--admin-warning)"
+                  : r.status === "rejected"
+                    ? "var(--admin-danger)"
+                    : "var(--admin-text-tertiary)";
+            return (
             <TR key={r.id}>
-              <TD className="tabular-nums">{r.id}</TD>
-              <TD>{r.rating}</TD>
-              <TD className="max-w-xs text-xs">
+              <TD className="tabular-nums font-mono text-xs text-fg-t7">#{r.id}</TD>
+              <TD>
+                <div className="inline-flex items-center gap-0.5">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star
+                      key={i}
+                      className="h-3.5 w-3.5"
+                      style={{
+                        fill: i < (r.rating ?? 0) ? "var(--admin-warning)" : "transparent",
+                        color: i < (r.rating ?? 0) ? "var(--admin-warning)" : "var(--admin-border)",
+                      }}
+                      aria-hidden
+                    />
+                  ))}
+                  <span className="ml-1 tabular-nums text-xs text-fg-t7">{r.rating}</span>
+                </div>
+              </TD>
+              <TD className="max-w-xs text-xs text-fg-t7">
                 {(r.review_text ?? "").slice(0, 200)}
                 {(r.review_text?.length ?? 0) > 200 ? "…" : ""}
               </TD>
               <TD>
-                <StatusPill status={r.status} />
+                <span className="inline-flex items-center gap-1.5 text-[12px]">
+                  <span
+                    aria-hidden
+                    className="inline-block h-1.5 w-1.5 rounded-full"
+                    style={{ backgroundColor: statusColor }}
+                  />
+                  <span className="capitalize">{r.status}</span>
+                </span>
               </TD>
-              <TD className="text-xs">
-                {r.target_entity_type} #{r.target_entity_id}
+              <TD>
+                <span
+                  className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                  style={{
+                    backgroundColor: "var(--admin-bg-tertiary)",
+                    color: "var(--admin-text-secondary)",
+                  }}
+                >
+                  {r.target_entity_type} #{r.target_entity_id}
+                </span>
               </TD>
-              <TD className="text-xs">{r.user?.name ?? "—"}</TD>
+              <TD>
+                <div className="flex items-center gap-3">
+                  <span
+                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold"
+                    style={avatarStyle(tone)}
+                    aria-hidden
+                  >
+                    {initials || "?"}
+                  </span>
+                  <div className="font-medium text-fg-t8 truncate text-xs">{userName}</div>
+                </div>
+              </TD>
               <TD>
                 <div className="flex flex-col gap-1">
                   {MOD_STATUSES.map((s) => (
@@ -185,7 +242,8 @@ export default function PlatformReviewsPage() {
                 </div>
               </TD>
             </TR>
-          ))}
+            );
+          })}
         </TBody>
       </Table>
       </V2Card>
@@ -195,4 +253,21 @@ export default function PlatformReviewsPage() {
       ) : null}
     </div>
   );
+}
+
+// v2 admin-redesign helpers — avatar tone.
+function pickAvatarTone(id: number | string): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  const n = typeof id === "number" ? id : id.length;
+  return tones[Math.abs(n) % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
 }

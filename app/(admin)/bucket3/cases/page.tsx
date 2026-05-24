@@ -37,7 +37,11 @@ import {
 import {
   PageHeader as V2PageHeader,
   SectionTabs,
+  V2Card,
+  V2Button,
+  IconButton,
 } from "@/components/ui/v2";
+import { Download, Eye, Plus } from "lucide-react";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useCallback, useEffect, useState } from "react";
 
@@ -317,9 +321,12 @@ export default function Bucket3CasesPage() {
             : t("admin.bucket3.cases.subtitle")
         }
         actions={
-          <Button size="sm" onClick={() => setComposeOpen(true)}>
-            {t("admin.bucket3.cases.new_case")}
-          </Button>
+          <>
+            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button variant="primary" icon={<Plus className="h-4 w-4" />} onClick={() => setComposeOpen(true)}>
+              {t("admin.bucket3.cases.new_case")}
+            </V2Button>
+          </>
         }
       />
 
@@ -428,6 +435,7 @@ export default function Bucket3CasesPage() {
         />
       </div>
 
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -438,34 +446,91 @@ export default function Bucket3CasesPage() {
             <TH>{t("admin.bucket3.cases.col.sla")}</TH>
             <TH>{t("admin.bucket3.cases.col.assigned")}</TH>
             <TH>{t("admin.bucket3.cases.col.opened")}</TH>
+            <TH align="right">Actions</TH>
           </TR>
         </THead>
         <TBody>
           {rows.length === 0 ? (
-            <TEmpty colSpan={7}>{t("admin.bucket3.cases.empty")}</TEmpty>
+            <TEmpty colSpan={8}>{t("admin.bucket3.cases.empty")}</TEmpty>
           ) : null}
           {rows.map((r) => {
             const sla = formatSlaChip(r);
+            const assignedName = r.assigned_to?.name ?? "";
+            const initials = (assignedName || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+            const tone = pickAvatarTone(r.id);
+            const statusColor =
+              r.status === "open"
+                ? "var(--admin-info)"
+                : r.status === "in_progress"
+                  ? "var(--admin-warning)"
+                  : r.status === "resolved" || r.status === "closed"
+                    ? "var(--admin-success)"
+                    : r.status === "escalated"
+                      ? "var(--admin-danger)"
+                      : "var(--admin-text-tertiary)";
+            const priorityBadge =
+              r.priority === "urgent"
+                ? { bg: "var(--admin-danger-light)", fg: "var(--admin-danger-dark)" }
+                : r.priority === "high"
+                  ? { bg: "var(--admin-warning-light)", fg: "var(--admin-warning-dark)" }
+                  : r.priority === "normal"
+                    ? { bg: "var(--admin-info-light)", fg: "var(--admin-info-dark)" }
+                    : { bg: "var(--admin-bg-tertiary)", fg: "var(--admin-text-secondary)" };
             return (
               <TR key={r.id} onClick={() => setSelected(r)}>
                 <TD className="font-mono text-xs text-fg-t8">{r.case_number}</TD>
                 <TD className="font-medium text-fg-t8 max-w-[280px] truncate">{r.title}</TD>
                 <TD>
-                  <StatusPill status={statusTier(r.status)}>{r.status}</StatusPill>
+                  <span className="inline-flex items-center gap-1.5 text-[12px]">
+                    <span
+                      aria-hidden
+                      className="inline-block h-1.5 w-1.5 rounded-full"
+                      style={{ backgroundColor: statusColor }}
+                    />
+                    <span className="capitalize">{r.status.replace(/_/g, " ")}</span>
+                  </span>
                 </TD>
                 <TD>
-                  <StatusPill status={priorityTier(r.priority)}>{r.priority}</StatusPill>
+                  <span
+                    className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                    style={{ backgroundColor: priorityBadge.bg, color: priorityBadge.fg }}
+                  >
+                    {r.priority}
+                  </span>
                 </TD>
                 <TD>
                   {sla ? <StatusPill status={sla.tone}>{sla.label}</StatusPill> : <span className="text-xs text-fg-t6">—</span>}
                 </TD>
-                <TD className="text-xs text-fg-t7">{r.assigned_to?.name ?? "—"}</TD>
-                <TD className="text-xs text-fg-t6">{formatDateTime(r.opened_at, lang)}</TD>
+                <TD>
+                  {assignedName ? (
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold"
+                        style={avatarStyle(tone)}
+                        aria-hidden
+                      >
+                        {initials}
+                      </span>
+                      <span className="text-xs text-fg-t7 truncate">{assignedName}</span>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-fg-t6">—</span>
+                  )}
+                </TD>
+                <TD className="text-xs text-fg-t6"><span title={formatDateTime(r.opened_at, lang)}>{formatRelativeTime(r.opened_at)}</span></TD>
+                <TD align="right" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex justify-end gap-1">
+                    <IconButton onClick={() => setSelected(r)} aria-label="View">
+                      <Eye className="h-4 w-4" />
+                    </IconButton>
+                  </div>
+                </TD>
               </TR>
             );
           })}
         </TBody>
       </Table>
+      </V2Card>
 
       {meta && meta.last_page > 1 && (
         <Pagination
@@ -730,4 +795,37 @@ export default function Bucket3CasesPage() {
       </div>
     </div>
   );
+}
+
+// v2 admin-redesign helpers — avatar tone + relative time.
+function pickAvatarTone(id: number | string): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  const n = typeof id === "number" ? id : id.length;
+  return tones[Math.abs(n) % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
+}
+
+function formatRelativeTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "—";
+  const diff = Date.now() - t;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  return new Date(iso).toLocaleDateString();
 }

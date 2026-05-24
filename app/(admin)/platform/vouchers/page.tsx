@@ -33,7 +33,9 @@ import {
   FilterField,
   V2Card,
   V2Button,
+  IconButton,
 } from "@/components/ui/v2";
+import { Download, Eye, Plus } from "lucide-react";
 
 /**
  * Platform-admin voucher viewer (Sprint 56, PART 09).
@@ -239,6 +241,14 @@ export default function PlatformVouchersPage() {
         ]}
         title={t("admin.platform_vouchers.title")}
         subtitle={t("admin.platform_vouchers.subtitle")}
+        actions={
+          <>
+            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
+              Issue voucher
+            </V2Button>
+          </>
+        }
       />
 
       <SectionTabs
@@ -320,29 +330,55 @@ export default function PlatformVouchersPage() {
           ) : rows.length === 0 ? (
             <TEmpty colSpan={8}>{t("admin.platform_vouchers.empty")}</TEmpty>
           ) : null}
-          {rows.map((r) => (
+          {rows.map((r) => {
+            const initials = (r.holder_name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+            const tone = pickAvatarTone(r.id);
+            return (
             <TR key={r.id} onClick={() => openDetail(r)}>
-              <TD className="font-mono text-xs">{r.voucher_number}</TD>
-              <TD className="text-xs">{r.service_type}</TD>
-              <TD className="text-xs">{r.holder_name}</TD>
+              <TD className="font-mono text-xs text-fg-t8">{r.voucher_number}</TD>
+              <TD>
+                <span
+                  className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                  style={{
+                    backgroundColor: "var(--admin-bg-tertiary)",
+                    color: "var(--admin-text-secondary)",
+                  }}
+                >
+                  {r.service_type}
+                </span>
+              </TD>
+              <TD>
+                <div className="flex items-center gap-3">
+                  <span
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                    style={avatarStyle(tone)}
+                    aria-hidden
+                  >
+                    {initials || "?"}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="font-medium text-fg-t8 truncate">{r.holder_name}</div>
+                    <div className="text-[11px] text-fg-t6 truncate">{r.language?.toUpperCase()}</div>
+                  </div>
+                </div>
+              </TD>
               <TD><VoucherStatusBadge status={r.status} /></TD>
-              <TD className="text-xs">
+              <TD className="text-xs text-fg-t6">
                 {formatDate(r.valid_from, lang)}
-                {r.valid_to ? ` в†’ ${formatDate(r.valid_to, lang)}` : ""}
+                {r.valid_to ? ` → ${formatDate(r.valid_to, lang)}` : ""}
               </TD>
               <TD className="tabular-nums text-xs">{r.verification_count}</TD>
-              <TD className="text-xs text-fg-t6">{formatDate(r.created_at, lang)}</TD>
+              <TD className="text-xs text-fg-t6">{formatRelativeTime(r.created_at)}</TD>
               <TD align="right" onClick={(e) => e.stopPropagation()}>
-                <button
-                  type="button"
-                  onClick={() => openDetail(r)}
-                  className="text-xs text-primary-500 hover:underline"
-                >
-                  {t("admin.platform_vouchers.details")}
-                </button>
+                <div className="flex justify-end gap-1">
+                  <IconButton onClick={() => openDetail(r)} aria-label="View">
+                    <Eye className="h-4 w-4" />
+                  </IconButton>
+                </div>
               </TD>
             </TR>
-          ))}
+            );
+          })}
         </TBody>
       </Table>
       </V2Card>
@@ -511,4 +547,37 @@ function DetailRow({ label, value }: { label: string; value: string }) {
       <dd className="text-sm break-words">{value}</dd>
     </div>
   );
+}
+
+// v2 admin-redesign helpers — avatar tone + relative time.
+function pickAvatarTone(id: number | string): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  const n = typeof id === "number" ? id : id.length;
+  return tones[Math.abs(n) % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
+}
+
+function formatRelativeTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "—";
+  const diff = Date.now() - t;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  return new Date(iso).toLocaleDateString();
 }

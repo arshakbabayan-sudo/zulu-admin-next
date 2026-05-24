@@ -47,7 +47,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   PageHeader as V2PageHeader,
   SectionTabs,
+  V2Button,
 } from "@/components/ui/v2";
+import { Download, Plus } from "lucide-react";
 
 type SortDir = "asc" | "desc";
 type SortField = "id" | "name" | "type" | "status" | "governance_status" | "is_seller";
@@ -466,6 +468,14 @@ export default function PlatformCompaniesPage() {
                 .replace("{lastPage}", String(meta.last_page))
             : undefined
         }
+        actions={
+          <>
+            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
+              Add company
+            </V2Button>
+          </>
+        }
       />
 
       <SectionTabs
@@ -715,27 +725,67 @@ export default function PlatformCompaniesPage() {
                   </td>
                 </tr>
               ))}
-              {rows.map((r) => (
+              {rows.map((r) => {
+                const initials = (r.name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+                const tone = pickAvatarTone(r.id);
+                const statusColor =
+                  r.status === "active"
+                    ? "var(--admin-success)"
+                    : r.status === "suspended" || r.status === "banned"
+                      ? "var(--admin-danger)"
+                      : r.status === "pending"
+                        ? "var(--admin-warning)"
+                        : "var(--admin-text-tertiary)";
+                return (
                 <tr key={r.id} className="border-b border-default last:border-0 transition hover:bg-figma-bg-1">
-                  <td className="px-4 py-3 tabular-nums text-fg-t7">
+                  <td className="px-4 py-3 tabular-nums font-mono text-xs text-fg-t7">
                     <Link
                       href={`/platform/companies/${r.id}`}
                       className="text-primary transition hover:underline"
                     >
-                      {r.id}
+                      #{r.id}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 font-medium text-fg-t8">
+                  <td className="px-4 py-3">
                     <Link
                       href={`/platform/companies/${r.id}`}
-                      className="text-fg-t8 transition hover:text-primary hover:underline"
+                      className="flex items-center gap-3 transition hover:text-primary"
                     >
-                      {r.name}
+                      <span
+                        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[11px] font-semibold"
+                        style={avatarStyle(tone)}
+                        aria-hidden
+                      >
+                        {initials}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="font-medium text-fg-t8 truncate">{r.name}</div>
+                        {r.type ? <div className="text-[11px] text-fg-t6 truncate capitalize">{r.type}</div> : null}
+                      </div>
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-fg-t7 capitalize">{r.type ?? "—"}</td>
+                  <td className="px-4 py-3 text-fg-t7">
+                    <span
+                      className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                      style={{
+                        backgroundColor: "var(--admin-bg-tertiary)",
+                        color: "var(--admin-text-secondary)",
+                      }}
+                    >
+                      {r.type ?? "—"}
+                    </span>
+                  </td>
                   <td className="px-4 py-3">
-                    {r.status ? <StatusPill status={r.status} /> : <span className="text-fg-t6">—</span>}
+                    {r.status ? (
+                      <span className="inline-flex items-center gap-1.5 text-[12px]">
+                        <span
+                          aria-hidden
+                          className="inline-block h-1.5 w-1.5 rounded-full"
+                          style={{ backgroundColor: statusColor }}
+                        />
+                        <span className="capitalize">{r.status}</span>
+                      </span>
+                    ) : <span className="text-fg-t6">—</span>}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
@@ -861,7 +911,8 @@ export default function PlatformCompaniesPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -1038,4 +1089,20 @@ export default function PlatformCompaniesPage() {
       />
     </div>
   );
+}
+
+// v2 admin-redesign helpers — avatar tone picker.
+function pickAvatarTone(id: number): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  return tones[id % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
 }

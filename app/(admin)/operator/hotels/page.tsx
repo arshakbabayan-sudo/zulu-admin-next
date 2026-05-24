@@ -30,7 +30,9 @@ import {
   SectionTabs,
   V2Card,
   V2Button,
+  IconButton,
 } from "@/components/ui/v2";
+import { Edit3, Trash2 } from "lucide-react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { ApiRequestError } from "@/lib/api-client";
@@ -1196,57 +1198,93 @@ export default function OperatorHotelsPage() {
             <TH>{t("admin.crud.hotels.col.country")}</TH>
             <TH>{t("admin.crud.hotels.col.stars")}</TH>
             <TH>{t("admin.crud.common.status")}</TH>
-            <TH>{t("admin.crud.common.actions")}</TH>
+            <TH align="right">{t("admin.crud.common.actions")}</TH>
           </TR>
         </THead>
         <TBody>
           {rows.length === 0 ? (
             <TEmpty colSpan={7}>{t("admin.crud.hotels.empty")}</TEmpty>
           ) : null}
-          {rows.map((r) => (
+          {rows.map((r) => {
+            const name = r.hotel_name ?? "?";
+            const initials = name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+            const tone = pickAvatarTone(r.id);
+            return (
             <TR key={r.id}>
-              <TD className="tabular-nums text-fg-t7">{r.id}</TD>
-              <TD className="font-medium">{r.hotel_name ?? "-"}</TD>
-              <TD>{r.city ?? "-"}</TD>
-              <TD>{r.country ?? "-"}</TD>
-              <TD>{formatHotelStarRatingDisplay(r.star_rating)}</TD>
+              <TD className="tabular-nums font-mono text-xs text-fg-t7">#{r.id}</TD>
+              <TD>
+                <div className="flex items-center gap-3">
+                  <span
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[11px] font-semibold"
+                    style={avatarStyle(tone)}
+                    aria-hidden
+                  >
+                    {initials || "?"}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="font-medium text-fg-t8 truncate">{r.hotel_name ?? "-"}</div>
+                    <div className="text-[11px] text-fg-t6 truncate">{[r.city, r.country].filter(Boolean).join(", ")}</div>
+                  </div>
+                </div>
+              </TD>
+              <TD className="text-xs text-fg-t7">{r.city ?? "-"}</TD>
+              <TD>
+                <span
+                  className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                  style={{
+                    backgroundColor: "var(--admin-bg-tertiary)",
+                    color: "var(--admin-text-secondary)",
+                  }}
+                >
+                  {r.country ?? "-"}
+                </span>
+              </TD>
+              <TD className="text-xs">{formatHotelStarRatingDisplay(r.star_rating)}</TD>
               <TD>
                 <OfferStatusBadge status={r.offer?.status ?? null} />
               </TD>
-              <TD>
-                <div className="flex flex-col gap-1">
-                  <button
-                    type="button"
-                    onClick={() => void openEdit(r)}
-                    className="text-left text-xs text-info-700 hover:underline"
-                  >
-                    {t("admin.crud.common.edit")}
-                  </button>
+              <TD align="right">
+                <div className="flex justify-end items-center gap-1">
                   {r.offer?.id && isSubmittableStatus(r.offer.status) && (
                     <Button
                       size="sm"
                       variant="primary"
                       onClick={() => void handleSubmitForReview(r.offer!.id!)}
-                      className="self-start"
                     >
                       {t("admin.crud.common.submit_for_review")}
                     </Button>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => void handleDelete(r.id)}
-                    className="text-left text-xs text-error-600 hover:underline"
-                  >
-                    {t("admin.crud.common.delete")}
-                  </button>
+                  <IconButton onClick={() => void openEdit(r)} aria-label={t("admin.crud.common.edit")}>
+                    <Edit3 className="h-4 w-4" />
+                  </IconButton>
+                  <IconButton onClick={() => void handleDelete(r.id)} aria-label={t("admin.crud.common.delete")}>
+                    <Trash2 className="h-4 w-4" />
+                  </IconButton>
                 </div>
               </TD>
             </TR>
-          ))}
+            );
+          })}
         </TBody>
       </Table>
       </V2Card>
       {meta && <PaginationBar meta={meta} onPage={setPage} />}
     </div>
   );
+}
+
+// v2 admin-redesign helpers — avatar tone picker.
+function pickAvatarTone(id: number): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  return tones[id % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
 }
