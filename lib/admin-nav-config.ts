@@ -257,7 +257,10 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     labelKey: "admin.nav.section.roles_permissions",
     labelFallback: "Roles & permissions",
     icon: "/icons/menu/shield.svg",
-    defaultHref: "/admin-redesign/roles-permissions",
+    // Phase Զ fix 2026-05-24 — route to real /platform/rbac page (already
+    // v2-migrated in Phase Դ.9). Old placeholder /admin-redesign/roles-
+    // permissions deleted.
+    defaultHref: "/platform/rbac",
     tabs: [],
     visibility: "always",
   },
