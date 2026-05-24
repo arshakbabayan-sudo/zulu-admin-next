@@ -21,7 +21,8 @@ import {
   type CompanyModulePermissionsResponse,
   type ModulePermissionPatch,
 } from "@/lib/company-module-permissions-api";
-import { Button, Checkbox, PageHeader } from "@/components/ui";
+import { Button, Checkbox } from "@/components/ui";
+import { PageHeader as V2PageHeader, V2Card, V2Button } from "@/components/ui/v2";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -137,19 +138,24 @@ export default function CompanyModulePermissionsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Marketplace ops", href: "/platform/companies" },
+          { label: "Companies", href: "/platform/companies" },
+          { label: `#${companyId}`, href: `/platform/companies/${companyId}` },
+          { label: "Module permissions" },
+        ]}
         title={`Module access — company #${companyId}`}
         subtitle="Toggle which admin-panel sections this company's operator and agent users can see. Default state is allowed — only explicit denials hide a module."
         actions={
-          <Link
-            href={`/platform/companies/${companyId}`}
-            className="inline-flex h-10 items-center rounded-md border-2 border-primary-500 px-4 text-ds-button-s font-ds-button-s font-semibold text-primary-500 transition hover:bg-primary-50"
-          >
+          <V2Button as="link" href={`/platform/companies/${companyId}`}>
             ← Back to company
-          </Link>
+          </V2Button>
         }
       />
+      <div className="space-y-6">
 
       {err && (
         <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
@@ -168,7 +174,7 @@ export default function CompanyModulePermissionsPage() {
       ) : (
         <>
           {Object.entries(groupedKeys).map(([group, keys]) => (
-            <section key={group} className="admin-card p-4">
+            <V2Card key={group} className="p-4">
               <h2 className="mb-3 text-base font-semibold">{groupLabel(group)}</h2>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {keys.map((k) => (
@@ -181,7 +187,7 @@ export default function CompanyModulePermissionsPage() {
                   />
                 ))}
               </div>
-            </section>
+            </V2Card>
           ))}
 
           <div className="flex gap-2">
@@ -197,7 +203,7 @@ export default function CompanyModulePermissionsPage() {
           </div>
 
           {data.permissions.length > 0 && (
-            <section className="admin-card p-4">
+            <V2Card className="p-4">
               <h2 className="mb-3 text-base font-semibold">Existing override rows</h2>
               <p className="mb-3 text-xs text-fg-t6">
                 Rows persisted server-side. Modules without a row use the default-allow state.
@@ -218,10 +224,11 @@ export default function CompanyModulePermissionsPage() {
                   </li>
                 ))}
               </ul>
-            </section>
+            </V2Card>
           )}
         </>
       )}
+      </div>
     </div>
   );
 }

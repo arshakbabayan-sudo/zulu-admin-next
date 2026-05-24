@@ -26,6 +26,7 @@ import {
   type PlatformAdminUserDetail,
   type UpdatePlatformUserInput,
 } from "@/lib/platform-admin-api";
+import { PageHeader as V2PageHeader, V2Card } from "@/components/ui/v2";
 
 const LANG_OPTIONS = [
   { value: "", label: "—" },
@@ -166,29 +167,31 @@ export default function PlatformUserDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <nav className="mb-2 text-sm text-fg-t6">
-            <Link href="/platform/users" className="hover:text-primary">
-              {t("admin.users.title")}
-            </Link>
-            <span className="mx-2">/</span>
-            <span className="text-fg-t8">#{user.id}</span>
-          </nav>
-          <h1 className="admin-page-title">{user.name || user.email}</h1>
-          <p className="mt-1 text-sm text-fg-t6">{user.email}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <StatusPill status={user.status} />
-          {user.is_super_admin ? (
-            <span className="inline-flex rounded-full bg-primary-50 px-2 py-0.5 text-xs font-medium text-primary-700">
-              Super admin
-            </span>
-          ) : null}
-        </div>
-      </header>
+    <div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Marketplace ops", href: "/platform/users" },
+          { label: t("admin.users.title"), href: "/platform/users" },
+          { label: user.name || user.email },
+        ]}
+        title={user.name || user.email}
+        subtitle={
+          <span className="flex items-center gap-2">
+            <span>{user.email}</span>
+            <span>·</span>
+            <span>#{user.id}</span>
+            <StatusPill status={user.status} />
+            {user.is_super_admin ? (
+              <span className="inline-flex rounded-full bg-primary-50 px-2 py-0.5 text-xs font-medium text-primary-700">
+                Super admin
+              </span>
+            ) : null}
+          </span>
+        }
+      />
 
+      <div className="space-y-6">
       {err ? (
         <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
       ) : null}
@@ -198,7 +201,8 @@ export default function PlatformUserDetailPage() {
         </div>
       ) : null}
 
-      <form onSubmit={handleSubmit} className="admin-card space-y-5 p-5">
+      <V2Card>
+      <form onSubmit={handleSubmit} className="space-y-5 p-5">
         <h2 className="text-lg font-semibold text-fg-t8">
           {t("admin.users.section.personal") === "admin.users.section.personal"
             ? "Personal information"
@@ -299,9 +303,10 @@ export default function PlatformUserDetailPage() {
           </div>
         </div>
       </form>
+      </V2Card>
 
       {user.companies.length > 0 ? (
-        <section className="admin-card p-5">
+        <V2Card className="p-5">
           <h2 className="text-lg font-semibold text-fg-t8">
             {t("admin.users.section.companies") === "admin.users.section.companies"
               ? "Companies"
@@ -320,8 +325,9 @@ export default function PlatformUserDetailPage() {
               </li>
             ))}
           </ul>
-        </section>
+        </V2Card>
       ) : null}
+      </div>
     </div>
   );
 }

@@ -30,10 +30,10 @@ import {
   Checkbox,
   FormField,
   Input,
-  PageHeader,
   StatusPill,
   Switch,
 } from "@/components/ui";
+import { PageHeader as V2PageHeader, V2Button } from "@/components/ui/v2";
 import { ArrowLeft } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -453,36 +453,37 @@ export default function AdminPageEditorLayoutPage() {
   }
 
   return (
-    <div className="space-y-5">
-      <div className="space-y-2">
-        {backLink}
-        <PageHeader
-          title={t("admin.pages.editor.title")}
-          actions={
-            <>
-              <Button
-                size="sm"
-                onClick={() => void togglePublished()}
-                disabled={busyAction === "published" || page == null}
-              >
-                {page?.status === 1
-                  ? t("admin.pages.editor.published_btn")
-                  : t("admin.pages.editor.draft_btn")}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!slugName}
-                onClick={() =>
-                  window.open(`/${slugName}`, "_blank", "noopener,noreferrer")
-                }
-              >
-                {t("admin.pages.editor.view_page")}
-              </Button>
-            </>
-          }
-        />
-      </div>
+    <div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Settings", href: "/pages" },
+          { label: "CMS pages", href: "/pages" },
+          { label: page?.page_name ?? t("admin.pages.editor.title") },
+        ]}
+        title={page?.page_name ?? t("admin.pages.editor.title")}
+        subtitle={t("admin.pages.editor.title")}
+        actions={
+          <>
+            <V2Button
+              onClick={() => void togglePublished()}
+              disabled={busyAction === "published" || page == null}
+              variant="primary"
+            >
+              {page?.status === 1
+                ? t("admin.pages.editor.published_btn")
+                : t("admin.pages.editor.draft_btn")}
+            </V2Button>
+            <V2Button
+              disabled={!slugName}
+              onClick={() => window.open(`/${slugName}`, "_blank", "noopener,noreferrer")}
+            >
+              {t("admin.pages.editor.view_page")}
+            </V2Button>
+          </>
+        }
+      />
+      <div className="space-y-5">
 
       <div className="admin-card p-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -752,6 +753,7 @@ export default function AdminPageEditorLayoutPage() {
           </div>
         </div>
       </section>
+      </div>
     </div>
   );
 }

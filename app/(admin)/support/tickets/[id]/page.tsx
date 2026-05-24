@@ -20,9 +20,9 @@ import {
   apiSupportTicketReply,
   type SupportTicketDetail,
 } from "@/lib/support-api";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { PageHeader as V2PageHeader, V2Card } from "@/components/ui/v2";
 
 type StatusTone = "info" | "success" | "warning" | "error" | "muted";
 
@@ -157,35 +157,26 @@ export default function SupportTicketDetailPage() {
   const createdAt = ticket?.messages?.[0]?.created_at;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <Link
-          href="/support/tickets"
-          className="inline-flex items-center gap-1.5 text-sm text-fg-t6 transition hover:text-primary"
-        >
-          <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="m15 18-6-6 6-6" />
-          </svg>
-          Tickets
-        </Link>
-      </div>
-
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="admin-page-title">Support ticket #{id}</h1>
-          {ticket && (
-            <p className="mt-1 text-sm text-fg-t6">
-              {ticket.subject}
-            </p>
-          )}
-        </div>
-        {ticket && (
-          <div className="flex items-center gap-2">
-            <StatusPill value={ticket.status} tone={statusTone(ticket.status)} />
-            <StatusPill value={`Priority: ${ticket.priority}`} tone={priorityTone(ticket.priority)} />
-          </div>
-        )}
-      </header>
+    <div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Settings", href: "/support/tickets" },
+          { label: "Support tickets", href: "/support/tickets" },
+          { label: `#${id}` },
+        ]}
+        title={`Support ticket #${id}`}
+        subtitle={ticket?.subject}
+        actions={
+          ticket ? (
+            <>
+              <StatusPill value={ticket.status} tone={statusTone(ticket.status)} />
+              <StatusPill value={`Priority: ${ticket.priority}`} tone={priorityTone(ticket.priority)} />
+            </>
+          ) : undefined
+        }
+      />
+      <div className="space-y-6">
 
       {isSuper && (
         <div className="admin-card flex flex-wrap items-end gap-3 p-4">
@@ -228,7 +219,7 @@ export default function SupportTicketDetailPage() {
 
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="space-y-6 lg:col-span-2">
-              <div className="admin-card p-5">
+              <V2Card className="p-5">
                 <h2 className="text-base font-semibold text-fg-t8">{ticket.subject}</h2>
                 <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
                   <div>
@@ -257,9 +248,9 @@ export default function SupportTicketDetailPage() {
                     </dd>
                   </div>
                 </dl>
-              </div>
+              </V2Card>
 
-              <div className="admin-card p-5">
+              <V2Card className="p-5">
                 <h2 className="text-base font-semibold text-fg-t8">Conversation</h2>
                 <ol className="mt-4 space-y-4">
                   {ticket.messages.map((m) => (
@@ -289,11 +280,11 @@ export default function SupportTicketDetailPage() {
                     </li>
                   ))}
                 </ol>
-              </div>
+              </V2Card>
             </div>
 
             <aside className="space-y-6">
-              <div className="admin-card p-5">
+              <V2Card className="p-5">
                 <h2 className="text-base font-semibold text-fg-t8">Reply</h2>
                 <textarea
                   value={reply}
@@ -312,11 +303,12 @@ export default function SupportTicketDetailPage() {
                 >
                   {busy ? "Sending…" : "Send reply"}
                 </button>
-              </div>
+              </V2Card>
             </aside>
           </div>
         </>
       )}
+      </div>
     </div>
   );
 }

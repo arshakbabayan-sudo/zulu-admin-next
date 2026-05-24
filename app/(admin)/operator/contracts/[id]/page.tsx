@@ -24,7 +24,8 @@ import {
   contractTypeLabel,
   type ContractDetail,
 } from "@/lib/contracts-api";
-import { Button, PageHeader, StatusPill } from "@/components/ui";
+import { StatusPill } from "@/components/ui";
+import { PageHeader as V2PageHeader, V2Card, V2Button } from "@/components/ui/v2";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -128,8 +129,14 @@ export default function SellerContractDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Sales workspace", href: "/operator/contracts" },
+          { label: "My contracts", href: "/operator/contracts" },
+          { label: row.contract_number },
+        ]}
         title={
           <span className="inline-flex items-center gap-3">
             <span className="font-mono text-base">{row.contract_number}</span>
@@ -140,21 +147,20 @@ export default function SellerContractDetailPage() {
         }
         subtitle={contractTypeLabel(row.type)}
         actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => router.back()}>
-              ← Back
-            </Button>
+          <>
+            <V2Button onClick={() => router.back()}>← Back</V2Button>
             {isSignableRow(row.status) && (
-              <Button size="sm" disabled={signing} onClick={() => void handleSign()}>
+              <V2Button variant="primary" disabled={signing} onClick={() => void handleSign()}>
                 {signing ? "Signing…" : "Sign"}
-              </Button>
+              </V2Button>
             )}
-          </div>
+          </>
         }
       />
+      <div className="space-y-6">
 
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="admin-card p-4 space-y-3">
+        <V2Card className="p-4 space-y-3">
           <h3 className="text-sm font-semibold text-fg-t8">Parties</h3>
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between gap-3">
@@ -168,9 +174,9 @@ export default function SellerContractDetailPage() {
               <dd className="text-right text-fg-t8">{row.partyB?.name ?? "—"}</dd>
             </div>
           </dl>
-        </div>
+        </V2Card>
 
-        <div className="admin-card p-4 space-y-3">
+        <V2Card className="p-4 space-y-3">
           <h3 className="text-sm font-semibold text-fg-t8">Schedule</h3>
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between gap-3">
@@ -202,10 +208,10 @@ export default function SellerContractDetailPage() {
               </>
             )}
           </dl>
-        </div>
+        </V2Card>
       </div>
 
-      <div className="admin-card p-4 space-y-3">
+      <V2Card className="p-4 space-y-3">
         <h3 className="text-sm font-semibold text-fg-t8">Template</h3>
         <dl className="grid grid-cols-2 gap-2 text-sm md:grid-cols-4">
           <div>
@@ -225,7 +231,7 @@ export default function SellerContractDetailPage() {
             <dd className="text-fg-t8 uppercase">{row.template?.language ?? "—"}</dd>
           </div>
         </dl>
-      </div>
+      </V2Card>
 
       <div className="grid gap-4 md:grid-cols-3">
         <JsonBlock label="Commission clause" value={row.commission_clause} />
@@ -234,7 +240,7 @@ export default function SellerContractDetailPage() {
       </div>
 
       {row.signed_pdf_url && (
-        <div className="admin-card p-4">
+        <V2Card className="p-4">
           <h3 className="mb-2 text-sm font-semibold text-fg-t8">Signed PDF</h3>
           <a
             href={row.signed_pdf_url}
@@ -244,11 +250,11 @@ export default function SellerContractDetailPage() {
           >
             Download signed PDF →
           </a>
-        </div>
+        </V2Card>
       )}
 
       {row.versions && row.versions.length > 0 && (
-        <div className="admin-card p-4">
+        <V2Card className="p-4">
           <h3 className="mb-3 text-sm font-semibold text-fg-t8">Version history</h3>
           <ul className="space-y-2 text-sm">
             {row.versions.map((v) => (
@@ -261,8 +267,9 @@ export default function SellerContractDetailPage() {
               </li>
             ))}
           </ul>
-        </div>
+        </V2Card>
       )}
+      </div>
     </div>
   );
 }

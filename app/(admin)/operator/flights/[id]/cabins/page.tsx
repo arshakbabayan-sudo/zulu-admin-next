@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
@@ -18,6 +17,7 @@ import {
   type FlightCabinSeatMapRow,
   type FlightRow,
 } from "@/lib/inventory-crud-api";
+import { PageHeader as V2PageHeader, V2Card, V2Button } from "@/components/ui/v2";
 
 export default function FlightCabinsSeatMapPage() {
   const params = useParams<{ id: string }>();
@@ -116,28 +116,36 @@ export default function FlightCabinsSeatMapPage() {
     );
   }
 
+  const flightRef = flight
+    ? `#${flight.id} — ${flight.flight_code_internal ?? flight.flight_number ?? "N/A"}`
+    : `#${flightId}`;
+
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h1 className="admin-page-title">Flight cabin seat maps</h1>
-          <p className="mt-1 text-sm text-fg-t6">
-            {flight
-              ? `Flight #${flight.id} - ${flight.flight_code_internal ?? flight.flight_number ?? "N/A"}`
-              : `Flight #${flightId}`}
-          </p>
-        </div>
-        <Link
-          href="/operator/flights"
-          className="rounded border border-default bg-white px-3 py-1.5 text-sm text-fg-t7 hover:bg-figma-bg-1"
-        >
-          Back to flights
-        </Link>
-      </div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Inventory", href: "/operator/flights" },
+          { label: "Flights", href: "/operator/flights" },
+          { label: flightRef, href: `/operator/flights` },
+          { label: "Cabins" },
+        ]}
+        title="Flight cabin seat maps"
+        subtitle={
+          flight
+            ? `Flight #${flight.id} - ${flight.flight_code_internal ?? flight.flight_number ?? "N/A"}`
+            : `Flight #${flightId}`
+        }
+        actions={
+          <V2Button as="link" href="/operator/flights">
+            Back to flights
+          </V2Button>
+        }
+      />
 
       {err && <p className="mb-3 text-sm text-error-600">{err}</p>}
 
-      <div className="mb-4 overflow-x-auto rounded border border-default bg-white">
+      <V2Card className="mb-4 overflow-x-auto">
         <table className="w-full min-w-[680px] text-left text-sm">
           <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
@@ -182,7 +190,7 @@ export default function FlightCabinsSeatMapPage() {
             ))}
           </tbody>
         </table>
-      </div>
+      </V2Card>
 
       {activeCabin ? (
         <SeatMapEditor

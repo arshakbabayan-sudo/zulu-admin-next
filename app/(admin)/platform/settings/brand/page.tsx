@@ -21,7 +21,29 @@ import {
   type BrandSettings,
 } from "@/lib/platform-admin-api";
 import { useCallback, useEffect, useState } from "react";
-import { Button, FormField, Input, PageHeader, Select } from "@/components/ui";
+import { Button, FormField, Input, Select } from "@/components/ui";
+import { PageHeader as V2PageHeader, SectionTabs, V2Card, V2Button } from "@/components/ui/v2";
+
+const SETTINGS_TABS = [
+  { href: "/settings/pricing-rules", label: "Pricing rules" },
+  { href: "/settings/money-flow", label: "Money flow" },
+  { href: "/localization/languages", label: "Languages" },
+  { href: "/localization/templates", label: "Email templates" },
+  { href: "/platform/banners", label: "Banners" },
+  { href: "/pages", label: "CMS pages" },
+  { href: "/platform/notifications", label: "System notifications" },
+  { href: "/platform/newsletter", label: "Newsletter" },
+  { href: "/platform/loyalty", label: "Loyalty" },
+  { href: "/bucket3/block-dates", label: "Block dates" },
+  { href: "/bucket3/custom-fields", label: "Custom fields" },
+  { href: "/platform/security", label: "Security" },
+  { href: "/platform/webhooks", label: "Webhooks" },
+  { href: "/platform/locations", label: "Locations" },
+  { href: "/platform/settings/brand", label: "Brand" },
+  { href: "/connections", label: "Connections" },
+  { href: "/support/tickets", label: "Support" },
+  { href: "/platform/reviews", label: "Reviews" },
+];
 
 const CUSTOM_TYPES: BrandCustomField["type"][] = ["text", "url", "email", "phone", "image", "tel"];
 
@@ -116,16 +138,28 @@ export default function PlatformBrandSettingsPage() {
   }
 
   return (
-    <div className="max-w-3xl space-y-6">
-      <PageHeader
+    <div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Settings", href: "/settings/pricing-rules" },
+          { label: t("admin.brand.title") },
+        ]}
         title={t("admin.brand.title")}
         subtitle={t("admin.brand.subtitle")}
+        actions={
+          <V2Button variant="primary" disabled={saving} onClick={() => void handleSave()}>
+            {saving ? t("admin.crud.common.saving") : t("admin.template_detail.btn_save")}
+          </V2Button>
+        }
       />
+      <SectionTabs activeHref="/platform/settings/brand" items={SETTINGS_TABS} />
+      <div className="max-w-3xl space-y-6 mt-6">
 
       {err && <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
       {savedAt && <div className="rounded-zulu border border-success-100 bg-success-50 px-4 py-2 text-sm text-success-700">{t("admin.brand.saved")}</div>}
 
-      <section className="admin-card p-4">
+      <V2Card className="p-4">
         <h2 className="text-base font-semibold text-fg-t11">{t("admin.brand.section.imagery")}</h2>
         <p className="mt-1 mb-3 text-xs text-fg-t7">{t("admin.brand.section.imagery_hint")}</p>
         <div className="grid gap-4 md:grid-cols-2">
@@ -151,9 +185,9 @@ export default function PlatformBrandSettingsPage() {
             altText="Favicon"
           />
         </div>
-      </section>
+      </V2Card>
 
-      <section className="admin-card p-4">
+      <V2Card className="p-4">
         <h2 className="text-base font-semibold text-fg-t11">{t("admin.brand.section.contact")}</h2>
         <div className="mt-3 grid gap-3 md:grid-cols-2">
           <FormField label={t("admin.brand.field.phone")} htmlFor="br-phone">
@@ -196,9 +230,9 @@ export default function PlatformBrandSettingsPage() {
             />
           </FormField>
         </div>
-      </section>
+      </V2Card>
 
-      <section className="admin-card p-4">
+      <V2Card className="p-4">
         <h2 className="text-base font-semibold text-fg-t11">{t("admin.brand.section.social")}</h2>
         <p className="mt-1 mb-3 text-xs text-fg-t7">{t("admin.brand.section.social_hint")}</p>
         <div className="grid gap-3 md:grid-cols-2">
@@ -214,9 +248,9 @@ export default function PlatformBrandSettingsPage() {
             </FormField>
           ))}
         </div>
-      </section>
+      </V2Card>
 
-      <section className="admin-card p-4">
+      <V2Card className="p-4">
         <div className="flex items-baseline justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-fg-t11">{t("admin.brand.section.custom_fields")}</h2>
@@ -281,12 +315,13 @@ export default function PlatformBrandSettingsPage() {
             ))}
           </div>
         )}
-      </section>
+      </V2Card>
 
       <div className="sticky bottom-0 flex justify-end gap-2 border-t border-default bg-white py-3 -mx-4 px-4">
         <Button size="sm" disabled={saving} onClick={() => void handleSave()}>
           {saving ? t("admin.crud.common.saving") : t("admin.template_detail.btn_save")}
         </Button>
+      </div>
       </div>
     </div>
   );

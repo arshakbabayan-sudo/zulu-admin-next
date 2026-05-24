@@ -16,7 +16,29 @@ import {
   type HeaderMenuAdminRow,
 } from "@/lib/platform-admin-api";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Button, Checkbox, FormField, Input, PageHeader } from "@/components/ui";
+import { Button, Checkbox, FormField, Input } from "@/components/ui";
+import { PageHeader as V2PageHeader, SectionTabs, V2Button } from "@/components/ui/v2";
+
+const SETTINGS_TABS = [
+  { href: "/settings/pricing-rules", label: "Pricing rules" },
+  { href: "/settings/money-flow", label: "Money flow" },
+  { href: "/localization/languages", label: "Languages" },
+  { href: "/localization/templates", label: "Email templates" },
+  { href: "/platform/banners", label: "Banners" },
+  { href: "/pages", label: "CMS pages" },
+  { href: "/platform/notifications", label: "System notifications" },
+  { href: "/platform/newsletter", label: "Newsletter" },
+  { href: "/platform/loyalty", label: "Loyalty" },
+  { href: "/bucket3/block-dates", label: "Block dates" },
+  { href: "/bucket3/custom-fields", label: "Custom fields" },
+  { href: "/platform/security", label: "Security" },
+  { href: "/platform/webhooks", label: "Webhooks" },
+  { href: "/platform/locations", label: "Locations" },
+  { href: "/platform/settings/brand", label: "Brand" },
+  { href: "/connections", label: "Connections" },
+  { href: "/support/tickets", label: "Support" },
+  { href: "/platform/reviews", label: "Reviews" },
+];
 
 type EditRow = HeaderMenuAdminRow & { _tempId?: string };
 
@@ -156,11 +178,25 @@ export default function PlatformHeaderMenuPage() {
   }
 
   return (
-    <div className="max-w-4xl space-y-6">
-      <PageHeader
+    <div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Settings", href: "/settings/pricing-rules" },
+          { label: t("admin.header_menu.title") || "Header menu" },
+        ]}
         title={t("admin.header_menu.title")}
-        actions={<Button variant="outline" size="sm" onClick={addRootItem}>{t("admin.header_menu.add_item")}</Button>}
+        actions={
+          <>
+            <V2Button onClick={addRootItem}>{t("admin.header_menu.add_item")}</V2Button>
+            <V2Button variant="primary" disabled={saving} onClick={() => void handleSave()}>
+              {saving ? t("admin.crud.common.saving") : t("admin.header_menu.save_all")}
+            </V2Button>
+          </>
+        }
       />
+      <SectionTabs activeHref="/platform/settings/header-menu" items={SETTINGS_TABS} />
+      <div className="max-w-4xl space-y-6 mt-6">
 
       {err && <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
       {savedAt && <div className="rounded-zulu border border-success-100 bg-success-50 px-4 py-2 text-sm text-success-700">{t("admin.brand.saved")}</div>}
@@ -224,6 +260,7 @@ export default function PlatformHeaderMenuPage() {
         <Button size="sm" disabled={saving} onClick={() => void handleSave()}>
           {saving ? t("admin.crud.common.saving") : t("admin.header_menu.save_all")}
         </Button>
+      </div>
       </div>
     </div>
   );

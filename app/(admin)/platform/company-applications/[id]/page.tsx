@@ -13,8 +13,9 @@ import {
   type CompanyApplicationRow,
 } from "@/lib/platform-admin-api";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { PageHeader as V2PageHeader, V2Card, V2Button } from "@/components/ui/v2";
 
 function canActOnApplication(status: string): boolean {
   return status === "pending" || status === "under_review";
@@ -22,7 +23,6 @@ function canActOnApplication(status: string): boolean {
 
 export default function CompanyApplicationDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const id = Number(params.id);
   const { token, user } = useAdminAuth();
   const { t } = useLanguage();
@@ -112,19 +112,32 @@ export default function CompanyApplicationDetailPage() {
 
   return (
     <div>
-      <div className="mb-4 text-sm">
-        <button
-          type="button"
-          onClick={() => router.push("/platform/company-applications")}
-          className="text-blue-700 underline"
-        >
-          ← {t("admin.company_applications.title")}
-        </button>
-      </div>
-      <h1 className="admin-page-title">{t("admin.company_application_detail.application_number").replace("{id}", String(row.id))}</h1>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Marketplace ops", href: "/platform/company-applications" },
+          { label: t("admin.company_applications.title"), href: "/platform/company-applications" },
+          { label: `#${row.id}` },
+        ]}
+        title={t("admin.company_application_detail.application_number").replace("{id}", String(row.id))}
+        subtitle={row.company_name}
+        actions={
+          canActOnApplication(row.status) ? (
+            <>
+              <V2Button onClick={() => reject()} disabled={busy} variant="danger">
+                {t("admin.pending_review.btn_reject")}
+              </V2Button>
+              <V2Button onClick={() => approve()} disabled={busy} variant="success">
+                {t("admin.pending_review.btn_approve")}
+              </V2Button>
+            </>
+          ) : undefined
+        }
+      />
       {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
 
-      <dl className="mt-6 grid max-w-2xl gap-3 text-sm sm:grid-cols-2">
+      <V2Card className="p-5">
+      <dl className="grid max-w-2xl gap-3 text-sm sm:grid-cols-2">
         <div>
           <dt className="text-xs uppercase text-slate-700">{t("admin.company_application_detail.label_status")}</dt>
           <dd className="font-medium">{row.status}</dd>
@@ -194,27 +207,7 @@ export default function CompanyApplicationDetailPage() {
           </dd>
         </div>
       </dl>
-
-      {canActOnApplication(row.status) && (
-        <div className="mt-8 flex flex-wrap gap-3">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => approve()}
-            className="rounded border border-emerald-600 bg-emerald-50 px-3 py-1.5 text-sm text-emerald-900 disabled:opacity-40"
-          >
-            {t("admin.pending_review.btn_approve")}
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => reject()}
-            className="rounded border border-red-300 bg-red-50 px-3 py-1.5 text-sm text-red-900 disabled:opacity-40"
-          >
-            {t("admin.pending_review.btn_reject")}
-          </button>
-        </div>
-      )}
+      </V2Card>
     </div>
   );
 }

@@ -37,6 +37,7 @@ import {
   type PlatformCompanyRow,
 } from "@/lib/platform-admin-api";
 import { StatusPill as _StatusPill } from "@/components/ui/StatusPill";
+import { PageHeader as V2PageHeader, V2Card } from "@/components/ui/v2";
 
 const GOVERNANCE_STATUSES = ["pending", "active", "suspended", "rejected"] as const;
 type Tab =
@@ -207,27 +208,29 @@ export default function PlatformCompanyDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Top bar — Back link / spacer / language switcher */}
-      <header className="flex items-center justify-between gap-3">
-        <BackLink t={t} />
-        <LanguageSwitcher
-          options={languageOptions.length ? languageOptions : DEFAULT_LANG_OPTIONS}
-          value={lang}
-          onChange={setLang}
-        />
-      </header>
+    <div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Marketplace ops", href: "/platform/companies" },
+          { label: t("admin.platform_companies.title"), href: "/platform/companies" },
+          { label: company.name },
+        ]}
+        title={company.name}
+        subtitle={company.slug ?? company.legal_name ?? `ID: ${company.id}`}
+        actions={
+          <LanguageSwitcher
+            options={languageOptions.length ? languageOptions : DEFAULT_LANG_OPTIONS}
+            value={lang}
+            onChange={setLang}
+          />
+        }
+      />
 
-      {/* Title + subtitle (Admin Profile pattern) */}
-      <div className="text-center">
-        <h1 className="text-2xl font-semibold text-fg-t8">{company.name}</h1>
-        <p className="mt-1 text-sm text-fg-t6">
-          {company.slug ?? company.legal_name ?? `ID: ${company.id}`}
-        </p>
-      </div>
+      <div className="space-y-6">
 
       {/* Horizontal tab bar (Admin Profile pattern) */}
-      <div className="admin-card overflow-hidden">
+      <V2Card className="overflow-hidden">
         <nav className="flex flex-wrap border-b border-default" role="tablist">
           <TabButton
             active={tab === "profile"}
@@ -353,6 +356,7 @@ export default function PlatformCompanyDetailPage() {
             </div>
           )}
         </div>
+      </V2Card>
       </div>
 
       <PartnerSettingsModal

@@ -20,7 +20,8 @@ import {
   type ContractType,
   type ContractTemplateDetail,
 } from "@/lib/contracts-api";
-import { Button, FormField, Input, PageHeader, Select } from "@/components/ui";
+import { FormField, Input, Select } from "@/components/ui";
+import { PageHeader as V2PageHeader, V2Card, V2Button } from "@/components/ui/v2";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -139,19 +140,28 @@ export default function AdminContractTemplateDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Marketplace ops", href: "/platform/contract-templates" },
+          { label: t("admin.contract_templates.title") || "Contract templates", href: "/platform/contract-templates" },
+          { label: tpl.name },
+        ]}
         title={tpl.name}
         subtitle={`${contractTypeLabel(tpl.type)} · ${tpl.language.toUpperCase()}${tpl.version ? ` · v${tpl.version}` : ""}`}
         actions={
-          <Link
-            href="/platform/contract-templates"
-            className="inline-flex h-10 items-center rounded-md border-2 border-primary-500 px-4 text-ds-button-s font-ds-button-s font-semibold text-primary-500 transition hover:bg-primary-50"
-          >
-            ← {t("common.back")}
-          </Link>
+          <>
+            <V2Button as="link" href="/platform/contract-templates">
+              {t("common.cancel")}
+            </V2Button>
+            <V2Button variant="primary" disabled={busy} onClick={() => void handleSave()}>
+              {busy ? t("admin.crud.common.saving") : t("admin.template_detail.btn_save")}
+            </V2Button>
+          </>
         }
       />
+      <div className="space-y-6">
 
       {err && (
         <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
@@ -165,7 +175,7 @@ export default function AdminContractTemplateDetailPage() {
         </div>
       )}
 
-      <section className="admin-card p-4">
+      <V2Card className="p-4">
         <h2 className="mb-3 text-base font-semibold">{t("admin.template_form.section.identity")}</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           <FormField label={t("admin.contract_templates.col_name")} htmlFor="tpl-name" required className="sm:col-span-2">
@@ -211,9 +221,9 @@ export default function AdminContractTemplateDetailPage() {
             />
           </FormField>
         </div>
-      </section>
+      </V2Card>
 
-      <section className="admin-card p-4">
+      <V2Card className="p-4">
         <h2 className="mb-3 text-base font-semibold">{t("admin.template_form.section.body")}</h2>
         <FormField label={t("admin.template_form.body_label")} htmlFor="tpl-body">
           <Input
@@ -225,9 +235,9 @@ export default function AdminContractTemplateDetailPage() {
             onChange={(e) => setForm((p) => p && { ...p, body_template: e.target.value })}
           />
         </FormField>
-      </section>
+      </V2Card>
 
-      <section className="admin-card p-4">
+      <V2Card className="p-4">
         <h2 className="mb-3 text-base font-semibold">{t("admin.template_form.section.defaults")}</h2>
         <FormField label={t("admin.template_form.defaults_label")} htmlFor="tpl-defaults">
           <Input
@@ -241,18 +251,16 @@ export default function AdminContractTemplateDetailPage() {
             }
           />
         </FormField>
-      </section>
+      </V2Card>
 
       <div className="flex gap-2">
-        <Button size="sm" disabled={busy} onClick={() => void handleSave()}>
+        <V2Button variant="primary" disabled={busy} onClick={() => void handleSave()}>
           {busy ? t("admin.crud.common.saving") : t("admin.template_detail.btn_save")}
-        </Button>
-        <Link
-          href="/platform/contract-templates"
-          className="inline-flex h-10 items-center rounded-md border-2 border-primary-500 px-4 text-ds-button-s font-ds-button-s font-semibold text-primary-500 transition hover:bg-primary-50"
-        >
+        </V2Button>
+        <V2Button as="link" href="/platform/contract-templates">
           {t("common.cancel")}
-        </Link>
+        </V2Button>
+      </div>
       </div>
     </div>
   );

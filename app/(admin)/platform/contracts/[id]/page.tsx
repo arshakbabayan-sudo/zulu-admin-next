@@ -33,7 +33,8 @@ import {
   contractTypeLabel,
   type ContractDetail,
 } from "@/lib/contracts-api";
-import { Button, PageHeader, StatusPill } from "@/components/ui";
+import { Button, StatusPill } from "@/components/ui";
+import { PageHeader as V2PageHeader, V2Card, V2Button } from "@/components/ui/v2";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -183,8 +184,14 @@ export default function AdminContractDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Marketplace ops", href: "/platform/contracts" },
+          { label: t("admin.platform_contracts.title") || "Partnership agreements", href: "/platform/contracts" },
+          { label: row.contract_number },
+        ]}
         title={
           <span className="inline-flex items-center gap-3">
             <span className="font-mono text-base">{row.contract_number}</span>
@@ -195,28 +202,29 @@ export default function AdminContractDetailPage() {
         }
         subtitle={contractTypeLabel(row.type)}
         actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => router.push("/platform/contracts")}>
+          <>
+            <V2Button onClick={() => router.push("/platform/contracts")}>
               ← {t("common.back")}
-            </Button>
+            </V2Button>
             {canSend(row.status) && (
-              <Button size="sm" disabled={busyAction !== null} onClick={() => void handleSend()}>
+              <V2Button variant="primary" disabled={busyAction !== null} onClick={() => void handleSend()}>
                 {busyAction === "send" ? t("admin.contract_detail.btn_sending") : t("admin.contract_detail.btn_send")}
-              </Button>
+              </V2Button>
             )}
             {canCountersign(row.status) && (
-              <Button size="sm" disabled={busyAction !== null} onClick={() => void handleCountersign()}>
+              <V2Button variant="primary" disabled={busyAction !== null} onClick={() => void handleCountersign()}>
                 {busyAction === "countersign" ? t("admin.contract_detail.btn_signing") : t("admin.contract_detail.btn_countersign")}
-              </Button>
+              </V2Button>
             )}
             {canTerminate(row.status) && !terminating && (
-              <Button variant="danger" size="sm" onClick={() => setTerminating(true)}>
+              <V2Button variant="danger" onClick={() => setTerminating(true)}>
                 {t("admin.contract_detail.btn_terminate")}
-              </Button>
+              </V2Button>
             )}
-          </div>
+          </>
         }
       />
+      <div className="space-y-6">
 
       {terminating && (
         <div className="admin-card p-4 space-y-3 border-error-100">
@@ -253,7 +261,7 @@ export default function AdminContractDetailPage() {
       )}
 
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="admin-card p-4 space-y-3">
+        <V2Card className="p-4 space-y-3">
           <h3 className="text-sm font-semibold text-fg-t8">{t("admin.contract_detail.parties_section")}</h3>
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between gap-3">
@@ -273,9 +281,9 @@ export default function AdminContractDetailPage() {
               </dd>
             </div>
           </dl>
-        </div>
+        </V2Card>
 
-        <div className="admin-card p-4 space-y-3">
+        <V2Card className="p-4 space-y-3">
           <h3 className="text-sm font-semibold text-fg-t8">{t("admin.contract_new.section.schedule")}</h3>
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between gap-3">
@@ -311,10 +319,10 @@ export default function AdminContractDetailPage() {
               </>
             )}
           </dl>
-        </div>
+        </V2Card>
       </div>
 
-      <div className="admin-card p-4 space-y-3">
+      <V2Card className="p-4 space-y-3">
         <h3 className="text-sm font-semibold text-fg-t8">{t("admin.contracts.col_template")}</h3>
         <dl className="grid grid-cols-2 gap-2 text-sm md:grid-cols-4">
           <div>
@@ -334,7 +342,7 @@ export default function AdminContractDetailPage() {
             <dd className="text-fg-t8 uppercase">{row.template?.language ?? "—"}</dd>
           </div>
         </dl>
-      </div>
+      </V2Card>
 
       <div className="grid gap-4 md:grid-cols-3">
         <JsonBlock label={t("admin.contract_new.field.commission_clause")} value={row.commission_clause} />
@@ -343,7 +351,7 @@ export default function AdminContractDetailPage() {
       </div>
 
       {row.signed_pdf_url && (
-        <div className="admin-card p-4">
+        <V2Card className="p-4">
           <h3 className="mb-2 text-sm font-semibold text-fg-t8">{t("admin.contract_detail.signed_pdf")}</h3>
           <a
             href={row.signed_pdf_url}
@@ -353,11 +361,11 @@ export default function AdminContractDetailPage() {
           >
             {t("admin.contract_detail.download_signed_pdf")} →
           </a>
-        </div>
+        </V2Card>
       )}
 
       {row.versions && row.versions.length > 0 && (
-        <div className="admin-card p-4">
+        <V2Card className="p-4">
           <h3 className="mb-3 text-sm font-semibold text-fg-t8">{t("admin.contract_detail.version_history")}</h3>
           <ul className="space-y-2 text-sm">
             {row.versions.map((v) => (
@@ -375,8 +383,9 @@ export default function AdminContractDetailPage() {
               </li>
             ))}
           </ul>
-        </div>
+        </V2Card>
       )}
+      </div>
     </div>
   );
 }
