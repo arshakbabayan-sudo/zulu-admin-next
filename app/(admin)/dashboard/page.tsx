@@ -27,6 +27,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { formatNumber } from "@/lib/format";
 import { PageHeader, Table, THead, TBody, TR, TH, TD, Badge, type BadgeTone } from "@/components/ui";
+import { PageHeader as V2PageHeader, V2Button } from "@/components/ui/v2";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
@@ -777,7 +778,42 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title={greeting} subtitle={t("admin.dashboard.platform_overview")} />
+      {/* v2 admin-redesign (2026-05-24) — page header with breadcrumb + actions.
+          Matches docs/zulu-admin-v2.html dashboard mockup (lines 286-293). */}
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: t("admin.dashboard.title") },
+        ]}
+        title={greeting}
+        subtitle={t("admin.dashboard.platform_overview")}
+        actions={
+          <>
+            <select
+              defaultValue="30"
+              className="h-9 rounded-md border bg-white px-3 text-[13px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+              style={{ borderColor: "var(--admin-border)", color: "var(--admin-text-primary)" }}
+              aria-label={tx(t, "admin.dashboard.date_range", "Date range")}
+            >
+              <option value="7">{tx(t, "admin.dashboard.last_7d", "Last 7 days")}</option>
+              <option value="30">{tx(t, "admin.dashboard.last_30d", "Last 30 days")}</option>
+              <option value="90">{tx(t, "admin.dashboard.last_90d", "Last 90 days")}</option>
+            </select>
+            <V2Button
+              variant="primary"
+              icon={
+                <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+              }
+            >
+              {tx(t, "admin.dashboard.export", "Export")}
+            </V2Button>
+          </>
+        }
+      />
 
       {/* Row 1 — three hero stat cards (Phase 1 visual refresh: solid colors per mockup).
           Grid: 1 col on mobile (default), 2 cols on tablet (sm: 600px+), 3 cols on desktop (lg: 1280px+). */}
