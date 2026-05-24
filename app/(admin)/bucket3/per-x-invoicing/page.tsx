@@ -36,7 +36,9 @@ import {
   V2Card,
   V2Button,
 } from "@/components/ui/v2";
-import { Download, RefreshCw } from "lucide-react";
+import { Download, FileText, RefreshCw } from "lucide-react";
+import { IconButton } from "@/components/ui/v2";
+import { getApiBaseUrl } from "@/lib/api-base";
 import { useCallback, useEffect, useState } from "react";
 
 type GroupBy = "status" | "currency" | "month" | "operator";
@@ -69,6 +71,43 @@ function describeBucket(b: Bucket, groupBy: GroupBy): string {
     return b.label ?? `Company #${b.bucket ?? "?"}`;
   }
   return String(b.bucket ?? "—");
+}
+
+function thisMonth(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+async function downloadBlob(url: string, token: string | null, filename: string): Promise<void> {
+  if (!token) return;
+  const res = await fetch(`${getApiBaseUrl()}${url}`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: "*/*" },
+  });
+  if (!res.ok) {
+    console.error("Download failed", res.status);
+    return;
+  }
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = objectUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(objectUrl);
+}
+
+async function downloadCsv(token: string | null): Promise<void> {
+  await downloadBlob("/invoices/export", token, `invoices-${thisMonth()}.csv`);
+}
+
+async function downloadStatement(token: string | null, companyId: number, month: string): Promise<void> {
+  await downloadBlob(
+    `/invoices/statement?company_id=${companyId}&month=${month}`,
+    token,
+    `statement-${companyId}-${month}.pdf`
+  );
 }
 
 export default function Bucket3PerXInvoicingPage() {
@@ -128,7 +167,12 @@ export default function Bucket3PerXInvoicingPage() {
         title={t("admin.bucket3.per_x_invoicing.title")}
         subtitle={t("admin.bucket3.per_x_invoicing.subtitle")}
         actions={
-          <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+          <V2Button
+            icon={<Download className="h-4 w-4" />}
+            onClick={() => void downloadCsv(token)}
+          >
+            Export CSV
+          </V2Button>
         }
       />
 
@@ -205,6 +249,7 @@ export default function Bucket3PerXInvoicingPage() {
             {groupBy !== "currency" && <TH>{t("admin.bucket3.per_x_invoicing.col.currency")}</TH>}
             <TH>{t("admin.bucket3.per_x_invoicing.col.invoices")}</TH>
             <TH align="right">{t("admin.bucket3.per_x_invoicing.col.total")}</TH>
+            {groupBy === "operator" && <TH align="right">Statement</TH>}
           </TR>
         </THead>
         <TBody>
@@ -234,6 +279,18 @@ export default function Bucket3PerXInvoicingPage() {
               <TD align="right" className="tabular-nums font-medium text-fg-t8">
                 {formatMoney(b.total_sum, lang, b.currency)}
               </TD>
+              {groupBy === "operator" && (
+                <TD align="right">
+                  <IconButton
+                    onClick={() =>
+                      void downloadStatement(token, Number(b.bucket), thisMonth())
+                    }
+                    aria-label="Download monthly statement PDF"
+                  >
+                    <FileText />
+                  </IconButton>
+                </TD>
+              )}
             </TR>
           ))}
         </TBody>
