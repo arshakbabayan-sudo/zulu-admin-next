@@ -45,11 +45,15 @@ function TopIconButton({
   onClick,
   children,
   badge,
+  dot,
 }: {
   label: string;
   onClick?: () => void;
   children: React.ReactNode;
   badge?: number;
+  /** v2 admin-redesign — render a small red dot indicator instead of a
+   *  numeric badge. Used by the notifications bell per v2 spec. */
+  dot?: boolean;
 }) {
   return (
     <button
@@ -57,10 +61,15 @@ function TopIconButton({
       aria-label={label}
       title={label}
       onClick={onClick}
-      className="relative inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-700 transition hover:bg-black/5"
+      className="relative inline-flex h-9 w-9 items-center justify-center rounded-md text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
     >
       {children}
-      {badge && badge > 0 ? (
+      {dot ? (
+        <span
+          aria-hidden
+          className="absolute right-1.5 top-1.5 inline-block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"
+        />
+      ) : badge && badge > 0 ? (
         <span
           className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white"
           aria-label={`${badge} unread`}
@@ -456,7 +465,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               <TopIconButton
                 label={t("admin.nav.notifications")}
                 onClick={() => setNotificationsOpen((o) => !o)}
-                badge={unreadCount}
+                dot={unreadCount > 0}
               >
                 <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" aria-hidden="true">
                   <path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5" />
@@ -573,14 +582,22 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               aria-expanded={userMenuOpen}
             >
               <span
-                className="inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold text-white"
-                style={{ backgroundColor: "var(--admin-primary)" }}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold"
+                style={{ backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" }}
               >
                 {(user?.name ?? t("admin.user.fallback_initial")).slice(0, 1).toUpperCase()}
               </span>
-              <span className="hidden max-w-[160px] truncate text-xs font-medium text-slate-700 md:block">
-                {user?.name ?? t("admin.user.fallback_name")}
-              </span>
+              {/* v2 admin-redesign — name on top, role label below */}
+              <div className="hidden max-w-[160px] flex-col text-left leading-tight md:flex">
+                <span className="truncate text-[13px] font-medium" style={{ color: "var(--admin-text-primary)" }}>
+                  {user?.name ?? t("admin.user.fallback_name")}
+                </span>
+                {user?.context?.world ? (
+                  <span className="truncate text-[11px]" style={{ color: "var(--admin-text-secondary)" }}>
+                    {user.context.world}
+                  </span>
+                ) : null}
+              </div>
               <svg viewBox="0 0 24 24" className={`h-3 w-3 fill-none stroke-current text-slate-500 transition-transform ${userMenuOpen ? "rotate-180" : ""}`} strokeWidth="2" strokeLinecap="round" aria-hidden>
                 <path d="m6 9 6 6 6-6" />
               </svg>
@@ -653,6 +670,33 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         }`}
         style={{ borderColor: "var(--admin-border)", backgroundColor: "var(--admin-surface)" }}
       >
+        {/* v2 admin-redesign — sidebar brand block (logo + ZULU label +
+            "Admin panel" subtitle). Per docs/zulu-admin-v2.html lines 234-241.
+            Hidden when sidebar collapsed to icon-only on desktop. */}
+        {sidebarOpen ? (
+          <div
+            className="flex items-center gap-2.5 border-b px-3 py-3"
+            style={{ borderColor: "var(--admin-border)" }}
+          >
+            <div
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] font-bold text-white"
+              style={{ backgroundColor: "var(--admin-primary)" }}
+              aria-hidden
+            >
+              Z
+            </div>
+            <div className="min-w-0">
+              <div className="text-[14px] font-semibold leading-tight" style={{ color: "var(--admin-text-primary)" }}>
+                ZULU
+              </div>
+              <div className="text-[11px] leading-tight" style={{ color: "var(--admin-text-secondary)" }}>
+                {t("admin.shell.brand_subtitle") !== "admin.shell.brand_subtitle"
+                  ? t("admin.shell.brand_subtitle")
+                  : "Admin panel"}
+              </div>
+            </div>
+          </div>
+        ) : null}
         <nav className="flex flex-col gap-1.5 px-3 py-3 text-sm">
           {(() => {
             const isGroupVisible = (g: AdminNavGroup): boolean => {
