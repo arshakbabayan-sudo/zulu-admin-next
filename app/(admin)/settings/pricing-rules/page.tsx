@@ -25,7 +25,6 @@ import {
   DrawerSection,
   FormField,
   Input,
-  PageHeader,
   Select,
   Switch,
   Table,
@@ -46,7 +45,6 @@ import {
   IconButton,
 } from "@/components/ui/v2";
 import { Trash2 } from "lucide-react";
-import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 
 /**
  * Phase 1 / Step D.3 — pricing rules admin CRUD UI.
@@ -296,20 +294,10 @@ export default function PricingRulesPage() {
     return parts.join(" ");
   };
 
-  if (!isSuper) {
-    return (
-      <div className="space-y-4">
-        <PageHeader
-          title={tr("admin.settings.pricing_rules.title", "Pricing rules")}
-          subtitle={tr(
-            "admin.settings.pricing_rules.subtitle",
-            "Unified Markup + Commission rules table"
-          )}
-        />
-        <ForbiddenNotice />
-      </div>
-    );
-  }
+  // Phase Զ.15 — Item 9. Non-super (operator_admin / platform_admin) gets
+  // a read-only view: list + filter + Test panel work, but Create / Edit /
+  // Delete are hidden. Backend mirrors this — index() open, store/update/
+  // destroy stay super-only via Form Request authorize().
 
   return (
     <div>
@@ -331,9 +319,11 @@ export default function PricingRulesPage() {
             <V2Button onClick={() => setTestPanelOpen(true)}>
               🧪 {tr("admin.settings.pricing_rules.test_panel", "Test a rule")}
             </V2Button>
-            <V2Button onClick={openCreate} variant="primary">
-              + {tr("admin.settings.pricing_rules.new", "New rule")}
-            </V2Button>
+            {isSuper && (
+              <V2Button onClick={openCreate} variant="primary">
+                + {tr("admin.settings.pricing_rules.new", "New rule")}
+              </V2Button>
+            )}
           </>
         }
       />
@@ -440,7 +430,11 @@ export default function PricingRulesPage() {
               </TEmpty>
             ) : (
               rows.map((rule) => (
-                <TR key={rule.id} className="cursor-pointer" onClick={() => openEdit(rule)}>
+                <TR
+                  key={rule.id}
+                  className={isSuper ? "cursor-pointer" : undefined}
+                  onClick={isSuper ? () => openEdit(rule) : undefined}
+                >
                   <TD className="font-medium">{formatRule(rule)}</TD>
                   <TD>
                     {rule.markup_type === "percentage"
@@ -468,15 +462,19 @@ export default function PricingRulesPage() {
                   </TD>
                   <TD className="text-right">
                     <div className="flex justify-end gap-1">
-                      <IconButton
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setPendingDelete(rule);
-                        }}
-                        aria-label="Delete"
-                      >
-                        <Trash2 />
-                      </IconButton>
+                      {isSuper ? (
+                        <IconButton
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPendingDelete(rule);
+                          }}
+                          aria-label="Delete"
+                        >
+                          <Trash2 />
+                        </IconButton>
+                      ) : (
+                        <span className="text-[11px] text-fg-t6">Read-only</span>
+                      )}
                     </div>
                   </TD>
                 </TR>

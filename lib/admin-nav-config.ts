@@ -307,6 +307,9 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/settings/pricing-rules", labelKey: "admin.nav.tab.pricing_rules" },
       // Phase 1 / D.2 — money-flow terms CRUD (super-admin only).
       { href: "/settings/money-flow", labelKey: "admin.nav.tab.money_flow", superAdminOnly: true },
+      // Phase Զ.15 / Item 16-17 — manual FX rate overrides (read open,
+      // write super-admin only).
+      { href: "/settings/exchange-rates", labelKey: "admin.nav.tab.exchange_rates" },
       // RBAC — UI-level filters company-scoped roles for non-super viewers
       // (see /platform/rbac/page.tsx). Backend whitelist is a separate task.
       { href: "/platform/rbac", labelKey: "admin.nav.tab.rbac" },
