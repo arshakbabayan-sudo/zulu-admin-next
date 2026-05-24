@@ -31,6 +31,14 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  FilterCard,
+  FilterField,
+  V2Card,
+  V2Button,
+} from "@/components/ui/v2";
 
 function canActOnApproval(status: string): boolean {
   return status === "pending" || status === "under_review";
@@ -111,50 +119,75 @@ export default function GenericApprovalsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader title={t("admin.approvals.title")} />
+    <div>
+      {/* v2 admin-redesign — Marketplace ops approvals page chrome.
+          Matches docs/zulu-admin-v2.html page-view#marketplace (lines 715-748). */}
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Marketplace ops", href: "/platform/approvals" },
+          { label: t("admin.approvals.title") },
+        ]}
+        title={t("admin.approvals.title")}
+      />
 
-      <div className="admin-card p-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <FormField label={t("admin.approvals.filter_status")} htmlFor="ap-status" className="min-w-[180px]">
-            <Select
-              id="ap-status"
-              fieldSize="sm"
-              value={statusFilter}
-              onChange={(e) => { setPage(1); setStatusFilter(e.target.value); }}
-            >
-              <option value="">{t("admin.approvals.status_any")}</option>
-              <option value="pending">{t("admin.approvals.status_pending")}</option>
-              <option value="under_review">{t("admin.approvals.status_under_review")}</option>
-              <option value="approved">{t("admin.approvals.status_approved")}</option>
-              <option value="rejected">{t("admin.approvals.status_rejected")}</option>
-            </Select>
-          </FormField>
-          <FormField label={t("admin.approvals.filter_entity_type")} htmlFor="ap-ent" className="min-w-[200px]">
-            <Input
-              id="ap-ent"
-              value={entityTypeDraft}
-              onChange={(e) => setEntityTypeDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  setPage(1);
-                  setEntityType(entityTypeDraft.trim());
-                }
-              }}
-              placeholder={t("admin.approvals.placeholder_entity_type")}
-            />
-          </FormField>
-          <Button
-            size="sm"
-            onClick={() => { setPage(1); setEntityType(entityTypeDraft.trim()); }}
+      <SectionTabs
+        activeHref="/platform/approvals"
+        items={[
+          { href: "/platform/approvals", label: "Approval queue", count: meta?.total },
+          { href: "/platform/companies", label: "Companies access" },
+          { href: "/platform/seller-applications", label: "Seller applications" },
+          { href: "/platform/contracts", label: "Partnership agreements" },
+          { href: "/platform/contract-templates", label: "Contract templates" },
+          { href: "/platform/audit-logs", label: "Audit logs" },
+          { href: "/bucket3/service-logs", label: "Service logs" },
+          { href: "/bucket3/unverified-accounts", label: "Unverified accounts" },
+        ]}
+      />
+
+      <FilterCard>
+        <FilterField label={t("admin.approvals.filter_status")} minWidth={180}>
+          <Select
+            id="ap-status"
+            fieldSize="sm"
+            value={statusFilter}
+            onChange={(e) => { setPage(1); setStatusFilter(e.target.value); }}
+            className="!h-[34px]"
           >
-            {t("admin.approvals.btn_apply_filter")}
-          </Button>
-        </div>
-      </div>
+            <option value="">{t("admin.approvals.status_any")}</option>
+            <option value="pending">{t("admin.approvals.status_pending")}</option>
+            <option value="under_review">{t("admin.approvals.status_under_review")}</option>
+            <option value="approved">{t("admin.approvals.status_approved")}</option>
+            <option value="rejected">{t("admin.approvals.status_rejected")}</option>
+          </Select>
+        </FilterField>
+        <FilterField label={t("admin.approvals.filter_entity_type")} minWidth={200}>
+          <Input
+            id="ap-ent"
+            value={entityTypeDraft}
+            onChange={(e) => setEntityTypeDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                setPage(1);
+                setEntityType(entityTypeDraft.trim());
+              }
+            }}
+            placeholder={t("admin.approvals.placeholder_entity_type")}
+            className="!h-[34px]"
+          />
+        </FilterField>
+        <V2Button
+          size="sm"
+          variant="primary"
+          onClick={() => { setPage(1); setEntityType(entityTypeDraft.trim()); }}
+        >
+          {t("admin.approvals.btn_apply_filter")}
+        </V2Button>
+      </FilterCard>
 
-      {err && <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
+      {err && <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
 
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -217,6 +250,7 @@ export default function GenericApprovalsPage() {
           ))}
         </TBody>
       </Table>
+      </V2Card>
 
       {meta && meta.last_page > 1 ? (
         <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />
