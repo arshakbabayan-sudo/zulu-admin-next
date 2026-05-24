@@ -34,7 +34,9 @@ import {
   SectionTabs,
   V2Card,
   V2Button,
+  IconButton,
 } from "@/components/ui/v2";
+import { Edit3, Trash2, Send } from "lucide-react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -1863,51 +1865,96 @@ export default function OperatorCarsPage() {
           {rows.length === 0 ? (
             <TEmpty colSpan={8}>{t("admin.crud.cars.empty")}</TEmpty>
           ) : null}
-          {rows.map((r) => (
+          {rows.map((r) => {
+            const carInitials = String(r.vehicle_class ?? "?").slice(0, 2).toUpperCase();
+            const tone = pickAvatarTone(r.id);
+            return (
             <TR key={r.id}>
-              <TD className="tabular-nums text-fg-t7">{r.id}</TD>
-              <TD className="tabular-nums">{companyCell(r)}</TD>
-              <TD>{r.pickup_location ?? "—"}</TD>
-              <TD>{r.dropoff_location ?? "—"}</TD>
-              <TD>{r.vehicle_class ?? "—"}</TD>
-              <TD>{offerTitle(r)}</TD>
+              <TD className="tabular-nums text-fg-t7 font-mono text-xs">#{r.id}</TD>
+              <TD>
+                <div className="flex items-center gap-3">
+                  <span
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                    style={avatarStyle(tone)}
+                    aria-hidden
+                  >
+                    {carInitials}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="font-medium text-fg-t8 truncate">{offerTitle(r)}</div>
+                    <div className="text-[11px] text-fg-t6 truncate">Company #{companyCell(r)}</div>
+                  </div>
+                </div>
+              </TD>
+              <TD>
+                <span
+                  className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                  style={{ backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }}
+                >
+                  {r.pickup_location ?? "—"}
+                </span>
+              </TD>
+              <TD>
+                <span
+                  className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                  style={{ backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }}
+                >
+                  {r.dropoff_location ?? "—"}
+                </span>
+              </TD>
+              <TD>
+                <span
+                  className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                  style={{ backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" }}
+                >
+                  {r.vehicle_class ?? "—"}
+                </span>
+              </TD>
+              <TD className="text-xs text-fg-t7">{offerTitle(r)}</TD>
               <TD>
                 <OfferStatusBadge status={r.offer?.status ?? null} />
               </TD>
-              <TD>
-                <div className="flex flex-col gap-1">
-                  <button
-                    type="button"
-                    onClick={() => openEdit(r)}
-                    className="text-left text-xs text-info-700 hover:underline"
-                  >
-                    {t("admin.crud.common.edit")}
-                  </button>
+              <TD align="right">
+                <div className="flex justify-end gap-1">
                   {r.offer?.id && isSubmittableStatus(r.offer.status) && (
-                    <Button
-                      size="sm"
-                      variant="primary"
+                    <IconButton
                       onClick={() => void handleSubmitForReview(r.offer!.id!)}
-                      className="self-start"
+                      aria-label="Submit for review"
                     >
-                      Submit for review
-                    </Button>
+                      <Send />
+                    </IconButton>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => void handleDelete(r.id)}
-                    className="text-left text-xs text-error-600 hover:underline"
-                  >
-                    {t("admin.crud.common.delete")}
-                  </button>
+                  <IconButton onClick={() => openEdit(r)} aria-label={t("admin.crud.common.edit")}>
+                    <Edit3 />
+                  </IconButton>
+                  <IconButton onClick={() => void handleDelete(r.id)} aria-label={t("admin.crud.common.delete")}>
+                    <Trash2 />
+                  </IconButton>
                 </div>
               </TD>
             </TR>
-          ))}
+            );
+          })}
         </TBody>
       </Table>
       </V2Card>
       {meta && <PaginationBar meta={meta} onPage={setPage} />}
     </div>
   );
+}
+
+function pickAvatarTone(id: number | string): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  const n = typeof id === "number" ? id : id.length;
+  return tones[n % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
 }

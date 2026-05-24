@@ -34,7 +34,7 @@ import {
   V2Button,
   IconButton,
 } from "@/components/ui/v2";
-import { Edit3, Trash2 } from "lucide-react";
+import { Edit3, Trash2, Send } from "lucide-react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useExcursionWizardStepper } from "@/hooks/useExcursionWizardStepper";
@@ -1175,19 +1175,18 @@ export default function OperatorExcursionsPage() {
               <TD align="right">
                 <div className="flex justify-end items-center gap-1">
                   {r.offer?.id && isSubmittableStatus(r.offer.status) && (
-                    <V2Button
-                      size="sm"
-                      variant="primary"
+                    <IconButton
                       onClick={() => void handleSubmitForReview(r.offer!.id!)}
+                      aria-label="Submit for review"
                     >
-                      Submit for review
-                    </V2Button>
+                      <Send />
+                    </IconButton>
                   )}
                   <IconButton onClick={() => openEdit(r)} aria-label={t("admin.crud.common.edit")}>
-                    <Edit3 className="h-4 w-4" />
+                    <Edit3 />
                   </IconButton>
                   <IconButton onClick={() => void handleDelete(r.id)} aria-label={t("admin.crud.common.delete")}>
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 />
                   </IconButton>
                 </div>
               </TD>

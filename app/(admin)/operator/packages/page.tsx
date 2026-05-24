@@ -48,7 +48,7 @@ import {
   V2Button,
   IconButton,
 } from "@/components/ui/v2";
-import { Download, Plus, Edit3, Trash2, Power } from "lucide-react";
+import { Download, Plus, Edit3, Trash2, Power, Send } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -605,31 +605,30 @@ export default function OperatorPackagesPage() {
               <TD align="right">
                 <div className="flex justify-end items-center gap-1">
                   {r.offer?.id && isSubmittableStatus(r.offer.status) && (
-                    <V2Button
-                      size="sm"
-                      variant="primary"
-                      disabled={busyId === r.offer.id}
+                    <IconButton
                       onClick={() => void handleSubmitForReview(r.offer!.id!)}
+                      disabled={busyId === r.offer.id}
+                      aria-label="Submit for review"
                     >
-                      Submit for review
-                    </V2Button>
+                      <Send />
+                    </IconButton>
                   )}
                   <IconButton
                     onClick={() => void handleToggle(r)}
                     disabled={busyId === r.id}
                     aria-label={r.status === "active" ? t("admin.crud.common.deactivate") : t("admin.crud.common.activate")}
                   >
-                    <Power className="h-4 w-4" />
+                    <Power />
                   </IconButton>
                   <IconButton onClick={() => openEdit(r)} aria-label={t("admin.crud.common.edit")}>
-                    <Edit3 className="h-4 w-4" />
+                    <Edit3 />
                   </IconButton>
                   <IconButton
                     onClick={() => void handleDelete(r.id)}
                     disabled={busyId === r.id}
                     aria-label={t("admin.crud.common.delete")}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 />
                   </IconButton>
                 </div>
               </TD>

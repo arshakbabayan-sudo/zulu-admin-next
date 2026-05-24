@@ -43,7 +43,9 @@ import {
   FilterField,
   V2Card,
   V2Button,
+  IconButton,
 } from "@/components/ui/v2";
+import { Trash2 } from "lucide-react";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 
 /**
@@ -465,16 +467,17 @@ export default function PricingRulesPage() {
                       : ""}
                   </TD>
                   <TD className="text-right">
-                    <button
-                      type="button"
-                      className="text-xs text-error-600 hover:underline"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPendingDelete(rule);
-                      }}
-                    >
-                      Delete
-                    </button>
+                    <div className="flex justify-end gap-1">
+                      <IconButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPendingDelete(rule);
+                        }}
+                        aria-label="Delete"
+                      >
+                        <Trash2 />
+                      </IconButton>
+                    </div>
                   </TD>
                 </TR>
               ))

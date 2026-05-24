@@ -34,6 +34,8 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import { IconButton } from "@/components/ui/v2";
+import { Trash2 } from "lucide-react";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 
 type FormState = {
@@ -314,16 +316,17 @@ export default function MoneyFlowTermsPage() {
                       : ""}
                   </TD>
                   <TD className="text-right">
-                    <button
-                      type="button"
-                      className="text-xs text-error-600 hover:underline"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPendingDelete(term);
-                      }}
-                    >
-                      Delete
-                    </button>
+                    <div className="flex justify-end gap-1">
+                      <IconButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPendingDelete(term);
+                        }}
+                        aria-label="Delete"
+                      >
+                        <Trash2 />
+                      </IconButton>
+                    </div>
                   </TD>
                 </TR>
               ))

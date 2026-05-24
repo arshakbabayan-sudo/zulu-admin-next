@@ -35,11 +35,18 @@ type LinkProps = CommonProps & {
 
 type Props = ButtonProps | LinkProps;
 
+// v2 admin-redesign — bumped from 30×30 to 34×34 (spec was 30×30 but the
+// no-border default made buttons feel invisible in dense tables). Now uses
+// a subtle 1px border + faint bg by default, so the action target is
+// always visible even before hover. SVG children are force-sized to 18px
+// via the `[&>svg]:` selectors so every caller renders icons at the same
+// size regardless of what they pass (h-4 w-4, h-5 w-5, no size at all).
 const BASE_CLASSES =
-  "inline-flex h-[30px] w-[30px] items-center justify-center rounded-[6px] border-none bg-transparent transition";
+  "inline-flex h-[34px] w-[34px] items-center justify-center rounded-md border bg-white transition [&>svg]:h-[18px] [&>svg]:w-[18px]";
 
 const HOVER_STYLE: React.CSSProperties = {
   color: "var(--admin-text-secondary)",
+  borderColor: "var(--admin-border)",
 };
 
 export function IconButton(props: Props) {
