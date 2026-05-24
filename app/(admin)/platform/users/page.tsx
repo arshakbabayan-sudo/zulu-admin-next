@@ -13,6 +13,7 @@
 
 import Link from "next/link";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
+import { PinPromptDialog } from "@/components/PinPromptDialog";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -70,6 +71,12 @@ export default function PlatformUsersPage() {
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
+  // Phase Զ.15 / Item 15 — PIN gate state.
+  const [pinGate, setPinGate] = useState<{
+    title: string;
+    description: React.ReactNode;
+    onConfirm: () => Promise<void>;
+  } | null>(null);
 
   const load = useCallback(async () => {
     if (!token || !allowed) return;
@@ -174,15 +181,28 @@ export default function PlatformUsersPage() {
       variant: "danger",
     });
     if (reason === null) return;
-    setBusyId(row.id);
-    try {
-      await apiHardDeletePlatformUser(token, row.id, reason);
-      await load();
-    } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : t("admin.users.err_hard_delete"));
-    } finally {
-      setBusyId(null);
-    }
+    // Phase Զ.15 / Item 15 — PIN gate for hard-delete (most destructive).
+    setPinGate({
+      title: "Verify PIN to hard-delete",
+      description: (
+        <>
+          You are about to permanently delete <strong>{row.name}</strong>. Enter your account PIN
+          to confirm.
+        </>
+      ),
+      onConfirm: async () => {
+        setBusyId(row.id);
+        try {
+          await apiHardDeletePlatformUser(token, row.id, reason);
+          await load();
+          setPinGate(null);
+        } catch (e) {
+          alert(e instanceof ApiRequestError ? e.message : t("admin.users.err_hard_delete"));
+        } finally {
+          setBusyId(null);
+        }
+      },
+    });
   }
 
   const k = (key: string, fb: string) => {
@@ -520,6 +540,17 @@ export default function PlatformUsersPage() {
       {meta && meta.last_page > 1 ? (
         <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />
       ) : null}
+
+      {/* Phase Զ.15 / Item 15 — PIN gate for destructive actions. */}
+      <PinPromptDialog
+        isOpen={pinGate !== null}
+        title={pinGate?.title}
+        description={pinGate?.description}
+        onCancel={() => setPinGate(null)}
+        onConfirm={async () => {
+          if (pinGate) await pinGate.onConfirm();
+        }}
+      />
     </div>
   );
 }
