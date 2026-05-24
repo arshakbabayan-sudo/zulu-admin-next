@@ -33,6 +33,12 @@ import {
   Tabs,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  V2Card,
+  V2Button,
+} from "@/components/ui/v2";
 
 type Tab = "policies" | "records";
 
@@ -163,18 +169,32 @@ export default function CommissionsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      {/* v2 admin-redesign — Commissions ledger page chrome (Finance section). */}
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Finance", href: "/platform/finance-summary" },
+          { label: t("admin.platform_commissions.title") },
+        ]}
         title={t("admin.platform_commissions.title")}
         actions={
-          <button
-            type="button"
-            onClick={() => setNewOpen(true)}
-            className="inline-flex h-10 items-center rounded-zulu bg-primary px-4 text-sm font-semibold text-white transition hover:opacity-90"
-          >
+          <V2Button variant="primary" onClick={() => setNewOpen(true)}>
             {t("admin.platform_commissions.btn_new")}
-          </button>
+          </V2Button>
         }
+      />
+
+      <SectionTabs
+        activeHref="/platform/commissions"
+        items={[
+          { href: "/platform/finance-summary", label: "Summary" },
+          { href: "/platform/invoices", label: "Invoices" },
+          { href: "/platform/payments", label: "Payments" },
+          { href: "/platform/commissions", label: "Commissions ledger" },
+          { href: "/platform/finance", label: "Transactions" },
+          { href: "/platform/vouchers", label: "Vouchers" },
+        ]}
       />
 
       <Tabs
@@ -187,11 +207,12 @@ export default function CommissionsPage() {
       />
 
       {err ? (
-        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
+        <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
       ) : null}
 
       {tab === "policies" && (
         <>
+          <V2Card>
           <Table>
             <THead>
               <TR>
@@ -234,6 +255,7 @@ export default function CommissionsPage() {
               ))}
             </TBody>
           </Table>
+          </V2Card>
           {policiesMeta && policiesMeta.last_page > 1 ? (
             <Pagination page={policiesMeta.current_page} lastPage={policiesMeta.last_page} onPage={setPoliciesPage} />
           ) : null}
@@ -242,6 +264,7 @@ export default function CommissionsPage() {
 
       {tab === "records" && (
         <>
+          <V2Card>
           <Table>
             <THead>
               <TR>
@@ -275,6 +298,7 @@ export default function CommissionsPage() {
               ))}
             </TBody>
           </Table>
+          </V2Card>
           {recordsMeta && recordsMeta.last_page > 1 ? (
             <Pagination page={recordsMeta.current_page} lastPage={recordsMeta.last_page} onPage={setRecordsPage} />
           ) : null}

@@ -24,6 +24,14 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  FilterCard,
+  FilterField,
+  V2Card,
+  V2Button,
+} from "@/components/ui/v2";
 
 /**
  * Platform-admin audit log viewer (Sprint 53, PART 26).
@@ -272,14 +280,19 @@ export default function PlatformAuditLogsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      {/* v2 admin-redesign — Audit logs page chrome (Marketplace ops). */}
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Marketplace ops", href: "/platform/approvals" },
+          { label: t("admin.platform_audit_logs.title") },
+        ]}
         title={t("admin.platform_audit_logs.title")}
         subtitle={t("admin.platform_audit_logs.subtitle")}
         actions={
           <>
-            <Button
-              variant="outline"
+            <V2Button
               size="sm"
               onClick={verifyIntegrity}
               disabled={verifying}
@@ -287,28 +300,41 @@ export default function PlatformAuditLogsPage() {
               {verifying
                 ? t("admin.platform_audit_logs.verifying")
                 : t("admin.platform_audit_logs.verify_integrity")}
-            </Button>
-            <Button
-              variant="outline"
+            </V2Button>
+            <V2Button
               size="sm"
               onClick={exportCsv}
               disabled={rows.length === 0}
             >
               {t("admin.platform_audit_logs.export_csv_page")}
-            </Button>
+            </V2Button>
           </>
         }
       />
 
+      <SectionTabs
+        activeHref="/platform/audit-logs"
+        items={[
+          { href: "/platform/approvals", label: "Approval queue" },
+          { href: "/platform/companies", label: "Companies access" },
+          { href: "/platform/seller-applications", label: "Seller applications" },
+          { href: "/platform/contracts", label: "Partnership agreements" },
+          { href: "/platform/contract-templates", label: "Contract templates" },
+          { href: "/platform/audit-logs", label: "Audit logs", count: meta?.total },
+          { href: "/bucket3/service-logs", label: "Service logs" },
+          { href: "/bucket3/unverified-accounts", label: "Unverified accounts" },
+        ]}
+      />
+
       {error && (
-        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
+        <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
           {error}
         </div>
       )}
 
       {integrity && (
         <div
-          className={`rounded-zulu border px-4 py-2 text-sm ${
+          className={`mb-4 rounded-md border px-4 py-2 text-sm ${
             integrity.is_intact
               ? "border-success-200 bg-success-50 text-success-700"
               : "border-error-200 bg-error-50 text-error-700"
@@ -325,88 +351,89 @@ export default function PlatformAuditLogsPage() {
         </div>
       )}
 
-      <div className="admin-card p-4">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <FormField label={t("admin.platform_audit_logs.category")} htmlFor="al-cat">
-            <Select
-              id="al-cat"
-              fieldSize="sm"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            >
-              <option value="">{t("common.all")}</option>
-              {CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </Select>
-          </FormField>
-          <FormField label={t("admin.platform_audit_logs.action")} htmlFor="al-action">
-            <Input
-              id="al-action"
-              value={action}
-              onChange={(e) => setAction(e.target.value)}
-              placeholder="user.login"
-            />
-          </FormField>
-          <FormField label={t("admin.platform_audit_logs.subject_type")} htmlFor="al-stype">
-            <Input
-              id="al-stype"
-              value={subjectType}
-              onChange={(e) => setSubjectType(e.target.value)}
-              placeholder="App\\Models\\Order"
-            />
-          </FormField>
-          <FormField label={t("admin.platform_audit_logs.subject_id")} htmlFor="al-sid">
-            <Input
-              id="al-sid"
-              value={subjectId}
-              onChange={(e) => setSubjectId(e.target.value)}
-            />
-          </FormField>
-          <FormField label={t("admin.platform_audit_logs.actor_id")} htmlFor="al-aid">
-            <Input
-              id="al-aid"
-              value={actorId}
-              onChange={(e) => setActorId(e.target.value)}
-            />
-          </FormField>
-          <FormField label={t("admin.platform_audit_logs.from")} htmlFor="al-from">
-            <Input
-              id="al-from"
-              type="datetime-local"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-            />
-          </FormField>
-          <FormField label={t("admin.platform_audit_logs.to")} htmlFor="al-to">
-            <Input
-              id="al-to"
-              type="datetime-local"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-            />
-          </FormField>
-          <FormField label={t("common.search")} htmlFor="al-q">
-            <Input
-              id="al-q"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="action, subject, actor name"
-            />
-          </FormField>
-        </div>
-        <div className="mt-4 flex justify-end gap-2">
-          <Button variant="outline" size="sm" onClick={resetFilters}>
-            {t("common.reset")}
-          </Button>
-          <Button size="sm" onClick={applyFilters}>
-            {t("common.apply")}
-          </Button>
-        </div>
-      </div>
+      <FilterCard>
+        <FilterField label={t("admin.platform_audit_logs.category")} minWidth={160}>
+          <Select
+            id="al-cat"
+            fieldSize="sm"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="!h-[34px]"
+          >
+            <option value="">{t("common.all")}</option>
+            {CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </Select>
+        </FilterField>
+        <FilterField label={t("admin.platform_audit_logs.action")} minWidth={160}>
+          <Input
+            id="al-action"
+            value={action}
+            onChange={(e) => setAction(e.target.value)}
+            placeholder="user.login"
+            className="!h-[34px]"
+          />
+        </FilterField>
+        <FilterField label={t("admin.platform_audit_logs.subject_type")} minWidth={180}>
+          <Input
+            id="al-stype"
+            value={subjectType}
+            onChange={(e) => setSubjectType(e.target.value)}
+            placeholder="App\\Models\\Order"
+            className="!h-[34px]"
+          />
+        </FilterField>
+        <FilterField label={t("admin.platform_audit_logs.subject_id")} minWidth={120}>
+          <Input
+            id="al-sid"
+            value={subjectId}
+            onChange={(e) => setSubjectId(e.target.value)}
+            className="!h-[34px]"
+          />
+        </FilterField>
+        <FilterField label={t("admin.platform_audit_logs.actor_id")} minWidth={120}>
+          <Input
+            id="al-aid"
+            value={actorId}
+            onChange={(e) => setActorId(e.target.value)}
+            className="!h-[34px]"
+          />
+        </FilterField>
+        <FilterField label={t("admin.platform_audit_logs.from")} minWidth={180}>
+          <Input
+            id="al-from"
+            type="datetime-local"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            className="!h-[34px]"
+          />
+        </FilterField>
+        <FilterField label={t("admin.platform_audit_logs.to")} minWidth={180}>
+          <Input
+            id="al-to"
+            type="datetime-local"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            className="!h-[34px]"
+          />
+        </FilterField>
+        <FilterField label={t("common.search")} minWidth={220}>
+          <Input
+            id="al-q"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="action, subject, actor name"
+            className="!h-[34px]"
+          />
+        </FilterField>
+        <V2Button size="sm" onClick={resetFilters}>{t("common.reset")}</V2Button>
+        <V2Button size="sm" variant="primary" onClick={applyFilters}>{t("common.apply")}</V2Button>
+      </FilterCard>
 
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -462,6 +489,7 @@ export default function PlatformAuditLogsPage() {
           ))}
         </TBody>
       </Table>
+      </V2Card>
 
       {meta && meta.last_page > 1 && (
         <div className="flex items-center justify-between gap-3">

@@ -23,6 +23,14 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  FilterCard,
+  FilterField,
+  V2Card,
+  V2Button,
+} from "@/components/ui/v2";
 import { formatDateTime, formatNumber } from "@/lib/format";
 
 type TwoFactorRow = {
@@ -177,11 +185,45 @@ export default function PlatformSecurityPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader title={t("admin.security.title")} subtitle={t("admin.security.subtitle")} />
+    <div>
+      {/* v2 admin-redesign — Security page chrome (Settings section). */}
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Settings", href: "/settings/pricing-rules" },
+          { label: t("admin.security.title") },
+        ]}
+        title={t("admin.security.title")}
+        subtitle={t("admin.security.subtitle")}
+      />
 
-      {error && <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{error}</div>}
-      {success && <div className="rounded-zulu border border-success-100 bg-success-50 px-4 py-2 text-sm text-success-700">{success}</div>}
+      <SectionTabs
+        activeHref="/platform/security"
+        items={[
+          { href: "/settings/pricing-rules", label: "Pricing rules" },
+          { href: "/settings/money-flow", label: "Money flow" },
+          { href: "/localization/languages", label: "Languages" },
+          { href: "/localization/templates", label: "Email templates" },
+          { href: "/platform/banners", label: "Banners" },
+          { href: "/pages", label: "CMS pages" },
+          { href: "/platform/notifications", label: "System notifications" },
+          { href: "/platform/newsletter", label: "Newsletter" },
+          { href: "/platform/loyalty", label: "Loyalty" },
+          { href: "/bucket3/block-dates", label: "Block dates" },
+          { href: "/bucket3/custom-fields", label: "Custom fields" },
+          { href: "/platform/security", label: "Security" },
+          { href: "/platform/webhooks", label: "Webhooks" },
+          { href: "/platform/locations", label: "Locations" },
+          { href: "/platform/settings/brand", label: "Brand" },
+          { href: "/connections", label: "Connections" },
+          { href: "/support/tickets", label: "Support" },
+          { href: "/platform/reviews", label: "Reviews" },
+        ]}
+      />
+
+      <div className="space-y-6">
+      {error && <div className="rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{error}</div>}
+      {success && <div className="rounded-md border border-success-100 bg-success-50 px-4 py-2 text-sm text-success-700">{success}</div>}
 
       {stats && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -216,21 +258,21 @@ export default function PlatformSecurityPage() {
         </div>
       </section>
 
-      <div className="admin-card p-4">
-        <div className="flex items-end gap-2">
-          <FormField label={t("admin.security.search_label")} htmlFor="sec-q" className="flex-1">
-            <Input
-              id="sec-q"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") applyFilters(); }}
-            />
-          </FormField>
-          <Button size="sm" onClick={applyFilters}>{t("admin.security.btn_apply")}</Button>
-          {q && <Button variant="outline" size="sm" onClick={() => { setQ(""); setPage(1); setAppliedFilters((n) => n + 1); }}>{t("common.reset")}</Button>}
-        </div>
-      </div>
+      <FilterCard>
+        <FilterField label={t("admin.security.search_label")} minWidth={320}>
+          <Input
+            id="sec-q"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") applyFilters(); }}
+            className="!h-[34px]"
+          />
+        </FilterField>
+        <V2Button size="sm" variant="primary" onClick={applyFilters}>{t("admin.security.btn_apply")}</V2Button>
+        {q && <V2Button size="sm" onClick={() => { setQ(""); setPage(1); setAppliedFilters((n) => n + 1); }}>{t("common.reset")}</V2Button>}
+      </FilterCard>
 
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -284,10 +326,12 @@ export default function PlatformSecurityPage() {
           ))}
         </TBody>
       </Table>
+      </V2Card>
 
       {meta && meta.last_page > 1 ? (
         <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />
       ) : null}
+      </div>
     </div>
   );
 }

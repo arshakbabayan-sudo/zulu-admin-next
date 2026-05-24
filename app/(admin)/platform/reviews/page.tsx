@@ -25,6 +25,12 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  FilterCard,
+  FilterField,
+  V2Card,
+} from "@/components/ui/v2";
 
 const MOD_STATUSES = ["published", "hidden", "rejected"] as const;
 
@@ -97,11 +103,19 @@ export default function PlatformReviewsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader title={t("admin.reviews.title")} />
+    <div>
+      {/* v2 admin-redesign — Reviews page chrome (Settings sibling, standalone). */}
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Settings", href: "/settings/pricing-rules" },
+          { label: t("admin.reviews.title") },
+        ]}
+        title={t("admin.reviews.title")}
+      />
 
-      <div className="admin-card p-4">
-        <FormField label={t("admin.reviews.filter_status")} htmlFor="r-status" className="max-w-xs">
+      <FilterCard>
+        <FilterField label={t("admin.reviews.filter_status")} minWidth={220}>
           <Select
             id="r-status"
             fieldSize="sm"
@@ -110,6 +124,7 @@ export default function PlatformReviewsPage() {
               setPage(1);
               setStatusFilter(e.target.value);
             }}
+            className="!h-[34px]"
           >
             <option value="">{t("common.all")}</option>
             <option value="pending">{t("admin.approvals.status_pending")}</option>
@@ -117,13 +132,14 @@ export default function PlatformReviewsPage() {
             <option value="hidden">{t("admin.reviews.status_hidden")}</option>
             <option value="rejected">{t("admin.approvals.status_rejected")}</option>
           </Select>
-        </FormField>
-      </div>
+        </FilterField>
+      </FilterCard>
 
       {err ? (
-        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
+        <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
       ) : null}
 
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -174,6 +190,7 @@ export default function PlatformReviewsPage() {
           ))}
         </TBody>
       </Table>
+      </V2Card>
 
       {meta && meta.last_page > 1 ? (
         <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />

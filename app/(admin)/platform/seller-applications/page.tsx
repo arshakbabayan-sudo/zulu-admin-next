@@ -30,6 +30,13 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  FilterCard,
+  FilterField,
+  V2Card,
+} from "@/components/ui/v2";
 
 export default function SellerApplicationsPage() {
   const { token, user } = useAdminAuth();
@@ -114,20 +121,39 @@ export default function SellerApplicationsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader title={t("admin.seller_applications.title")} />
+    <div>
+      {/* v2 admin-redesign — Seller applications page chrome (Marketplace ops). */}
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Marketplace ops", href: "/platform/approvals" },
+          { label: t("admin.seller_applications.title") },
+        ]}
+        title={t("admin.seller_applications.title")}
+      />
 
-      <div className="admin-card p-4">
-        <FormField
-          label={t("admin.seller_applications.filter_status")}
-          htmlFor="sa-status"
-          className="max-w-xs"
-        >
+      <SectionTabs
+        activeHref="/platform/seller-applications"
+        items={[
+          { href: "/platform/approvals", label: "Approval queue" },
+          { href: "/platform/companies", label: "Companies access" },
+          { href: "/platform/seller-applications", label: "Seller applications", count: meta?.total },
+          { href: "/platform/contracts", label: "Partnership agreements" },
+          { href: "/platform/contract-templates", label: "Contract templates" },
+          { href: "/platform/audit-logs", label: "Audit logs" },
+          { href: "/bucket3/service-logs", label: "Service logs" },
+          { href: "/bucket3/unverified-accounts", label: "Unverified accounts" },
+        ]}
+      />
+
+      <FilterCard>
+        <FilterField label={t("admin.seller_applications.filter_status")} minWidth={220}>
           <Select
             id="sa-status"
             fieldSize="sm"
             value={statusFilter}
             onChange={(e) => { setPage(1); setStatusFilter(e.target.value); }}
+            className="!h-[34px]"
           >
             <option value="">{t("admin.seller_applications.filter_default_queue")}</option>
             <option value="pending">{t("admin.seller_applications.status_pending")}</option>
@@ -135,11 +161,12 @@ export default function SellerApplicationsPage() {
             <option value="approved">{t("admin.seller_applications.status_approved")}</option>
             <option value="rejected">{t("admin.seller_applications.status_rejected")}</option>
           </Select>
-        </FormField>
-      </div>
+        </FilterField>
+      </FilterCard>
 
-      {err && <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
+      {err && <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
 
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -182,6 +209,7 @@ export default function SellerApplicationsPage() {
           ))}
         </TBody>
       </Table>
+      </V2Card>
 
       {meta && meta.last_page > 1 ? (
         <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />

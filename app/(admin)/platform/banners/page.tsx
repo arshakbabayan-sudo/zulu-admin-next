@@ -33,6 +33,12 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  V2Card,
+  V2Button,
+} from "@/components/ui/v2";
 
 function resolveBannerImageSrc(row: PlatformBannerRow): string | null {
   const u = row.image_url;
@@ -241,28 +247,58 @@ export default function PlatformBannersPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      {/* v2 admin-redesign — Banners page chrome (Settings section). */}
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Settings", href: "/settings/pricing-rules" },
+          { label: t("admin.banners.title") },
+        ]}
         title={t("admin.banners.title_long")}
         subtitle={t("admin.banners.subtitle")}
         actions={
           selectedIds.size > 0 ? (
-            <button
-              type="button"
+            <V2Button
+              variant="danger"
               disabled={bulkBusy}
               onClick={() => void handleBulkDelete()}
-              className="inline-flex h-10 items-center rounded-zulu bg-error-600 px-4 text-sm font-semibold text-white transition hover:bg-error-700 disabled:opacity-40"
             >
               {bulkBusy
                 ? t("admin.banners.bulk_deleting")
                 : t("admin.banners.btn_bulk_delete").replace("{count}", String(selectedIds.size))}
-            </button>
+            </V2Button>
           ) : undefined
         }
       />
 
-      {err && <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
+      <SectionTabs
+        activeHref="/platform/banners"
+        items={[
+          { href: "/settings/pricing-rules", label: "Pricing rules" },
+          { href: "/settings/money-flow", label: "Money flow" },
+          { href: "/localization/languages", label: "Languages" },
+          { href: "/localization/templates", label: "Email templates" },
+          { href: "/platform/banners", label: "Banners" },
+          { href: "/pages", label: "CMS pages" },
+          { href: "/platform/notifications", label: "System notifications" },
+          { href: "/platform/newsletter", label: "Newsletter" },
+          { href: "/platform/loyalty", label: "Loyalty" },
+          { href: "/bucket3/block-dates", label: "Block dates" },
+          { href: "/bucket3/custom-fields", label: "Custom fields" },
+          { href: "/platform/security", label: "Security" },
+          { href: "/platform/webhooks", label: "Webhooks" },
+          { href: "/platform/locations", label: "Locations" },
+          { href: "/platform/settings/brand", label: "Brand" },
+          { href: "/connections", label: "Connections" },
+          { href: "/support/tickets", label: "Support" },
+          { href: "/platform/reviews", label: "Reviews" },
+        ]}
+      />
 
+      {err && <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
+
+      <div className="space-y-6">
       <section className="admin-card p-4 space-y-3">
         <h2 className="text-sm font-semibold text-fg-t8">{t("admin.banners.create_title")}</h2>
         <div className="grid max-w-xl gap-3">
@@ -338,6 +374,7 @@ export default function PlatformBannersPage() {
         </section>
       )}
 
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -442,6 +479,8 @@ export default function PlatformBannersPage() {
           })}
         </TBody>
       </Table>
+      </V2Card>
+      </div>
     </div>
   );
 }

@@ -29,6 +29,14 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  FilterCard,
+  FilterField,
+  V2Card,
+  V2Button,
+} from "@/components/ui/v2";
 
 /**
  * Platform-admin voucher viewer (Sprint 56, PART 09).
@@ -224,61 +232,78 @@ export default function PlatformVouchersPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      {/* v2 admin-redesign — Vouchers page chrome (Finance section). */}
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Finance", href: "/platform/finance-summary" },
+          { label: t("admin.platform_vouchers.title") },
+        ]}
         title={t("admin.platform_vouchers.title")}
         subtitle={t("admin.platform_vouchers.subtitle")}
       />
 
+      <SectionTabs
+        activeHref="/platform/vouchers"
+        items={[
+          { href: "/platform/finance-summary", label: "Summary" },
+          { href: "/platform/invoices", label: "Invoices" },
+          { href: "/platform/payments", label: "Payments" },
+          { href: "/platform/commissions", label: "Commissions ledger" },
+          { href: "/platform/finance", label: "Transactions" },
+          { href: "/platform/vouchers", label: "Vouchers", count: meta?.total },
+        ]}
+      />
+
       {error && (
-        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{error}</div>
+        <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{error}</div>
       )}
 
-      {/* Filters */}
-      <div className="admin-card p-4">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <FormField label={t("admin.platform_vouchers.status")} htmlFor="v-status">
-            <Select
-              id="v-status"
-              fieldSize="sm"
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-            >
-              <option value="">{t("common.all")}</option>
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </Select>
-          </FormField>
-          <FormField label={t("admin.platform_vouchers.service_type")} htmlFor="v-svc">
-            <Select
-              id="v-svc"
-              fieldSize="sm"
-              value={serviceType}
-              onChange={(e) => setServiceType(e.target.value)}
-            >
-              <option value="">{t("common.all")}</option>
-              {SERVICE_TYPES.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </Select>
-          </FormField>
-          <FormField label={t("common.search")} htmlFor="v-q" className="sm:col-span-2">
-            <Input
-              id="v-q"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder={t("admin.platform_vouchers.search_placeholder")}
-            />
-          </FormField>
-          <div className="sm:col-span-2 lg:col-span-4 flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={resetFilters}>{t("common.reset")}</Button>
-            <Button size="sm" onClick={applyFilters}>{t("common.apply")}</Button>
-          </div>
-        </div>
-      </div>
+      <FilterCard>
+        <FilterField label={t("admin.platform_vouchers.status")} minWidth={160}>
+          <Select
+            id="v-status"
+            fieldSize="sm"
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="!h-[34px]"
+          >
+            <option value="">{t("common.all")}</option>
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </Select>
+        </FilterField>
+        <FilterField label={t("admin.platform_vouchers.service_type")} minWidth={160}>
+          <Select
+            id="v-svc"
+            fieldSize="sm"
+            value={serviceType}
+            onChange={(e) => setServiceType(e.target.value)}
+            className="!h-[34px]"
+          >
+            <option value="">{t("common.all")}</option>
+            {SERVICE_TYPES.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </Select>
+        </FilterField>
+        <FilterField label={t("common.search")} minWidth={240}>
+          <Input
+            id="v-q"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder={t("admin.platform_vouchers.search_placeholder")}
+            className="!h-[34px]"
+          />
+        </FilterField>
+        <V2Button size="sm" onClick={resetFilters}>{t("common.reset")}</V2Button>
+        <V2Button size="sm" variant="primary" onClick={applyFilters}>{t("common.apply")}</V2Button>
+      </FilterCard>
 
       {/* Table */}
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -323,6 +348,7 @@ export default function PlatformVouchersPage() {
           ))}
         </TBody>
       </Table>
+      </V2Card>
 
       {meta && meta.last_page > 1 ? (
         <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />

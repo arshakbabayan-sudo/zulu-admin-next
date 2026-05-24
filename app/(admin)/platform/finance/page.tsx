@@ -42,6 +42,13 @@ import {
   Tabs,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  FilterCard,
+  FilterField,
+  V2Card,
+} from "@/components/ui/v2";
 
 type Tab = "summary" | "entitlements" | "settlements";
 
@@ -166,17 +173,38 @@ export default function FinancePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader title={t("admin.platform_finance.title")} />
+    <div>
+      {/* v2 admin-redesign — Transactions page chrome (Finance section). */}
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Finance", href: "/platform/finance-summary" },
+          { label: t("admin.platform_finance.title") },
+        ]}
+        title={t("admin.platform_finance.title")}
+      />
 
-      <div className="admin-card p-4">
-        <FormField label={t("admin.platform_finance.company")} htmlFor="finance-company-id">
+      <SectionTabs
+        activeHref="/platform/finance"
+        items={[
+          { href: "/platform/finance-summary", label: "Summary" },
+          { href: "/platform/invoices", label: "Invoices" },
+          { href: "/platform/payments", label: "Payments" },
+          { href: "/platform/commissions", label: "Commissions ledger" },
+          { href: "/platform/finance", label: "Transactions" },
+          { href: "/platform/vouchers", label: "Vouchers" },
+        ]}
+      />
+
+      <FilterCard>
+        <FilterField label={t("admin.platform_finance.company")} minWidth={260}>
           {companyOptions.length > 0 ? (
             <Select
               id="finance-company-id"
               value={companyId ?? ""}
               onChange={(e) => setCompanyId(e.target.value ? Number(e.target.value) : null)}
               fieldSize="sm"
+              className="!h-[34px]"
             >
               {companyOptions.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -192,15 +220,16 @@ export default function FinancePage() {
               value={companyId ?? ""}
               onChange={(e) => setCompanyId(e.target.value ? Number(e.target.value) : null)}
               placeholder={t("admin.platform_finance.enter_company_id")}
+              className="!h-[34px]"
             />
           )}
-        </FormField>
-        {!hasValidCompanyId && (
-          <p className="mt-2 text-sm text-warning-700">
-            {t("admin.platform_finance.valid_company_id_required")}
-          </p>
-        )}
-      </div>
+        </FilterField>
+      </FilterCard>
+      {!hasValidCompanyId && (
+        <p className="mb-4 text-sm text-warning-700">
+          {t("admin.platform_finance.valid_company_id_required")}
+        </p>
+      )}
 
       <Tabs
         value={tab}
@@ -213,7 +242,7 @@ export default function FinancePage() {
       />
 
       {err ? (
-        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
+        <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
       ) : null}
 
       {tab === "summary" && summary && (
@@ -242,6 +271,7 @@ export default function FinancePage() {
               {selectedEnt.size > 0 ? `(${selectedEnt.size}) ` : ""}
             </Button>
           </div>
+          <V2Card>
           <Table>
             <THead>
               <TR>
@@ -287,6 +317,7 @@ export default function FinancePage() {
               ))}
             </TBody>
           </Table>
+          </V2Card>
           {entMeta && entMeta.last_page > 1 ? (
             <Pagination page={entMeta.current_page} lastPage={entMeta.last_page} onPage={setEntPage} />
           ) : null}
@@ -295,6 +326,7 @@ export default function FinancePage() {
 
       {tab === "settlements" && (
         <>
+          <V2Card>
           <Table>
             <THead>
               <TR>
@@ -339,6 +371,7 @@ export default function FinancePage() {
               ))}
             </TBody>
           </Table>
+          </V2Card>
           {setMeta2 && setMeta2.last_page > 1 ? (
             <Pagination page={setMeta2.current_page} lastPage={setMeta2.last_page} onPage={setSetPage2} />
           ) : null}

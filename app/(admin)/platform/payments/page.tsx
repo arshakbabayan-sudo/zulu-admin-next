@@ -29,6 +29,14 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  FilterCard,
+  FilterField,
+  V2Card,
+  V2Button,
+} from "@/components/ui/v2";
 
 const PAYMENT_STATUSES = ["", "pending", "processing", "paid", "failed", "refunded", "cancelled"];
 
@@ -99,77 +107,94 @@ export default function PlatformPaymentsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      {/* v2 admin-redesign — Payments page chrome (Finance section). */}
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Finance", href: "/platform/finance-summary" },
+          { label: t("admin.payments.title") },
+        ]}
         title={t("admin.payments.title")}
         actions={
-          <button
-            type="button"
-            disabled={exporting}
+          <V2Button
             onClick={() => void handleExport()}
-            className="inline-flex h-10 items-center rounded-zulu border border-default bg-white px-4 text-sm font-semibold text-fg-t8 transition hover:bg-figma-bg-1 disabled:opacity-40"
+            disabled={exporting}
           >
             {exporting ? t("admin.payments.exporting") : t("admin.payments.btn_export_csv")}
-          </button>
+          </V2Button>
         }
       />
 
-      <div className="admin-card p-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <FormField label={t("admin.approvals.filter_status")} htmlFor="status-filter" className="max-w-xs">
-            <Select
-              id="status-filter"
-              fieldSize="sm"
-              value={statusFilter}
-              onChange={(e) => {
-                setPage(1);
-                setStatusFilter(e.target.value);
-              }}
-            >
-              {PAYMENT_STATUSES.map((s) => (
-                <option key={s} value={s}>{s || t("common.all")}</option>
-              ))}
-            </Select>
-          </FormField>
-          <FormField label={t("admin.invoices.filter_from")} htmlFor="pay-from" className="max-w-xs">
-            <input
-              id="pay-from"
-              type="date"
-              value={fromDate}
-              onChange={(e) => { setPage(1); setFromDate(e.target.value); }}
-              className="h-9 rounded-zulu border border-default px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
-            />
-          </FormField>
-          <FormField label={t("admin.invoices.filter_to")} htmlFor="pay-to" className="max-w-xs">
-            <input
-              id="pay-to"
-              type="date"
-              value={toDate}
-              onChange={(e) => { setPage(1); setToDate(e.target.value); }}
-              className="h-9 rounded-zulu border border-default px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
-            />
-          </FormField>
-          {(statusFilter || fromDate || toDate) && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setPage(1);
-                setStatusFilter("");
-                setFromDate("");
-                setToDate("");
-              }}
-            >
-              {t("admin.invoices.btn_clear_filters")}
-            </Button>
-          )}
-        </div>
-      </div>
+      <SectionTabs
+        activeHref="/platform/payments"
+        items={[
+          { href: "/platform/finance-summary", label: "Summary" },
+          { href: "/platform/invoices", label: "Invoices" },
+          { href: "/platform/payments", label: "Payments", count: meta?.total },
+          { href: "/platform/commissions", label: "Commissions ledger" },
+          { href: "/platform/finance", label: "Transactions" },
+          { href: "/platform/vouchers", label: "Vouchers" },
+        ]}
+      />
+
+      <FilterCard>
+        <FilterField label={t("admin.approvals.filter_status")}>
+          <Select
+            id="status-filter"
+            fieldSize="sm"
+            value={statusFilter}
+            onChange={(e) => {
+              setPage(1);
+              setStatusFilter(e.target.value);
+            }}
+            className="!h-[34px]"
+          >
+            {PAYMENT_STATUSES.map((s) => (
+              <option key={s} value={s}>{s || t("common.all")}</option>
+            ))}
+          </Select>
+        </FilterField>
+        <FilterField label={t("admin.invoices.filter_from")}>
+          <input
+            id="pay-from"
+            type="date"
+            value={fromDate}
+            onChange={(e) => { setPage(1); setFromDate(e.target.value); }}
+            className="h-[34px] rounded-md border bg-white px-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+            style={{ borderColor: "var(--admin-border)" }}
+          />
+        </FilterField>
+        <FilterField label={t("admin.invoices.filter_to")}>
+          <input
+            id="pay-to"
+            type="date"
+            value={toDate}
+            onChange={(e) => { setPage(1); setToDate(e.target.value); }}
+            className="h-[34px] rounded-md border bg-white px-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+            style={{ borderColor: "var(--admin-border)" }}
+          />
+        </FilterField>
+        {(statusFilter || fromDate || toDate) && (
+          <V2Button
+            size="sm"
+            onClick={() => {
+              setPage(1);
+              setStatusFilter("");
+              setFromDate("");
+              setToDate("");
+            }}
+          >
+            {t("admin.invoices.btn_clear_filters")}
+          </V2Button>
+        )}
+      </FilterCard>
 
       {err ? (
-        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
+        <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
       ) : null}
 
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -220,6 +245,7 @@ export default function PlatformPaymentsPage() {
           ))}
         </TBody>
       </Table>
+      </V2Card>
 
       {meta && meta.last_page > 1 ? (
         <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />
