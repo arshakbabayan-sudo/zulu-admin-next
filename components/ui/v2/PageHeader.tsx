@@ -21,7 +21,7 @@ import { Breadcrumb, type BreadcrumbItem } from "./Breadcrumb";
 
 export type PageHeaderProps = {
   breadcrumb?: BreadcrumbItem[];
-  title: string;
+  title: ReactNode;
   subtitle?: ReactNode;
   actions?: ReactNode;
 };

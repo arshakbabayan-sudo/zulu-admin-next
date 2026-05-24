@@ -26,6 +26,12 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  V2Card,
+  V2Button,
+} from "@/components/ui/v2";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { ApiRequestError } from "@/lib/api-client";
@@ -274,18 +280,23 @@ export default function OperatorHotelsPage() {
     );
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      {/* v2 admin-redesign — Inventory → Hotels page chrome.
+          Matches docs/zulu-admin-v2.html page-view#inventory (lines 409-520). */}
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Inventory", href: "/operator/hotels" },
+          { label: t("admin.crud.hotels.title") },
+        ]}
         title={
           <span className="inline-flex items-center gap-3">
             {t("admin.crud.hotels.title")}
-            {/* Pill is hidden when edit/create form is open: switching content lang
-                there would either discard unsaved edits (refetch) or silently
-                overwrite the EN source on save (no refetch). Use the Translations
-                tabs at the bottom of the edit form instead. */}
+            {/* Pill is hidden when edit/create form is open. */}
             {form === null && <ContentLanguagePill />}
           </span>
         }
+        subtitle="Manage your hotel inventory"
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <ImportExportButtons
@@ -293,7 +304,6 @@ export default function OperatorHotelsPage() {
               exportDisabled={!token}
               onTemplate={async () => {
                 try {
-                  // Lazy-load ExcelJS only when the operator asks for the template.
                   const { buildHotelsTemplateBlob, downloadBlob } = await import("@/lib/hotels-xlsx");
                   const blob = await buildHotelsTemplateBlob();
                   downloadBlob("hotels-template.xlsx", blob);
@@ -315,11 +325,26 @@ export default function OperatorHotelsPage() {
               }}
               onImport={() => setImportOpen(true)}
             />
-            <Button size="sm" onClick={openCreate}>
-              {t("admin.crud.hotels.new_btn")}
-            </Button>
+            <V2Button variant="primary" size="sm" onClick={openCreate}>
+              + {t("admin.crud.hotels.new_btn")}
+            </V2Button>
           </div>
         }
+      />
+
+      {/* Inventory section-tabs — switch between inventory types */}
+      <SectionTabs
+        activeHref="/operator/hotels"
+        items={[
+          { href: "/operator/hotels", label: "Hotels", count: meta?.total },
+          { href: "/operator/flights", label: "Flights" },
+          { href: "/operator/transfers", label: "Transfers" },
+          { href: "/operator/cars", label: "Cars" },
+          { href: "/operator/excursions", label: "Excursions" },
+          { href: "/operator/visas", label: "Visas" },
+          { href: "/operator/packages", label: "Packages" },
+          { href: "/operator/offers", label: "Offers" },
+        ]}
       />
       {importOpen && (
         <HotelsXlsxImportModal
@@ -1162,6 +1187,7 @@ export default function OperatorHotelsPage() {
           </div>
         </section>
       )}
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -1220,6 +1246,7 @@ export default function OperatorHotelsPage() {
           ))}
         </TBody>
       </Table>
+      </V2Card>
       {meta && <PaginationBar meta={meta} onPage={setPage} />}
     </div>
   );
