@@ -35,6 +35,14 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  FilterCard,
+  FilterField,
+  V2Card,
+  V2Button,
+} from "@/components/ui/v2";
 
 const SOURCES = ["", "home", "footer", "newsletter-block", "other"];
 const LANGS = ["", "en", "ru", "hy"];
@@ -142,11 +150,43 @@ export default function PlatformNewsletterPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader title={t("admin.newsletter.title_long")} />
+    <div>
+      {/* v2 admin-redesign — Settings Newsletter page chrome. */}
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Settings", href: "/settings/pricing-rules" },
+          { label: t("admin.newsletter.title_long") },
+        ]}
+        title={t("admin.newsletter.title_long")}
+      />
+
+      <SectionTabs
+        activeHref="/platform/newsletter"
+        items={[
+          { href: "/settings/pricing-rules", label: "Pricing rules" },
+          { href: "/settings/money-flow", label: "Money flow" },
+          { href: "/localization/languages", label: "Languages" },
+          { href: "/localization/templates", label: "Email templates" },
+          { href: "/platform/banners", label: "Banners" },
+          { href: "/pages", label: "CMS pages" },
+          { href: "/platform/notifications", label: "System notifications" },
+          { href: "/platform/newsletter", label: "Newsletter", count: meta?.total },
+          { href: "/platform/loyalty", label: "Loyalty" },
+          { href: "/bucket3/block-dates", label: "Block dates" },
+          { href: "/bucket3/custom-fields", label: "Custom fields" },
+          { href: "/platform/security", label: "Security" },
+          { href: "/platform/webhooks", label: "Webhooks" },
+          { href: "/platform/locations", label: "Locations" },
+          { href: "/platform/settings/brand", label: "Brand" },
+          { href: "/connections", label: "Connections" },
+          { href: "/support/tickets", label: "Support" },
+          { href: "/platform/reviews", label: "Reviews" },
+        ]}
+      />
 
       {stats && (
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="mb-4 grid gap-3 sm:grid-cols-3">
           <div className="admin-card p-4">
             <p className="text-xs text-fg-t6 uppercase tracking-wide">{t("admin.newsletter.stat_active")}</p>
             <p className="mt-1 text-2xl font-semibold text-fg-t11 tabular-nums">{stats.total_active}</p>
@@ -166,43 +206,43 @@ export default function PlatformNewsletterPage() {
         </div>
       )}
 
-      <div className="admin-card p-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <FormField label={t("admin.newsletter.filter_source")} htmlFor="nl-src" className="min-w-[180px]">
-            <Select id="nl-src" fieldSize="sm" value={source} onChange={(e) => { setPage(1); setSource(e.target.value); }}>
-              {SOURCES.map((s) => <option key={s} value={s}>{s || t("common.all")}</option>)}
-            </Select>
-          </FormField>
-          <FormField label={t("admin.newsletter.filter_lang")} htmlFor="nl-lang" className="min-w-[140px]">
-            <Select id="nl-lang" fieldSize="sm" value={lang} onChange={(e) => { setPage(1); setLang(e.target.value); }}>
-              {LANGS.map((l) => <option key={l} value={l}>{l || t("common.all")}</option>)}
-            </Select>
-          </FormField>
-          <FormField label={t("admin.newsletter.filter_search")} htmlFor="nl-q" className="flex-1 min-w-[240px]">
-            <Input
-              id="nl-q"
-              value={searchDraft}
-              onChange={(e) => setSearchDraft(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") { setPage(1); setSearch(searchDraft.trim()); } }}
-              placeholder={t("admin.newsletter.search_placeholder")}
-            />
-          </FormField>
-          <Checkbox
-            checked={activeOnly}
-            onChange={(e) => { setPage(1); setActiveOnly(e.target.checked); }}
-            label={t("admin.newsletter.filter_active_only")}
+      <FilterCard>
+        <FilterField label={t("admin.newsletter.filter_source")}>
+          <Select id="nl-src" fieldSize="sm" value={source} onChange={(e) => { setPage(1); setSource(e.target.value); }} className="!h-[34px]">
+            {SOURCES.map((s) => <option key={s} value={s}>{s || t("common.all")}</option>)}
+          </Select>
+        </FilterField>
+        <FilterField label={t("admin.newsletter.filter_lang")}>
+          <Select id="nl-lang" fieldSize="sm" value={lang} onChange={(e) => { setPage(1); setLang(e.target.value); }} className="!h-[34px]">
+            {LANGS.map((l) => <option key={l} value={l}>{l || t("common.all")}</option>)}
+          </Select>
+        </FilterField>
+        <FilterField label={t("admin.newsletter.filter_search")}>
+          <Input
+            id="nl-q"
+            value={searchDraft}
+            onChange={(e) => setSearchDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { setPage(1); setSearch(searchDraft.trim()); } }}
+            placeholder={t("admin.newsletter.search_placeholder")}
+            className="!h-[34px]"
           />
-          <Button size="sm" onClick={() => { setPage(1); setSearch(searchDraft.trim()); }}>
-            {t("admin.newsletter.btn_apply")}
-          </Button>
-          <Button variant="outline" size="sm" onClick={exportCsv}>
-            {t("admin.newsletter.btn_export_csv")}
-          </Button>
-        </div>
-      </div>
+        </FilterField>
+        <Checkbox
+          checked={activeOnly}
+          onChange={(e) => { setPage(1); setActiveOnly(e.target.checked); }}
+          label={t("admin.newsletter.filter_active_only")}
+        />
+        <V2Button size="sm" variant="primary" onClick={() => { setPage(1); setSearch(searchDraft.trim()); }}>
+          {t("admin.newsletter.btn_apply")}
+        </V2Button>
+        <V2Button size="sm" onClick={exportCsv}>
+          {t("admin.newsletter.btn_export_csv")}
+        </V2Button>
+      </FilterCard>
 
-      {err && <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
+      {err && <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
 
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -247,6 +287,7 @@ export default function PlatformNewsletterPage() {
           ))}
         </TBody>
       </Table>
+      </V2Card>
 
       {meta && meta.last_page > 1 ? (
         <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />

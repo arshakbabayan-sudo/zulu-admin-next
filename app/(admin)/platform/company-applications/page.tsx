@@ -11,6 +11,13 @@ import type { ApiListMeta } from "@/lib/api-envelope";
 import { apiCompanyApplications, type CompanyApplicationRow } from "@/lib/platform-admin-api";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  FilterCard,
+  FilterField,
+  V2Card,
+} from "@/components/ui/v2";
 
 export default function CompanyApplicationsPage() {
   const { token, user } = useAdminAuth();
@@ -57,17 +64,41 @@ export default function CompanyApplicationsPage() {
 
   return (
     <div>
-      <h1 className="admin-page-title">{t("admin.company_applications.title")}</h1>
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <label className="text-sm text-fg-t6">
-          {t("admin.approvals.filter_status")}
+      {/* v2 admin-redesign — Marketplace ops Company applications page chrome. */}
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Marketplace ops", href: "/platform/approvals" },
+          { label: t("admin.company_applications.title") },
+        ]}
+        title={t("admin.company_applications.title")}
+      />
+
+      <SectionTabs
+        activeHref="/platform/companies"
+        items={[
+          { href: "/platform/approvals", label: "Approval queue" },
+          { href: "/platform/companies", label: "Companies access", count: meta?.total },
+          { href: "/platform/seller-applications", label: "Seller applications" },
+          { href: "/platform/contracts", label: "Partnership agreements" },
+          { href: "/platform/contract-templates", label: "Contract templates" },
+          { href: "/platform/users", label: "Users" },
+          { href: "/platform/audit-logs", label: "Audit logs" },
+          { href: "/bucket3/service-logs", label: "Service logs" },
+          { href: "/bucket3/unverified-accounts", label: "Unverified accounts" },
+        ]}
+      />
+
+      <FilterCard>
+        <FilterField label={t("admin.approvals.filter_status")}>
           <select
             value={statusFilter}
             onChange={(e) => {
               setPage(1);
               setStatusFilter(e.target.value);
             }}
-            className="ml-2 rounded border border-default px-2 py-1 text-sm"
+            className="h-[34px] rounded-md border bg-white px-2 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+            style={{ borderColor: "var(--admin-border)" }}
           >
             <option value="">{t("common.all")}</option>
             <option value="pending">{t("admin.approvals.status_pending")}</option>
@@ -75,10 +106,11 @@ export default function CompanyApplicationsPage() {
             <option value="approved">{t("admin.approvals.status_approved")}</option>
             <option value="rejected">{t("admin.approvals.status_rejected")}</option>
           </select>
-        </label>
-      </div>
-      {err && <p className="mt-2 text-sm text-error-600">{err}</p>}
-      <div className="mt-4 overflow-x-auto rounded border border-default bg-white">
+        </FilterField>
+      </FilterCard>
+      {err && <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
+      <V2Card>
+      <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7">
             <tr>
@@ -130,6 +162,7 @@ export default function CompanyApplicationsPage() {
           </tbody>
         </table>
       </div>
+      </V2Card>
       {meta && <PaginationBar meta={meta} onPage={setPage} />}
     </div>
   );

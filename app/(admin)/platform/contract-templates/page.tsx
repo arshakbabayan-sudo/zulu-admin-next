@@ -32,6 +32,14 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  FilterCard,
+  FilterField,
+  V2Card,
+  V2Button,
+} from "@/components/ui/v2";
 import { Plus, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -79,8 +87,14 @@ export default function PlatformContractTemplatesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      {/* v2 admin-redesign — Marketplace ops Contract templates page chrome. */}
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Marketplace ops", href: "/platform/approvals" },
+          { label: t("admin.contract_templates.title") },
+        ]}
         title={t("admin.contract_templates.title")}
         subtitle={`${rows.length} ${t("admin.contract_templates.meta_count_suffix")}`}
         actions={
@@ -94,53 +108,65 @@ export default function PlatformContractTemplatesPage() {
         }
       />
 
-      <div className="admin-card p-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-2 text-sm text-fg-t6">
-            <span className="font-medium text-fg-t7">{t("admin.contract_templates.filter_type")}</span>
-            <Select
-              fieldSize="sm"
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value as ContractType | "")}
-              className="!w-auto min-w-[200px]"
-            >
-              <option value="">{t("common.all")}</option>
-              {CONTRACT_TYPES.map((tp) => (
-                <option key={tp} value={tp}>
-                  {contractTypeLabel(tp)}
-                </option>
-              ))}
-            </Select>
-          </label>
-          <label className="flex items-center gap-2 text-sm text-fg-t6">
-            <span className="font-medium text-fg-t7">{t("admin.contract_templates.filter_language")}</span>
-            <Select
-              fieldSize="sm"
-              value={langFilter}
-              onChange={(e) => setLangFilter(e.target.value as ContractLanguage | "")}
-              className="!w-auto min-w-[120px]"
-            >
-              <option value="">{t("common.all")}</option>
-              {CONTRACT_LANGUAGES.map((l) => (
-                <option key={l} value={l}>
-                  {l.toUpperCase()}
-                </option>
-              ))}
-            </Select>
-          </label>
-          <Button variant="outline" size="sm" onClick={() => void load()}>
-            <RefreshCw className="h-4 w-4" aria-hidden />
-            {t("admin.crud.common.refresh")}
-          </Button>
-        </div>
-      </div>
+      <SectionTabs
+        activeHref="/platform/contract-templates"
+        items={[
+          { href: "/platform/approvals", label: "Approval queue" },
+          { href: "/platform/companies", label: "Companies access" },
+          { href: "/platform/seller-applications", label: "Seller applications" },
+          { href: "/platform/contracts", label: "Partnership agreements" },
+          { href: "/platform/contract-templates", label: "Contract templates", count: rows.length },
+          { href: "/platform/users", label: "Users" },
+          { href: "/platform/audit-logs", label: "Audit logs" },
+          { href: "/bucket3/service-logs", label: "Service logs" },
+          { href: "/bucket3/unverified-accounts", label: "Unverified accounts" },
+        ]}
+      />
+
+      <FilterCard>
+        <FilterField label={t("admin.contract_templates.filter_type")}>
+          <Select
+            fieldSize="sm"
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value as ContractType | "")}
+            className="!h-[34px]"
+          >
+            <option value="">{t("common.all")}</option>
+            {CONTRACT_TYPES.map((tp) => (
+              <option key={tp} value={tp}>
+                {contractTypeLabel(tp)}
+              </option>
+            ))}
+          </Select>
+        </FilterField>
+        <FilterField label={t("admin.contract_templates.filter_language")}>
+          <Select
+            fieldSize="sm"
+            value={langFilter}
+            onChange={(e) => setLangFilter(e.target.value as ContractLanguage | "")}
+            className="!h-[34px]"
+          >
+            <option value="">{t("common.all")}</option>
+            {CONTRACT_LANGUAGES.map((l) => (
+              <option key={l} value={l}>
+                {l.toUpperCase()}
+              </option>
+            ))}
+          </Select>
+        </FilterField>
+        <V2Button size="sm" onClick={() => void load()}>
+          <RefreshCw className="h-4 w-4" aria-hidden />
+          {t("admin.crud.common.refresh")}
+        </V2Button>
+      </FilterCard>
 
       {err && (
-        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
+        <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
           {err}
         </div>
       )}
 
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -179,6 +205,7 @@ export default function PlatformContractTemplatesPage() {
           ))}
         </TBody>
       </Table>
+      </V2Card>
     </div>
   );
 }

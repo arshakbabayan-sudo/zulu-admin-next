@@ -25,6 +25,14 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  FilterCard,
+  FilterField,
+  V2Card,
+  V2Button,
+} from "@/components/ui/v2";
 
 export default function PlatformPackageOrdersPage() {
   const { token, user } = useAdminAuth();
@@ -93,52 +101,69 @@ export default function PlatformPackageOrdersPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader title={t("admin.package_orders.title")} />
+    <div>
+      {/* v2 admin-redesign — Bookings Package orders page chrome. */}
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Bookings", href: "/platform/bookings" },
+          { label: t("admin.package_orders.title") },
+        ]}
+        title={t("admin.package_orders.title")}
+      />
 
-      <div className="admin-card p-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <FormField label={t("admin.approvals.filter_status")} htmlFor="po-status" className="flex-1 min-w-[180px]">
-            <Input
-              id="po-status"
-              value={statusFilter}
-              onChange={(e) => {
-                setPage(1);
-                setStatusFilter(e.target.value);
-              }}
-              placeholder={t("admin.package_orders.placeholder_status")}
-            />
-          </FormField>
-          <FormField label={t("admin.package_orders.filter_payment_status")} htmlFor="po-pay" className="flex-1 min-w-[180px]">
-            <Input
-              id="po-pay"
-              value={paymentStatusFilter}
-              onChange={(e) => {
-                setPage(1);
-                setPaymentStatusFilter(e.target.value);
-              }}
-              placeholder={t("admin.package_orders.placeholder_payment_status")}
-            />
-          </FormField>
-          <FormField label={t("admin.inventory_hotels.filter_company_id")} htmlFor="po-co" className="min-w-[140px]">
-            <Input
-              id="po-co"
-              value={companyIdDraft}
-              onChange={(e) => setCompanyIdDraft(e.target.value)}
-              placeholder={t("admin.package_orders.placeholder_optional")}
-              className="tabular-nums"
-            />
-          </FormField>
-          <Button variant="outline" size="sm" onClick={applyCompanyFilter}>
-            {t("admin.package_orders.btn_apply_company")}
-          </Button>
-        </div>
-      </div>
+      <SectionTabs
+        activeHref="/platform/package-orders"
+        items={[
+          { href: "/platform/bookings", label: "All bookings" },
+          { href: "/platform/package-orders", label: "Package orders", count: meta?.total },
+        ]}
+      />
+
+      <FilterCard>
+        <FilterField label={t("admin.approvals.filter_status")}>
+          <Input
+            id="po-status"
+            value={statusFilter}
+            onChange={(e) => {
+              setPage(1);
+              setStatusFilter(e.target.value);
+            }}
+            placeholder={t("admin.package_orders.placeholder_status")}
+            className="!h-[34px]"
+          />
+        </FilterField>
+        <FilterField label={t("admin.package_orders.filter_payment_status")}>
+          <Input
+            id="po-pay"
+            value={paymentStatusFilter}
+            onChange={(e) => {
+              setPage(1);
+              setPaymentStatusFilter(e.target.value);
+            }}
+            placeholder={t("admin.package_orders.placeholder_payment_status")}
+            className="!h-[34px]"
+          />
+        </FilterField>
+        <FilterField label={t("admin.inventory_hotels.filter_company_id")}>
+          <Input
+            id="po-co"
+            value={companyIdDraft}
+            onChange={(e) => setCompanyIdDraft(e.target.value)}
+            placeholder={t("admin.package_orders.placeholder_optional")}
+            className="!h-[34px] tabular-nums"
+          />
+        </FilterField>
+        <V2Button size="sm" onClick={applyCompanyFilter}>
+          {t("admin.package_orders.btn_apply_company")}
+        </V2Button>
+      </FilterCard>
 
       {err ? (
-        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
+        <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
       ) : null}
 
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -180,6 +205,7 @@ export default function PlatformPackageOrdersPage() {
           ))}
         </TBody>
       </Table>
+      </V2Card>
 
       {meta && meta.last_page > 1 ? (
         <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />

@@ -40,6 +40,14 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  FilterCard,
+  FilterField,
+  V2Card,
+  V2Button,
+} from "@/components/ui/v2";
 import { Plus, RefreshCw, Search } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -93,8 +101,14 @@ export default function PlatformContractsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      {/* v2 admin-redesign — Marketplace ops Partnership agreements page chrome. */}
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Marketplace ops", href: "/platform/approvals" },
+          { label: t("admin.contracts.title") },
+        ]}
         title={t("admin.contracts.title")}
         subtitle={
           meta
@@ -112,9 +126,24 @@ export default function PlatformContractsPage() {
         }
       />
 
-      <div className="admin-card p-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[200px]">
+      <SectionTabs
+        activeHref="/platform/contracts"
+        items={[
+          { href: "/platform/approvals", label: "Approval queue" },
+          { href: "/platform/companies", label: "Companies access" },
+          { href: "/platform/seller-applications", label: "Seller applications" },
+          { href: "/platform/contracts", label: "Partnership agreements", count: meta?.total },
+          { href: "/platform/contract-templates", label: "Contract templates" },
+          { href: "/platform/users", label: "Users" },
+          { href: "/platform/audit-logs", label: "Audit logs" },
+          { href: "/bucket3/service-logs", label: "Service logs" },
+          { href: "/bucket3/unverified-accounts", label: "Unverified accounts" },
+        ]}
+      />
+
+      <FilterCard>
+        <FilterField label={t("admin.contracts.search_placeholder")}>
+          <div className="relative">
             <Search
               aria-hidden
               className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-t6"
@@ -127,60 +156,60 @@ export default function PlatformContractsPage() {
                 setSearch(e.target.value);
               }}
               placeholder={t("admin.contracts.search_placeholder")}
-              className="h-10 w-full rounded-zulu border border-default bg-white pl-9 pr-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+              className="h-[34px] w-full rounded-md border bg-white pl-9 pr-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+              style={{ borderColor: "var(--admin-border)" }}
             />
           </div>
-          <label className="flex items-center gap-2 text-sm text-fg-t6">
-            <span className="font-medium text-fg-t7">{t("admin.contracts.filter_status")}</span>
-            <Select
-              fieldSize="sm"
-              value={statusFilter}
-              onChange={(e) => {
-                setPage(1);
-                setStatusFilter(e.target.value as ContractStatus | "");
-              }}
-              className="!w-auto min-w-[160px]"
-            >
-              <option value="">{t("common.all")}</option>
-              {CONTRACT_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {contractStatusLabel(s)}
-                </option>
-              ))}
-            </Select>
-          </label>
-          <label className="flex items-center gap-2 text-sm text-fg-t6">
-            <span className="font-medium text-fg-t7">{t("admin.contracts.filter_type")}</span>
-            <Select
-              fieldSize="sm"
-              value={typeFilter}
-              onChange={(e) => {
-                setPage(1);
-                setTypeFilter(e.target.value as ContractType | "");
-              }}
-              className="!w-auto min-w-[200px]"
-            >
-              <option value="">{t("common.all")}</option>
-              {CONTRACT_TYPES.map((tp) => (
-                <option key={tp} value={tp}>
-                  {contractTypeLabel(tp)}
-                </option>
-              ))}
-            </Select>
-          </label>
-          <Button variant="outline" size="sm" onClick={() => void load()}>
-            <RefreshCw className="h-4 w-4" aria-hidden />
-            {t("admin.crud.common.refresh")}
-          </Button>
-        </div>
-      </div>
+        </FilterField>
+        <FilterField label={t("admin.contracts.filter_status")}>
+          <Select
+            fieldSize="sm"
+            value={statusFilter}
+            onChange={(e) => {
+              setPage(1);
+              setStatusFilter(e.target.value as ContractStatus | "");
+            }}
+            className="!h-[34px]"
+          >
+            <option value="">{t("common.all")}</option>
+            {CONTRACT_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {contractStatusLabel(s)}
+              </option>
+            ))}
+          </Select>
+        </FilterField>
+        <FilterField label={t("admin.contracts.filter_type")}>
+          <Select
+            fieldSize="sm"
+            value={typeFilter}
+            onChange={(e) => {
+              setPage(1);
+              setTypeFilter(e.target.value as ContractType | "");
+            }}
+            className="!h-[34px]"
+          >
+            <option value="">{t("common.all")}</option>
+            {CONTRACT_TYPES.map((tp) => (
+              <option key={tp} value={tp}>
+                {contractTypeLabel(tp)}
+              </option>
+            ))}
+          </Select>
+        </FilterField>
+        <V2Button size="sm" onClick={() => void load()}>
+          <RefreshCw className="h-4 w-4" aria-hidden />
+          {t("admin.crud.common.refresh")}
+        </V2Button>
+      </FilterCard>
 
       {err && (
-        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
+        <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
           {err}
         </div>
       )}
 
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -223,6 +252,7 @@ export default function PlatformContractsPage() {
           ))}
         </TBody>
       </Table>
+      </V2Card>
 
       {meta && meta.last_page > 1 && (
         <Pagination

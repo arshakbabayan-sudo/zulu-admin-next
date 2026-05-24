@@ -24,6 +24,13 @@ import {
   Tabs,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  FilterCard,
+  FilterField,
+  V2Card,
+} from "@/components/ui/v2";
 
 type WebhookStats = {
   total_subscriptions: number;
@@ -119,10 +126,44 @@ export default function PlatformWebhooksPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader title={t("admin.platform_webhooks.title")} subtitle={t("admin.platform_webhooks.subtitle")} />
+    <div>
+      {/* v2 admin-redesign — Settings Webhooks page chrome. */}
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Settings", href: "/settings/pricing-rules" },
+          { label: t("admin.platform_webhooks.title") },
+        ]}
+        title={t("admin.platform_webhooks.title")}
+        subtitle={t("admin.platform_webhooks.subtitle")}
+      />
 
-      {error && <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{error}</div>}
+      <SectionTabs
+        activeHref="/platform/webhooks"
+        items={[
+          { href: "/settings/pricing-rules", label: "Pricing rules" },
+          { href: "/settings/money-flow", label: "Money flow" },
+          { href: "/localization/languages", label: "Languages" },
+          { href: "/localization/templates", label: "Email templates" },
+          { href: "/platform/banners", label: "Banners" },
+          { href: "/pages", label: "CMS pages" },
+          { href: "/platform/notifications", label: "System notifications" },
+          { href: "/platform/newsletter", label: "Newsletter" },
+          { href: "/platform/loyalty", label: "Loyalty" },
+          { href: "/bucket3/block-dates", label: "Block dates" },
+          { href: "/bucket3/custom-fields", label: "Custom fields" },
+          { href: "/platform/security", label: "Security" },
+          { href: "/platform/webhooks", label: "Webhooks", count: stats?.total_subscriptions },
+          { href: "/platform/locations", label: "Locations" },
+          { href: "/platform/settings/brand", label: "Brand" },
+          { href: "/connections", label: "Connections" },
+          { href: "/support/tickets", label: "Support" },
+          { href: "/platform/reviews", label: "Reviews" },
+        ]}
+      />
+
+      <div className="space-y-6">
+      {error && <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{error}</div>}
 
       {stats && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -144,22 +185,24 @@ export default function PlatformWebhooksPage() {
 
       {tab === "deliveries" && (
         <>
-          <div className="admin-card p-4">
-            <FormField label={t("admin.platform_webhooks.status")} htmlFor="wh-status" className="max-w-xs">
+          <FilterCard>
+            <FilterField label={t("admin.platform_webhooks.status")}>
               <Select
                 id="wh-status"
                 fieldSize="sm"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
+                className="!h-[34px]"
               >
                 <option value="">{t("common.all")}</option>
                 <option value="pending">{t("admin.platform_webhooks.status_pending")}</option>
                 <option value="success">{t("admin.platform_webhooks.status_success")}</option>
                 <option value="failed">{t("admin.platform_webhooks.status_failed")}</option>
               </Select>
-            </FormField>
-          </div>
+            </FilterField>
+          </FilterCard>
 
+          <V2Card>
           <Table>
             <THead>
               <TR>
@@ -203,10 +246,12 @@ export default function PlatformWebhooksPage() {
               ))}
             </TBody>
           </Table>
+          </V2Card>
         </>
       )}
 
       {tab === "subscriptions" && (
+        <V2Card>
         <Table>
           <THead>
             <TR>
@@ -238,7 +283,9 @@ export default function PlatformWebhooksPage() {
             ))}
           </TBody>
         </Table>
+        </V2Card>
       )}
+      </div>
     </div>
   );
 }

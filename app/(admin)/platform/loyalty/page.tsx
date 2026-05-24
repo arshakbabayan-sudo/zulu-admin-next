@@ -25,6 +25,11 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  V2Card,
+} from "@/components/ui/v2";
 
 /**
  * Platform-admin loyalty oversight (Sprint 58, PART 27).
@@ -227,14 +232,45 @@ export default function PlatformLoyaltyPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      {/* v2 admin-redesign — Settings Loyalty page chrome. */}
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Settings", href: "/settings/pricing-rules" },
+          { label: t("admin.platform_loyalty.title") },
+        ]}
         title={t("admin.platform_loyalty.title")}
         subtitle={t("admin.platform_loyalty.subtitle")}
       />
 
+      <SectionTabs
+        activeHref="/platform/loyalty"
+        items={[
+          { href: "/settings/pricing-rules", label: "Pricing rules" },
+          { href: "/settings/money-flow", label: "Money flow" },
+          { href: "/localization/languages", label: "Languages" },
+          { href: "/localization/templates", label: "Email templates" },
+          { href: "/platform/banners", label: "Banners" },
+          { href: "/pages", label: "CMS pages" },
+          { href: "/platform/notifications", label: "System notifications" },
+          { href: "/platform/newsletter", label: "Newsletter" },
+          { href: "/platform/loyalty", label: "Loyalty", count: total },
+          { href: "/bucket3/block-dates", label: "Block dates" },
+          { href: "/bucket3/custom-fields", label: "Custom fields" },
+          { href: "/platform/security", label: "Security" },
+          { href: "/platform/webhooks", label: "Webhooks" },
+          { href: "/platform/locations", label: "Locations" },
+          { href: "/platform/settings/brand", label: "Brand" },
+          { href: "/connections", label: "Connections" },
+          { href: "/support/tickets", label: "Support" },
+          { href: "/platform/reviews", label: "Reviews" },
+        ]}
+      />
+
+      <div className="space-y-6">
       {error && (
-        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
+        <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
           {error}
         </div>
       )}
@@ -320,6 +356,7 @@ export default function PlatformLoyaltyPage() {
         </div>
       </div>
 
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -364,6 +401,7 @@ export default function PlatformLoyaltyPage() {
           ))}
         </TBody>
       </Table>
+      </V2Card>
 
       {lastPage > 1 && (
         <div className="flex items-center justify-between gap-3">
@@ -531,6 +569,7 @@ export default function PlatformLoyaltyPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

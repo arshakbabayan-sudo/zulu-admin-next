@@ -25,6 +25,11 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  V2Card,
+} from "@/components/ui/v2";
 
 const STATUSES = ["unread", "read"] as const;
 const PRIORITIES = ["low", "normal", "high", "critical"] as const;
@@ -170,10 +175,44 @@ export default function PlatformNotificationsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader title={t("admin.platform_notifications.title")} subtitle={t("admin.platform_notifications.subtitle")} />
+    <div>
+      {/* v2 admin-redesign — Settings System notifications page chrome. */}
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Settings", href: "/settings/pricing-rules" },
+          { label: t("admin.platform_notifications.title") },
+        ]}
+        title={t("admin.platform_notifications.title")}
+        subtitle={t("admin.platform_notifications.subtitle")}
+      />
 
-      {error && <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{error}</div>}
+      <SectionTabs
+        activeHref="/platform/notifications"
+        items={[
+          { href: "/settings/pricing-rules", label: "Pricing rules" },
+          { href: "/settings/money-flow", label: "Money flow" },
+          { href: "/localization/languages", label: "Languages" },
+          { href: "/localization/templates", label: "Email templates" },
+          { href: "/platform/banners", label: "Banners" },
+          { href: "/pages", label: "CMS pages" },
+          { href: "/platform/notifications", label: "System notifications", count: meta?.total },
+          { href: "/platform/newsletter", label: "Newsletter" },
+          { href: "/platform/loyalty", label: "Loyalty" },
+          { href: "/bucket3/block-dates", label: "Block dates" },
+          { href: "/bucket3/custom-fields", label: "Custom fields" },
+          { href: "/platform/security", label: "Security" },
+          { href: "/platform/webhooks", label: "Webhooks" },
+          { href: "/platform/locations", label: "Locations" },
+          { href: "/platform/settings/brand", label: "Brand" },
+          { href: "/connections", label: "Connections" },
+          { href: "/support/tickets", label: "Support" },
+          { href: "/platform/reviews", label: "Reviews" },
+        ]}
+      />
+
+      <div className="space-y-6">
+      {error && <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{error}</div>}
 
       {stats && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -248,6 +287,7 @@ export default function PlatformNotificationsPage() {
         </div>
       </div>
 
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -292,6 +332,7 @@ export default function PlatformNotificationsPage() {
           ))}
         </TBody>
       </Table>
+      </V2Card>
 
       {meta && meta.last_page > 1 ? (
         <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />
@@ -323,6 +364,7 @@ export default function PlatformNotificationsPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

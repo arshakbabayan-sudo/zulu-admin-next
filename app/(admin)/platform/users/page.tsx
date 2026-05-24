@@ -44,6 +44,14 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  FilterCard,
+  FilterField,
+  V2Card,
+  V2Button,
+} from "@/components/ui/v2";
 
 export default function PlatformUsersPage() {
   const { token, user } = useAdminAuth();
@@ -195,8 +203,14 @@ export default function PlatformUsersPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      {/* v2 admin-redesign — Marketplace ops Users page chrome. */}
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Marketplace ops", href: "/platform/approvals" },
+          { label: t("admin.users.title_long") },
+        ]}
         title={t("admin.users.title_long")}
         subtitle={
           meta
@@ -208,51 +222,73 @@ export default function PlatformUsersPage() {
         }
       />
 
+      <SectionTabs
+        activeHref="/platform/users"
+        items={[
+          { href: "/platform/approvals", label: "Approval queue" },
+          { href: "/platform/companies", label: "Companies access" },
+          { href: "/platform/seller-applications", label: "Seller applications" },
+          { href: "/platform/contracts", label: "Partnership agreements" },
+          { href: "/platform/contract-templates", label: "Contract templates" },
+          { href: "/platform/users", label: "Users", count: meta?.total },
+          { href: "/platform/audit-logs", label: "Audit logs" },
+          { href: "/bucket3/service-logs", label: "Service logs" },
+          { href: "/bucket3/unverified-accounts", label: "Unverified accounts" },
+        ]}
+      />
+
       <form
-        className="admin-card flex flex-wrap items-center gap-3 p-4"
         onSubmit={(e) => {
           e.preventDefault();
           setPage(1);
           setSearch(searchInput.trim());
         }}
       >
-        <div className="relative min-w-[220px] flex-1">
-          <Search
-            aria-hidden
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-t6"
-          />
-          <input
-            placeholder={t("admin.users.search_placeholder")}
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            className="h-10 w-full rounded-zulu border border-default bg-white pl-9 pr-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
-          />
-        </div>
-        {/* Phase 6.4 — type filter (customers / staff / unverified) */}
-        <select
-          value={typeFilter}
-          onChange={(e) => {
-            setPage(1);
-            setTypeFilter(e.target.value as PlatformUserTypeFilter);
-          }}
-          className="h-10 rounded-zulu border border-default bg-white px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
-        >
-          <option value="">{t("admin.users.type_all")}</option>
-          <option value="customers">{t("admin.users.type_customers")}</option>
-          <option value="staff">{t("admin.users.type_staff")}</option>
-          <option value="unverified">{t("admin.users.type_unverified")}</option>
-        </select>
-        <Button type="submit" size="sm">
-          {t("common.search")}
-        </Button>
+        <FilterCard>
+          <FilterField label={t("admin.users.search_placeholder")}>
+            <div className="relative">
+              <Search
+                aria-hidden
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-t6"
+              />
+              <input
+                placeholder={t("admin.users.search_placeholder")}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="h-[34px] w-full rounded-md border bg-white pl-9 pr-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+                style={{ borderColor: "var(--admin-border)" }}
+              />
+            </div>
+          </FilterField>
+          <FilterField label={t("admin.users.type_all")}>
+            <select
+              value={typeFilter}
+              onChange={(e) => {
+                setPage(1);
+                setTypeFilter(e.target.value as PlatformUserTypeFilter);
+              }}
+              className="h-[34px] rounded-md border bg-white px-2 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+              style={{ borderColor: "var(--admin-border)" }}
+            >
+              <option value="">{t("admin.users.type_all")}</option>
+              <option value="customers">{t("admin.users.type_customers")}</option>
+              <option value="staff">{t("admin.users.type_staff")}</option>
+              <option value="unverified">{t("admin.users.type_unverified")}</option>
+            </select>
+          </FilterField>
+          <V2Button type="submit" size="sm" variant="primary">
+            {t("common.search")}
+          </V2Button>
+        </FilterCard>
       </form>
 
       {err ? (
-        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
+        <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
       ) : null}
 
       {/* Desktop table */}
       <div className="hidden md:block">
+        <V2Card>
         <Table>
           <THead>
             <TR>
@@ -349,6 +385,7 @@ export default function PlatformUsersPage() {
             ))}
           </TBody>
         </Table>
+        </V2Card>
       </div>
 
       {/* Mobile card list */}
