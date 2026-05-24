@@ -1,15 +1,14 @@
 "use client";
 
 /**
- * Phase 7.6 — Bulk notifications (admin broadcast).
+ * Bulk notifications (admin broadcast).
  *
  * Super admin selects a recipient segment (all B2C / all staff / by company /
- * specific user IDs) and sends a single notification row to each matched
- * user. Backend creates one Notification row per recipient inside a
- * transaction.
- *
- * SMS / email / push channels + scheduling are deferred — this initial
- * cut surfaces the in-app notification bell to the recipients.
+ * specific user IDs), picks one or more delivery channels (in-app / email /
+ * SMS / push), and hits send. The backend fans the message out via
+ * SendBulkNotificationJob — email always works (Mail driver is "log" by
+ * default and writes to storage/logs/laravel.log); SMS and push fall back
+ * to NoopSmsProvider / NoopPushProvider when no real gateway is configured.
  */
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
@@ -35,6 +34,13 @@ import { Download, Send } from "lucide-react";
 import { useState } from "react";
 
 type Target = "all_b2c" | "all_staff" | "by_company" | "specific_users";
+type Channel = "in_app" | "email" | "sms" | "push";
+
+/** i18n with English fallback so the page stays readable mid-translation. */
+function tx(t: (k: string) => string, key: string, fallback: string): string {
+  const r = t(key);
+  return r === key ? fallback : r;
+}
 
 export default function Bucket3BulkNotificationsPage() {
   const { token, user } = useAdminAuth();
@@ -47,9 +53,19 @@ export default function Bucket3BulkNotificationsPage() {
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [priority, setPriority] = useState<"low" | "normal" | "high">("normal");
+  const [channels, setChannels] = useState<Record<Channel, boolean>>({
+    in_app: true,
+    email: true,
+    sms: false,
+    push: false,
+  });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [result, setResult] = useState<{ sent_count: number } | null>(null);
+  const [result, setResult] = useState<{ sent_count: number; channels?: Channel[] } | null>(null);
+
+  function toggleChannel(channel: Channel) {
+    setChannels((prev) => ({ ...prev, [channel]: !prev[channel] }));
+  }
 
   async function handleSend() {
     if (!token) return;
@@ -59,11 +75,19 @@ export default function Bucket3BulkNotificationsPage() {
       setErr(t("admin.bucket3.bulk_notifications.error.title_message_required"));
       return;
     }
+    const selectedChannels = (Object.keys(channels) as Channel[]).filter((c) => channels[c]);
+    if (selectedChannels.length === 0) {
+      setErr(
+        tx(t, "admin.bucket3.bulk_notifications.error.channels_required", "Pick at least one delivery channel.")
+      );
+      return;
+    }
     const payload: Record<string, unknown> = {
       target,
       title: title.trim(),
       message: message.trim(),
       priority,
+      channels: selectedChannels,
     };
     if (target === "by_company") {
       const cid = Number(companyId.trim());
@@ -90,10 +114,9 @@ export default function Bucket3BulkNotificationsPage() {
 
     setBusy(true);
     try {
-      const res = await apiFetchJson<ApiSuccessEnvelope<{ sent_count: number }>>(
-        `/platform-admin/notifications/bulk-send`,
-        { method: "POST", token, body: payload }
-      );
+      const res = await apiFetchJson<
+        ApiSuccessEnvelope<{ sent_count: number; channels?: Channel[] }>
+      >(`/platform-admin/notifications/bulk-send`, { method: "POST", token, body: payload });
       setResult(res.data);
       setTitle("");
       setMessage("");
@@ -165,6 +188,12 @@ export default function Bucket3BulkNotificationsPage() {
       {result && (
         <div className="rounded-zulu border border-success-200 bg-success-50 px-4 py-2 text-sm text-success-700">
           {t("admin.bucket3.bulk_notifications.success").replace("{count}", String(result.sent_count))}
+          {result.channels && result.channels.length > 0 ? (
+            <span className="ml-2 text-xs opacity-80">
+              ({tx(t, "admin.bucket3.bulk_notifications.channels_label", "channels")}:{" "}
+              {result.channels.join(", ")})
+            </span>
+          ) : null}
         </div>
       )}
 
@@ -215,6 +244,59 @@ export default function Bucket3BulkNotificationsPage() {
       </section>
 
       <section className="admin-card p-4 space-y-3">
+        <h2 className="text-base font-semibold">
+          {tx(t, "admin.bucket3.bulk_notifications.section.channels", "Delivery channels")}
+        </h2>
+        <FormField
+          label={tx(t, "admin.bucket3.bulk_notifications.field.channels", "Channels")}
+          htmlFor="bulk-channels"
+          required
+          helperText={tx(
+            t,
+            "admin.bucket3.bulk_notifications.field.channels_helper",
+            "Pick where this broadcast should land. In-app shows in the bell; email goes to the user's address on file."
+          )}
+        >
+          <div id="bulk-channels" className="flex flex-wrap gap-x-6 gap-y-2 pt-1">
+            <ChannelCheckbox
+              id="bulk-channel-in-app"
+              label={tx(t, "admin.bucket3.bulk_notifications.channel.in_app", "In-app")}
+              checked={channels.in_app}
+              onChange={() => toggleChannel("in_app")}
+            />
+            <ChannelCheckbox
+              id="bulk-channel-email"
+              label={tx(t, "admin.bucket3.bulk_notifications.channel.email", "Email")}
+              checked={channels.email}
+              onChange={() => toggleChannel("email")}
+            />
+            <ChannelCheckbox
+              id="bulk-channel-sms"
+              label={tx(t, "admin.bucket3.bulk_notifications.channel.sms", "SMS")}
+              checked={channels.sms}
+              onChange={() => toggleChannel("sms")}
+              note={tx(
+                t,
+                "admin.bucket3.bulk_notifications.channel.sms_note",
+                "provider not configured — sent to log"
+              )}
+            />
+            <ChannelCheckbox
+              id="bulk-channel-push"
+              label={tx(t, "admin.bucket3.bulk_notifications.channel.push", "Push")}
+              checked={channels.push}
+              onChange={() => toggleChannel("push")}
+              note={tx(
+                t,
+                "admin.bucket3.bulk_notifications.channel.push_note",
+                "provider not configured — sent to log"
+              )}
+            />
+          </div>
+        </FormField>
+      </section>
+
+      <section className="admin-card p-4 space-y-3">
         <h2 className="text-base font-semibold">{t("admin.bucket3.bulk_notifications.section.message")}</h2>
         <FormField label={t("admin.bucket3.bulk_notifications.field.title")} htmlFor="bulk-title" required>
           <Input
@@ -254,5 +336,38 @@ export default function Bucket3BulkNotificationsPage() {
       </div>
       </div>
     </div>
+  );
+}
+
+function ChannelCheckbox({
+  id,
+  label,
+  checked,
+  onChange,
+  note,
+}: {
+  id: string;
+  label: string;
+  checked: boolean;
+  onChange: () => void;
+  note?: string;
+}) {
+  return (
+    <label
+      htmlFor={id}
+      className="flex items-center gap-2 text-sm cursor-pointer select-none"
+    >
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        onChange={onChange}
+        className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+      />
+      <span>{label}</span>
+      {note ? (
+        <span className="text-xs text-gray-500">({note})</span>
+      ) : null}
+    </label>
   );
 }

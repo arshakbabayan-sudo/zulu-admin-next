@@ -8,8 +8,10 @@
  * sent). Each row has status pill + click-to-resolve action via a modal.
  *
  * Status flow: open → in_progress → resolved / rejected.
- * Reply threading is deferred to a follow-up (current schema only captures
- * subject + body + resolution_notes).
+ *
+ * Item 14 follow-up: the detail modal now renders a threaded chat — original
+ * subject/body at the top + every /messages reply as its own bubble, newest
+ * at the bottom + composer at the bottom of the modal.
  */
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
@@ -20,7 +22,9 @@ import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { formatDateTime } from "@/lib/format";
 import {
+  apiAppendRequestMessage,
   apiCreateRequest,
+  apiListRequestMessages,
   apiRequestsInbox,
   apiUpdateRequestStatus,
   REQUEST_STATUSES,
@@ -28,6 +32,7 @@ import {
   requestStatusTier,
   type InboxBox,
   type RequestInboxRow,
+  type RequestMessage,
   type RequestStatus,
 } from "@/lib/requests-inbox-api";
 import {
@@ -68,6 +73,11 @@ export default function Bucket3RequestsPage() {
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState<RequestInboxRow | null>(null);
   const [resolutionDraft, setResolutionDraft] = useState("");
+  const [thread, setThread] = useState<RequestMessage[]>([]);
+  const [threadLoading, setThreadLoading] = useState(false);
+  const [threadError, setThreadError] = useState<string | null>(null);
+  const [replyDraft, setReplyDraft] = useState("");
+  const [replySending, setReplySending] = useState(false);
   const [composeOpen, setComposeOpen] = useState(false);
   const [compose, setCompose] = useState({ target_company_id: "", subject: "", body: "" });
 
@@ -93,6 +103,63 @@ export default function Bucket3RequestsPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Load the message thread whenever a row is selected. Resets when the modal
+  // closes so we don't display the previous request's replies on reopen.
+  useEffect(() => {
+    if (!token || !selected) {
+      setThread([]);
+      setThreadError(null);
+      setReplyDraft("");
+      return;
+    }
+    let cancelled = false;
+    setThreadLoading(true);
+    setThreadError(null);
+    void (async () => {
+      try {
+        const res = await apiListRequestMessages(token, selected.id);
+        if (!cancelled) setThread(res.data);
+      } catch (e) {
+        if (!cancelled) {
+          setThreadError(
+            e instanceof ApiRequestError ? e.message : "Failed to load thread"
+          );
+        }
+      } finally {
+        if (!cancelled) setThreadLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, selected]);
+
+  async function sendReply() {
+    if (!token || !selected) return;
+    const body = replyDraft.trim();
+    if (!body) return;
+    setReplySending(true);
+    try {
+      const res = await apiAppendRequestMessage(token, selected.id, body);
+      setThread((prev) => [...prev, res.data]);
+      setReplyDraft("");
+      // If posting reopened a closed request, refresh the list so the status
+      // pill in the table reflects the new "open" state.
+      if (selected.status === "resolved" || selected.status === "rejected") {
+        await load();
+        setSelected((prev) =>
+          prev ? { ...prev, status: "open", resolved_at: null, resolved_by: null } : prev
+        );
+      }
+    } catch (e) {
+      setThreadError(
+        e instanceof ApiRequestError ? e.message : "Failed to send reply"
+      );
+    } finally {
+      setReplySending(false);
+    }
+  }
 
   async function updateStatus(newStatus: RequestStatus) {
     if (!token || !selected) return;
@@ -322,6 +389,7 @@ export default function Bucket3RequestsPage() {
           onClick={() => {
             setSelected(null);
             setResolutionDraft("");
+            setReplyDraft("");
           }}
         >
           <div
@@ -343,9 +411,41 @@ export default function Bucket3RequestsPage() {
                 {requestStatusLabel(selected.status)}
               </StatusPill>
             </div>
-            <p className="whitespace-pre-wrap rounded-zulu border border-default bg-figma-bg-1/50 p-3 text-sm text-fg-t8">
-              {selected.body}
-            </p>
+            {/* Threaded conversation: original message + replies, newest at bottom. */}
+            <div className="space-y-2.5 max-h-[40vh] overflow-y-auto pr-1">
+              <MessageBubble
+                authorName={selected.requester?.name ?? selected.requester_company?.name ?? "—"}
+                authorEmail={selected.requester?.email}
+                body={selected.body}
+                createdAt={selected.created_at}
+                lang={lang}
+                isOriginal
+              />
+              {threadLoading ? (
+                <div className="py-3 text-center text-xs text-fg-t6">{t("common.loading")}</div>
+              ) : null}
+              {!threadLoading &&
+                thread.map((m) => (
+                  <MessageBubble
+                    key={m.id}
+                    authorName={m.sender?.name ?? "—"}
+                    authorEmail={m.sender?.email}
+                    body={m.body}
+                    createdAt={m.created_at}
+                    lang={lang}
+                  />
+                ))}
+              {!threadLoading && thread.length === 0 && !threadError ? (
+                <div className="py-2 text-center text-[11px] text-fg-t6">
+                  {t("admin.bucket3.requests.no_replies_yet")}
+                </div>
+              ) : null}
+              {threadError ? (
+                <div className="rounded-zulu border border-error-100 bg-error-50 px-3 py-2 text-xs text-error-700">
+                  {threadError}
+                </div>
+              ) : null}
+            </div>
             {selected.resolution_notes && (
               <div>
                 <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-fg-t6">
@@ -356,6 +456,33 @@ export default function Bucket3RequestsPage() {
                 </p>
               </div>
             )}
+
+            {/* Reply composer */}
+            <div className="space-y-2 border-t border-default pt-3">
+              <FormField label={t("admin.bucket3.requests.reply_label")} htmlFor="reply-body">
+                <Input
+                  as="textarea"
+                  id="reply-body"
+                  rows={3}
+                  value={replyDraft}
+                  onChange={(e) => setReplyDraft(e.target.value)}
+                  placeholder={t("admin.bucket3.requests.reply_placeholder")}
+                />
+              </FormField>
+              <div className="flex justify-end">
+                <Button
+                  size="sm"
+                  variant="primary"
+                  disabled={replySending || !replyDraft.trim()}
+                  onClick={() => void sendReply()}
+                >
+                  {replySending
+                    ? t("admin.bucket3.requests.sending")
+                    : t("admin.bucket3.requests.send_reply")}
+                </Button>
+              </div>
+            </div>
+
             <FormField label={t("admin.bucket3.requests.field.resolution_notes")} htmlFor="resolution-notes">
               <Input
                 as="textarea"
@@ -498,6 +625,55 @@ function tierBadgeStyle(tier: "neutral" | "info" | "success" | "warning" | "dang
     default:
       return { backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" };
   }
+}
+
+function MessageBubble({
+  authorName,
+  authorEmail,
+  body,
+  createdAt,
+  lang,
+  isOriginal = false,
+}: {
+  authorName: string;
+  authorEmail?: string;
+  body: string;
+  createdAt: string | null | undefined;
+  lang: string;
+  isOriginal?: boolean;
+}) {
+  return (
+    <div className="flex items-start gap-2.5">
+      <span
+        aria-hidden
+        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+        style={avatarStyle(pickAvatarTone(authorEmail ?? authorName))}
+      >
+        {getInitials(authorName)}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-baseline gap-2">
+          <span className="text-[13px] font-semibold text-fg-t8">{authorName}</span>
+          {isOriginal ? (
+            <span className="text-[10px] uppercase tracking-wide text-fg-t6">opener</span>
+          ) : null}
+          <span
+            className="text-[11px] text-fg-t6"
+            title={createdAt ? new Date(createdAt).toLocaleString(lang) : undefined}
+          >
+            {formatRelativeTime(createdAt ?? null)}
+          </span>
+        </div>
+        <p
+          className={`mt-1 whitespace-pre-wrap rounded-zulu border border-default px-3 py-2 text-sm text-fg-t8 ${
+            isOriginal ? "bg-figma-bg-1/50" : "bg-white"
+          }`}
+        >
+          {body}
+        </p>
+      </div>
+    </div>
+  );
 }
 
 function formatRelativeTime(iso: string | null | undefined): string {

@@ -63,6 +63,44 @@ export async function apiUpdateRequestStatus(
   });
 }
 
+/* ─── Reply thread (Item 14) ──────────────────────────────────────── */
+
+export type RequestMessage = {
+  id: number;
+  request_id: number;
+  body: string;
+  sender: {
+    id: number;
+    name: string;
+    email?: string;
+    avatar?: string | null;
+  } | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+export async function apiListRequestMessages(
+  token: string,
+  requestId: number
+): Promise<ApiSuccessEnvelope<RequestMessage[]>> {
+  return apiFetchJson(`/agent-operator-requests/${requestId}/messages`, {
+    method: "GET",
+    token,
+  });
+}
+
+export async function apiAppendRequestMessage(
+  token: string,
+  requestId: number,
+  body: string
+): Promise<ApiSuccessEnvelope<RequestMessage>> {
+  return apiFetchJson(`/agent-operator-requests/${requestId}/messages`, {
+    method: "POST",
+    token,
+    body: { body },
+  });
+}
+
 export function requestStatusTier(s: RequestStatus): "neutral" | "info" | "success" | "warning" | "danger" {
   switch (s) {
     case "open":

@@ -3,9 +3,9 @@
 /**
  * Phase 7.11 — Subscription plans + company assignments.
  *
- * Replaces the ComingSoonPage placeholder. Super-admin manages the plan
- * catalog and assigns plans to companies manually (payment-integration
- * auto-renew is parked per memory feedback_no_payment_integration_yet.md).
+ * Super-admin manages the plan catalog and assigns plans to companies.
+ * Billing is manual (admin marks a subscription paid externally and
+ * extends the period) — by design per the operations model.
  */
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";

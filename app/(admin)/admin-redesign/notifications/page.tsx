@@ -40,6 +40,8 @@ type ApiNotification = {
   related_company_id: number | null;
   priority: string | null;
   created_at: string | null;
+  /** Channels this notification was fanned out through (in_app/email/sms/push). */
+  delivered_channels?: string[] | null;
 };
 
 type DateGroup = "today" | "yesterday" | "this_week" | "earlier";
@@ -414,6 +416,13 @@ function NotificationRow({
             {item.message}
           </div>
         ) : null}
+        {Array.isArray(item.delivered_channels) && item.delivered_channels.length > 0 ? (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {item.delivered_channels.map((ch) => (
+              <ChannelPill key={ch} channel={ch} />
+            ))}
+          </div>
+        ) : null}
         {unread ? (
           <div className="mt-3 flex flex-wrap gap-2">
             <V2Button size="xs" variant="primary" onClick={() => onMarkRead(item.id)}>
@@ -430,6 +439,30 @@ function NotificationRow({
         />
       ) : null}
     </div>
+  );
+}
+
+function ChannelPill({ channel }: { channel: string }) {
+  const label =
+    channel === "in_app"
+      ? "in-app"
+      : channel === "email"
+        ? "email"
+        : channel === "sms"
+          ? "SMS"
+          : channel === "push"
+            ? "push"
+            : channel;
+  return (
+    <span
+      className="inline-flex items-center rounded-full px-2 py-[1px] text-[10px] font-medium"
+      style={{
+        backgroundColor: "var(--admin-bg-tertiary)",
+        color: "var(--admin-text-secondary)",
+      }}
+    >
+      {label}
+    </span>
   );
 }
 

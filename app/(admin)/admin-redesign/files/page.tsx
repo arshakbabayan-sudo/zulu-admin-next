@@ -1,69 +1,236 @@
 "use client";
 
 /**
- * File manager — v2 admin-redesign page (2026-05-24).
- * Mockup: docs/zulu-admin-v2.html page-view#files (lines 863-933).
+ * File manager — v2 admin-redesign page (2026-05-25, Phase Ե wired).
+ *
+ * Replaces the mockup (FOLDERS / FILES hardcoded arrays) with real /api/files
+ * calls. Storage is Laravel's default disk (FILESYSTEM_DISK; default `local`);
+ * S3 migration later = just an env var swap.
  *
  * Layout:
- *   PageHeader (breadcrumb, title, subtitle, New folder + Upload actions)
+ *   PageHeader (breadcrumb + New folder + Upload actions)
  *   2-col grid (240px sidebar + 1fr main)
- *     Left  — Quick access (All files / Recent / Starred / Shared / Trash) +
- *             Tags (Important / Contracts / Invoices) + Storage card
- *     Right — Breadcrumb chip + Search + view toggle, Folders grid (3 cols),
- *             Files table (Name + Owner + Size + Modified + Actions)
+ *     Left  — Quick access (My files / Recent / Trash) + Storage card
+ *     Right — Folder breadcrumb chip + Search, Folders grid, Files table
  *
- * Data is static demo; Phase Ե wires real file storage API.
+ * Click a folder → enter it. Click a file → download. Hover row → Delete.
  */
 
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useDocumentTitle } from "@/lib/use-document-title";
+import { ApiRequestError } from "@/lib/api-client";
+import {
+  apiFilesList,
+  apiFilesUpload,
+  apiFilesDownload,
+  apiFilesCreateFolder,
+  apiFilesDelete,
+  apiFilesStorageStats,
+  formatBytes,
+  mimeBucket,
+  mimeLabel,
+  type FileAssetRow,
+  type FolderSummary,
+  type StorageStats,
+  type FileVisibility,
+} from "@/lib/file-assets-api";
 import { PageHeader, V2Card, V2Button, IconButton } from "@/components/ui/v2";
-
-type FolderDemo = { name: string; files: number; sizeLabel: string };
-
-const FOLDERS: FolderDemo[] = [
-  { name: "Contracts", files: 24, sizeLabel: "156 MB" },
-  { name: "Invoices 2026", files: 58, sizeLabel: "412 MB" },
-  { name: "Hotel photos", files: 142, sizeLabel: "2.1 GB" },
-];
-
-type FileDemo = {
-  name: string;
-  type: "pdf" | "xls" | "img" | "doc";
-  owner: { initials: string; tone: "purple" | "teal" | "amber" | "blue"; firstName: string };
-  size: string;
-  modified: string;
-};
-
-const FILES: FileDemo[] = [
-  { name: "contract-marriott.pdf", type: "pdf", owner: { initials: "AM", tone: "purple", firstName: "Արշակ" }, size: "2.4 MB", modified: "May 20, 2026" },
-  { name: "commissions-q2.xlsx", type: "xls", owner: { initials: "DH", tone: "amber", firstName: "Դավիթ" }, size: "486 KB", modified: "May 18, 2026" },
-  { name: "athens-hotel-main.jpg", type: "img", owner: { initials: "NK", tone: "teal", firstName: "Նարե" }, size: "2.1 MB", modified: "May 15, 2026" },
-  { name: "partnership-proposal.docx", type: "doc", owner: { initials: "AM", tone: "purple", firstName: "Արշակ" }, size: "94 KB", modified: "May 12, 2026" },
-];
-
-const QUICK_ACCESS = [
-  { key: "all", label: "All files", count: 328, icon: "files", active: true },
-  { key: "recent", label: "Recent", count: 12, icon: "clock" },
-  { key: "starred", label: "Starred", count: 8, icon: "star" },
-  { key: "shared", label: "Shared", count: 24, icon: "users" },
-  { key: "trash", label: "Trash", icon: "trash" },
-] as const;
-
-const TAGS = [
-  { color: "var(--admin-primary)", label: "Important" },
-  { color: "var(--admin-success)", label: "Contracts" },
-  { color: "var(--admin-warning)", label: "Invoices" },
-];
 
 function tx(t: (k: string) => string, key: string, fallback: string): string {
   const r = t(key);
   return r === key ? fallback : r;
 }
 
+function formatDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
+function ownerInitials(uploadedBy: number, selfId: number | undefined): string {
+  if (selfId && uploadedBy === selfId) return "You";
+  return `#${uploadedBy}`;
+}
+
+type QuickKey = "all" | "recent" | "trash";
+
 export default function AdminRedesignFilesPage() {
   const { t } = useLanguage();
+  const { token, user } = useAdminAuth();
   useDocumentTitle("File manager — ZULU Admin");
+
+  const [folder, setFolder] = useState<string>("/");
+  const [files, setFiles] = useState<FileAssetRow[]>([]);
+  const [subfolders, setSubfolders] = useState<FolderSummary[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [err, setErr] = useState<string | null>(null);
+  const [search, setSearch] = useState<string>("");
+  const [quick, setQuick] = useState<QuickKey>("all");
+  const [stats, setStats] = useState<StorageStats | null>(null);
+  const [uploading, setUploading] = useState<boolean>(false);
+  const [actionMsg, setActionMsg] = useState<string | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const loadFolder = useCallback(
+    async (target: string) => {
+      if (!token) return;
+      setLoading(true);
+      setErr(null);
+      try {
+        const res = await apiFilesList(token, { folder: target });
+        setFiles(res.data.files);
+        setSubfolders(res.data.subfolders);
+      } catch (e) {
+        setErr(
+          e instanceof ApiRequestError
+            ? e.message
+            : tx(t, "admin.files.err_list", "Failed to load files")
+        );
+        setFiles([]);
+        setSubfolders([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [token, t]
+  );
+
+  const loadStats = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await apiFilesStorageStats(token);
+      setStats(res.data);
+    } catch {
+      // non-fatal
+    }
+  }, [token]);
+
+  useEffect(() => {
+    void loadFolder(folder);
+  }, [folder, loadFolder]);
+
+  useEffect(() => {
+    void loadStats();
+  }, [loadStats]);
+
+  // Derived list — handles search + quick-access filter.
+  const visibleFiles = useMemo(() => {
+    let arr = files;
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      arr = arr.filter((f) => f.filename.toLowerCase().includes(q));
+    }
+    if (quick === "recent") {
+      arr = [...arr]
+        .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))
+        .slice(0, 20);
+    }
+    return arr;
+  }, [files, search, quick]);
+
+  const handleUpload = async (selected: FileList | null) => {
+    if (!selected || selected.length === 0 || !token) return;
+    setUploading(true);
+    setErr(null);
+    setActionMsg(null);
+    try {
+      let count = 0;
+      for (const file of Array.from(selected)) {
+        await apiFilesUpload(token, file, {
+          folder,
+          visibility: "private" as FileVisibility,
+        });
+        count++;
+      }
+      setActionMsg(
+        count === 1
+          ? tx(t, "admin.files.upload_done", "File uploaded")
+          : `${count} ${tx(t, "admin.files.upload_done_n", "files uploaded")}`
+      );
+      window.setTimeout(() => setActionMsg(null), 3000);
+      await loadFolder(folder);
+      await loadStats();
+    } catch (e) {
+      setErr(
+        e instanceof ApiRequestError
+          ? e.message
+          : tx(t, "admin.files.err_upload", "Upload failed")
+      );
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleNewFolder = async () => {
+    if (!token) return;
+    const name = window.prompt(tx(t, "admin.files.new_folder_prompt", "Folder name"));
+    if (!name) return;
+    const safe = name.trim().replace(/[/\\]/g, "_").replace(/^\.+/, "");
+    if (!safe) return;
+    const target = folder === "/" ? `/${safe}` : `${folder}/${safe}`;
+    setErr(null);
+    try {
+      await apiFilesCreateFolder(token, target, { visibility: "private" });
+      setActionMsg(tx(t, "admin.files.folder_created", "Folder created"));
+      window.setTimeout(() => setActionMsg(null), 3000);
+      await loadFolder(folder);
+    } catch (e) {
+      setErr(
+        e instanceof ApiRequestError
+          ? e.message
+          : tx(t, "admin.files.err_folder", "Could not create folder")
+      );
+    }
+  };
+
+  const handleDownload = async (asset: FileAssetRow) => {
+    if (!token) return;
+    try {
+      await apiFilesDownload(token, asset);
+    } catch (e) {
+      setErr(
+        e instanceof ApiRequestError
+          ? e.message
+          : tx(t, "admin.files.err_download", "Download failed")
+      );
+    }
+  };
+
+  const handleDelete = async (asset: FileAssetRow) => {
+    if (!token) return;
+    const ok = window.confirm(
+      `${tx(t, "admin.files.delete_confirm", "Delete this file?")}\n\n${asset.filename}`
+    );
+    if (!ok) return;
+    try {
+      await apiFilesDelete(token, asset.id);
+      setActionMsg(tx(t, "admin.files.deleted", "File deleted"));
+      window.setTimeout(() => setActionMsg(null), 3000);
+      await loadFolder(folder);
+      await loadStats();
+    } catch (e) {
+      setErr(
+        e instanceof ApiRequestError
+          ? e.message
+          : tx(t, "admin.files.err_delete", "Could not delete")
+      );
+    }
+  };
+
+  // Breadcrumb chip — split current folder into clickable segments.
+  const folderCrumbs = useMemo(() => {
+    if (folder === "/") return [{ label: "My files", path: "/" }];
+    const segs = folder.split("/").filter(Boolean);
+    return [
+      { label: "My files", path: "/" },
+      ...segs.map((s, i) => ({ label: s, path: "/" + segs.slice(0, i + 1).join("/") })),
+    ];
+  }, [folder]);
 
   return (
     <div>
@@ -76,70 +243,105 @@ export default function AdminRedesignFilesPage() {
         subtitle={tx(t, "admin.files.subtitle", "Manage all platform files and folders")}
         actions={
           <>
-            <V2Button icon={<FolderPlusIcon />}>
+            <V2Button icon={<FolderPlusIcon />} onClick={() => void handleNewFolder()}>
               {tx(t, "admin.files.new_folder", "New folder")}
             </V2Button>
-            <V2Button variant="primary" icon={<UploadIcon />}>
-              {tx(t, "admin.files.upload", "Upload files")}
+            <V2Button
+              variant="primary"
+              icon={<UploadIcon />}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+            >
+              {uploading
+                ? tx(t, "admin.files.uploading", "Uploading…")
+                : tx(t, "admin.files.upload", "Upload files")}
             </V2Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              hidden
+              onChange={(e) => void handleUpload(e.target.files)}
+            />
           </>
         }
       />
+
+      {/* Status messages */}
+      {err ? (
+        <div className="mb-3 rounded-md border border-error-100 bg-error-50 px-3 py-2 text-xs text-error-700">
+          {err}
+        </div>
+      ) : null}
+      {actionMsg ? (
+        <div
+          className="mb-3 rounded-md px-3 py-2 text-xs"
+          style={{
+            backgroundColor: "var(--admin-success-light)",
+            color: "var(--admin-success-dark)",
+          }}
+        >
+          {actionMsg}
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[240px_1fr]">
         {/* Left sidebar */}
         <aside className="space-y-4">
           <V2Card className="p-3.5">
-            <div className="px-3 pb-1.5 pt-1.5 text-[10px] font-semibold uppercase tracking-[0.5px]" style={{ color: "var(--admin-text-tertiary)" }}>
-              Quick access
+            <div
+              className="px-3 pb-1.5 pt-1.5 text-[10px] font-semibold uppercase tracking-[0.5px]"
+              style={{ color: "var(--admin-text-tertiary)" }}
+            >
+              {tx(t, "admin.files.quick", "Quick access")}
             </div>
-            {QUICK_ACCESS.map((item) => (
-              <button
-                key={item.key}
-                className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-[13px] transition"
-                style={{
-                  backgroundColor: "active" in item && item.active ? "var(--admin-primary-light)" : "transparent",
-                  color: "active" in item && item.active ? "var(--admin-primary-dark)" : "var(--admin-text-secondary)",
-                  fontWeight: "active" in item && item.active ? 500 : 400,
-                }}
-              >
-                <QuickIcon name={item.icon} />
-                <span className="flex-1">{item.label}</span>
-                {"count" in item && item.count !== undefined ? (
-                  <span className="text-[11px] opacity-60">{item.count}</span>
-                ) : null}
-              </button>
-            ))}
-
-            <div className="mt-4 border-t pt-3.5" style={{ borderColor: "var(--admin-border)" }}>
-              <div className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.5px]" style={{ color: "var(--admin-text-tertiary)" }}>
-                Tags
-              </div>
-              {TAGS.map((tag) => (
-                <div
-                  key={tag.label}
-                  className="flex items-center gap-2.5 px-3 py-2 text-[13px]"
-                  style={{ color: "var(--admin-text-secondary)" }}
-                >
-                  <span aria-hidden className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: tag.color }} />
-                  {tag.label}
-                </div>
-              ))}
-            </div>
+            <QuickItem
+              icon="files"
+              label={tx(t, "admin.files.q.all", "My files")}
+              active={quick === "all"}
+              onClick={() => {
+                setQuick("all");
+                setFolder("/");
+              }}
+              count={stats?.total_count}
+            />
+            <QuickItem
+              icon="clock"
+              label={tx(t, "admin.files.q.recent", "Recent")}
+              active={quick === "recent"}
+              onClick={() => setQuick("recent")}
+            />
+            <QuickItem
+              icon="trash"
+              label={tx(t, "admin.files.q.trash", "Trash")}
+              active={quick === "trash"}
+              onClick={() => setQuick("trash")}
+            />
           </V2Card>
 
-          {/* Storage card */}
-          <V2Card className="p-3.5" >
-            <div className="text-[12px] font-medium">Storage</div>
-            <div className="mt-2 h-1.5 overflow-hidden rounded-full" style={{ backgroundColor: "var(--admin-bg-tertiary)" }}>
-              <div className="h-full rounded-full" style={{ width: "68%", backgroundColor: "var(--admin-primary)" }} />
+          {/* Storage card — real numbers */}
+          <V2Card className="p-3.5">
+            <div className="text-[12px] font-medium">
+              {tx(t, "admin.files.storage", "Storage")}
             </div>
-            <div className="mt-2 text-[11px]" style={{ color: "var(--admin-text-secondary)" }}>
-              6.8 GB of 10 GB used
-            </div>
-            <V2Button variant="primary" size="xs" className="mt-3 w-full">
-              Upgrade
-            </V2Button>
+            <StorageMeter stats={stats} />
+            {stats ? (
+              <div
+                className="mt-2 text-[11px]"
+                style={{ color: "var(--admin-text-secondary)" }}
+              >
+                {formatBytes(stats.total_bytes)} {tx(t, "admin.files.of", "of")}{" "}
+                {formatBytes(stats.quota_bytes)}{" "}
+                {tx(t, "admin.files.used", "used")}
+              </div>
+            ) : (
+              <div
+                className="mt-2 text-[11px]"
+                style={{ color: "var(--admin-text-tertiary)" }}
+              >
+                {tx(t, "common.loading", "Loading…")}
+              </div>
+            )}
           </V2Card>
         </aside>
 
@@ -148,134 +350,302 @@ export default function AdminRedesignFilesPage() {
           {/* Breadcrumb chip + search + view toggle */}
           <V2Card className="mb-4">
             <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5">
-              <div className="flex items-center gap-1.5 text-[12px]" style={{ color: "var(--admin-text-secondary)" }}>
+              <div
+                className="flex flex-wrap items-center gap-1.5 text-[12px]"
+                style={{ color: "var(--admin-text-secondary)" }}
+              >
                 <FolderIcon />
-                <a href="#" className="hover:text-[color:var(--admin-primary)]">My files</a>
-                <ChevronRightSmall />
-                <span className="font-medium" style={{ color: "var(--admin-text-primary)" }}>Documents</span>
+                {folderCrumbs.map((c, i) => {
+                  const isLast = i === folderCrumbs.length - 1;
+                  return (
+                    <span key={c.path} className="flex items-center gap-1.5">
+                      {i > 0 ? <ChevronRightSmall /> : null}
+                      <button
+                        type="button"
+                        onClick={() => setFolder(c.path)}
+                        className={
+                          isLast
+                            ? "font-medium"
+                            : "hover:text-[color:var(--admin-primary)]"
+                        }
+                        style={
+                          isLast ? { color: "var(--admin-text-primary)" } : undefined
+                        }
+                      >
+                        {c.label}
+                      </button>
+                    </span>
+                  );
+                })}
               </div>
               <div className="flex items-center gap-2">
                 <div className="relative">
                   <SearchSmall />
                   <input
                     type="search"
-                    placeholder="Search files..."
-                    className="h-[30px] w-[200px] rounded-md border bg-white pl-9 pr-3 text-[12px] outline-none"
+                    placeholder={tx(t, "admin.files.search_placeholder", "Search files...")}
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="h-[30px] w-[220px] rounded-md border bg-white pl-9 pr-3 text-[12px] outline-none"
                     style={{ borderColor: "var(--admin-border)" }}
                   />
                 </div>
-                <V2Button size="sm" aria-label="Grid view">
-                  <GridIcon />
-                </V2Button>
-                <V2Button size="sm" className="!bg-[color:var(--admin-primary-light)]" aria-label="List view">
-                  <ListIcon />
-                </V2Button>
               </div>
             </div>
           </V2Card>
 
           {/* Folders */}
-          <div className="mb-4">
-            <div className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.5px]" style={{ color: "var(--admin-text-secondary)" }}>
-              Folders ({FOLDERS.length})
+          {quick === "all" && subfolders.length > 0 ? (
+            <div className="mb-4">
+              <div
+                className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.5px]"
+                style={{ color: "var(--admin-text-secondary)" }}
+              >
+                {tx(t, "admin.files.folders", "Folders")} ({subfolders.length})
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {subfolders.map((f) => (
+                  <button
+                    key={f.folder}
+                    type="button"
+                    onClick={() => setFolder(f.folder)}
+                    className="text-left"
+                  >
+                    <V2Card className="cursor-pointer p-4 transition hover:shadow-md">
+                      <FolderLargeIcon />
+                      <div className="mt-3 font-medium">{f.name}</div>
+                      <div
+                        className="text-[11px]"
+                        style={{ color: "var(--admin-text-secondary)" }}
+                      >
+                        {f.file_count} {tx(t, "admin.files.files", "files")} ·{" "}
+                        {formatBytes(f.total_bytes)}
+                      </div>
+                    </V2Card>
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {FOLDERS.map((f) => (
-                <V2Card key={f.name} className="cursor-pointer p-4">
-                  <FolderLargeIcon />
-                  <div className="mt-3 font-medium">{f.name}</div>
-                  <div className="text-[11px]" style={{ color: "var(--admin-text-secondary)" }}>
-                    {f.files} files · {f.sizeLabel}
-                  </div>
-                </V2Card>
-              ))}
-            </div>
-          </div>
+          ) : null}
 
           {/* Files */}
           <V2Card>
             <div
               className="border-b px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.5px]"
-              style={{ borderColor: "var(--admin-border)", color: "var(--admin-text-secondary)" }}
+              style={{
+                borderColor: "var(--admin-border)",
+                color: "var(--admin-text-secondary)",
+              }}
             >
-              Files ({FILES.length})
+              {tx(t, "admin.files.files", "Files")} ({visibleFiles.length})
             </div>
-            <table className="w-full border-collapse text-[13px]">
-              <thead style={{ backgroundColor: "var(--admin-bg-secondary)" }}>
-                <tr>
-                  <th className="px-4 py-2.5 text-left" style={{ width: 32 }}>
-                    <input type="checkbox" aria-label="Select all" />
-                  </th>
-                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.5px]" style={{ color: "var(--admin-text-secondary)" }}>Name</th>
-                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.5px]" style={{ color: "var(--admin-text-secondary)" }}>Owner</th>
-                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.5px]" style={{ color: "var(--admin-text-secondary)" }}>Size</th>
-                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.5px]" style={{ color: "var(--admin-text-secondary)" }}>Modified</th>
-                  <th className="px-4 py-2.5"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {FILES.map((file) => (
-                  <tr
-                    key={file.name}
-                    className="border-t transition hover:bg-[color:var(--admin-bg-secondary)]"
-                    style={{ borderColor: "var(--admin-border)" }}
-                  >
-                    <td className="px-4 py-3 align-middle">
-                      <input type="checkbox" aria-label={`Select ${file.name}`} />
-                    </td>
-                    <td className="px-4 py-3 align-middle">
-                      <div className="flex items-center gap-3">
-                        <FileTypeIcon type={file.type} />
-                        <span className="font-medium">{file.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 align-middle">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold"
-                          style={ownerStyle(file.owner.tone)}
-                        >
-                          {file.owner.initials}
-                        </span>
-                        <span className="text-[12px]">{file.owner.firstName}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 align-middle" style={{ color: "var(--admin-text-secondary)" }}>
-                      {file.size}
-                    </td>
-                    <td className="px-4 py-3 align-middle" style={{ color: "var(--admin-text-secondary)" }}>
-                      {file.modified}
-                    </td>
-                    <td className="px-4 py-3 align-middle">
-                      <div className="flex justify-end gap-1">
-                        <IconButton aria-label="Download"><DownloadSmall /></IconButton>
-                        <IconButton aria-label="Share"><ShareIcon /></IconButton>
-                        <IconButton aria-label="More"><DotsVerticalIcon /></IconButton>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </V2Card>
 
-          <p className="mt-3 text-[12px]" style={{ color: "var(--admin-text-secondary)" }}>
-            🚧 <strong>Placeholder data</strong> — file storage backend Փուլ Ե-ում։
-          </p>
+            {quick === "trash" ? (
+              <div className="px-4 py-10 text-center">
+                <div
+                  className="text-[13px] font-medium"
+                  style={{ color: "var(--admin-text-primary)" }}
+                >
+                  {tx(t, "admin.files.trash_title", "Trash is empty")}
+                </div>
+                <div
+                  className="mt-1 text-[11px]"
+                  style={{ color: "var(--admin-text-secondary)" }}
+                >
+                  {tx(
+                    t,
+                    "admin.files.trash_hint",
+                    "Deleted files stay recoverable for 30 days via super-admin."
+                  )}
+                </div>
+              </div>
+            ) : loading ? (
+              <div
+                className="px-4 py-10 text-center text-[12px]"
+                style={{ color: "var(--admin-text-secondary)" }}
+              >
+                {tx(t, "common.loading", "Loading…")}
+              </div>
+            ) : visibleFiles.length === 0 ? (
+              <div className="px-4 py-10 text-center">
+                <div
+                  className="text-[13px] font-medium"
+                  style={{ color: "var(--admin-text-primary)" }}
+                >
+                  {tx(t, "admin.files.empty", "No files in this folder")}
+                </div>
+                <div
+                  className="mt-1 text-[11px]"
+                  style={{ color: "var(--admin-text-secondary)" }}
+                >
+                  {tx(
+                    t,
+                    "admin.files.empty_hint",
+                    "Click Upload files to add the first one."
+                  )}
+                </div>
+              </div>
+            ) : (
+              <table className="w-full border-collapse text-[13px]">
+                <thead style={{ backgroundColor: "var(--admin-bg-secondary)" }}>
+                  <tr>
+                    <th
+                      className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.5px]"
+                      style={{ color: "var(--admin-text-secondary)" }}
+                    >
+                      {tx(t, "admin.files.col.name", "Name")}
+                    </th>
+                    <th
+                      className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.5px]"
+                      style={{ color: "var(--admin-text-secondary)" }}
+                    >
+                      {tx(t, "admin.files.col.owner", "Owner")}
+                    </th>
+                    <th
+                      className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.5px]"
+                      style={{ color: "var(--admin-text-secondary)" }}
+                    >
+                      {tx(t, "admin.files.col.size", "Size")}
+                    </th>
+                    <th
+                      className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.5px]"
+                      style={{ color: "var(--admin-text-secondary)" }}
+                    >
+                      {tx(t, "admin.files.col.modified", "Modified")}
+                    </th>
+                    <th className="px-4 py-2.5"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleFiles.map((file) => (
+                    <tr
+                      key={file.id}
+                      className="group border-t transition hover:bg-[color:var(--admin-bg-secondary)]"
+                      style={{ borderColor: "var(--admin-border)" }}
+                    >
+                      <td className="px-4 py-3 align-middle">
+                        <button
+                          type="button"
+                          onClick={() => void handleDownload(file)}
+                          className="flex items-center gap-3 text-left"
+                        >
+                          <FileTypeIcon mime={file.mime_type} />
+                          <div>
+                            <div className="font-medium">{file.filename}</div>
+                            <div
+                              className="text-[10px] uppercase tracking-[0.3px]"
+                              style={{ color: "var(--admin-text-tertiary)" }}
+                            >
+                              {mimeLabel(file.mime_type)} · {file.visibility}
+                            </div>
+                          </div>
+                        </button>
+                      </td>
+                      <td className="px-4 py-3 align-middle">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold"
+                            style={{
+                              backgroundColor: "var(--admin-primary-light)",
+                              color: "var(--admin-primary-dark)",
+                            }}
+                          >
+                            {ownerInitials(file.uploaded_by, user?.id).slice(0, 2)}
+                          </span>
+                          <span className="text-[12px]">
+                            {ownerInitials(file.uploaded_by, user?.id)}
+                          </span>
+                        </div>
+                      </td>
+                      <td
+                        className="px-4 py-3 align-middle"
+                        style={{ color: "var(--admin-text-secondary)" }}
+                      >
+                        {formatBytes(file.size_bytes)}
+                      </td>
+                      <td
+                        className="px-4 py-3 align-middle"
+                        style={{ color: "var(--admin-text-secondary)" }}
+                      >
+                        {formatDate(file.created_at)}
+                      </td>
+                      <td className="px-4 py-3 align-middle">
+                        <div className="flex justify-end gap-1 opacity-60 transition group-hover:opacity-100">
+                          <IconButton
+                            aria-label="Download"
+                            onClick={() => void handleDownload(file)}
+                          >
+                            <DownloadSmall />
+                          </IconButton>
+                          <IconButton
+                            aria-label="Delete"
+                            onClick={() => void handleDelete(file)}
+                          >
+                            <TrashSmall />
+                          </IconButton>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </V2Card>
         </div>
       </div>
     </div>
   );
 }
 
-function ownerStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
-  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
-    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
-    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
-    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
-    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
-  };
-  return map[tone];
+/* ─── small render helpers ─────────────────────────────────────────────── */
+
+function StorageMeter({ stats }: { stats: StorageStats | null }) {
+  const pct =
+    stats && stats.quota_bytes > 0
+      ? Math.min(100, Math.round((stats.total_bytes / stats.quota_bytes) * 100))
+      : 0;
+  return (
+    <div
+      className="mt-2 h-1.5 overflow-hidden rounded-full"
+      style={{ backgroundColor: "var(--admin-bg-tertiary)" }}
+    >
+      <div
+        className="h-full rounded-full"
+        style={{ width: `${pct}%`, backgroundColor: "var(--admin-primary)" }}
+      />
+    </div>
+  );
+}
+
+function QuickItem({
+  icon,
+  label,
+  active,
+  onClick,
+  count,
+}: {
+  icon: "files" | "clock" | "trash";
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  count?: number;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-[13px] transition"
+      style={{
+        backgroundColor: active ? "var(--admin-primary-light)" : "transparent",
+        color: active ? "var(--admin-primary-dark)" : "var(--admin-text-secondary)",
+        fontWeight: active ? 500 : 400,
+      }}
+    >
+      <QuickIcon name={icon} />
+      <span className="flex-1">{label}</span>
+      {count != null ? <span className="text-[11px] opacity-60">{count}</span> : null}
+    </button>
+  );
 }
 
 /* ─── icons ────────────────────────────────────────────────────────────── */
@@ -295,19 +665,6 @@ function QuickIcon({ name }: { name: string }) {
         <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <circle cx={12} cy={12} r={10} />
           <polyline points="12 6 12 12 16 14" />
-        </svg>
-      );
-    case "star":
-      return (
-        <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-        </svg>
-      );
-    case "users":
-      return (
-        <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-          <circle cx={9} cy={7} r={4} />
         </svg>
       );
     case "trash":
@@ -350,34 +707,20 @@ function SearchSmall() {
     </svg>
   );
 }
-function GridIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <rect x={3} y={3} width={7} height={7} />
-      <rect x={14} y={3} width={7} height={7} />
-      <rect x={3} y={14} width={7} height={7} />
-      <rect x={14} y={14} width={7} height={7} />
-    </svg>
-  );
-}
-function ListIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <line x1={8} y1={6} x2={21} y2={6} />
-      <line x1={8} y1={12} x2={21} y2={12} />
-      <line x1={8} y1={18} x2={21} y2={18} />
-      <line x1={3} y1={6} x2={3.01} y2={6} />
-      <line x1={3} y1={12} x2={3.01} y2={12} />
-      <line x1={3} y1={18} x2={3.01} y2={18} />
-    </svg>
-  );
-}
-function FileTypeIcon({ type }: { type: "pdf" | "xls" | "img" | "doc" }) {
+function FileTypeIcon({ mime }: { mime: string }) {
+  const bucket = mimeBucket(mime);
   const color =
-    type === "pdf" ? "var(--admin-danger)" :
-    type === "xls" ? "var(--admin-success)" :
-    type === "img" ? "var(--admin-info)" :
-    "var(--admin-primary)";
+    mime === "application/pdf"
+      ? "var(--admin-danger)"
+      : bucket === "image"
+        ? "var(--admin-info)"
+        : bucket === "video"
+          ? "var(--admin-info-dark)"
+          : bucket === "audio"
+            ? "var(--admin-success)"
+            : bucket === "text"
+              ? "var(--admin-text-secondary)"
+              : "var(--admin-primary)";
   return (
     <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke={color} strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -412,23 +755,11 @@ function DownloadSmall() {
     </svg>
   );
 }
-function ShareIcon() {
+function TrashSmall() {
   return (
     <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <circle cx={18} cy={5} r={3} />
-      <circle cx={6} cy={12} r={3} />
-      <circle cx={18} cy={19} r={3} />
-      <line x1={8.59} y1={13.51} x2={15.42} y2={17.49} />
-      <line x1={15.41} y1={6.51} x2={8.59} y2={10.49} />
-    </svg>
-  );
-}
-function DotsVerticalIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width={14} height={14} fill="currentColor" aria-hidden>
-      <circle cx={12} cy={5} r={1.5} />
-      <circle cx={12} cy={12} r={1.5} />
-      <circle cx={12} cy={19} r={1.5} />
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
     </svg>
   );
 }

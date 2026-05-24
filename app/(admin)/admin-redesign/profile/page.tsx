@@ -22,17 +22,19 @@
  *     /bucket3/pin-settings (in-place change-password is parked because
  *     no /account/change-password endpoint exists).
  *   - Activity tab: full /account/activity list (limit=50).
- *   - Sessions tab: info card explaining the Phase 2 limitation (no
- *     /account/sessions endpoint).
+ *   - Sessions tab: real /account/sessions list with last-used + created
+ *     dates + Revoke action per row; current device is pinned + disabled.
+ *   - Security tab: Change-password Drawer hitting /account/change-password.
+ *   - Profile shows + edits the new `location` column (was hard-coded "—").
  */
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { apiFetchJson, ApiRequestError } from "@/lib/api-client";
 import type { ApiSuccessEnvelope } from "@/lib/api-envelope";
+import { apiFilesStorageStats, formatBytes, type StorageStats } from "@/lib/file-assets-api";
 import {
   V2Button,
   V2Card,
@@ -46,13 +48,22 @@ import {
   Input,
   Select,
 } from "@/components/ui";
+import { IconButton } from "@/components/ui/v2";
+import {
+  apiChangePassword,
+  apiListAccountSessions,
+  apiRevokeAccountSession,
+  type AccountSession,
+} from "@/lib/account-sessions-api";
 import {
   Bell,
   CheckCircle2,
   Edit3,
   FileText,
+  Monitor,
   Receipt,
   ShieldCheck,
+  Trash2,
 } from "lucide-react";
 
 const TABS = [
@@ -156,6 +167,7 @@ const LANGUAGE_OPTIONS = [
 type ProfileFormState = {
   name: string;
   phone: string;
+  location: string;
   preferred_language: string;
 };
 
@@ -171,11 +183,15 @@ export default function AdminRedesignProfilePage() {
   const [activityLimit, setActivityLimit] = useState<number>(10);
   const [pinStatus, setPinStatus] = useState<PinStatus | null>(null);
 
+  // Real storage stats from /api/files/storage-stats — wired 2026-05-25.
+  const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
+
   // Edit-profile drawer state
   const [editOpen, setEditOpen] = useState(false);
   const [form, setForm] = useState<ProfileFormState>({
     name: "",
     phone: "",
+    location: "",
     preferred_language: "en",
   });
   const [saving, setSaving] = useState(false);
@@ -190,6 +206,9 @@ export default function AdminRedesignProfilePage() {
   const email = user?.email || "—";
   const initials = getInitials(displayName);
   const phone = user?.phone || "—";
+  const location =
+    (user as (typeof user) & { location?: string | null } | null)?.location ?? null;
+  const locationText = location && location.trim() !== "" ? location : null;
 
   // Role badge: super admin > canonical_role > context.world
   const roleLabel = user?.is_super_admin
@@ -233,6 +252,23 @@ export default function AdminRedesignProfilePage() {
     void loadActivity(activityLimit);
   }, [loadActivity, activityLimit]);
 
+  // Load storage stats once for the Overview tab's Storage card.
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await apiFilesStorageStats(token);
+        if (!cancelled) setStorageStats(res.data);
+      } catch {
+        // non-fatal — Storage card falls back to a 0/quota display
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
   // Load PIN status once when the Security tab is opened.
   useEffect(() => {
     if (activeTab !== "security" || !token || pinStatus !== null) return;
@@ -253,6 +289,7 @@ export default function AdminRedesignProfilePage() {
     setForm({
       name: user?.name ?? "",
       phone: user?.phone ?? "",
+      location: (user as (typeof user) & { location?: string | null } | null)?.location ?? "",
       preferred_language: user?.preferred_language ?? "en",
     });
     setSaveError(null);
@@ -270,6 +307,7 @@ export default function AdminRedesignProfilePage() {
         body: {
           name: form.name.trim() || undefined,
           phone: form.phone.trim() || null,
+          location: form.location.trim() || null,
           preferred_language: form.preferred_language,
         },
       });
@@ -378,7 +416,19 @@ export default function AdminRedesignProfilePage() {
                     <MailIcon /> {email}
                   </span>
                   <span className="inline-flex items-center gap-1.5">
-                    <MapPinIcon /> —
+                    <MapPinIcon />
+                    {locationText ? (
+                      <span>{locationText}</span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={openEdit}
+                        className="underline decoration-dotted underline-offset-2"
+                        style={{ color: "var(--admin-text-secondary)" }}
+                      >
+                        {tx(t, "admin.profile.location_not_set", "Not set (edit)")}
+                      </button>
+                    )}
                   </span>
                   <span className="inline-flex items-center gap-1.5">
                     <CalendarIcon /> {joinedDateText}
@@ -469,11 +519,14 @@ export default function AdminRedesignProfilePage() {
           displayName={displayName}
           email={email}
           phone={phone}
+          locationText={locationText}
+          onEditLocation={openEdit}
           roleLabel={roleLabel}
           joinedDateText={joinedDateText}
           lastSeenText={lastSeenText}
           activity={activity}
           activityErr={activityErr}
+          storageStats={storageStats}
         />
       ) : null}
 
@@ -489,14 +542,23 @@ export default function AdminRedesignProfilePage() {
       ) : null}
 
       {activeTab === "security" ? (
-        <SecurityTab pinStatus={pinStatus} tx={(k, fb) => tx(t, k, fb)} />
+        <SecurityTab
+          pinStatus={pinStatus}
+          token={token}
+          onPasswordChanged={() => {
+            void refreshMe();
+          }}
+          tx={(k, fb) => tx(t, k, fb)}
+        />
       ) : null}
 
       {activeTab === "activity" ? (
         <ActivityTab activity={activity} activityErr={activityErr} tx={(k, fb) => tx(t, k, fb)} />
       ) : null}
 
-      {activeTab === "sessions" ? <SessionsTab tx={(k, fb) => tx(t, k, fb)} /> : null}
+      {activeTab === "sessions" ? (
+        <SessionsTab token={token} tx={(k, fb) => tx(t, k, fb)} />
+      ) : null}
 
       {/* Edit profile drawer */}
       <Drawer
@@ -548,6 +610,26 @@ export default function AdminRedesignProfilePage() {
         </DrawerSection>
         <DrawerSection>
           <FormField
+            label={tx(t, "admin.profile.form.location", "Location")}
+            htmlFor="prof-location"
+            helperText={tx(
+              t,
+              "admin.profile.form.location_help",
+              "City, country, or anything you want colleagues to see."
+            )}
+          >
+            <Input
+              id="prof-location"
+              value={form.location}
+              maxLength={120}
+              onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
+              placeholder="Yerevan, Armenia"
+              disabled={saving}
+            />
+          </FormField>
+        </DrawerSection>
+        <DrawerSection>
+          <FormField
             label={tx(t, "admin.profile.form.preferred_language", "Preferred language")}
             htmlFor="prof-lang"
             helperText={tx(
@@ -583,20 +665,26 @@ function OverviewTab({
   displayName,
   email,
   phone,
+  locationText,
+  onEditLocation,
   roleLabel,
   joinedDateText,
   lastSeenText,
   activity,
   activityErr,
+  storageStats,
 }: {
   displayName: string;
   email: string;
   phone: string;
+  locationText: string | null;
+  onEditLocation: () => void;
   roleLabel: string;
   joinedDateText: string;
   lastSeenText: string;
   activity: ActivityData | null;
   activityErr: string | null;
+  storageStats: StorageStats | null;
 }) {
   const heights = activity ? scaleHistogram(activity.histogram) : new Array(29).fill(0);
   const recentPreview = (activity?.recent ?? []).slice(0, 5);
@@ -681,7 +769,21 @@ function OverviewTab({
             <InfoRow label="Email" value={email} />
             <InfoRow label="Phone" value={phone} />
             <InfoRow label="Joined" value={joinedDateText} />
-            <InfoRow label="Location" value="—" />
+            <InfoRow
+              label="Location"
+              value={
+                locationText ?? (
+                  <button
+                    type="button"
+                    onClick={onEditLocation}
+                    className="underline decoration-dotted underline-offset-2 text-[13px] font-medium"
+                    style={{ color: "var(--admin-text-secondary)" }}
+                  >
+                    Not set (edit)
+                  </button>
+                )
+              }
+            />
             <InfoRow label="Last seen" value={lastSeenText} />
             <InfoRow
               label="Role"
@@ -701,39 +803,11 @@ function OverviewTab({
           </V2CardBody>
         </V2Card>
 
-        {/* Storage — placeholder until File manager backend ships */}
+        {/* Storage — wired to /api/files/storage-stats (Phase Ե, 2026-05-25) */}
         <V2Card>
           <V2CardHeader title="Storage" />
           <V2CardBody>
-            <div className="text-[22px] font-semibold">
-              0 GB{" "}
-              <span
-                className="text-[13px] font-normal"
-                style={{ color: "var(--admin-text-secondary)" }}
-              >
-                of 10 GB
-              </span>
-            </div>
-            <div
-              className="mt-3 h-2 overflow-hidden rounded-full"
-              style={{ backgroundColor: "var(--admin-bg-tertiary)" }}
-            >
-              <div
-                className="h-full rounded-full"
-                style={{ width: "0%", backgroundColor: "var(--admin-primary)" }}
-              />
-            </div>
-            <div className="mt-3.5 text-[12px]">
-              <StorageRow color="var(--admin-primary)" label="Documents" value="0 GB" />
-              <StorageRow color="var(--admin-success)" label="Images" value="0 GB" />
-              <StorageRow color="var(--admin-warning)" label="Other" value="0 GB" last />
-            </div>
-            <div
-              className="mt-3 text-[11px]"
-              style={{ color: "var(--admin-text-tertiary)" }}
-            >
-              Real storage data available when File manager backend ships.
-            </div>
+            <ProfileStorageBody stats={storageStats} />
           </V2CardBody>
         </V2Card>
       </div>
@@ -814,11 +888,65 @@ function SettingsTab({
 
 function SecurityTab({
   pinStatus,
+  token,
+  onPasswordChanged,
   tx: trans,
 }: {
   pinStatus: PinStatus | null;
+  token: string | null;
+  onPasswordChanged: () => void;
   tx: (k: string, fb: string) => string;
 }) {
+  const [open, setOpen] = useState(false);
+  const [pwForm, setPwForm] = useState({
+    current_password: "",
+    new_password: "",
+    new_password_confirmation: "",
+  });
+  const [pwSaving, setPwSaving] = useState(false);
+  const [pwError, setPwError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const reset = () => {
+    setPwForm({ current_password: "", new_password: "", new_password_confirmation: "" });
+    setPwError(null);
+  };
+
+  const submit = async () => {
+    if (!token) return;
+    setPwError(null);
+    if (pwForm.new_password.length < 8) {
+      setPwError(trans("admin.profile.security.pw_min", "New password must be at least 8 characters."));
+      return;
+    }
+    if (pwForm.new_password !== pwForm.new_password_confirmation) {
+      setPwError(trans("admin.profile.security.pw_mismatch", "Passwords do not match."));
+      return;
+    }
+    setPwSaving(true);
+    try {
+      const res = await apiChangePassword(token, pwForm);
+      setOpen(false);
+      reset();
+      const revoked = res.data?.revoked_other_sessions ?? 0;
+      setToast(
+        revoked > 0
+          ? trans("admin.profile.security.pw_changed_revoked", "Password changed. Other devices were signed out.")
+          : trans("admin.profile.security.pw_changed", "Password changed.")
+      );
+      onPasswordChanged();
+      window.setTimeout(() => setToast(null), 4000);
+    } catch (e) {
+      setPwError(
+        e instanceof ApiRequestError
+          ? e.message
+          : trans("admin.profile.security.pw_err", "Failed to change password.")
+      );
+    } finally {
+      setPwSaving(false);
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       <V2Card>
@@ -888,17 +1016,109 @@ function SecurityTab({
             style={{ color: "var(--admin-text-secondary)" }}
           >
             {trans(
-              "admin.profile.security.password_phase2",
-              "Self-service password change is a Phase 2 follow-up — there is no /account/change-password endpoint yet. Contact a super admin to rotate your password."
+              "admin.profile.security.password_desc",
+              "Change your sign-in password. Other devices will be signed out automatically; this device stays signed in."
             )}
           </p>
-          <div className="mt-4">
-            <V2Button as="link" href="/login" variant="default">
-              {trans("admin.profile.security.signout", "Sign out and back in")}
+          <div className="mt-4 flex items-center gap-3">
+            <V2Button variant="primary" onClick={() => setOpen(true)}>
+              {trans("admin.profile.security.change_password", "Change password")}
             </V2Button>
+            {toast ? (
+              <span className="text-[12px]" style={{ color: "var(--admin-success-dark)" }}>
+                {toast}
+              </span>
+            ) : null}
           </div>
         </V2CardBody>
       </V2Card>
+
+      <Drawer
+        open={open}
+        onClose={() => (pwSaving ? undefined : (setOpen(false), reset()))}
+        title={trans("admin.profile.security.change_password", "Change password")}
+        subtitle={trans(
+          "admin.profile.security.change_password_subtitle",
+          "Verify your current password, then pick a new one (min 8 characters)."
+        )}
+        size="md"
+        footer={
+          <div className="flex justify-end gap-2">
+            <V2Button
+              onClick={() => {
+                setOpen(false);
+                reset();
+              }}
+              disabled={pwSaving}
+            >
+              {trans("common.cancel", "Cancel")}
+            </V2Button>
+            <V2Button variant="primary" onClick={() => void submit()} disabled={pwSaving}>
+              {pwSaving
+                ? trans("common.saving", "Saving…")
+                : trans("admin.profile.security.change_password", "Change password")}
+            </V2Button>
+          </div>
+        }
+      >
+        <DrawerSection>
+          {pwError ? (
+            <div className="mb-3 rounded-md border border-error-100 bg-error-50 px-3 py-2 text-xs text-error-700">
+              {pwError}
+            </div>
+          ) : null}
+          <FormField
+            label={trans("admin.profile.security.current_password", "Current password")}
+            htmlFor="pw-current"
+          >
+            <Input
+              id="pw-current"
+              type="password"
+              autoComplete="current-password"
+              value={pwForm.current_password}
+              onChange={(e) =>
+                setPwForm((f) => ({ ...f, current_password: e.target.value }))
+              }
+              disabled={pwSaving}
+            />
+          </FormField>
+        </DrawerSection>
+        <DrawerSection>
+          <FormField
+            label={trans("admin.profile.security.new_password", "New password")}
+            htmlFor="pw-new"
+            helperText={trans("admin.profile.security.pw_new_help", "Minimum 8 characters.")}
+          >
+            <Input
+              id="pw-new"
+              type="password"
+              autoComplete="new-password"
+              value={pwForm.new_password}
+              onChange={(e) =>
+                setPwForm((f) => ({ ...f, new_password: e.target.value }))
+              }
+              disabled={pwSaving}
+            />
+          </FormField>
+        </DrawerSection>
+        <DrawerSection>
+          <FormField
+            label={trans("admin.profile.security.confirm_password", "Confirm new password")}
+            htmlFor="pw-confirm"
+          >
+            <Input
+              id="pw-confirm"
+              type="password"
+              autoComplete="new-password"
+              value={pwForm.new_password_confirmation}
+              onChange={(e) =>
+                setPwForm((f) => ({ ...f, new_password_confirmation: e.target.value }))
+              }
+              disabled={pwSaving}
+            />
+          </FormField>
+        </DrawerSection>
+      </Drawer>
     </div>
   );
 }
@@ -954,36 +1174,165 @@ function ActivityTab({
   );
 }
 
-function SessionsTab({ tx: trans }: { tx: (k: string, fb: string) => string }) {
+function SessionsTab({
+  token,
+  tx: trans,
+}: {
+  token: string | null;
+  tx: (k: string, fb: string) => string;
+}) {
+  const [sessions, setSessions] = useState<AccountSession[] | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    setErr(null);
+    try {
+      const res = await apiListAccountSessions(token);
+      setSessions(res.data);
+    } catch (e) {
+      setErr(
+        e instanceof ApiRequestError
+          ? e.message
+          : trans("admin.profile.sessions.err", "Failed to load sessions.")
+      );
+    }
+  }, [token, trans]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const revoke = async (id: number) => {
+    if (!token) return;
+    setBusyId(id);
+    setErr(null);
+    try {
+      await apiRevokeAccountSession(token, id);
+      setToast(trans("admin.profile.sessions.revoked", "Session revoked."));
+      window.setTimeout(() => setToast(null), 2500);
+      await load();
+    } catch (e) {
+      setErr(
+        e instanceof ApiRequestError
+          ? e.message
+          : trans("admin.profile.sessions.revoke_err", "Failed to revoke session.")
+      );
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   return (
     <V2Card>
       <V2CardHeader title={trans("admin.profile.sessions.title", "Active sessions")} />
       <V2CardBody>
-        <div className="rounded-md border bg-figma-bg-1 p-4 text-[12px]">
-          <p style={{ color: "var(--admin-text-primary)" }}>
-            {trans(
-              "admin.profile.sessions.body_1",
-              "Active sessions are tracked via Sanctum tokens. Use the Logout button on the header to invalidate the current device."
-            )}
-          </p>
-          <p
-            className="mt-2"
-            style={{ color: "var(--admin-text-secondary)" }}
-          >
-            {trans(
-              "admin.profile.sessions.body_2",
-              "Multi-device session list (with last-used IP + revoke buttons) is a Phase 2 follow-up — needs the /account/sessions endpoint."
-            )}
-          </p>
-          <div className="mt-3">
-            <Link
-              href="/login"
-              className="text-[12px] font-medium underline"
-              style={{ color: "var(--admin-primary)" }}
-            >
-              {trans("admin.profile.sessions.signout", "Sign out →")}
-            </Link>
+        {err ? (
+          <div className="mb-3 rounded-md border border-error-100 bg-error-50 px-3 py-2 text-xs text-error-700">
+            {err}
           </div>
+        ) : null}
+        {toast ? (
+          <div className="mb-3 text-[12px]" style={{ color: "var(--admin-success-dark)" }}>
+            {toast}
+          </div>
+        ) : null}
+        {sessions === null ? (
+          <div className="py-6 text-center text-[12px]" style={{ color: "var(--admin-text-secondary)" }}>
+            {trans("common.loading", "Loading…")}
+          </div>
+        ) : sessions.length === 0 ? (
+          <div className="py-8 text-center">
+            <div className="text-[13px] font-medium" style={{ color: "var(--admin-text-primary)" }}>
+              {trans("admin.profile.sessions.empty", "No active sessions on file.")}
+            </div>
+            <div className="mt-1 text-[11px]" style={{ color: "var(--admin-text-secondary)" }}>
+              {trans(
+                "admin.profile.sessions.empty_hint",
+                "Each device you sign in from shows up here."
+              )}
+            </div>
+          </div>
+        ) : (
+          <ul className="divide-y" style={{ borderColor: "var(--admin-border)" }}>
+            {sessions.map((s) => (
+              <li key={s.id} className="flex items-start gap-3 py-3">
+                <span
+                  aria-hidden
+                  className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                  style={{
+                    backgroundColor: s.is_current
+                      ? "var(--admin-success-light)"
+                      : "var(--admin-primary-light)",
+                    color: s.is_current
+                      ? "var(--admin-success-dark)"
+                      : "var(--admin-primary-dark)",
+                  }}
+                >
+                  <Monitor className="h-4 w-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[13px] font-semibold" style={{ color: "var(--admin-text-primary)" }}>
+                      {s.name || trans("admin.profile.sessions.unnamed", "Unnamed session")}
+                    </span>
+                    {s.is_current ? (
+                      <span
+                        className="inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.3px]"
+                        style={{
+                          backgroundColor: "var(--admin-success-light)",
+                          color: "var(--admin-success-dark)",
+                        }}
+                      >
+                        {trans("admin.profile.sessions.this_device", "This device")}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div
+                    className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px]"
+                    style={{ color: "var(--admin-text-secondary)" }}
+                  >
+                    <span>
+                      {trans("admin.profile.sessions.created", "Created")}{" "}
+                      {formatDateLong(s.created_at)}
+                    </span>
+                    <span>
+                      {trans("admin.profile.sessions.last_used", "Last used")}{" "}
+                      {s.last_used_at ? formatRelativeTime(s.last_used_at) : "—"}
+                    </span>
+                    {s.expires_at ? (
+                      <span>
+                        {trans("admin.profile.sessions.expires", "Expires")}{" "}
+                        {formatDateLong(s.expires_at)}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+                <div>
+                  <IconButton
+                    aria-label={trans("admin.profile.sessions.revoke", "Revoke session")}
+                    onClick={() => void revoke(s.id)}
+                    disabled={s.is_current || busyId === s.id}
+                    title={
+                      s.is_current
+                        ? trans("admin.profile.sessions.cannot_revoke_current", "Sign out to end this device's session.")
+                        : trans("admin.profile.sessions.revoke", "Revoke session")
+                    }
+                  >
+                    <Trash2 />
+                  </IconButton>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="mt-4 text-[11px]" style={{ color: "var(--admin-text-tertiary)" }}>
+          {trans(
+            "admin.profile.sessions.note",
+            "Each row is one Sanctum personal access token. Revoking ends that device's session immediately."
+          )}
         </div>
       </V2CardBody>
     </V2Card>
@@ -1057,6 +1406,60 @@ function InfoRow({
       </div>
       <div className="mt-1.5 text-[13px] font-medium">{value}</div>
     </div>
+  );
+}
+
+function ProfileStorageBody({ stats }: { stats: StorageStats | null }) {
+  if (!stats) {
+    return (
+      <div className="text-[12px]" style={{ color: "var(--admin-text-tertiary)" }}>
+        Loading…
+      </div>
+    );
+  }
+  const pct =
+    stats.quota_bytes > 0
+      ? Math.min(100, Math.round((stats.total_bytes / stats.quota_bytes) * 100))
+      : 0;
+  const docs =
+    (stats.by_bucket.application?.bytes ?? 0) + (stats.by_bucket.text?.bytes ?? 0);
+  const images = stats.by_bucket.image?.bytes ?? 0;
+  const media =
+    (stats.by_bucket.video?.bytes ?? 0) + (stats.by_bucket.audio?.bytes ?? 0);
+  const other = stats.by_bucket.other?.bytes ?? 0;
+  return (
+    <>
+      <div className="text-[22px] font-semibold">
+        {formatBytes(stats.total_bytes)}{" "}
+        <span
+          className="text-[13px] font-normal"
+          style={{ color: "var(--admin-text-secondary)" }}
+        >
+          of {formatBytes(stats.quota_bytes)}
+        </span>
+      </div>
+      <div
+        className="mt-3 h-2 overflow-hidden rounded-full"
+        style={{ backgroundColor: "var(--admin-bg-tertiary)" }}
+      >
+        <div
+          className="h-full rounded-full"
+          style={{ width: `${pct}%`, backgroundColor: "var(--admin-primary)" }}
+        />
+      </div>
+      <div className="mt-3.5 text-[12px]">
+        <StorageRow color="var(--admin-primary)" label="Documents" value={formatBytes(docs)} />
+        <StorageRow color="var(--admin-success)" label="Images" value={formatBytes(images)} />
+        <StorageRow color="var(--admin-info)" label="Media" value={formatBytes(media)} />
+        <StorageRow color="var(--admin-warning)" label="Other" value={formatBytes(other)} last />
+      </div>
+      <div
+        className="mt-3 text-[11px]"
+        style={{ color: "var(--admin-text-tertiary)" }}
+      >
+        {stats.total_count} {stats.total_count === 1 ? "file" : "files"} across all folders.
+      </div>
+    </>
   );
 }
 
