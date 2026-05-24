@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { canAccessPlatformAdminNav } from "@/lib/access";
+import { canAccessPlatformAdminNav, isSuperAdminRole } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { Button, FormField, Input, PageHeader } from "@/components/ui";
@@ -101,6 +101,28 @@ export default function PlatformRbacPage() {
     [filteredPermissions]
   );
 
+  // ─── 2026-05-24 — 8-section IA: company-scoped role filter ────────────
+  // Platform-scoped roles (super_admin, platform_admin) must NEVER be
+  // visible to non-super viewers. Company-scoped roles are: owner, booker,
+  // finance, content, viewer (the canonical company role set).
+  //
+  // ⚠️ This is UI-level only. Backend assignment whitelist enforcement is
+  // a separate task — see backend endpoint POST /api/platform-admin/users/
+  // {id}/roles which still accepts any role id from a non-super caller and
+  // must reject platform-scoped ids server-side. Tracked in
+  // MIGRATION_TODO.md → "Backend follow-ups" section.
+  const COMPANY_SCOPED_ROLE_NAMES = new Set([
+    "owner",
+    "booker",
+    "finance",
+    "content",
+    "viewer",
+  ]);
+  const visibleRoles = useMemo(() => {
+    if (isSuperAdminRole(user)) return roles;
+    return roles.filter((r) => COMPANY_SCOPED_ROLE_NAMES.has(r.role_name.toLowerCase()));
+  }, [roles, user]);
+
   if (!allowed || forbidden) {
     return (
       <div className="space-y-4">
@@ -164,14 +186,14 @@ export default function PlatformRbacPage() {
             </tr>
           </thead>
           <tbody>
-            {roles.length === 0 && !loading && (
+            {visibleRoles.length === 0 && !loading && (
               <tr>
                 <td colSpan={filteredPermissions.length + 1} className="px-3 py-6 text-center text-fg-t6">
                   {t("admin.rbac.empty")}
                 </td>
               </tr>
             )}
-            {roles.map((r) => (
+            {visibleRoles.map((r) => (
               <tr key={r.role_id} className="border-b border-default hover:bg-figma-bg-1">
                 <td className="px-3 py-2 font-medium">{r.role_name}</td>
                 {r.permissions

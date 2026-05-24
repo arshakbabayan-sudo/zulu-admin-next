@@ -152,3 +152,84 @@ export function canAccessAgentToolsNav(user: AdminUser | null): boolean {
   if (user.is_super_admin) return true;
   return user.roles?.includes("agent") ?? false;
 }
+
+// ─── 2026-05-24 — Role buckets for the 8-section sidebar IA ──────────────
+// Three primary buckets drive section visibility in the new sidebar:
+//   super_admin    → platform-wide governance (Marketplace ops, full Settings)
+//   operator_admin → company-level operator (their own Inventory, their company)
+//   agent          → individual sales agent (Sales workspace, no Inventory)
+// A user can technically have more than one role; precedence is
+// super > agent (only if not super) > operator. Super admins fall through
+// to every section.
+
+export function isSuperAdminRole(user: AdminUser | null): boolean {
+  return user?.is_super_admin === true;
+}
+
+/** Pure agent — has the agent role and is NOT super admin. Drives Sales workspace visibility. */
+export function isAgentOnlyRole(user: AdminUser | null): boolean {
+  if (!user) return false;
+  if (user.is_super_admin) return false;
+  return user.roles?.includes("agent") ?? false;
+}
+
+/** Operator-side admin (company-scoped CRUD) but not super, not pure agent. */
+export function isOperatorRole(user: AdminUser | null): boolean {
+  if (!user) return false;
+  if (user.is_super_admin) return false;
+  if (isAgentOnlyRole(user)) return false;
+  // operator_admin signal: has at least one CRUD permission OR holds operator-style canonical role
+  if (OPERATOR_TOOLS_PERMISSIONS.some((p) => user.permissions?.includes(p))) return true;
+  if (user.canonical_role && ["operator_admin", "tour_operator", "hotel_admin"].includes(user.canonical_role)) return true;
+  return false;
+}
+
+// ─── Section-level predicates (8 new sidebar groups, 2026-05-24) ────────
+// These are intentionally permissive at the section level — fine-grained
+// per-tab visibility is enforced by tab.superAdminOnly / perm / serviceType
+// / moduleKey filters that AdminGroupTabs already honours.
+
+export function canAccessDashboardSection(user: AdminUser | null): boolean {
+  return user != null;
+}
+
+/** Inventory section: super or operator. Agents do NOT see it. */
+export function canAccessInventorySection(user: AdminUser | null): boolean {
+  if (!user) return false;
+  if (user.is_super_admin) return true;
+  return canAccessOperatorToolsNav(user) || canAccessInventoryOversightNav(user);
+}
+
+/** Bookings: all three roles. */
+export function canAccessBookingsSection(user: AdminUser | null): boolean {
+  return user != null;
+}
+
+/** Sales workspace: agents only (super admin can preview via direct URL but not in sidebar). */
+export function canAccessSalesWorkspaceSection(user: AdminUser | null): boolean {
+  if (!user) return false;
+  if (user.is_super_admin) return true; // sidebar parity for QA, matches existing canAccessAgentToolsNav semantics
+  return user.roles?.includes("agent") ?? false;
+}
+
+/** Finance: all three roles. Backend permission filters columns/rows. */
+export function canAccessFinanceSection(user: AdminUser | null): boolean {
+  return user != null;
+}
+
+/** My company: all three roles (each sees only their own company). Super admin sees Zulu's. */
+export function canAccessMyCompanySection(user: AdminUser | null): boolean {
+  if (!user) return false;
+  if (user.is_super_admin) return true;
+  return (user.companies?.length ?? 0) > 0;
+}
+
+/** Marketplace ops: super_admin only. */
+export function canAccessMarketplaceOpsSection(user: AdminUser | null): boolean {
+  return user?.is_super_admin === true;
+}
+
+/** Settings: visible to all roles; tabs inside filter based on scope. */
+export function canAccessSettingsSection(user: AdminUser | null): boolean {
+  return user != null;
+}

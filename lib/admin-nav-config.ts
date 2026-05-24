@@ -42,15 +42,25 @@ export type AdminNavTab = {
   moduleKey?: string;
 };
 
+export type AdminNavTabScope = "all" | "mine";
+
 export type AdminNavGroup = {
   key: string;
   labelKey: string;
+  /**
+   * Plain-English fallback shown when t(labelKey) returns the key itself
+   * (translation row not yet seeded). The 8-section IA introduces new
+   * label keys (admin.nav.section.*) that need DB seeding — fallbacks
+   * keep the sidebar readable in the meantime.
+   */
+  labelFallback?: string;
   icon: string;
   /** Sidebar link points here. Usually the first tab. */
   defaultHref: string;
   tabs: AdminNavTab[];
   /** Visibility predicate name — wired in AdminShell.tsx. */
   visibility:
+    // legacy keys kept for back-compat with any external importer:
     | "always"
     | "platform_admin"
     | "operator_tools"
@@ -58,65 +68,56 @@ export type AdminNavGroup = {
     | "localization"
     | "super_admin"
     | "bucket3"
-    | "agent_tools";
+    | "agent_tools"
+    // 2026-05-24 — 8-section IA section-level predicates:
+    | "section_dashboard"
+    | "section_inventory"
+    | "section_bookings"
+    | "section_sales_workspace"
+    | "section_finance"
+    | "section_my_company"
+    | "section_marketplace_ops"
+    | "section_settings";
 };
 
+// ─── 8-section IA — 2026-05-24 ─────────────────────────────────────────────
+// Replaces the prior 14-group sidebar with role-aware sections per the
+// product spec. Page files stay where they are (Option B / pragmatic):
+// only the sidebar config + access predicates change. URL routes are
+// preserved so bookmarks, deep links from Telegram, and breadcrumbs
+// continue to work.
+//
+// Role visibility matrix (also enforced section-by-section in lib/access.ts):
+//   Dashboard         super ✓ / operator ✓ / agent ✓
+//   Inventory         super ✓ / operator ✓ / agent —
+//   Bookings          super ✓ / operator ✓ / agent ✓
+//   Sales workspace   super — / operator — / agent ✓
+//   Finance           super ✓ / operator ✓ / agent ✓
+//   My company        super ✓ / operator ✓ / agent ✓
+//   Marketplace ops   super ✓ / operator — / agent —
+//   Settings          super ✓ / operator ✓ / agent ✓  (tabs filter further)
+
 export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
+  // 1 ── Dashboard ──────────────────────────────────────────────────────
   {
     key: "dashboard",
-    labelKey: "admin.nav.dashboard",
+    labelKey: "admin.nav.section.dashboard",
+    labelFallback: "Dashboard",
     icon: "/icons/menu/dashboard.svg",
     defaultHref: "/dashboard",
     tabs: [],
-    visibility: "always",
+    visibility: "section_dashboard",
   },
+
+  // 2 ── Inventory ─────────────────────────────────────────────────────
+  // Operator-side tabs are the canonical set (most inventory users are
+  // operators). For super_admin viewers, the InventoryScopeToggle (rendered
+  // by AdminGroupTabs) flips the URL between /operator/* (mine) and
+  // /inventory/* (all-companies oversight). Agents do not see this section.
   {
-    key: "companies_access",
-    labelKey: "admin.nav.group.companies_access",
-    icon: "/icons/menu/company.svg",
-    defaultHref: "/platform/companies",
-    tabs: [
-      // Phase 3 consolidation (2026-05-23) — Applications hidden from sidebar:
-      // pending applications now surface on /platform/companies inline (Phase 1),
-      // and approved/rejected history lives on the Company detail page
-      // Applications tab (Phase 2). The route /platform/company-applications
-      // is preserved for direct linking + the legacy entry point.
-      { href: "/platform/companies", labelKey: "admin.nav.tab.active_companies" },
-      { href: "/platform/seller-applications", labelKey: "admin.nav.tab.seller_applications" },
-      { href: "/platform/users", labelKey: "admin.nav.tab.users" },
-      { href: "/platform/contracts", labelKey: "admin.nav.tab.contracts", moduleKey: "ops.contracts" },
-      { href: "/platform/contract-templates", labelKey: "admin.nav.tab.contract_templates", moduleKey: "ops.contracts" },
-    ],
-    visibility: "platform_admin",
-  },
-  {
-    key: "reviews_approvals",
-    labelKey: "admin.nav.group.reviews_approvals",
-    icon: "/icons/menu/checklist.svg",
-    defaultHref: "/platform/pending-review",
-    tabs: [
-      { href: "/platform/pending-review", labelKey: "admin.nav.tab.pending_offers", superAdminOnly: true },
-      { href: "/platform/approvals", labelKey: "admin.nav.tab.generic_approvals" },
-    ],
-    visibility: "platform_admin",
-  },
-  {
-    key: "inventory_oversight",
-    labelKey: "admin.nav.group.inventory_oversight",
-    icon: "/icons/menu/flight.svg",
-    defaultHref: "/inventory/flights",
-    tabs: [
-      { href: "/inventory/flights", labelKey: "admin.nav.tab.flights", perm: "flights.view" },
-      { href: "/inventory/hotels", labelKey: "admin.nav.tab.hotels", perm: "hotels.view" },
-      { href: "/inventory/transfers", labelKey: "admin.nav.tab.transfers", perm: "transfers.view" },
-      { href: "/inventory/cars", labelKey: "admin.nav.tab.cars", perm: "cars.view" },
-      { href: "/inventory/excursions", labelKey: "admin.nav.tab.excursions", perm: "excursions.view" },
-    ],
-    visibility: "inventory_oversight",
-  },
-  {
-    key: "my_inventory",
-    labelKey: "admin.nav.group.my_inventory",
+    key: "inventory",
+    labelKey: "admin.nav.section.inventory",
+    labelFallback: "Inventory",
     icon: "/icons/menu/hotel.svg",
     defaultHref: "/operator/hotels",
     tabs: [
@@ -127,147 +128,148 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/operator/excursions", labelKey: "admin.nav.tab.excursions", serviceType: "excursion", moduleKey: "inventory.excursions" },
       { href: "/operator/visas", labelKey: "admin.nav.tab.visas", serviceType: "visa", moduleKey: "inventory.visas" },
       { href: "/operator/packages", labelKey: "admin.nav.tab.packages", serviceType: "package", moduleKey: "inventory.packages" },
-      // Phase 5.1: super-admin packages oversight moved from Bucket3 to here
-      { href: "/platform/packages", labelKey: "admin.nav.tab.packages_oversight", superAdminOnly: true },
       { href: "/operator/offers", labelKey: "admin.nav.tab.offers", moduleKey: "inventory.offers" },
-      { href: "/operator/contracts", labelKey: "admin.nav.tab.contracts", moduleKey: "ops.contracts" },
-      // commission-settings moved to Finance group (Phase 5.2)
-      // /operator/external-api hidden from sidebar (Phase 4.1) — placeholder UI, no backend integration.
-      // Route still accessible via direct URL until full integration ships.
+      // super-admin only oversight tabs (visible alongside when scope=all)
+      { href: "/platform/packages", labelKey: "admin.nav.tab.packages_oversight", superAdminOnly: true },
     ],
-    visibility: "operator_tools",
+    visibility: "section_inventory",
   },
-  {
-    key: "agent_tools",
-    labelKey: "admin.nav.group.agent_tools",
-    icon: "/icons/menu/checklist.svg",
-    defaultHref: "/agent/contracts",
-    tabs: [
-      { href: "/agent/contracts", labelKey: "admin.nav.tab.my_contracts" },
-    ],
-    visibility: "agent_tools",
-  },
+
+  // 3 ── Bookings ──────────────────────────────────────────────────────
   {
     key: "bookings",
-    labelKey: "admin.nav.group.bookings",
+    labelKey: "admin.nav.section.bookings",
+    labelFallback: "Bookings",
     icon: "/icons/menu/booking.svg",
     defaultHref: "/platform/bookings",
     tabs: [
       { href: "/platform/bookings", labelKey: "admin.nav.tab.all_bookings", moduleKey: "ops.bookings" },
       { href: "/platform/package-orders", labelKey: "admin.nav.tab.package_orders", moduleKey: "ops.bookings" },
     ],
-    visibility: "platform_admin",
+    visibility: "section_bookings",
   },
+
+  // 4 ── Sales workspace (rename of Agent tools) ──────────────────────
+  {
+    key: "sales_workspace",
+    labelKey: "admin.nav.section.sales_workspace",
+    labelFallback: "Sales workspace",
+    icon: "/icons/menu/checklist.svg",
+    defaultHref: "/agent/contracts",
+    tabs: [
+      { href: "/agent/contracts", labelKey: "admin.nav.tab.my_contracts" },
+    ],
+    visibility: "section_sales_workspace",
+  },
+
+  // 5 ── Finance (reporting only — Commission settings moved to Settings) ─
   {
     key: "finance",
-    labelKey: "admin.nav.group.finance",
+    labelKey: "admin.nav.section.finance",
+    labelFallback: "Finance",
     icon: "/icons/menu/finance.svg",
     defaultHref: "/platform/finance-summary",
     tabs: [
       { href: "/platform/finance-summary", labelKey: "admin.nav.tab.finance_summary", moduleKey: "ops.finance" },
       { href: "/platform/invoices", labelKey: "admin.nav.tab.invoices", moduleKey: "ops.finance" },
       { href: "/platform/payments", labelKey: "admin.nav.tab.payments", moduleKey: "ops.finance" },
-      { href: "/platform/commissions", labelKey: "admin.nav.tab.commissions", moduleKey: "ops.finance" },
-      { href: "/operator/commission-settings", labelKey: "admin.nav.tab.commission_settings", moduleKey: "ops.finance" },
+      { href: "/platform/commissions", labelKey: "admin.nav.tab.commissions_ledger", moduleKey: "ops.finance" },
       { href: "/platform/finance", labelKey: "admin.nav.tab.transactions", moduleKey: "ops.finance" },
       { href: "/platform/vouchers", labelKey: "admin.nav.tab.vouchers", moduleKey: "ops.finance" },
+      // NOTE: /operator/commission-settings intentionally removed from
+      // Finance → moved under Settings → Pricing rules (8-IA spec).
     ],
-    visibility: "platform_admin",
+    visibility: "section_finance",
   },
+
+  // 6 ── My company (per-company internal CRM, from Bucket3) ───────────
   {
-    key: "content",
-    labelKey: "admin.nav.group.content",
-    icon: "/icons/menu/banner.svg",
-    defaultHref: "/platform/banners",
+    key: "my_company",
+    labelKey: "admin.nav.section.my_company",
+    labelFallback: "My company",
+    icon: "/icons/menu/company.svg",
+    defaultHref: "/bucket3/employees",
     tabs: [
+      { href: "/bucket3/employees", labelKey: "admin.nav.tab.bucket3.employees" },
+      { href: "/bucket3/payroll", labelKey: "admin.nav.tab.bucket3.payroll" },
+      { href: "/bucket3/non-service-hours", labelKey: "admin.nav.tab.bucket3.non_service_hours" },
+      { href: "/bucket3/cases", labelKey: "admin.nav.tab.bucket3.cases" },
+      { href: "/bucket3/bulk-notifications", labelKey: "admin.nav.tab.bucket3.bulk_notifications" },
+      { href: "/bucket3/pin-settings", labelKey: "admin.nav.tab.bucket3.pin_settings" },
+      { href: "/bucket3/customers", labelKey: "admin.nav.tab.bucket3.customers" },
+      { href: "/bucket3/subscriptions", labelKey: "admin.nav.tab.bucket3.subscriptions" },
+      { href: "/bucket3/per-x-invoicing", labelKey: "admin.nav.tab.bucket3.per_x_invoicing" },
+    ],
+    visibility: "section_my_company",
+  },
+
+  // 7 ── Marketplace ops (super_admin only) ────────────────────────────
+  {
+    key: "marketplace_ops",
+    labelKey: "admin.nav.section.marketplace_ops",
+    labelFallback: "Marketplace ops",
+    icon: "/icons/menu/checklist.svg",
+    defaultHref: "/platform/approvals",
+    tabs: [
+      // Approval queue — unified inbox; uses /platform/approvals as the
+      // canonical landing. /platform/pending-review is the offer-specific
+      // filter (linked from inside the page, not as a sibling tab).
+      { href: "/platform/approvals", labelKey: "admin.nav.tab.approval_queue" },
+      { href: "/platform/companies", labelKey: "admin.nav.tab.companies_access" },
+      { href: "/platform/seller-applications", labelKey: "admin.nav.tab.seller_applications" },
+      { href: "/platform/users", labelKey: "admin.nav.tab.users" },
+      { href: "/platform/contracts", labelKey: "admin.nav.tab.partnership_agreements", moduleKey: "ops.contracts" },
+      { href: "/platform/contract-templates", labelKey: "admin.nav.tab.contract_templates", moduleKey: "ops.contracts" },
+      { href: "/platform/audit-logs", labelKey: "admin.nav.tab.audit_logs" },
+      { href: "/bucket3/service-logs", labelKey: "admin.nav.tab.bucket3.service_logs" },
+      { href: "/bucket3/unverified-accounts", labelKey: "admin.nav.tab.bucket3.unverified_accounts" },
+    ],
+    visibility: "section_marketplace_ops",
+  },
+
+  // 8 ── Settings (full for super, company-scoped for non-super) ────────
+  {
+    key: "settings",
+    labelKey: "admin.nav.section.settings",
+    labelFallback: "Settings",
+    icon: "/icons/menu/settings.svg",
+    defaultHref: "/settings/pricing-rules",
+    tabs: [
+      // NEW placeholder — replaces /operator/commission-settings and will
+      // later host unified Markup + Commission rules.
+      { href: "/settings/pricing-rules", labelKey: "admin.nav.tab.pricing_rules" },
+      // RBAC — UI-level filters company-scoped roles for non-super viewers
+      // (see /platform/rbac/page.tsx). Backend whitelist is a separate task.
+      { href: "/platform/rbac", labelKey: "admin.nav.tab.rbac" },
+      // Localization
+      { href: "/localization/languages", labelKey: "admin.nav.tab.languages", superAdminOnly: true },
+      { href: "/localization/ui-translations", labelKey: "admin.nav.tab.ui_strings", superAdminOnly: true },
+      { href: "/localization/translations", labelKey: "admin.nav.tab.content_translations" },
+      // Content templates
+      { href: "/localization/templates", labelKey: "admin.nav.tab.email_templates" },
       { href: "/platform/banners", labelKey: "admin.nav.tab.banners", superAdminOnly: true },
       { href: "/pages", labelKey: "admin.nav.tab.cms_pages" },
       { href: "/platform/notifications", labelKey: "admin.nav.tab.system_notifications" },
       { href: "/platform/newsletter", labelKey: "admin.nav.tab.newsletter", moduleKey: "ops.newsletter" },
-      { href: "/localization/templates", labelKey: "admin.nav.tab.email_templates" },
-      { href: "/platform/settings/header-menu", labelKey: "admin.nav.tab.header_menu" },
-      { href: "/platform/settings/footer", labelKey: "admin.nav.tab.footer" },
-    ],
-    visibility: "platform_admin",
-  },
-  {
-    key: "localization",
-    labelKey: "admin.nav.group.localization",
-    icon: "/icons/menu/translation.svg",
-    defaultHref: "/localization/ui-translations",
-    tabs: [
-      { href: "/localization/ui-translations", labelKey: "admin.nav.tab.ui_strings", superAdminOnly: true },
-      { href: "/localization/translations", labelKey: "admin.nav.tab.content_translations" },
-      { href: "/localization/languages", labelKey: "admin.nav.tab.languages" },
-    ],
-    visibility: "localization",
-  },
-  {
-    key: "operations",
-    labelKey: "admin.nav.group.operations",
-    icon: "/icons/menu/connection.svg",
-    defaultHref: "/connections",
-    tabs: [
+      { href: "/platform/settings/header-menu", labelKey: "admin.nav.tab.header_menu", superAdminOnly: true },
+      { href: "/platform/settings/footer", labelKey: "admin.nav.tab.footer", superAdminOnly: true },
+      // Loyalty & promo rules
+      { href: "/platform/loyalty", labelKey: "admin.nav.tab.loyalty_programs", moduleKey: "ops.loyalty" },
+      // Inventory configuration (formerly Bucket3 admin-only)
+      { href: "/bucket3/block-dates", labelKey: "admin.nav.tab.bucket3.block_dates" },
+      { href: "/bucket3/custom-fields", labelKey: "admin.nav.tab.bucket3.custom_fields" },
+      { href: "/bucket3/service-catalog", labelKey: "admin.nav.tab.bucket3.service_catalog" },
+      // General platform settings
+      { href: "/platform/security", labelKey: "admin.nav.tab.security", superAdminOnly: true },
+      { href: "/platform/webhooks", labelKey: "admin.nav.tab.webhooks", superAdminOnly: true },
+      { href: "/platform/locations", labelKey: "admin.nav.tab.locations", superAdminOnly: true },
+      { href: "/platform/api-docs", labelKey: "admin.nav.tab.api_docs", superAdminOnly: true },
+      { href: "/platform/settings/brand", labelKey: "admin.nav.tab.brand_settings", superAdminOnly: true },
       { href: "/connections", labelKey: "admin.nav.tab.connections", moduleKey: "ops.connections" },
       { href: "/support/tickets", labelKey: "admin.nav.tab.support" },
       { href: "/platform/reviews", labelKey: "admin.nav.tab.reviews", moduleKey: "ops.reviews" },
-      // /statistics hidden from sidebar (Phase 4.2) — current page shows raw JSON dump, not a usable visualization.
-      // Will be brought back as HF-2 (parking lot) with proper charts/KPI cards.
     ],
-    visibility: "platform_admin",
-  },
-  {
-    key: "loyalty_promo",
-    labelKey: "admin.nav.group.loyalty_promo",
-    icon: "/icons/menu/star.svg",
-    defaultHref: "/platform/loyalty",
-    tabs: [
-      { href: "/platform/loyalty", labelKey: "admin.nav.tab.loyalty_programs", moduleKey: "ops.loyalty" },
-    ],
-    visibility: "platform_admin",
-  },
-  {
-    key: "bucket3",
-    labelKey: "admin.nav.group.bucket3",
-    icon: "/icons/menu/banner.svg",
-    defaultHref: "/bucket3/customers",
-    tabs: [
-      // Phase 6.4 — /bucket3/customers + /bucket3/unverified-accounts merged into
-      // /platform/users with a Type filter (customers / staff / unverified).
-      // The routes still exist for direct linking but are hidden from sidebar.
-      // /platform/packages moved to My Inventory group (Phase 5.1)
-      { href: "/bucket3/block-dates", labelKey: "admin.nav.tab.bucket3.block_dates" },
-      { href: "/bucket3/per-x-invoicing", labelKey: "admin.nav.tab.bucket3.per_x_invoicing" },
-      { href: "/bucket3/custom-fields", labelKey: "admin.nav.tab.bucket3.custom_fields" },
-      { href: "/bucket3/employees", labelKey: "admin.nav.tab.bucket3.employees" },
-      // Phase 6.5 — /bucket3/bulk-notifications merged into /platform/notifications
-      // (route preserved; bulk-send button is on the unified notifications page).
-      { href: "/bucket3/requests", labelKey: "admin.nav.tab.bucket3.requests" },
-      { href: "/bucket3/service-logs", labelKey: "admin.nav.tab.bucket3.service_logs" },
-      { href: "/bucket3/cases", labelKey: "admin.nav.tab.bucket3.cases" },
-      { href: "/bucket3/subscriptions", labelKey: "admin.nav.tab.bucket3.subscriptions" },
-      { href: "/bucket3/service-catalog", labelKey: "admin.nav.tab.bucket3.service_catalog" },
-      { href: "/bucket3/non-service-hours", labelKey: "admin.nav.tab.bucket3.non_service_hours" },
-      { href: "/bucket3/pin-settings", labelKey: "admin.nav.tab.bucket3.pin_settings" },
-      { href: "/bucket3/payroll", labelKey: "admin.nav.tab.bucket3.payroll" },
-    ],
-    visibility: "bucket3",
-  },
-  {
-    key: "system",
-    labelKey: "admin.nav.group.system",
-    icon: "/icons/menu/settings.svg",
-    defaultHref: "/platform/rbac",
-    tabs: [
-      { href: "/platform/rbac", labelKey: "admin.nav.tab.rbac" },
-      { href: "/platform/security", labelKey: "admin.nav.tab.security" },
-      { href: "/platform/webhooks", labelKey: "admin.nav.tab.webhooks" },
-      { href: "/platform/locations", labelKey: "admin.nav.tab.locations", superAdminOnly: true },
-      { href: "/platform/audit-logs", labelKey: "admin.nav.tab.audit_logs" },
-      { href: "/platform/api-docs", labelKey: "admin.nav.tab.api_docs" },
-      { href: "/platform/settings/brand", labelKey: "admin.nav.tab.brand_settings" },
-    ],
-    visibility: "super_admin",
+    visibility: "section_settings",
   },
 ];
 
@@ -365,6 +367,18 @@ export function resolveAdminPageTitle(pathname: string, t: (key: string) => stri
   return parts.map((p) => p.replace(/-/g, " ")).join(" / ");
 }
 
+// ─── Alias prefixes for the 8-section IA ──────────────────────────────────
+// Routes that belong to a section but aren't listed as a tab. Keeps the
+// sidebar active-highlight working when:
+//   - Super admin switches Inventory scope to "all" (/inventory/*)
+//   - A user lands on a Settings sub-page (e.g. /settings/foo)
+//   - Bucket3 routes still in the My Company / Settings sections
+const SECTION_ALIAS_PREFIXES: Array<{ prefix: string; groupKey: string }> = [
+  { prefix: "/inventory/", groupKey: "inventory" },
+  { prefix: "/operator/commission-settings", groupKey: "settings" },
+  { prefix: "/settings/", groupKey: "settings" },
+];
+
 // ─── Helper: find the active group for a pathname ──────────────────────────
 export function findActiveGroup(pathname: string): AdminNavGroup | null {
   // Prefer most-specific match (longest defaultHref or tab.href that
@@ -380,5 +394,14 @@ export function findActiveGroup(pathname: string): AdminNavGroup | null {
       }
     }
   }
-  return best?.group ?? null;
+  if (best) return best.group;
+
+  // Fall back to alias prefix lookup (8-section IA).
+  for (const alias of SECTION_ALIAS_PREFIXES) {
+    if (pathname === alias.prefix.replace(/\/$/, "") || pathname.startsWith(alias.prefix)) {
+      const group = ADMIN_NAV_GROUPS.find((g) => g.key === alias.groupKey);
+      if (group) return group;
+    }
+  }
+  return null;
 }

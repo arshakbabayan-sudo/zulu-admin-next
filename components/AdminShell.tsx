@@ -21,11 +21,19 @@ import {
 } from "@/lib/admin-nav-config";
 import {
   canAccessAgentToolsNav,
+  canAccessBookingsSection,
+  canAccessDashboardSection,
+  canAccessFinanceSection,
   canAccessInventoryOversightNav,
+  canAccessInventorySection,
   canAccessLocalizationSectionNav,
+  canAccessMarketplaceOpsSection,
+  canAccessMyCompanySection,
   canAccessNotificationsNav,
   canAccessOperatorToolsNav,
   canAccessPlatformAdminNav,
+  canAccessSalesWorkspaceSection,
+  canAccessSettingsSection,
   canAccessSuperAdminOnlyPlatformNav,
   userHasModuleAccess,
   userHasPermission,
@@ -620,6 +628,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           {(() => {
             const isGroupVisible = (g: AdminNavGroup): boolean => {
               switch (g.visibility) {
+                // legacy keys (still used by any leftover importer)
                 case "always":
                   return true;
                 case "platform_admin":
@@ -633,10 +642,26 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 case "super_admin":
                   return showSuperAdminOnlyPlatform;
                 case "bucket3":
-                  // Bucket-3 placeholders: same gate as platform admin for now.
                   return showPlatform;
                 case "agent_tools":
                   return showAgentTools;
+                // 2026-05-24 — 8-section IA keys
+                case "section_dashboard":
+                  return canAccessDashboardSection(user);
+                case "section_inventory":
+                  return canAccessInventorySection(user);
+                case "section_bookings":
+                  return canAccessBookingsSection(user);
+                case "section_sales_workspace":
+                  return canAccessSalesWorkspaceSection(user);
+                case "section_finance":
+                  return canAccessFinanceSection(user);
+                case "section_my_company":
+                  return canAccessMyCompanySection(user);
+                case "section_marketplace_ops":
+                  return canAccessMarketplaceOpsSection(user);
+                case "section_settings":
+                  return canAccessSettingsSection(user);
                 default:
                   return false;
               }
@@ -680,6 +705,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               const firstVisibleTab = g.tabs.find(isTabVisible);
               const href = firstVisibleTab?.href ?? g.defaultHref;
               const active = activeGroup?.key === g.key;
+              // Fallback label kicks in when the translation row is not yet
+              // seeded (t() returns the key itself). Keeps the new section
+              // names readable until the ui_translations rows ship.
+              const rawLabel = t(g.labelKey);
+              const label = rawLabel === g.labelKey && g.labelFallback ? g.labelFallback : rawLabel;
               return (
                 <Link
                   key={g.key}
@@ -688,11 +718,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   className={`flex items-center rounded-lg px-3 py-2 transition ${
                     active ? "shadow-sm" : "text-slate-700 hover:bg-slate-100"
                   } ${sidebarOpen ? "gap-2" : "justify-center"}`}
-                  title={t(g.labelKey)}
+                  title={label}
                   style={active ? { backgroundColor: "var(--admin-primary-soft)", color: "var(--admin-primary)" } : undefined}
                 >
                   <img src={g.icon} alt="" aria-hidden className="h-4 w-4 shrink-0 opacity-80" />
-                  {sidebarOpen && <span>{t(g.labelKey)}</span>}
+                  {sidebarOpen && <span>{label}</span>}
                 </Link>
               );
             });
