@@ -34,6 +34,10 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+} from "@/components/ui/v2";
 import { useCallback, useEffect, useState } from "react";
 
 const TYPES = ["vacation", "sick", "personal", "unpaid", "other"] as const;
@@ -280,12 +284,33 @@ export default function Bucket3NonServiceHoursPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "My company", href: "/bucket3/employees" },
+          { label: t("admin.bucket3.non_service_hours.title") },
+        ]}
         title={t("admin.bucket3.non_service_hours.title")}
         subtitle={t("admin.bucket3.non_service_hours.subtitle")}
       />
 
+      <SectionTabs
+        activeHref="/bucket3/non-service-hours"
+        items={[
+          { href: "/bucket3/employees", label: "Employees" },
+          { href: "/bucket3/payroll", label: "Payroll" },
+          { href: "/bucket3/non-service-hours", label: "Non-service hours" },
+          { href: "/bucket3/cases", label: "Cases" },
+          { href: "/bucket3/bulk-notifications", label: "Bulk notifications" },
+          { href: "/bucket3/pin-settings", label: "PIN settings" },
+          { href: "/bucket3/customers", label: "Customers" },
+          { href: "/bucket3/subscriptions", label: "Subscriptions" },
+          { href: "/bucket3/per-x-invoicing", label: "Per-X invoicing" },
+        ]}
+      />
+
+      <div className="space-y-6">
       {err && (
         <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
           {err}
@@ -504,6 +529,7 @@ export default function Bucket3NonServiceHoursPage() {
           onPage={(p) => setPage(p)}
         />
       )}
+      </div>
     </div>
   );
 }

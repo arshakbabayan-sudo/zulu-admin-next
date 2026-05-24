@@ -46,6 +46,10 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+} from "@/components/ui/v2";
 import { useCallback, useEffect, useState } from "react";
 
 export default function Bucket3RequestsPage() {
@@ -140,8 +144,13 @@ export default function Bucket3RequestsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Marketplace ops", href: "/platform/approvals" },
+          { label: t("admin.bucket3.requests.title") },
+        ]}
         title={t("admin.bucket3.requests.title")}
         subtitle={
           meta
@@ -157,6 +166,22 @@ export default function Bucket3RequestsPage() {
           </Button>
         }
       />
+
+      <SectionTabs
+        activeHref="/bucket3/requests"
+        items={[
+          { href: "/platform/approvals", label: "Approval queue" },
+          { href: "/platform/companies", label: "Companies access" },
+          { href: "/platform/seller-applications", label: "Seller applications" },
+          { href: "/platform/contracts", label: "Partnership agreements" },
+          { href: "/platform/contract-templates", label: "Contract templates" },
+          { href: "/platform/audit-logs", label: "Audit logs" },
+          { href: "/bucket3/service-logs", label: "Service logs" },
+          { href: "/bucket3/unverified-accounts", label: "Unverified accounts" },
+        ]}
+      />
+
+      <div className="space-y-6">
 
       <div className="admin-card p-4">
         <div className="flex flex-wrap items-center gap-3">
@@ -389,6 +414,7 @@ export default function Bucket3RequestsPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

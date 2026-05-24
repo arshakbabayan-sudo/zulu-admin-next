@@ -23,6 +23,10 @@ import {
   PageHeader,
   Select,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+} from "@/components/ui/v2";
 
 const CHANNELS = ["in_app", "email"] as const;
 
@@ -117,9 +121,41 @@ export default function LocalizationTemplatesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader title={t("admin.localization_templates.title")} />
+    <div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Settings", href: "/settings/pricing-rules" },
+          { label: t("admin.localization_templates.title") },
+        ]}
+        title={t("admin.localization_templates.title")}
+      />
 
+      <SectionTabs
+        activeHref="/localization/templates"
+        items={[
+          { href: "/settings/pricing-rules", label: "Pricing rules" },
+          { href: "/settings/money-flow", label: "Money flow" },
+          { href: "/localization/languages", label: "Languages" },
+          { href: "/localization/templates", label: "Email templates" },
+          { href: "/platform/banners", label: "Banners" },
+          { href: "/pages", label: "CMS pages" },
+          { href: "/platform/notifications", label: "System notifications" },
+          { href: "/platform/newsletter", label: "Newsletter" },
+          { href: "/platform/loyalty", label: "Loyalty" },
+          { href: "/bucket3/block-dates", label: "Block dates" },
+          { href: "/bucket3/custom-fields", label: "Custom fields" },
+          { href: "/platform/security", label: "Security" },
+          { href: "/platform/webhooks", label: "Webhooks" },
+          { href: "/platform/locations", label: "Locations" },
+          { href: "/platform/settings/brand", label: "Brand" },
+          { href: "/connections", label: "Connections" },
+          { href: "/support/tickets", label: "Support" },
+          { href: "/platform/reviews", label: "Reviews" },
+        ]}
+      />
+
+      <div className="space-y-6">
       {msg && (
         <div className="rounded-zulu border border-success-100 bg-success-50 px-4 py-2 text-sm text-success-700">{msg}</div>
       )}
@@ -184,6 +220,7 @@ export default function LocalizationTemplatesPage() {
           onChange={(e) => setIsActive(e.target.checked)}
           label={t("admin.localization_templates.field_active")}
         />
+      </div>
       </div>
     </div>
   );

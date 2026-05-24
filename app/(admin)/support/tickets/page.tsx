@@ -26,6 +26,14 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  FilterCard,
+  FilterField,
+  V2Card,
+  V2Button,
+} from "@/components/ui/v2";
 
 const STATUSES = ["open", "pending", "resolved", "closed"] as const;
 const PRIORITIES = ["low", "medium", "high"] as const;
@@ -86,50 +94,81 @@ export default function SupportTicketsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader title={t("admin.support.tickets_title")} />
+    <div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Settings", href: "/settings/pricing-rules" },
+          { label: t("admin.support.tickets_title") },
+        ]}
+        title={t("admin.support.tickets_title")}
+      />
 
-      <div className="admin-card p-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <FormField label={t("admin.support.status")} htmlFor="t-status" className="min-w-[140px]">
-            <Select id="t-status" fieldSize="sm" value={statusFilter} onChange={(e) => { setPage(1); setStatusFilter(e.target.value); }}>
-              <option value="">{t("common.all")}</option>
-              {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-            </Select>
-          </FormField>
-          <FormField label={t("admin.support.priority")} htmlFor="t-pri" className="min-w-[140px]">
-            <Select id="t-pri" fieldSize="sm" value={priorityFilter} onChange={(e) => { setPage(1); setPriorityFilter(e.target.value); }}>
-              <option value="">{t("common.all")}</option>
-              {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
-            </Select>
-          </FormField>
-          <FormField label={t("admin.support.search_subject")} htmlFor="t-q" className="flex-1 min-w-[200px]">
+      <SectionTabs
+        activeHref="/support/tickets"
+        items={[
+          { href: "/settings/pricing-rules", label: "Pricing rules" },
+          { href: "/settings/money-flow", label: "Money flow" },
+          { href: "/localization/languages", label: "Languages" },
+          { href: "/localization/templates", label: "Email templates" },
+          { href: "/platform/banners", label: "Banners" },
+          { href: "/pages", label: "CMS pages" },
+          { href: "/platform/notifications", label: "System notifications" },
+          { href: "/platform/newsletter", label: "Newsletter" },
+          { href: "/platform/loyalty", label: "Loyalty" },
+          { href: "/bucket3/block-dates", label: "Block dates" },
+          { href: "/bucket3/custom-fields", label: "Custom fields" },
+          { href: "/platform/security", label: "Security" },
+          { href: "/platform/webhooks", label: "Webhooks" },
+          { href: "/platform/locations", label: "Locations" },
+          { href: "/platform/settings/brand", label: "Brand" },
+          { href: "/connections", label: "Connections" },
+          { href: "/support/tickets", label: "Support", count: meta?.total },
+          { href: "/platform/reviews", label: "Reviews" },
+        ]}
+      />
+
+      <FilterCard>
+        <FilterField label={t("admin.support.status")} minWidth={140}>
+          <Select id="t-status" fieldSize="sm" value={statusFilter} onChange={(e) => { setPage(1); setStatusFilter(e.target.value); }} className="!h-[34px]">
+            <option value="">{t("common.all")}</option>
+            {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+          </Select>
+        </FilterField>
+        <FilterField label={t("admin.support.priority")} minWidth={140}>
+          <Select id="t-pri" fieldSize="sm" value={priorityFilter} onChange={(e) => { setPage(1); setPriorityFilter(e.target.value); }} className="!h-[34px]">
+            <option value="">{t("common.all")}</option>
+            {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
+          </Select>
+        </FilterField>
+        <FilterField label={t("admin.support.search_subject")} minWidth={200}>
+          <Input
+            id="t-q"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onBlur={() => setPage(1)}
+            placeholder={t("admin.support.placeholder_substring")}
+            className="!h-[34px]"
+          />
+        </FilterField>
+        {isSuper && (
+          <FilterField label={t("admin.support.company_id")} minWidth={140}>
             <Input
-              id="t-q"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              id="t-co"
+              value={companyIdFilter}
+              onChange={(e) => setCompanyIdFilter(e.target.value)}
               onBlur={() => setPage(1)}
-              placeholder={t("admin.support.placeholder_substring")}
+              placeholder={t("admin.support.placeholder_all")}
+              className="!h-[34px] tabular-nums"
             />
-          </FormField>
-          {isSuper && (
-            <FormField label={t("admin.support.company_id")} htmlFor="t-co" className="max-w-[140px]">
-              <Input
-                id="t-co"
-                value={companyIdFilter}
-                onChange={(e) => setCompanyIdFilter(e.target.value)}
-                onBlur={() => setPage(1)}
-                placeholder={t("admin.support.placeholder_all")}
-                className="tabular-nums"
-              />
-            </FormField>
-          )}
-          <Button size="sm" onClick={() => { setPage(1); load(); }}>{t("admin.support.apply")}</Button>
-        </div>
-      </div>
+          </FilterField>
+        )}
+        <V2Button size="sm" variant="primary" onClick={() => { setPage(1); load(); }}>{t("admin.support.apply")}</V2Button>
+      </FilterCard>
 
-      {err && <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
+      {err && <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
 
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -161,6 +200,7 @@ export default function SupportTicketsPage() {
           ))}
         </TBody>
       </Table>
+      </V2Card>
 
       {meta && meta.last_page > 1 ? (
         <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />

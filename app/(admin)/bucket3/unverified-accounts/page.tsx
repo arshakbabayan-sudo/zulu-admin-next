@@ -27,6 +27,13 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  FilterCard,
+  FilterField,
+  V2Card,
+} from "@/components/ui/v2";
 import { Search } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -98,8 +105,13 @@ export default function Bucket3UnverifiedAccountsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Marketplace ops", href: "/platform/approvals" },
+          { label: t("admin.bucket3.unverified_accounts.title") },
+        ]}
         title={t("admin.bucket3.unverified_accounts.title")}
         subtitle={
           meta
@@ -108,34 +120,53 @@ export default function Bucket3UnverifiedAccountsPage() {
         }
       />
 
-      <div className="admin-card p-4">
-        <div className="relative max-w-md">
-          <Search
-            aria-hidden
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-t6"
-          />
-          <input
-            type="search"
-            value={searchDraft}
-            onChange={(e) => setSearchDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                setPage(1);
-                setSearch(searchDraft.trim());
-              }
-            }}
-            placeholder={t("admin.bucket3.unverified_accounts.search_placeholder")}
-            className="h-10 w-full rounded-zulu border border-default bg-white pl-9 pr-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
-          />
-        </div>
-      </div>
+      <SectionTabs
+        activeHref="/bucket3/unverified-accounts"
+        items={[
+          { href: "/platform/approvals", label: "Approval queue" },
+          { href: "/platform/companies", label: "Companies access" },
+          { href: "/platform/seller-applications", label: "Seller applications" },
+          { href: "/platform/contracts", label: "Partnership agreements" },
+          { href: "/platform/contract-templates", label: "Contract templates" },
+          { href: "/platform/audit-logs", label: "Audit logs" },
+          { href: "/bucket3/service-logs", label: "Service logs" },
+          { href: "/bucket3/unverified-accounts", label: "Unverified accounts", count: meta?.total },
+        ]}
+      />
+
+      <FilterCard>
+        <FilterField label="Search" minWidth={240}>
+          <div className="relative">
+            <Search
+              aria-hidden
+              className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2"
+              style={{ color: "var(--admin-text-tertiary)" }}
+            />
+            <input
+              type="search"
+              value={searchDraft}
+              onChange={(e) => setSearchDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  setPage(1);
+                  setSearch(searchDraft.trim());
+                }
+              }}
+              placeholder={t("admin.bucket3.unverified_accounts.search_placeholder")}
+              className="h-[34px] w-full rounded-md border bg-white pl-8 pr-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+              style={{ borderColor: "var(--admin-border)" }}
+            />
+          </div>
+        </FilterField>
+      </FilterCard>
 
       {err && (
-        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
+        <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
           {err}
         </div>
       )}
 
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -179,6 +210,7 @@ export default function Bucket3UnverifiedAccountsPage() {
           ))}
         </TBody>
       </Table>
+      </V2Card>
 
       {meta && meta.last_page > 1 && (
         <Pagination

@@ -30,6 +30,10 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+} from "@/components/ui/v2";
 import { useCallback, useEffect, useState } from "react";
 
 type FieldType = "text" | "number" | "boolean" | "select" | "multi_select" | "date";
@@ -215,8 +219,13 @@ export default function Bucket3CustomFieldsPage() {
   const showOptions = form.field_type === "select" || form.field_type === "multi_select";
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Settings", href: "/settings/pricing-rules" },
+          { label: t("admin.bucket3.custom_fields.title") },
+        ]}
         title={t("admin.bucket3.custom_fields.title")}
         subtitle={
           data
@@ -225,6 +234,31 @@ export default function Bucket3CustomFieldsPage() {
         }
       />
 
+      <SectionTabs
+        activeHref="/bucket3/custom-fields"
+        items={[
+          { href: "/settings/pricing-rules", label: "Pricing rules" },
+          { href: "/settings/money-flow", label: "Money flow" },
+          { href: "/localization/languages", label: "Languages" },
+          { href: "/localization/templates", label: "Email templates" },
+          { href: "/platform/banners", label: "Banners" },
+          { href: "/pages", label: "CMS pages" },
+          { href: "/platform/notifications", label: "System notifications" },
+          { href: "/platform/newsletter", label: "Newsletter" },
+          { href: "/platform/loyalty", label: "Loyalty" },
+          { href: "/bucket3/block-dates", label: "Block dates" },
+          { href: "/bucket3/custom-fields", label: "Custom fields" },
+          { href: "/platform/security", label: "Security" },
+          { href: "/platform/webhooks", label: "Webhooks" },
+          { href: "/platform/locations", label: "Locations" },
+          { href: "/platform/settings/brand", label: "Brand" },
+          { href: "/connections", label: "Connections" },
+          { href: "/support/tickets", label: "Support" },
+          { href: "/platform/reviews", label: "Reviews" },
+        ]}
+      />
+
+      <div className="space-y-6">
       {err && (
         <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
           {err}
@@ -402,6 +436,7 @@ export default function Bucket3CustomFieldsPage() {
           ))}
         </TBody>
       </Table>
+      </div>
     </div>
   );
 }

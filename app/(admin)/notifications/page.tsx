@@ -29,6 +29,10 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  V2Card,
+} from "@/components/ui/v2";
 
 export default function NotificationsPage() {
   const { token, user } = useAdminAuth();
@@ -116,8 +120,12 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: t("admin.notifications.title") },
+        ]}
         title={t("admin.notifications.title")}
         subtitle={unreadCount !== null ? `${t("admin.notifications.unread")}: ${unreadCount}` : undefined}
         actions={
@@ -132,8 +140,9 @@ export default function NotificationsPage() {
         }
       />
 
-      {err && <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
+      {err && <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
 
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -178,12 +187,13 @@ export default function NotificationsPage() {
           ))}
         </TBody>
       </Table>
+      </V2Card>
 
       {meta && meta.last_page > 1 ? (
         <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />
       ) : null}
 
-      <p className="text-xs text-fg-t7">{t("admin.notifications.footer_help")}</p>
+      <p className="text-xs text-fg-t7 mt-4">{t("admin.notifications.footer_help")}</p>
     </div>
   );
 }

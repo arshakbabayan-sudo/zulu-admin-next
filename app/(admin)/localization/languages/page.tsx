@@ -41,6 +41,11 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  V2Card,
+} from "@/components/ui/v2";
 import { Info, Pencil, Trash2, Plus } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -462,13 +467,18 @@ export default function LocalizationLanguagesPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div>
       {showAdd && <AddModal onClose={() => setShowAdd(false)} onAdd={handleAdd} />}
       {editRow && (
         <EditModal row={editRow} onClose={() => setEditRow(null)} onSave={handleEdit} />
       )}
 
-      <PageHeader
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Settings", href: "/settings/pricing-rules" },
+          { label: t("admin.languages.title") },
+        ]}
         title={t("admin.languages.title")}
         actions={
           <Button size="sm" onClick={() => setShowAdd(true)}>
@@ -478,12 +488,37 @@ export default function LocalizationLanguagesPage() {
         }
       />
 
+      <SectionTabs
+        activeHref="/localization/languages"
+        items={[
+          { href: "/settings/pricing-rules", label: "Pricing rules" },
+          { href: "/settings/money-flow", label: "Money flow" },
+          { href: "/localization/languages", label: "Languages" },
+          { href: "/localization/templates", label: "Email templates" },
+          { href: "/platform/banners", label: "Banners" },
+          { href: "/pages", label: "CMS pages" },
+          { href: "/platform/notifications", label: "System notifications" },
+          { href: "/platform/newsletter", label: "Newsletter" },
+          { href: "/platform/loyalty", label: "Loyalty" },
+          { href: "/bucket3/block-dates", label: "Block dates" },
+          { href: "/bucket3/custom-fields", label: "Custom fields" },
+          { href: "/platform/security", label: "Security" },
+          { href: "/platform/webhooks", label: "Webhooks" },
+          { href: "/platform/locations", label: "Locations" },
+          { href: "/platform/settings/brand", label: "Brand" },
+          { href: "/connections", label: "Connections" },
+          { href: "/support/tickets", label: "Support" },
+          { href: "/platform/reviews", label: "Reviews" },
+        ]}
+      />
+
       {err && (
-        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
+        <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
           {err}
         </div>
       )}
 
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -564,8 +599,9 @@ export default function LocalizationLanguagesPage() {
           ))}
         </TBody>
       </Table>
+      </V2Card>
 
-      {token && <AiTranslatorPanel token={token} />}
+      {token && <div className="mt-6"><AiTranslatorPanel token={token} /></div>}
     </div>
   );
 }

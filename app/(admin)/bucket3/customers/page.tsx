@@ -26,7 +26,6 @@ import {
 } from "@/lib/customers-api";
 import { formatDate } from "@/lib/format";
 import {
-  Button,
   PageHeader,
   Pagination,
   Select,
@@ -39,6 +38,14 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  FilterCard,
+  FilterField,
+  V2Card,
+  V2Button,
+} from "@/components/ui/v2";
 import { RefreshCw, Search } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -91,8 +98,13 @@ export default function Bucket3CustomersPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "My company", href: "/bucket3/employees" },
+          { label: t("admin.bucket3.customers.title") },
+        ]}
         title={t("admin.bucket3.customers.title")}
         subtitle={
           meta
@@ -104,12 +116,28 @@ export default function Bucket3CustomersPage() {
         }
       />
 
-      <div className="admin-card p-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[220px]">
+      <SectionTabs
+        activeHref="/bucket3/customers"
+        items={[
+          { href: "/bucket3/employees", label: "Employees" },
+          { href: "/bucket3/payroll", label: "Payroll" },
+          { href: "/bucket3/non-service-hours", label: "Non-service hours" },
+          { href: "/bucket3/cases", label: "Cases" },
+          { href: "/bucket3/bulk-notifications", label: "Bulk notifications" },
+          { href: "/bucket3/pin-settings", label: "PIN settings" },
+          { href: "/bucket3/customers", label: "Customers", count: meta?.total },
+          { href: "/bucket3/subscriptions", label: "Subscriptions" },
+          { href: "/bucket3/per-x-invoicing", label: "Per-X invoicing" },
+        ]}
+      />
+
+      <FilterCard>
+        <FilterField label="Search" minWidth={240}>
+          <div className="relative">
             <Search
               aria-hidden
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-t6"
+              className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2"
+              style={{ color: "var(--admin-text-tertiary)" }}
             />
             <input
               type="search"
@@ -122,49 +150,44 @@ export default function Bucket3CustomersPage() {
                 }
               }}
               placeholder={t("admin.bucket3.customers.search_placeholder")}
-              className="h-10 w-full rounded-zulu border border-default bg-white pl-9 pr-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+              className="h-[34px] w-full rounded-md border bg-white pl-8 pr-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+              style={{ borderColor: "var(--admin-border)" }}
             />
           </div>
-          <Button
-            size="sm"
-            onClick={() => {
+        </FilterField>
+        <FilterField label={t("admin.bucket3.customers.filter.status")}>
+          <Select
+            fieldSize="sm"
+            value={statusFilter}
+            onChange={(e) => {
               setPage(1);
-              setSearch(searchDraft.trim());
+              setStatusFilter(e.target.value);
             }}
+            className="!h-[34px] !min-w-[140px]"
           >
-            {t("common.apply")}
-          </Button>
-          <label className="flex items-center gap-2 text-sm text-fg-t6">
-            <span className="font-medium text-fg-t7">{t("admin.bucket3.customers.filter.status")}</span>
-            <Select
-              fieldSize="sm"
-              value={statusFilter}
-              onChange={(e) => {
-                setPage(1);
-                setStatusFilter(e.target.value);
-              }}
-              className="!w-auto min-w-[140px]"
-            >
-              {CUSTOMER_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s ? s.charAt(0).toUpperCase() + s.slice(1) : t("common.all")}
-                </option>
-              ))}
-            </Select>
-          </label>
-          <Button variant="outline" size="sm" onClick={() => void load()}>
-            <RefreshCw className="h-4 w-4" aria-hidden />
-            {t("admin.bucket3.customers.refresh")}
-          </Button>
-        </div>
-      </div>
+            {CUSTOMER_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s ? s.charAt(0).toUpperCase() + s.slice(1) : t("common.all")}
+              </option>
+            ))}
+          </Select>
+        </FilterField>
+        <V2Button size="sm" variant="primary" onClick={() => { setPage(1); setSearch(searchDraft.trim()); }}>
+          {t("common.apply")}
+        </V2Button>
+        <V2Button size="sm" onClick={() => void load()}>
+          <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+          {t("admin.bucket3.customers.refresh")}
+        </V2Button>
+      </FilterCard>
 
       {err && (
-        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
+        <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
           {err}
         </div>
       )}
 
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -202,6 +225,7 @@ export default function Bucket3CustomersPage() {
           ))}
         </TBody>
       </Table>
+      </V2Card>
 
       {meta && meta.last_page > 1 && (
         <Pagination

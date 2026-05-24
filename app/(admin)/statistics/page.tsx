@@ -28,6 +28,9 @@ import { ApiRequestError } from "@/lib/api-client";
 import { apiOperatorStatistics } from "@/lib/platform-admin-api";
 import { useCallback, useEffect, useState } from "react";
 import { Button, FormField, Input, PageHeader } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+} from "@/components/ui/v2";
 
 export default function OperatorStatisticsPage() {
   const { token, user } = useAdminAuth();
@@ -85,9 +88,16 @@ export default function OperatorStatisticsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader title={t("admin.operator_statistics.title")} />
+    <div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: t("admin.operator_statistics.title") },
+        ]}
+        title={t("admin.operator_statistics.title")}
+      />
 
+      <div className="space-y-6">
       {isSuper && (
         <div className="admin-card p-4">
           <div className="flex flex-wrap items-end gap-3">
@@ -121,6 +131,7 @@ export default function OperatorStatisticsPage() {
           {JSON.stringify(payload, null, 2)}
         </pre>
       )}
+      </div>
     </div>
   );
 }

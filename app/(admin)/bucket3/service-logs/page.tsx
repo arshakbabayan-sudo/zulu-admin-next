@@ -31,6 +31,13 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  FilterCard,
+  FilterField,
+  V2Card,
+} from "@/components/ui/v2";
 import { Search } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -109,8 +116,13 @@ export default function Bucket3ServiceLogsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Marketplace ops", href: "/platform/approvals" },
+          { label: t("admin.bucket3.service_logs.title") },
+        ]}
         title={t("admin.bucket3.service_logs.title")}
         subtitle={
           meta
@@ -130,12 +142,27 @@ export default function Bucket3ServiceLogsPage() {
         }
       />
 
-      <div className="admin-card p-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[200px]">
+      <SectionTabs
+        activeHref="/bucket3/service-logs"
+        items={[
+          { href: "/platform/approvals", label: "Approval queue" },
+          { href: "/platform/companies", label: "Companies access" },
+          { href: "/platform/seller-applications", label: "Seller applications" },
+          { href: "/platform/contracts", label: "Partnership agreements" },
+          { href: "/platform/contract-templates", label: "Contract templates" },
+          { href: "/platform/audit-logs", label: "Audit logs" },
+          { href: "/bucket3/service-logs", label: "Service logs", count: meta?.total },
+          { href: "/bucket3/unverified-accounts", label: "Unverified accounts" },
+        ]}
+      />
+
+      <FilterCard>
+        <FilterField label="Search" minWidth={220}>
+          <div className="relative">
             <Search
               aria-hidden
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-t6"
+              className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2"
+              style={{ color: "var(--admin-text-tertiary)" }}
             />
             <input
               type="search"
@@ -148,37 +175,38 @@ export default function Bucket3ServiceLogsPage() {
                 }
               }}
               placeholder={t("admin.bucket3.service_logs.search_placeholder")}
-              className="h-10 w-full rounded-zulu border border-default bg-white pl-9 pr-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+              className="h-[34px] w-full rounded-md border bg-white pl-8 pr-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+              style={{ borderColor: "var(--admin-border)" }}
             />
           </div>
-          <label className="flex items-center gap-2 text-sm text-fg-t6">
-            <span className="font-medium text-fg-t7">{t("admin.bucket3.service_logs.filter.category")}</span>
-            <Select
-              fieldSize="sm"
-              value={category}
-              onChange={(e) => {
-                setPage(1);
-                setCategory(e.target.value as ServiceCategory | "");
-              }}
-              className="!w-auto min-w-[160px]"
-            >
-              <option value="">{t("admin.bucket3.service_logs.all_categories")}</option>
-              {SERVICE_CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </Select>
-          </label>
-        </div>
-      </div>
+        </FilterField>
+        <FilterField label={t("admin.bucket3.service_logs.filter.category")}>
+          <Select
+            fieldSize="sm"
+            value={category}
+            onChange={(e) => {
+              setPage(1);
+              setCategory(e.target.value as ServiceCategory | "");
+            }}
+            className="!h-[34px] !min-w-[160px]"
+          >
+            <option value="">{t("admin.bucket3.service_logs.all_categories")}</option>
+            {SERVICE_CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </Select>
+        </FilterField>
+      </FilterCard>
 
       {err && (
-        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
+        <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
           {err}
         </div>
       )}
 
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -219,6 +247,7 @@ export default function Bucket3ServiceLogsPage() {
           ))}
         </TBody>
       </Table>
+      </V2Card>
 
       {meta && meta.last_page > 1 && (
         <Pagination

@@ -35,6 +35,11 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  V2Card,
+} from "@/components/ui/v2";
 
 function slugify(input: string): string {
   return input
@@ -226,10 +231,15 @@ export default function AdminPagesListPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div>
       <AddPageModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} onSubmit={handleAdd} />
 
-      <PageHeader
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Settings", href: "/settings/pricing-rules" },
+          { label: t("admin.pages.title") },
+        ]}
         title={t("admin.pages.title")}
         actions={
           <Button size="sm" onClick={() => setShowAddModal(true)}>
@@ -238,8 +248,33 @@ export default function AdminPagesListPage() {
         }
       />
 
-      {err && <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
+      <SectionTabs
+        activeHref="/pages"
+        items={[
+          { href: "/settings/pricing-rules", label: "Pricing rules" },
+          { href: "/settings/money-flow", label: "Money flow" },
+          { href: "/localization/languages", label: "Languages" },
+          { href: "/localization/templates", label: "Email templates" },
+          { href: "/platform/banners", label: "Banners" },
+          { href: "/pages", label: "CMS pages" },
+          { href: "/platform/notifications", label: "System notifications" },
+          { href: "/platform/newsletter", label: "Newsletter" },
+          { href: "/platform/loyalty", label: "Loyalty" },
+          { href: "/bucket3/block-dates", label: "Block dates" },
+          { href: "/bucket3/custom-fields", label: "Custom fields" },
+          { href: "/platform/security", label: "Security" },
+          { href: "/platform/webhooks", label: "Webhooks" },
+          { href: "/platform/locations", label: "Locations" },
+          { href: "/platform/settings/brand", label: "Brand" },
+          { href: "/connections", label: "Connections" },
+          { href: "/support/tickets", label: "Support" },
+          { href: "/platform/reviews", label: "Reviews" },
+        ]}
+      />
 
+      {err && <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
+
+      <V2Card>
       <div className={`transition-opacity ${isLoading ? "pointer-events-none opacity-60" : "opacity-100"}`}>
         <Table>
           <THead>
@@ -301,6 +336,7 @@ export default function AdminPagesListPage() {
           </TBody>
         </Table>
       </div>
+      </V2Card>
 
       {meta && meta.last_page > 1 ? (
         <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />

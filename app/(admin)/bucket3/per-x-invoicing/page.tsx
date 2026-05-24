@@ -18,7 +18,6 @@ import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import { formatMoney } from "@/lib/format";
 import type { ApiSuccessEnvelope } from "@/lib/api-envelope";
 import {
-  Button,
   PageHeader,
   Select,
   Table,
@@ -29,6 +28,14 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  FilterCard,
+  FilterField,
+  V2Card,
+  V2Button,
+} from "@/components/ui/v2";
 import { RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -111,43 +118,60 @@ export default function Bucket3PerXInvoicingPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "My company", href: "/bucket3/employees" },
+          { label: t("admin.bucket3.per_x_invoicing.title") },
+        ]}
         title={t("admin.bucket3.per_x_invoicing.title")}
         subtitle={t("admin.bucket3.per_x_invoicing.subtitle")}
       />
 
-      <div className="admin-card p-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-2 text-sm text-fg-t6">
-            <span className="font-medium text-fg-t7">{t("admin.bucket3.per_x_invoicing.group_by")}</span>
-            <Select
-              fieldSize="sm"
-              value={groupBy}
-              onChange={(e) => setGroupBy(e.target.value as GroupBy)}
-              className="!w-auto min-w-[180px]"
-            >
-              <option value="status">{t("admin.bucket3.per_x_invoicing.group.status")}</option>
-              <option value="currency">{t("admin.bucket3.per_x_invoicing.group.currency")}</option>
-              <option value="month">{t("admin.bucket3.per_x_invoicing.group.month")}</option>
-              <option value="operator">{t("admin.bucket3.per_x_invoicing.group.operator")}</option>
-            </Select>
-          </label>
-          <Button variant="outline" size="sm" onClick={() => void load()}>
-            <RefreshCw className="h-4 w-4" aria-hidden />
-            {t("admin.bucket3.per_x_invoicing.refresh")}
-          </Button>
-        </div>
-      </div>
+      <SectionTabs
+        activeHref="/bucket3/per-x-invoicing"
+        items={[
+          { href: "/bucket3/employees", label: "Employees" },
+          { href: "/bucket3/payroll", label: "Payroll" },
+          { href: "/bucket3/non-service-hours", label: "Non-service hours" },
+          { href: "/bucket3/cases", label: "Cases" },
+          { href: "/bucket3/bulk-notifications", label: "Bulk notifications" },
+          { href: "/bucket3/pin-settings", label: "PIN settings" },
+          { href: "/bucket3/customers", label: "Customers" },
+          { href: "/bucket3/subscriptions", label: "Subscriptions" },
+          { href: "/bucket3/per-x-invoicing", label: "Per-X invoicing" },
+        ]}
+      />
+
+      <FilterCard>
+        <FilterField label={t("admin.bucket3.per_x_invoicing.group_by")}>
+          <Select
+            fieldSize="sm"
+            value={groupBy}
+            onChange={(e) => setGroupBy(e.target.value as GroupBy)}
+            className="!h-[34px] !min-w-[180px]"
+          >
+            <option value="status">{t("admin.bucket3.per_x_invoicing.group.status")}</option>
+            <option value="currency">{t("admin.bucket3.per_x_invoicing.group.currency")}</option>
+            <option value="month">{t("admin.bucket3.per_x_invoicing.group.month")}</option>
+            <option value="operator">{t("admin.bucket3.per_x_invoicing.group.operator")}</option>
+          </Select>
+        </FilterField>
+        <V2Button size="sm" onClick={() => void load()}>
+          <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+          {t("admin.bucket3.per_x_invoicing.refresh")}
+        </V2Button>
+      </FilterCard>
 
       {err && (
-        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
+        <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
           {err}
         </div>
       )}
 
       {data && (
-        <section className="admin-card p-4 space-y-2">
+        <section className="admin-card p-4 space-y-2 mb-4">
           <h2 className="text-base font-semibold">{t("admin.bucket3.per_x_invoicing.totals")}</h2>
           <p className="text-sm text-fg-t7">
             {t("admin.bucket3.per_x_invoicing.totals_count")
@@ -170,6 +194,7 @@ export default function Bucket3PerXInvoicingPage() {
         </section>
       )}
 
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -197,6 +222,7 @@ export default function Bucket3PerXInvoicingPage() {
           ))}
         </TBody>
       </Table>
+      </V2Card>
     </div>
   );
 }

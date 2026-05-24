@@ -26,6 +26,10 @@ import {
   PageHeader,
   Select,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+} from "@/components/ui/v2";
 import { useState } from "react";
 
 type Target = "all_b2c" | "all_staff" | "by_company" | "specific_users";
@@ -111,12 +115,33 @@ export default function Bucket3BulkNotificationsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "My company", href: "/bucket3/employees" },
+          { label: t("admin.bucket3.bulk_notifications.title") },
+        ]}
         title={t("admin.bucket3.bulk_notifications.title")}
         subtitle={t("admin.bucket3.bulk_notifications.subtitle")}
       />
 
+      <SectionTabs
+        activeHref="/bucket3/bulk-notifications"
+        items={[
+          { href: "/bucket3/employees", label: "Employees" },
+          { href: "/bucket3/payroll", label: "Payroll" },
+          { href: "/bucket3/non-service-hours", label: "Non-service hours" },
+          { href: "/bucket3/cases", label: "Cases" },
+          { href: "/bucket3/bulk-notifications", label: "Bulk notifications" },
+          { href: "/bucket3/pin-settings", label: "PIN settings" },
+          { href: "/bucket3/customers", label: "Customers" },
+          { href: "/bucket3/subscriptions", label: "Subscriptions" },
+          { href: "/bucket3/per-x-invoicing", label: "Per-X invoicing" },
+        ]}
+      />
+
+      <div className="space-y-6">
       {err && (
         <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
           {err}
@@ -211,6 +236,7 @@ export default function Bucket3BulkNotificationsPage() {
         <Button size="sm" disabled={busy} onClick={() => void handleSend()}>
           {busy ? t("admin.bucket3.bulk_notifications.sending") : t("admin.bucket3.bulk_notifications.send")}
         </Button>
+      </div>
       </div>
     </div>
   );
