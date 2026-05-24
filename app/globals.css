@@ -582,18 +582,48 @@ html.dark input[type="radio"] {
   --admin-border: var(--border-default);
   --admin-header-bg: #ffffff;
 
-  /* Phase 3 admin-redesign 2026-05-24 — design tokens from
-     docs/zulu-admin-single.html (lines 35-48). Used by sidebar,
-     header, cards, buttons, forms across the admin surface. */
+  /* Phase 3+Բ admin-redesign 2026-05-24 — full design tokens from
+     docs/zulu-admin-v2.html (lines 13-39). Used by sidebar, header,
+     cards, buttons, tables, forms across the admin surface. */
   --admin-radius-sm: 6px;
   --admin-radius-md: 8px;
   --admin-radius-lg: 12px;
+
+  /* Text */
   --admin-text-primary: #161343;
   --admin-text-secondary: #717689;
   --admin-text-tertiary: #9CA0B0;
+
+  /* Surfaces */
   --admin-bg-secondary: #FAFBFC;
   --admin-bg-tertiary: #F4F5F7;
+
+  /* Borders */
   --admin-border-hover: #C2C3CC;
+
+  /* Primary (ZuluSpin magenta/purple — kept aligned with v2 --primary-600) */
+  --admin-primary-light: #F2E6F0;
+  --admin-primary-dark: #631351;
+
+  /* Semantic — Success (green) */
+  --admin-success: #318137;
+  --admin-success-light: #E8F6EA;
+  --admin-success-dark: #1F5F25;
+
+  /* Semantic — Warning (amber) */
+  --admin-warning: #FFA000;
+  --admin-warning-light: #FFF8E1;
+  --admin-warning-dark: #B07000;
+
+  /* Semantic — Danger / Error (red) */
+  --admin-danger: #BC3436;
+  --admin-danger-light: #FCEDF0;
+  --admin-danger-dark: #8A2426;
+
+  /* Semantic — Info (blue) */
+  --admin-info: #1770D0;
+  --admin-info-light: #E2F1FD;
+  --admin-info-dark: #145EBE;
 }
 
 @layer utilities {
