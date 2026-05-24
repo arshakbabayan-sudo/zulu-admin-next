@@ -10,7 +10,6 @@ import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
-import { formatDate } from "@/lib/format";
 import {
   apiAdminContractTemplates,
   CONTRACT_LANGUAGES,
@@ -39,13 +38,13 @@ import {
   V2Card,
   V2Button,
 } from "@/components/ui/v2";
-import { Plus, RefreshCw } from "lucide-react";
+import { Download, Plus, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 export default function PlatformContractTemplatesPage() {
   const { token, user } = useAdminAuth();
-  const { lang, t } = useLanguage();
+  const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<ContractTemplateRow[]>([]);
   const [typeFilter, setTypeFilter] = useState<ContractType | "">("");
@@ -97,13 +96,16 @@ export default function PlatformContractTemplatesPage() {
         title={t("admin.contract_templates.title")}
         subtitle={`${rows.length} ${t("admin.contract_templates.meta_count_suffix")}`}
         actions={
-          <Link
-            href="/platform/contract-templates/new"
-            className="inline-flex h-10 items-center gap-2 rounded-md bg-primary-500 px-4 text-ds-button-s font-ds-button-s font-semibold text-white transition hover:bg-purple-dark"
-          >
-            <Plus className="h-4 w-4" aria-hidden />
-            {t("admin.contract_templates.btn_new")}
-          </Link>
+          <>
+            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <Link
+              href="/platform/contract-templates/new"
+              className="inline-flex h-10 items-center gap-2 rounded-md bg-primary-500 px-4 text-ds-button-s font-ds-button-s font-semibold text-white transition hover:bg-purple-dark"
+            >
+              <Plus className="h-4 w-4" aria-hidden />
+              {t("admin.contract_templates.btn_new")}
+            </Link>
+          </>
         }
       />
 
@@ -189,17 +191,43 @@ export default function PlatformContractTemplatesPage() {
           {rows.map((tpl) => (
             <TR key={tpl.id} href={`/platform/contract-templates/${tpl.id}`}>
               <TD className="font-medium text-fg-t8">{tpl.name}</TD>
-              <TD className="text-xs text-fg-t7">{contractTypeLabel(tpl.type)}</TD>
-              <TD className="uppercase text-fg-t7">{tpl.language}</TD>
-              <TD className="font-mono text-xs text-fg-t8">{tpl.version ?? "—"}</TD>
+              <TD>
+                <span
+                  className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                  style={{ backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }}
+                >
+                  {contractTypeLabel(tpl.type)}
+                </span>
+              </TD>
+              <TD>
+                <span
+                  className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                  style={{ backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }}
+                >
+                  {tpl.language}
+                </span>
+              </TD>
+              <TD className="font-mono text-xs text-fg-t8 tabular-nums">{tpl.version ?? "—"}</TD>
               <TD>
                 {tpl.is_published ? (
-                  <span className="text-xs font-medium text-success-700">{t("admin.contract_templates.status_published")}</span>
+                  <span
+                    className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                    style={{ backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" }}
+                  >
+                    {t("admin.contract_templates.status_published")}
+                  </span>
                 ) : (
-                  <span className="text-xs text-fg-t6">{t("admin.contract_templates.status_draft")}</span>
+                  <span
+                    className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                    style={{ backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" }}
+                  >
+                    {t("admin.contract_templates.status_draft")}
+                  </span>
                 )}
               </TD>
-              <TD className="text-xs text-fg-t6">{formatDate(tpl.updated_at, lang)}</TD>
+              <TD className="text-xs text-fg-t6" title={tpl.updated_at ?? undefined}>
+                {formatRelativeTime(tpl.updated_at)}
+              </TD>
             </TR>
           ))}
         </TBody>
@@ -207,4 +235,21 @@ export default function PlatformContractTemplatesPage() {
       </V2Card>
     </div>
   );
+}
+
+// v2 admin-redesign helpers — relative-time.
+function formatRelativeTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "—";
+  const diff = Date.now() - t;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  return new Date(iso).toLocaleDateString();
 }

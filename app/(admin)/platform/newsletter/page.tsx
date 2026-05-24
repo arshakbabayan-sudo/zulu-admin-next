@@ -6,7 +6,6 @@ import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { formatDateTime } from "@/lib/format";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { getApiBaseUrl } from "@/lib/api-base";
 import { ApiRequestError } from "@/lib/api-client";
@@ -42,14 +41,16 @@ import {
   FilterField,
   V2Card,
   V2Button,
+  IconButton,
 } from "@/components/ui/v2";
+import { Download, Trash2 } from "lucide-react";
 
 const SOURCES = ["", "home", "footer", "newsletter-block", "other"];
 const LANGS = ["", "en", "ru", "hy"];
 
 export default function PlatformNewsletterPage() {
   const { token, user } = useAdminAuth();
-  const { t, lang: uiLang } = useLanguage();
+  const { t } = useLanguage();
   const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<NewsletterSubscriptionRow[]>([]);
@@ -159,6 +160,11 @@ export default function PlatformNewsletterPage() {
           { label: t("admin.newsletter.title_long") },
         ]}
         title={t("admin.newsletter.title_long")}
+        actions={
+          <V2Button icon={<Download className="h-4 w-4" />} onClick={exportCsv}>
+            Export
+          </V2Button>
+        }
       />
 
       <SectionTabs
@@ -257,34 +263,88 @@ export default function PlatformNewsletterPage() {
         </THead>
         <TBody>
           {rows.length === 0 ? <TEmpty colSpan={7}>{t("admin.newsletter.empty")}</TEmpty> : null}
-          {rows.map((r) => (
-            <TR key={r.id}>
-              <TD className="tabular-nums">{r.id}</TD>
-              <TD className="font-medium">{r.email}</TD>
-              <TD className="text-xs">{r.lang ?? "—"}</TD>
-              <TD className="text-xs">{r.source ?? "—"}</TD>
-              <TD className="text-xs">{formatDateTime(r.subscribed_at, uiLang)}</TD>
-              <TD className="text-xs">
-                {r.unsubscribed_at ? (
-                  <span className="text-error-600">{formatDateTime(r.unsubscribed_at, uiLang)}</span>
-                ) : (
-                  <span className="text-success-700">{t("admin.newsletter.status_active")}</span>
-                )}
-              </TD>
-              <TD>
-                {!r.unsubscribed_at && (
-                  <button
-                    type="button"
-                    disabled={busyId === r.id}
-                    onClick={() => void handleDelete(r.id)}
-                    className="text-xs text-error-600 underline disabled:opacity-40 hover:text-error-800"
-                  >
-                    {t("admin.newsletter.btn_unsubscribe")}
-                  </button>
-                )}
-              </TD>
-            </TR>
-          ))}
+          {rows.map((r) => {
+            const initials = getInitials(r.email);
+            const tone = pickAvatarTone(r.id);
+            return (
+              <TR key={r.id}>
+                <TD className="tabular-nums text-fg-t7 font-mono text-xs">#{r.id}</TD>
+                <TD>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                      style={avatarStyle(tone)}
+                      aria-hidden
+                    >
+                      {initials}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="font-medium text-fg-t8 truncate">{r.email}</div>
+                      {r.source ? <div className="text-[11px] text-fg-t6 truncate">{r.source}</div> : null}
+                    </div>
+                  </div>
+                </TD>
+                <TD>
+                  {r.lang ? (
+                    <span
+                      className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                      style={{ backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }}
+                    >
+                      {r.lang}
+                    </span>
+                  ) : (
+                    <span className="text-fg-t6">—</span>
+                  )}
+                </TD>
+                <TD>
+                  {r.source ? (
+                    <span
+                      className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                      style={{ backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }}
+                    >
+                      {r.source}
+                    </span>
+                  ) : (
+                    <span className="text-fg-t6">—</span>
+                  )}
+                </TD>
+                <TD className="text-xs text-fg-t6" title={r.subscribed_at ?? undefined}>
+                  {formatRelativeTime(r.subscribed_at)}
+                </TD>
+                <TD>
+                  {r.unsubscribed_at ? (
+                    <span
+                      className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                      style={{ backgroundColor: "var(--admin-danger-light)", color: "var(--admin-danger-dark)" }}
+                      title={r.unsubscribed_at}
+                    >
+                      Unsubscribed
+                    </span>
+                  ) : (
+                    <span
+                      className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                      style={{ backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" }}
+                    >
+                      {t("admin.newsletter.status_active")}
+                    </span>
+                  )}
+                </TD>
+                <TD align="right">
+                  <div className="flex justify-end gap-1">
+                    {!r.unsubscribed_at && (
+                      <IconButton
+                        onClick={() => void handleDelete(r.id)}
+                        disabled={busyId === r.id}
+                        aria-label={t("admin.newsletter.btn_unsubscribe")}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </IconButton>
+                    )}
+                  </div>
+                </TD>
+              </TR>
+            );
+          })}
         </TBody>
       </Table>
       </V2Card>
@@ -294,4 +354,41 @@ export default function PlatformNewsletterPage() {
       ) : null}
     </div>
   );
+}
+
+// v2 admin-redesign helpers — avatar / relative-time.
+function getInitials(name: string): string {
+  return (name || "?").split(/[\s@.]+/).filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+}
+
+function pickAvatarTone(id: number | string): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  const n = typeof id === "number" ? id : id.length;
+  return tones[n % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
+}
+
+function formatRelativeTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "—";
+  const diff = Date.now() - t;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  return new Date(iso).toLocaleDateString();
 }

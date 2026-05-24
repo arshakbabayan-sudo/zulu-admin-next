@@ -30,7 +30,6 @@ import {
   Input,
   Pagination,
   Select,
-  StatusPill,
   Table,
   TBody,
   TD,
@@ -46,7 +45,9 @@ import {
   FilterCard,
   FilterField,
   V2Card,
+  V2Button,
 } from "@/components/ui/v2";
+import { Download } from "lucide-react";
 
 type Tab = "summary" | "entitlements" | "settlements";
 
@@ -180,6 +181,9 @@ export default function FinancePage() {
           { label: t("admin.platform_finance.title") },
         ]}
         title={t("admin.platform_finance.title")}
+        actions={
+          <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+        }
       />
 
       <SectionTabs
@@ -299,16 +303,21 @@ export default function FinancePage() {
                       onChange={(e) => toggleEntitlement(r.id, e.target.checked)}
                     />
                   </TD>
-                  <TD className="tabular-nums">{r.id}</TD>
-                  <TD className="tabular-nums font-medium">
+                  <TD className="tabular-nums text-fg-t7 font-mono text-xs">#{r.id}</TD>
+                  <TD className="tabular-nums font-medium text-fg-t8">
                     {r.currency} {Number(r.net_amount).toFixed(2)}
                   </TD>
                   <TD>
-                    <StatusPill status={r.status} />
+                    <span
+                      className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                      style={financeStatusStyle(r.status)}
+                    >
+                      {r.status}
+                    </span>
                   </TD>
-                  <TD>{r.company_id}</TD>
-                  <TD className="tabular-nums">{r.package_order_id ?? "—"}</TD>
-                  <TD className="text-xs text-fg-t6">
+                  <TD className="text-xs text-fg-t7 tabular-nums">{r.company_id}</TD>
+                  <TD className="tabular-nums text-xs font-mono text-fg-t7">{r.package_order_id ?? "—"}</TD>
+                  <TD className="text-xs text-fg-t6" title={r.payable_at ?? undefined}>
                     {formatDate(r.payable_at, lang)}
                   </TD>
                 </TR>
@@ -340,33 +349,56 @@ export default function FinancePage() {
               {settlements.length === 0 ? (
                 <TEmpty colSpan={6}>{t("admin.platform_finance.no_settlements")}</TEmpty>
               ) : null}
-              {settlements.map((r) => (
-                <TR key={r.id}>
-                  <TD className="tabular-nums">{r.id}</TD>
-                  <TD className="tabular-nums font-medium">
-                    {r.currency} {Number(r.total_net_amount).toFixed(2)}
-                  </TD>
-                  <TD>
-                    <StatusPill status={r.status} />
-                  </TD>
-                  <TD>{r.company?.name ?? r.company_id}</TD>
-                  <TD className="text-xs text-fg-t6">
-                    {formatDate(r.settled_at, lang)}
-                  </TD>
-                  <TD>
-                    {r.status === "pending" && (
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => void handleSettlementStatus(r.id, "completed")}
-                        className="text-xs text-info-700 underline disabled:opacity-40"
+              {settlements.map((r) => {
+                const companyName = r.company?.name ?? String(r.company_id);
+                const initials = getInitials(companyName);
+                const tone = pickAvatarTone(r.company_id);
+                return (
+                  <TR key={r.id}>
+                    <TD className="tabular-nums text-fg-t7 font-mono text-xs">#{r.id}</TD>
+                    <TD className="tabular-nums font-medium text-fg-t8">
+                      {r.currency} {Number(r.total_net_amount).toFixed(2)}
+                    </TD>
+                    <TD>
+                      <span
+                        className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                        style={financeStatusStyle(r.status)}
                       >
-                        {t("admin.platform_finance.mark_completed")}
-                      </button>
-                    )}
-                  </TD>
-                </TR>
-              ))}
+                        {r.status}
+                      </span>
+                    </TD>
+                    <TD>
+                      <div className="flex items-center gap-3">
+                        <span
+                          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                          style={avatarStyle(tone)}
+                          aria-hidden
+                        >
+                          {initials}
+                        </span>
+                        <div className="min-w-0">
+                          <div className="font-medium text-fg-t8 truncate">{companyName}</div>
+                        </div>
+                      </div>
+                    </TD>
+                    <TD className="text-xs text-fg-t6" title={r.settled_at ?? undefined}>
+                      {formatDate(r.settled_at, lang)}
+                    </TD>
+                    <TD>
+                      {r.status === "pending" && (
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void handleSettlementStatus(r.id, "completed")}
+                          className="text-xs text-info-700 underline disabled:opacity-40"
+                        >
+                          {t("admin.platform_finance.mark_completed")}
+                        </button>
+                      )}
+                    </TD>
+                  </TR>
+                );
+              })}
             </TBody>
           </Table>
           </V2Card>
@@ -377,4 +409,45 @@ export default function FinancePage() {
       )}
     </div>
   );
+}
+
+// v2 admin-redesign helpers.
+function getInitials(name: string): string {
+  return (name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+}
+
+function pickAvatarTone(id: number | string): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  const n = typeof id === "number" ? id : id.length;
+  return tones[n % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
+}
+
+function financeStatusStyle(status: string): React.CSSProperties {
+  switch (status) {
+    case "paid":
+    case "completed":
+    case "settled":
+    case "payable":
+      return { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" };
+    case "pending":
+    case "scheduled":
+    case "draft":
+      return { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" };
+    case "failed":
+    case "rejected":
+    case "cancelled":
+      return { backgroundColor: "var(--admin-danger-light)", color: "var(--admin-danger-dark)" };
+    default:
+      return { backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" };
+  }
 }

@@ -13,7 +13,6 @@ import { useCallback, useEffect, useState } from "react";
 import {
   Input,
   Pagination,
-  StatusPill,
   Table,
   TBody,
   TD,
@@ -29,7 +28,9 @@ import {
   FilterField,
   V2Card,
   V2Button,
+  IconButton,
 } from "@/components/ui/v2";
+import { Download, Eye } from "lucide-react";
 
 export default function PlatformPackageOrdersPage() {
   const { token, user } = useAdminAuth();
@@ -107,6 +108,9 @@ export default function PlatformPackageOrdersPage() {
           { label: t("admin.package_orders.title") },
         ]}
         title={t("admin.package_orders.title")}
+        actions={
+          <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+        }
       />
 
       <SectionTabs
@@ -173,33 +177,87 @@ export default function PlatformPackageOrdersPage() {
             <TH>{t("admin.invoices.col_company")}</TH>
             <TH>{t("admin.package_orders.col_buyer")}</TH>
             <TH>{t("admin.approvals.col_created")}</TH>
+            <TH align="right">Actions</TH>
           </TR>
         </THead>
         <TBody>
           {rows.length === 0 ? (
-            <TEmpty colSpan={9}>{t("admin.package_orders.empty") || "No package orders."}</TEmpty>
+            <TEmpty colSpan={10}>{t("admin.package_orders.empty") || "No package orders."}</TEmpty>
           ) : null}
-          {rows.map((r) => (
-            <TR key={r.id}>
-              <TD className="tabular-nums">{r.id}</TD>
-              <TD className="font-mono text-xs">{r.order_number}</TD>
-              <TD>
-                <StatusPill status={r.status} />
-              </TD>
-              <TD>
-                <StatusPill status={r.payment_status} />
-              </TD>
-              <TD className="tabular-nums">
-                {r.final_total_snapshot} {r.currency}
-              </TD>
-              <TD className="text-xs">
-                {r.package ? `${r.package.package_title} (#${r.package.id})` : `#${r.package_id}`}
-              </TD>
-              <TD className="text-xs">{r.company ? r.company.name : `— (${r.company_id})`}</TD>
-              <TD className="text-xs">{r.user ? r.user.name : `— (${r.user_id})`}</TD>
-              <TD className="text-xs text-fg-t6">{r.created_at ?? "—"}</TD>
-            </TR>
-          ))}
+          {rows.map((r) => {
+            const companyName = r.company?.name ?? `#${r.company_id}`;
+            const buyerName = r.user?.name ?? `#${r.user_id}`;
+            const companyInitials = getInitials(companyName);
+            const buyerInitials = getInitials(buyerName);
+            const companyTone = pickAvatarTone(r.company_id);
+            const buyerTone = pickAvatarTone(r.user_id);
+            return (
+              <TR key={r.id}>
+                <TD className="tabular-nums text-fg-t7 font-mono text-xs">#{r.id}</TD>
+                <TD className="font-mono text-xs text-fg-t8">{r.order_number}</TD>
+                <TD>
+                  <span
+                    className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                    style={orderStatusStyle(r.status)}
+                  >
+                    {r.status}
+                  </span>
+                </TD>
+                <TD>
+                  <span
+                    className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                    style={paymentStatusStyle(r.payment_status)}
+                  >
+                    {r.payment_status}
+                  </span>
+                </TD>
+                <TD className="tabular-nums font-medium text-fg-t8">
+                  {r.final_total_snapshot} {r.currency}
+                </TD>
+                <TD className="text-xs text-fg-t7">
+                  {r.package ? `${r.package.package_title} (#${r.package.id})` : `#${r.package_id}`}
+                </TD>
+                <TD>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                      style={avatarStyle(companyTone)}
+                      aria-hidden
+                    >
+                      {companyInitials}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="font-medium text-fg-t8 truncate">{companyName}</div>
+                    </div>
+                  </div>
+                </TD>
+                <TD>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                      style={avatarStyle(buyerTone)}
+                      aria-hidden
+                    >
+                      {buyerInitials}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="font-medium text-fg-t8 truncate">{buyerName}</div>
+                    </div>
+                  </div>
+                </TD>
+                <TD className="text-xs text-fg-t6" title={r.created_at ?? undefined}>
+                  {formatRelativeTime(r.created_at)}
+                </TD>
+                <TD align="right">
+                  <div className="flex justify-end gap-1">
+                    <IconButton as="link" href={`/platform/package-orders/${r.id}`} aria-label="View">
+                      <Eye className="h-4 w-4" />
+                    </IconButton>
+                  </div>
+                </TD>
+              </TR>
+            );
+          })}
         </TBody>
       </Table>
       </V2Card>
@@ -209,4 +267,77 @@ export default function PlatformPackageOrdersPage() {
       ) : null}
     </div>
   );
+}
+
+// v2 admin-redesign helpers.
+function getInitials(name: string): string {
+  return (name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+}
+
+function pickAvatarTone(id: number | string): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  const n = typeof id === "number" ? id : id.length;
+  return tones[n % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
+}
+
+function formatRelativeTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "—";
+  const diff = Date.now() - t;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
+function orderStatusStyle(status: string): React.CSSProperties {
+  switch (status) {
+    case "confirmed":
+    case "completed":
+    case "fulfilled":
+      return { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" };
+    case "pending":
+    case "partially_confirmed":
+    case "in_progress":
+      return { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" };
+    case "cancelled":
+    case "failed":
+    case "partially_failed":
+      return { backgroundColor: "var(--admin-danger-light)", color: "var(--admin-danger-dark)" };
+    default:
+      return { backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" };
+  }
+}
+
+function paymentStatusStyle(status: string): React.CSSProperties {
+  switch (status) {
+    case "paid":
+    case "captured":
+      return { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" };
+    case "pending":
+    case "authorized":
+      return { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" };
+    case "failed":
+    case "refunded":
+    case "voided":
+      return { backgroundColor: "var(--admin-danger-light)", color: "var(--admin-danger-dark)" };
+    default:
+      return { backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" };
+  }
 }

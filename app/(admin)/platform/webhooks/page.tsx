@@ -9,10 +9,9 @@ import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { formatDate, formatDateTime, formatNumber } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
 import {
   Select,
-  StatusPill,
   Table,
   TBody,
   TD,
@@ -28,7 +27,9 @@ import {
   FilterCard,
   FilterField,
   V2Card,
+  V2Button,
 } from "@/components/ui/v2";
+import { Download, Plus, RefreshCw } from "lucide-react";
 
 type WebhookStats = {
   total_subscriptions: number;
@@ -134,6 +135,14 @@ export default function PlatformWebhooksPage() {
         ]}
         title={t("admin.platform_webhooks.title")}
         subtitle={t("admin.platform_webhooks.subtitle")}
+        actions={
+          <>
+            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
+              New webhook
+            </V2Button>
+          </>
+        }
       />
 
       <SectionTabs
@@ -198,6 +207,10 @@ export default function PlatformWebhooksPage() {
                 <option value="failed">{t("admin.platform_webhooks.status_failed")}</option>
               </Select>
             </FilterField>
+            <V2Button size="sm" onClick={() => setStatusFilter((s) => s)}>
+              <RefreshCw className="h-4 w-4" aria-hidden />
+              Refresh
+            </V2Button>
           </FilterCard>
 
           <V2Card>
@@ -221,20 +234,45 @@ export default function PlatformWebhooksPage() {
                 : null}
               {deliveries.map((d) => (
                 <TR key={d.id}>
-                  <TD className="tabular-nums">{d.id}</TD>
-                  <TD className="font-mono text-xs">{d.event}</TD>
+                  <TD className="tabular-nums text-fg-t7 font-mono text-xs">#{d.id}</TD>
                   <TD>
-                    <StatusPill status={d.status}>
+                    <span
+                      className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px] font-mono"
+                      style={{ backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }}
+                    >
+                      {d.event}
+                    </span>
+                  </TD>
+                  <TD>
+                    <span
+                      className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                      style={deliveryStatusStyle(d.status)}
+                    >
                       {t(`admin.platform_webhooks.status_${d.status}`)}
-                    </StatusPill>
+                    </span>
                   </TD>
-                  <TD className="truncate max-w-xs">{d.subscription?.url ?? "—"}</TD>
-                  <TD className="tabular-nums">{d.attempt_count}</TD>
-                  <TD className="tabular-nums text-xs">{d.last_response_status ?? "—"}</TD>
-                  <TD className="text-xs text-fg-t6">
-                    {formatDateTime(d.last_attempt_at, lang)}
+                  <TD className="truncate max-w-xs text-xs text-fg-t7" title={d.subscription?.url ?? undefined}>
+                    {d.subscription?.url ?? "—"}
                   </TD>
-                  <TD className="text-xs text-fg-t6">{formatDate(d.created_at, lang)}</TD>
+                  <TD className="tabular-nums text-xs">{d.attempt_count}</TD>
+                  <TD className="tabular-nums text-xs">
+                    {d.last_response_status !== null && d.last_response_status !== undefined ? (
+                      <span
+                        className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold font-mono"
+                        style={httpStatusStyle(d.last_response_status)}
+                      >
+                        {d.last_response_status}
+                      </span>
+                    ) : (
+                      <span className="text-fg-t6">—</span>
+                    )}
+                  </TD>
+                  <TD className="text-xs text-fg-t6" title={d.last_attempt_at ?? undefined}>
+                    {formatRelativeTime(d.last_attempt_at)}
+                  </TD>
+                  <TD className="text-xs text-fg-t6" title={d.created_at}>
+                    {formatRelativeTime(d.created_at)}
+                  </TD>
                   <TD align="right">
                     {d.status === "failed" && (
                       <ReplayButton deliveryId={d.id} token={token ?? ""} onReplayed={() => setStatusFilter((s) => s)} />
@@ -265,20 +303,45 @@ export default function PlatformWebhooksPage() {
             {loading ? <TEmpty colSpan={6}>{t("admin.platform_webhooks.loading")}</TEmpty>
               : subscriptions.length === 0 ? <TEmpty colSpan={6}>{t("admin.platform_webhooks.empty_subscriptions")}</TEmpty>
               : null}
-            {subscriptions.map((s) => (
-              <TR key={s.id}>
-                <TD className="tabular-nums">{s.id}</TD>
-                <TD>{s.company?.name ?? `#${s.company_id}`}</TD>
-                <TD className="truncate max-w-xs">{s.url}</TD>
-                <TD className="text-xs">{s.events.join(", ")}</TD>
-                <TD>
-                  <StatusPill status={s.status}>
-                    {t(`admin.platform_webhooks.subscription_status_${s.status}`)}
-                  </StatusPill>
-                </TD>
-                <TD className="text-xs text-fg-t6">{formatDate(s.created_at, lang)}</TD>
-              </TR>
-            ))}
+            {subscriptions.map((s) => {
+              const companyName = s.company?.name ?? `#${s.company_id}`;
+              const initials = getInitials(companyName);
+              const tone = pickAvatarTone(s.company_id);
+              return (
+                <TR key={s.id}>
+                  <TD className="tabular-nums text-fg-t7 font-mono text-xs">#{s.id}</TD>
+                  <TD>
+                    <div className="flex items-center gap-3">
+                      <span
+                        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                        style={avatarStyle(tone)}
+                        aria-hidden
+                      >
+                        {initials}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="font-medium text-fg-t8 truncate">{companyName}</div>
+                      </div>
+                    </div>
+                  </TD>
+                  <TD className="truncate max-w-xs text-xs text-fg-t7" title={s.url}>
+                    {s.url}
+                  </TD>
+                  <TD className="text-xs text-fg-t6">{s.events.join(", ")}</TD>
+                  <TD>
+                    <span
+                      className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                      style={subscriptionStatusStyle(s.status)}
+                    >
+                      {t(`admin.platform_webhooks.subscription_status_${s.status}`)}
+                    </span>
+                  </TD>
+                  <TD className="text-xs text-fg-t6" title={s.created_at}>
+                    {formatRelativeTime(s.created_at)}
+                  </TD>
+                </TR>
+              );
+            })}
           </TBody>
         </Table>
         </V2Card>
@@ -345,4 +408,84 @@ function ReplayButton({
       {busy ? "…" : t("admin.platform_webhooks.replay")}
     </button>
   );
+}
+
+// v2 admin-redesign helpers.
+function getInitials(name: string): string {
+  return (name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+}
+
+function pickAvatarTone(id: number | string): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  const n = typeof id === "number" ? id : id.length;
+  return tones[n % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
+}
+
+function formatRelativeTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "—";
+  const diff = Date.now() - t;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
+function deliveryStatusStyle(status: string): React.CSSProperties {
+  switch (status) {
+    case "success":
+      return { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" };
+    case "pending":
+      return { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" };
+    case "failed":
+      return { backgroundColor: "var(--admin-danger-light)", color: "var(--admin-danger-dark)" };
+    default:
+      return { backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" };
+  }
+}
+
+function subscriptionStatusStyle(status: string): React.CSSProperties {
+  switch (status) {
+    case "active":
+      return { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" };
+    case "disabled":
+    case "paused":
+      return { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" };
+    case "error":
+      return { backgroundColor: "var(--admin-danger-light)", color: "var(--admin-danger-dark)" };
+    default:
+      return { backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" };
+  }
+}
+
+function httpStatusStyle(code: number): React.CSSProperties {
+  if (code >= 200 && code < 300) {
+    return { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" };
+  }
+  if (code >= 300 && code < 400) {
+    return { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" };
+  }
+  if (code >= 400 && code < 500) {
+    return { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" };
+  }
+  if (code >= 500) {
+    return { backgroundColor: "var(--admin-danger-light)", color: "var(--admin-danger-dark)" };
+  }
+  return { backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" };
 }

@@ -30,6 +30,7 @@ import {
   V2Card,
   V2Button,
 } from "@/components/ui/v2";
+import { Download } from "lucide-react";
 import { formatDateTime, formatNumber } from "@/lib/format";
 
 type TwoFactorRow = {
@@ -194,6 +195,9 @@ export default function PlatformSecurityPage() {
         ]}
         title={t("admin.security.title")}
         subtitle={t("admin.security.subtitle")}
+        actions={
+          <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+        }
       />
 
       <SectionTabs
@@ -286,43 +290,75 @@ export default function PlatformSecurityPage() {
           {loading ? <TEmpty colSpan={5}>{t("common.loading")}</TEmpty>
             : rows.length === 0 ? <TEmpty colSpan={5}>{t("admin.security.empty")}</TEmpty>
             : null}
-          {rows.map((r) => (
-            <TR key={r.id}>
-              <TD className="text-xs">
-                {r.user?.name ?? `#${r.user_id}`}
-                {r.user?.email && <div className="text-fg-t6">{r.user.email}</div>}
-              </TD>
-              <TD className="text-xs">
-                {r.user?.is_super_admin ? (
-                  <span className="rounded bg-warning-50 px-2 py-0.5 text-warning-700">{t("admin.security.role_super_admin")}</span>
-                ) : (
-                  <span className="text-fg-t7">{r.user?.role ?? "—"}</span>
-                )}
-              </TD>
-              <TD className="text-xs text-fg-t6">{formatDateTime(r.confirmed_at, lang)}</TD>
-              <TD className="text-xs text-fg-t6">{r.last_verified_at ? formatDateTime(r.last_verified_at, lang) : t("admin.security.never")}</TD>
-              <TD align="right">
-                <div className="inline-flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => forceLogoutById(r.user_id, r.user?.name)}
-                    disabled={actionLoading !== null}
-                    className="text-xs text-warning-700 hover:underline disabled:opacity-40"
-                  >
-                    {actionLoading === `logout-${r.user_id}` ? "…" : t("admin.security.btn_force_logout")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => forceDisable(r)}
-                    disabled={actionLoading !== null}
-                    className="text-xs text-error-700 hover:underline disabled:opacity-40"
-                  >
-                    {actionLoading === `disable-${r.user_id}` ? "…" : t("admin.security.btn_disable_2fa")}
-                  </button>
-                </div>
-              </TD>
-            </TR>
-          ))}
+          {rows.map((r) => {
+            const userName = r.user?.name ?? `#${r.user_id}`;
+            const initials = getInitials(userName);
+            const tone = pickAvatarTone(r.user_id);
+            return (
+              <TR key={r.id}>
+                <TD>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                      style={avatarStyle(tone)}
+                      aria-hidden
+                    >
+                      {initials}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="font-medium text-fg-t8 truncate">{userName}</div>
+                      {r.user?.email ? <div className="text-[11px] text-fg-t6 truncate">{r.user.email}</div> : null}
+                    </div>
+                  </div>
+                </TD>
+                <TD>
+                  {r.user?.is_super_admin ? (
+                    <span
+                      className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                      style={{ backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" }}
+                    >
+                      {t("admin.security.role_super_admin")}
+                    </span>
+                  ) : r.user?.role ? (
+                    <span
+                      className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                      style={{ backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }}
+                    >
+                      {r.user.role}
+                    </span>
+                  ) : (
+                    <span className="text-fg-t6">—</span>
+                  )}
+                </TD>
+                <TD className="text-xs text-fg-t6" title={r.confirmed_at ?? undefined}>
+                  {formatDateTime(r.confirmed_at, lang)}
+                </TD>
+                <TD className="text-xs text-fg-t6" title={r.last_verified_at ?? undefined}>
+                  {r.last_verified_at ? formatDateTime(r.last_verified_at, lang) : t("admin.security.never")}
+                </TD>
+                <TD align="right">
+                  <div className="inline-flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => forceLogoutById(r.user_id, r.user?.name)}
+                      disabled={actionLoading !== null}
+                      className="text-xs text-warning-700 hover:underline disabled:opacity-40"
+                    >
+                      {actionLoading === `logout-${r.user_id}` ? "…" : t("admin.security.btn_force_logout")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => forceDisable(r)}
+                      disabled={actionLoading !== null}
+                      className="text-xs text-error-700 hover:underline disabled:opacity-40"
+                    >
+                      {actionLoading === `disable-${r.user_id}` ? "…" : t("admin.security.btn_disable_2fa")}
+                    </button>
+                  </div>
+                </TD>
+              </TR>
+            );
+          })}
         </TBody>
       </Table>
       </V2Card>
@@ -343,4 +379,25 @@ function StatCard({ label, value, tone = "neutral" }: { label: string; value: st
       <div className={`mt-2 text-2xl font-bold tabular-nums ${toneClass}`}>{value}</div>
     </div>
   );
+}
+
+// v2 admin-redesign helpers.
+function getInitials(name: string): string {
+  return (name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+}
+
+function pickAvatarTone(id: number | string): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  const n = typeof id === "number" ? id : id.length;
+  return tones[n % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
 }

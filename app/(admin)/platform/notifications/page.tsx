@@ -15,7 +15,6 @@ import {
   Input,
   Pagination,
   Select,
-  StatusPill,
   Table,
   TBody,
   TD,
@@ -28,7 +27,10 @@ import {
   PageHeader as V2PageHeader,
   SectionTabs,
   V2Card,
+  V2Button,
+  IconButton,
 } from "@/components/ui/v2";
+import { Download, Eye } from "lucide-react";
 
 const STATUSES = ["unread", "read"] as const;
 const PRIORITIES = ["low", "normal", "high", "critical"] as const;
@@ -184,6 +186,9 @@ export default function PlatformNotificationsPage() {
         ]}
         title={t("admin.platform_notifications.title")}
         subtitle={t("admin.platform_notifications.subtitle")}
+        actions={
+          <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+        }
       />
 
       <SectionTabs
@@ -303,32 +308,69 @@ export default function PlatformNotificationsPage() {
           {loading ? <TEmpty colSpan={7}>{t("admin.platform_notifications.loading")}</TEmpty>
             : rows.length === 0 ? <TEmpty colSpan={7}>{t("admin.platform_notifications.empty")}</TEmpty>
             : null}
-          {rows.map((r) => (
-            <TR key={r.id} onClick={() => setSelected(r)}>
-              <TD className="text-xs text-fg-t6 whitespace-nowrap">{formatDateTime(r.created_at, lang)}</TD>
-              <TD className="text-xs">
-                {r.user?.name ?? `#${r.user_id}`}
-                {r.user?.email && <div className="text-fg-t6">{r.user.email}</div>}
-              </TD>
-              <TD className="font-mono text-xs">{r.event_type ?? "—"}</TD>
-              <TD className="text-xs truncate max-w-xs">{r.title}</TD>
-              <TD>
-                <StatusPill status={r.priority}>{t(`admin.platform_notifications.priority_${r.priority}`)}</StatusPill>
-              </TD>
-              <TD>
-                <StatusPill status={r.status}>{t(`admin.platform_notifications.status_${r.status}`)}</StatusPill>
-              </TD>
-              <TD align="right" onClick={(e) => e.stopPropagation()}>
-                <button
-                  type="button"
-                  onClick={() => setSelected(r)}
-                  className="text-xs text-primary-500 hover:underline"
-                >
-                  {t("admin.platform_notifications.view")}
-                </button>
-              </TD>
-            </TR>
-          ))}
+          {rows.map((r) => {
+            const userName = r.user?.name ?? `#${r.user_id}`;
+            const initials = getInitials(userName);
+            const tone = pickAvatarTone(r.user_id);
+            return (
+              <TR key={r.id} onClick={() => setSelected(r)}>
+                <TD className="text-xs text-fg-t6 whitespace-nowrap" title={r.created_at}>
+                  {formatRelativeTime(r.created_at)}
+                </TD>
+                <TD>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                      style={avatarStyle(tone)}
+                      aria-hidden
+                    >
+                      {initials}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="font-medium text-fg-t8 truncate">{userName}</div>
+                      {r.user?.email ? <div className="text-[11px] text-fg-t6 truncate">{r.user.email}</div> : null}
+                    </div>
+                  </div>
+                </TD>
+                <TD>
+                  {r.event_type ? (
+                    <span
+                      className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px] font-mono"
+                      style={{ backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }}
+                    >
+                      {r.event_type}
+                    </span>
+                  ) : (
+                    <span className="text-fg-t6">—</span>
+                  )}
+                </TD>
+                <TD className="text-xs truncate max-w-xs font-medium text-fg-t8">{r.title}</TD>
+                <TD>
+                  <span
+                    className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                    style={priorityBadgeStyle(r.priority)}
+                  >
+                    {t(`admin.platform_notifications.priority_${r.priority}`)}
+                  </span>
+                </TD>
+                <TD>
+                  <span
+                    className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                    style={notificationStatusStyle(r.status)}
+                  >
+                    {t(`admin.platform_notifications.status_${r.status}`)}
+                  </span>
+                </TD>
+                <TD align="right" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex justify-end gap-1">
+                    <IconButton onClick={() => setSelected(r)} aria-label={t("admin.platform_notifications.view")}>
+                      <Eye className="h-4 w-4" />
+                    </IconButton>
+                  </div>
+                </TD>
+              </TR>
+            );
+          })}
         </TBody>
       </Table>
       </V2Card>
@@ -349,8 +391,18 @@ export default function PlatformNotificationsPage() {
               <button type="button" onClick={() => setSelected(null)} className="rounded p-1 text-fg-t6 hover:bg-figma-bg-1" aria-label="Close">✕</button>
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
-              <StatusPill status={selected.priority}>{t(`admin.platform_notifications.priority_${selected.priority}`)}</StatusPill>
-              <StatusPill status={selected.status}>{t(`admin.platform_notifications.status_${selected.status}`)}</StatusPill>
+              <span
+                className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                style={priorityBadgeStyle(selected.priority)}
+              >
+                {t(`admin.platform_notifications.priority_${selected.priority}`)}
+              </span>
+              <span
+                className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                style={notificationStatusStyle(selected.status)}
+              >
+                {t(`admin.platform_notifications.status_${selected.status}`)}
+              </span>
             </div>
             <div className="mt-4 rounded-zulu border border-default bg-figma-bg-1 p-3 text-sm whitespace-pre-wrap">{selected.message}</div>
             <dl className="mt-6 space-y-2 text-sm">
@@ -385,4 +437,66 @@ function DetailRow({ label, value }: { label: string; value: string }) {
       <dd className="text-sm break-words">{value}</dd>
     </div>
   );
+}
+
+// v2 admin-redesign helpers.
+function getInitials(name: string): string {
+  return (name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+}
+
+function pickAvatarTone(id: number | string): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  const n = typeof id === "number" ? id : id.length;
+  return tones[n % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
+}
+
+function formatRelativeTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "—";
+  const diff = Date.now() - t;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
+function priorityBadgeStyle(priority: string): React.CSSProperties {
+  switch (priority) {
+    case "critical":
+      return { backgroundColor: "var(--admin-danger-light)", color: "var(--admin-danger-dark)" };
+    case "high":
+      return { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" };
+    case "normal":
+      return { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" };
+    case "low":
+    default:
+      return { backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" };
+  }
+}
+
+function notificationStatusStyle(status: string): React.CSSProperties {
+  switch (status) {
+    case "read":
+      return { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" };
+    case "unread":
+      return { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" };
+    default:
+      return { backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" };
+  }
 }

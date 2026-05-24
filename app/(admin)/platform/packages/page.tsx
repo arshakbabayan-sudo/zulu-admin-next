@@ -34,6 +34,7 @@ import {
   V2Card,
   V2Button,
 } from "@/components/ui/v2";
+import { Download } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 export default function PlatformPackagesGovernancePage() {
@@ -131,6 +132,9 @@ export default function PlatformPackagesGovernancePage() {
           { label: "Packages oversight" },
         ]}
         title={t("admin.packages.title_long")}
+        actions={
+          <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+        }
       />
 
       <SectionTabs
@@ -196,42 +200,87 @@ export default function PlatformPackagesGovernancePage() {
         </THead>
         <TBody>
           {rows.length === 0 ? <TEmpty colSpan={7}>—</TEmpty> : null}
-          {rows.map((r) => (
-            <TR key={r.id}>
-              <TD className="tabular-nums">{r.id}</TD>
-              <TD>{r.package_title}</TD>
-              <TD className="text-xs">{r.package_type}</TD>
-              <TD>{r.status}</TD>
-              <TD className="text-xs">
-                {r.company ? r.company.name : `- (${r.company_id})`}
-              </TD>
-              <TD className="text-xs tabular-nums">
-                {r.is_public ? t("admin.packages.yes") : t("admin.packages.no")} /{" "}
-                {r.is_bookable ? t("admin.packages.yes") : t("admin.packages.no")}
-              </TD>
-              <TD>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setFeatureRow(r)}
+          {rows.map((r) => {
+            const companyName = r.company?.name ?? `#${r.company_id}`;
+            const initials = getInitials(companyName);
+            const tone = pickAvatarTone(r.company_id);
+            return (
+              <TR key={r.id}>
+                <TD className="tabular-nums text-fg-t7 font-mono text-xs">#{r.id}</TD>
+                <TD className="font-medium text-fg-t8">{r.package_title}</TD>
+                <TD>
+                  <span
+                    className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                    style={{ backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }}
                   >
-                    {t("admin.packages.btn_homepage_feature")}
-                  </Button>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    disabled={busyId === r.id}
-                    onClick={() => deactivate(r)}
+                    {r.package_type}
+                  </span>
+                </TD>
+                <TD>
+                  <span
+                    className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                    style={packageStatusStyle(r.status)}
                   >
-                    {busyId === r.id
-                      ? "..."
-                      : t("admin.packages.btn_force_deactivate")}
-                  </Button>
-                </div>
-              </TD>
-            </TR>
-          ))}
+                    {r.status}
+                  </span>
+                </TD>
+                <TD>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                      style={avatarStyle(tone)}
+                      aria-hidden
+                    >
+                      {initials}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="font-medium text-fg-t8 truncate">{companyName}</div>
+                    </div>
+                  </div>
+                </TD>
+                <TD className="text-xs tabular-nums">
+                  <span className="inline-flex items-center gap-1.5 text-[12px]">
+                    <span
+                      aria-hidden
+                      className="inline-block h-1.5 w-1.5 rounded-full"
+                      style={{ backgroundColor: r.is_public ? "var(--admin-success)" : "var(--admin-text-tertiary)" }}
+                    />
+                    {r.is_public ? t("admin.packages.yes") : t("admin.packages.no")}
+                  </span>
+                  <span className="mx-1 text-fg-t6">/</span>
+                  <span className="inline-flex items-center gap-1.5 text-[12px]">
+                    <span
+                      aria-hidden
+                      className="inline-block h-1.5 w-1.5 rounded-full"
+                      style={{ backgroundColor: r.is_bookable ? "var(--admin-success)" : "var(--admin-text-tertiary)" }}
+                    />
+                    {r.is_bookable ? t("admin.packages.yes") : t("admin.packages.no")}
+                  </span>
+                </TD>
+                <TD align="right">
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setFeatureRow(r)}
+                    >
+                      {t("admin.packages.btn_homepage_feature")}
+                    </Button>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      disabled={busyId === r.id}
+                      onClick={() => deactivate(r)}
+                    >
+                      {busyId === r.id
+                        ? "..."
+                        : t("admin.packages.btn_force_deactivate")}
+                    </Button>
+                  </div>
+                </TD>
+              </TR>
+            );
+          })}
         </TBody>
       </Table>
       </V2Card>
@@ -245,4 +294,42 @@ export default function PlatformPackagesGovernancePage() {
       />
     </div>
   );
+}
+
+// v2 admin-redesign helpers.
+function getInitials(name: string): string {
+  return (name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+}
+
+function pickAvatarTone(id: number | string): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  const n = typeof id === "number" ? id : id.length;
+  return tones[n % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
+}
+
+function packageStatusStyle(status: string): React.CSSProperties {
+  switch (status) {
+    case "active":
+    case "published":
+      return { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" };
+    case "draft":
+    case "pending":
+      return { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" };
+    case "inactive":
+    case "deactivated":
+    case "archived":
+      return { backgroundColor: "var(--admin-danger-light)", color: "var(--admin-danger-dark)" };
+    default:
+      return { backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" };
+  }
 }
