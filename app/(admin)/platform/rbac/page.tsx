@@ -36,6 +36,7 @@ import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav, isSuperAdminRole } from "@/lib/access";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
+import { PinPromptDialog } from "@/components/PinPromptDialog";
 import { formatNumber } from "@/lib/format";
 import {
   ConfirmDialog,
@@ -282,6 +283,14 @@ export default function PlatformRbacPage() {
 
   const [deleteTarget, setDeleteTarget] = useState<RbacRole | null>(null);
   const [deleting, setDeleting] = useState(false);
+  // Phase Զ.15 / Item 15 — PIN gate state. When the user confirms via the
+  // ConfirmDialog we don't call DELETE immediately; instead we surface the
+  // PIN prompt whose onConfirm fires the real delete.
+  const [pinGate, setPinGate] = useState<{
+    title: string;
+    description: React.ReactNode;
+    onConfirm: () => Promise<void>;
+  } | null>(null);
 
   const baseURL = useMemo(
     () => process.env.NEXT_PUBLIC_API_URL || "https://api.zulu.am",
@@ -511,42 +520,61 @@ export default function PlatformRbacPage() {
 
   // ─── Delete ─────────────────────────────────────────────────────
 
+  // Phase Զ.15 / Item 15 — instead of calling DELETE directly when the user
+  // confirms the ConfirmDialog, open the PIN gate; its onConfirm fires the
+  // actual DELETE only after the PIN is verified.
   const confirmDelete = async () => {
     if (!token || !deleteTarget) return;
-    setDeleting(true);
-    try {
-      const res = await fetch(
-        apiUrl(baseURL, `/platform-admin/rbac/roles/${deleteTarget.id}`),
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    const target = deleteTarget;
+    // Close the confirm dialog first so the PIN modal isn't stacked over it.
+    setDeleteTarget(null);
+    setPinGate({
+      title: t("admin.rbac.delete_title") /* Delete role */,
+      description: (
+        <>
+          {t("admin.rbac.pin_gate_delete") ||
+            "Enter your account PIN to delete role"}{" "}
+          <strong>{prettifyRoleName(target.name)}</strong>.
+        </>
+      ),
+      onConfirm: async () => {
+        setDeleting(true);
+        try {
+          const res = await fetch(
+            apiUrl(baseURL, `/platform-admin/rbac/roles/${target.id}`),
+            {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+            }
+          );
+          const json = (await res.json().catch(() => ({}))) as ApiEnvelope<unknown>;
+          if (!res.ok || !json.success) {
+            throw new Error(
+              json.message ||
+                t("admin.rbac.err_delete") /* Failed to delete role */
+            );
+          }
+          setRoles((rs) => rs.filter((r) => r.id !== target.id));
+          if (selectedRoleId === target.id) {
+            setSelectedRoleId(null);
+          }
+          setPinGate(null);
+          setToast({ tone: "ok", text: t("admin.rbac.toast_deleted") /* Role deleted */ });
+          void reload();
+        } catch (e) {
+          setToast({
+            tone: "err",
+            text:
+              e instanceof Error
+                ? e.message
+                : t("admin.rbac.err_delete") /* Failed to delete role */,
+          });
+          setPinGate(null);
+        } finally {
+          setDeleting(false);
         }
-      );
-      const json = (await res.json().catch(() => ({}))) as ApiEnvelope<unknown>;
-      if (!res.ok || !json.success) {
-        throw new Error(
-          json.message ||
-            t("admin.rbac.err_delete") /* Failed to delete role */
-        );
-      }
-      setRoles((rs) => rs.filter((r) => r.id !== deleteTarget.id));
-      if (selectedRoleId === deleteTarget.id) {
-        setSelectedRoleId(null);
-      }
-      setDeleteTarget(null);
-      setToast({ tone: "ok", text: t("admin.rbac.toast_deleted") /* Role deleted */ });
-      void reload();
-    } catch (e) {
-      setToast({
-        tone: "err",
-        text:
-          e instanceof Error
-            ? e.message
-            : t("admin.rbac.err_delete") /* Failed to delete role */,
-      });
-    } finally {
-      setDeleting(false);
-    }
+      },
+    });
   };
 
   // ─── 403 / unauthorized ─────────────────────────────────────────
@@ -1063,6 +1091,17 @@ export default function PlatformRbacPage() {
         variant="danger"
         busy={deleting}
         confirmLabelKey="common.delete"
+      />
+
+      {/* Phase Զ.15 / Item 15 — PIN gate for role deletion. */}
+      <PinPromptDialog
+        isOpen={pinGate !== null}
+        title={pinGate?.title}
+        description={pinGate?.description}
+        onCancel={() => setPinGate(null)}
+        onConfirm={async () => {
+          if (pinGate) await pinGate.onConfirm();
+        }}
       />
 
       {/* ─── Inline toast ────────────────────────────────────────── */}

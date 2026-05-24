@@ -56,6 +56,7 @@ import {
   IconButton,
 } from "@/components/ui/v2";
 import { Plus, Power, Trash2 } from "lucide-react";
+import { PinPromptDialog } from "@/components/PinPromptDialog";
 
 const SOURCE_OPTIONS: { value: FxRateSource | ""; label: string }[] = [
   { value: "", label: "All" },
@@ -106,6 +107,14 @@ export default function ExchangeRatesPage() {
 
   const [pendingDeactivate, setPendingDeactivate] = useState<ExchangeRateRow | null>(null);
   const [deactivating, setDeactivating] = useState(false);
+  // Phase Զ.15 / Item 15 — PIN gate state. Deactivation is destructive in
+  // production (pricing resolver falls back to next-precedence rate) so we
+  // gate it behind a PIN before the API call fires.
+  const [pinGate, setPinGate] = useState<{
+    title: string;
+    description: React.ReactNode;
+    onConfirm: () => Promise<void>;
+  } | null>(null);
 
   const fetchRows = useCallback(async () => {
     if (!token) return;
@@ -165,18 +174,37 @@ export default function ExchangeRatesPage() {
     }
   };
 
+  // Phase Զ.15 / Item 15 — instead of deactivating immediately, open the PIN
+  // gate. Only after the PIN verifies does the actual deactivate call fire.
   const confirmDeactivate = async () => {
     if (!token || !pendingDeactivate) return;
-    setDeactivating(true);
-    try {
-      await apiExchangeRateDeactivate(token, pendingDeactivate.id);
-      setPendingDeactivate(null);
-      void fetchRows();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to deactivate rate");
-    } finally {
-      setDeactivating(false);
-    }
+    const target = pendingDeactivate;
+    setPendingDeactivate(null);
+    setPinGate({
+      title: "Verify PIN to deactivate rate",
+      description: (
+        <>
+          Enter your account PIN to deactivate the manual rate{" "}
+          <strong>
+            {target.source_currency} → {target.target_currency} = {target.rate}
+          </strong>
+          .
+        </>
+      ),
+      onConfirm: async () => {
+        setDeactivating(true);
+        try {
+          await apiExchangeRateDeactivate(token, target.id);
+          setPinGate(null);
+          void fetchRows();
+        } catch (e) {
+          setError(e instanceof Error ? e.message : "Failed to deactivate rate");
+          setPinGate(null);
+        } finally {
+          setDeactivating(false);
+        }
+      },
+    });
   };
 
   const toggleActive = async (rate: ExchangeRateRow) => {
@@ -460,6 +488,17 @@ export default function ExchangeRatesPage() {
         busy={deactivating}
         onConfirm={() => void confirmDeactivate()}
         onCancel={() => setPendingDeactivate(null)}
+      />
+
+      {/* Phase Զ.15 / Item 15 — PIN gate for rate deactivation. */}
+      <PinPromptDialog
+        isOpen={pinGate !== null}
+        title={pinGate?.title}
+        description={pinGate?.description}
+        onCancel={() => setPinGate(null)}
+        onConfirm={async () => {
+          if (pinGate) await pinGate.onConfirm();
+        }}
       />
     </div>
   );

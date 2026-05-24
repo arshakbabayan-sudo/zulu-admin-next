@@ -505,6 +505,12 @@ export type PlatformAdminUserRow = {
   status: string;
   created_at?: string | null;
   updated_at?: string | null;
+  /**
+   * Phase 2 follow-up shipped 2026-05-24 (backend commit 138e19c). ISO timestamp
+   * of the user's most recent successful login. May be null for users who have
+   * never logged in (newly-created accounts, invitations-only, etc.).
+   */
+  last_login_at?: string | null;
   companies: { id: number; name: string; role: string }[];
 };
 

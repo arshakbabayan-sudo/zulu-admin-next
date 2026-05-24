@@ -11,14 +11,21 @@
  *   Card → Table (checkbox + ID + Name+avatar + Email + Status + Companies + Actions)
  *
  * 2026-05-24 wiring: now backed by real /platform-admin/users (apiPlatformUsers).
- * The 4 stat cards use meta.total for Total; Active/New/Pending derive from the
- * current page's rows only — a dedicated /rbac/stats-style endpoint would be
- * required for true platform-wide counts (flagged below as Phase 2).
+ * The 4 stat cards use meta.total for Total; Active today / New / Pending derive
+ * from the current page's rows only — a dedicated /platform-admin/users/stats
+ * endpoint would be required for true platform-wide counts (flagged below as
+ * Phase 2). `last_login_at` shipped 2026-05-24 (backend commit 138e19c) so
+ * "Active today" is now real.
+ *
+ * Export button writes a client-side CSV from the loaded rows. A real
+ * server-side `/platform-admin/users/export` would be required to export the
+ * full dataset (this is a Phase 2 follow-up).
+ * "Add user" links to /auth/signup — there is no admin-create-user flow yet.
  */
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { Edit3, MoreVertical } from "lucide-react";
+import { Edit3 } from "lucide-react";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -139,12 +146,19 @@ export default function AdminRedesignUsersPage() {
 
   // Phase 2 note: these derive from the current page only. A
   // /platform-admin/users/stats endpoint would give true platform-wide counts.
-  // `activeToday` cannot be computed yet — PlatformAdminUserRow has no
-  // last_login_at field (flagged below as a Phase 2 backend addition).
+  // `last_login_at` now ships on the API row (backend commit 138e19c, 2026-05-24)
+  // so Active today counts rows whose last login lies within the last 24h.
+  const now = Date.now();
   const new7d = rows.filter((r) => {
     if (!r.created_at) return false;
     const created = new Date(r.created_at).getTime();
-    return Number.isFinite(created) && Date.now() - created < 7 * 24 * 60 * 60 * 1000;
+    return Number.isFinite(created) && now - created < 7 * 24 * 60 * 60 * 1000;
+  }).length;
+  const activeToday = rows.filter((r) => {
+    const lastLogin = r.last_login_at;
+    if (!lastLogin) return false;
+    const ts = new Date(lastLogin).getTime();
+    return Number.isFinite(ts) && now - ts < 24 * 60 * 60 * 1000;
   }).length;
   const pendingCount = rows.filter((r) => r.status === "pending").length;
 
@@ -202,10 +216,25 @@ export default function AdminRedesignUsersPage() {
         }
         actions={
           <>
-            <V2Button icon={<DownloadIcon />}>
+            <V2Button
+              icon={<DownloadIcon />}
+              onClick={() => downloadUsersCsv(rows)}
+              disabled={rows.length === 0}
+              title={tx(
+                t,
+                "admin.users.export_tooltip",
+                "Download the currently-loaded rows as CSV.",
+              )}
+            >
               {tx(t, "admin.dashboard.export", "Export")}
             </V2Button>
-            <V2Button variant="primary" icon={<PlusIcon />}>
+            {/* No admin-create-user flow yet — point to the public signup page. */}
+            <V2Button
+              as="link"
+              href="/auth/signup"
+              variant="primary"
+              icon={<PlusIcon />}
+            >
               {tx(t, "admin.users.add", "Add user")}
             </V2Button>
           </>
@@ -218,16 +247,14 @@ export default function AdminRedesignUsersPage() {
           label={tx(t, "admin.users.stat.total", "Total users")}
         />
         <StatCard
-          // last_login_at not yet on PlatformAdminUserRow — show "—" until
-          // backend includes it. Approximation: status === "active" count on
-          // current page (Phase 2 will use dedicated endpoint).
-          value={<span style={{ color: "var(--admin-text-secondary)" }}>—</span>}
-          label={tx(t, "admin.users.stat.active_today", "Active today")}
-          footer={tx(
-            t,
-            "admin.users.stat.active_today_hint",
-            "(awaiting last_login_at API field)",
-          )}
+          // last_login_at shipped 2026-05-24 (backend commit 138e19c). Counts
+          // rows on the current page whose last login was within 24h.
+          value={
+            <span style={{ color: activeToday > 0 ? "var(--admin-success)" : undefined }}>
+              {activeToday}
+            </span>
+          }
+          label={tx(t, "admin.users.stat.active_today", "Active today — this page")}
         />
         <StatCard
           value={`+${new7d}`}
@@ -428,6 +455,14 @@ export default function AdminRedesignUsersPage() {
                     )}
                   </td>
                   <td className="px-4 py-3 align-middle">
+                    {/*
+                     * Phase 2 follow-up: the "More actions" dropdown (View / Edit
+                     * / Hard-delete) lives on the v1 page /platform/users with
+                     * the full PIN-gated hard-delete + anonymize flow. To avoid
+                     * duplicating that logic here we point the Edit IconButton
+                     * to the detail page (which doubles as a profile viewer)
+                     * and omit a separate kebab menu.
+                     */}
                     <div className="flex justify-end gap-1">
                       <IconButton
                         as="link"
@@ -435,9 +470,6 @@ export default function AdminRedesignUsersPage() {
                         aria-label={tx(t, "admin.users.btn_edit", "Edit")}
                       >
                         <Edit3 className="h-4 w-4" />
-                      </IconButton>
-                      <IconButton aria-label={tx(t, "common.more_actions", "More actions")}>
-                        <MoreVertical className="h-4 w-4" />
                       </IconButton>
                     </div>
                   </td>
@@ -520,4 +552,38 @@ function PlusIcon() {
       <line x1="5" y1="12" x2="19" y2="12" />
     </svg>
   );
+}
+
+/**
+ * Client-side CSV export of the currently-loaded user rows. We do not paginate
+ * the export — that would need a dedicated `/platform-admin/users/export`
+ * endpoint with proper RBAC. Until that ships, exporting the visible page is
+ * still useful for spot-checking and ad-hoc audits.
+ */
+function downloadUsersCsv(rows: PlatformAdminUserRow[]): void {
+  if (rows.length === 0) return;
+  const escape = (s: string): string =>
+    /[",\n]/.test(s) ? `"${s.replaceAll('"', '""')}"` : s;
+  const header = ["id", "name", "email", "status", "created_at", "last_login_at", "companies"];
+  const lines = rows.map((r) =>
+    [
+      String(r.id),
+      escape(r.name),
+      escape(r.email),
+      r.status,
+      r.created_at ?? "",
+      r.last_login_at ?? "",
+      escape(r.companies?.map((c) => c.name).join(" | ") ?? ""),
+    ].join(",")
+  );
+  const csv = [header.join(","), ...lines].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `users-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
