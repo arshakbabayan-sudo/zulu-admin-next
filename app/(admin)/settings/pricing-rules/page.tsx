@@ -36,6 +36,14 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  FilterCard,
+  FilterField,
+  V2Card,
+  V2Button,
+} from "@/components/ui/v2";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 
 /**
@@ -302,32 +310,63 @@ export default function PricingRulesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      {/* v2 admin-redesign — Settings → Pricing rules page chrome.
+          Matches docs/zulu-admin-v2.html page-view#settings (lines 1124-1160). */}
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Settings", href: "/settings/pricing-rules" },
+          { label: tr("admin.settings.pricing_rules.title", "Pricing rules") },
+        ]}
         title={tr("admin.settings.pricing_rules.title", "Pricing rules")}
         subtitle={tr(
           "admin.settings.pricing_rules.subtitle",
           "Unified Markup + Commission rules table"
         )}
         actions={
-          <div className="flex items-center gap-2">
-            <Button onClick={() => setTestPanelOpen(true)} variant="outline">
+          <>
+            <V2Button onClick={() => setTestPanelOpen(true)}>
               🧪 {tr("admin.settings.pricing_rules.test_panel", "Test a rule")}
-            </Button>
-            <Button onClick={openCreate} variant="primary">
+            </V2Button>
+            <V2Button onClick={openCreate} variant="primary">
               + {tr("admin.settings.pricing_rules.new", "New rule")}
-            </Button>
-          </div>
+            </V2Button>
+          </>
         }
       />
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-end gap-3">
-        <FormField label="Scope" htmlFor="filter-scope">
+      <SectionTabs
+        activeHref="/settings/pricing-rules"
+        items={[
+          { href: "/settings/pricing-rules", label: "Pricing rules" },
+          { href: "/settings/money-flow", label: "Money flow" },
+          { href: "/localization/languages", label: "Languages" },
+          { href: "/localization/templates", label: "Email templates" },
+          { href: "/platform/banners", label: "Banners" },
+          { href: "/pages", label: "CMS pages" },
+          { href: "/platform/notifications", label: "System notifications" },
+          { href: "/platform/newsletter", label: "Newsletter" },
+          { href: "/platform/loyalty", label: "Loyalty" },
+          { href: "/bucket3/block-dates", label: "Block dates" },
+          { href: "/bucket3/custom-fields", label: "Custom fields" },
+          { href: "/platform/security", label: "Security" },
+          { href: "/platform/webhooks", label: "Webhooks" },
+          { href: "/platform/locations", label: "Locations" },
+          { href: "/platform/settings/brand", label: "Brand" },
+          { href: "/connections", label: "Connections" },
+          { href: "/support/tickets", label: "Support" },
+          { href: "/platform/reviews", label: "Reviews" },
+        ]}
+      />
+
+      <FilterCard>
+        <FilterField label="Scope">
           <Select
             id="filter-scope"
             value={filterScope}
             onChange={(e) => setFilterScope(e.target.value as PricingRuleScope | "")}
+            className="!h-[34px]"
           >
             <option value="">All</option>
             {SCOPE_OPTIONS.map((o) => (
@@ -336,12 +375,13 @@ export default function PricingRulesPage() {
               </option>
             ))}
           </Select>
-        </FormField>
-        <FormField label="Currency" htmlFor="filter-currency">
+        </FilterField>
+        <FilterField label="Currency">
           <Select
             id="filter-currency"
             value={filterCurrency}
             onChange={(e) => setFilterCurrency(e.target.value)}
+            className="!h-[34px]"
           >
             <option value="">All</option>
             {CURRENCY_OPTIONS.map((c) => (
@@ -350,28 +390,29 @@ export default function PricingRulesPage() {
               </option>
             ))}
           </Select>
-        </FormField>
-        <FormField label="Status" htmlFor="filter-active">
+        </FilterField>
+        <FilterField label="Status">
           <Select
             id="filter-active"
             value={filterActive}
             onChange={(e) => setFilterActive(e.target.value as "" | "true" | "false")}
+            className="!h-[34px]"
           >
             <option value="">All</option>
             <option value="true">Active</option>
             <option value="false">Inactive</option>
           </Select>
-        </FormField>
-      </div>
+        </FilterField>
+      </FilterCard>
 
       {error && (
-        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
+        <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
           {error}
         </div>
       )}
 
-      {/* Rules table */}
-      <div className="admin-card overflow-hidden">
+      {/* Rules table — wrapped in v2 card for rounded chrome */}
+      <V2Card>
         <Table>
           <THead>
             <TR>
@@ -440,7 +481,7 @@ export default function PricingRulesPage() {
             )}
           </TBody>
         </Table>
-      </div>
+      </V2Card>
 
       {/* Create/Edit drawer */}
       <Drawer
