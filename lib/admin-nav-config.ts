@@ -238,6 +238,8 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       // NEW placeholder — replaces /operator/commission-settings and will
       // later host unified Markup + Commission rules.
       { href: "/settings/pricing-rules", labelKey: "admin.nav.tab.pricing_rules" },
+      // Phase 1 / D.2 — money-flow terms CRUD (super-admin only).
+      { href: "/settings/money-flow", labelKey: "admin.nav.tab.money_flow", superAdminOnly: true },
       // RBAC — UI-level filters company-scoped roles for non-super viewers
       // (see /platform/rbac/page.tsx). Backend whitelist is a separate task.
       { href: "/platform/rbac", labelKey: "admin.nav.tab.rbac" },
