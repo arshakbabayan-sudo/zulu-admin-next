@@ -39,6 +39,13 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  FilterCard,
+  FilterField,
+  V2Card,
+  V2Button,
+} from "@/components/ui/v2";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { formatDate } from "@/lib/format";
 import { RefreshCw } from "lucide-react";
@@ -114,59 +121,62 @@ export default function OperatorContractsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      {/* v2 admin-redesign (2026-05-24) — sales workspace contracts page.
+          Matches docs/zulu-admin-v2.html page-view#sales (lines 578-597). */}
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Sales workspace", href: "/agent/contracts" },
+          { label: "My contracts" },
+        ]}
         title="My contracts"
-        subtitle={`${rows.length} total · ${filteredRows.length} shown`}
+        subtitle={`${rows.length} total · ${filteredRows.length} shown · agent contracts and sales agreements`}
       />
 
-      <div className="admin-card p-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-2 text-sm text-fg-t6">
-            <span className="font-medium text-fg-t7">Status</span>
-            <Select
-              fieldSize="sm"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as ContractStatus | "")}
-              className="!w-auto min-w-[160px]"
-            >
-              <option value="">{t("common.all")}</option>
-              {CONTRACT_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {contractStatusLabel(s)}
-                </option>
-              ))}
-            </Select>
-          </label>
-          <label className="flex items-center gap-2 text-sm text-fg-t6">
-            <span className="font-medium text-fg-t7">Type</span>
-            <Select
-              fieldSize="sm"
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value as ContractType | "")}
-              className="!w-auto min-w-[200px]"
-            >
-              <option value="">{t("common.all")}</option>
-              {CONTRACT_TYPES.map((tp) => (
-                <option key={tp} value={tp}>
-                  {contractTypeLabel(tp)}
-                </option>
-              ))}
-            </Select>
-          </label>
-          <Button variant="outline" size="sm" onClick={() => void load()}>
-            <RefreshCw className="h-4 w-4" aria-hidden />
-            Refresh
-          </Button>
-        </div>
-      </div>
+      <FilterCard>
+        <FilterField label="Status" minWidth={160}>
+          <Select
+            fieldSize="sm"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as ContractStatus | "")}
+            className="!h-[34px] !w-full"
+          >
+            <option value="">{t("common.all")}</option>
+            {CONTRACT_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {contractStatusLabel(s)}
+              </option>
+            ))}
+          </Select>
+        </FilterField>
+        <FilterField label="Type" minWidth={200}>
+          <Select
+            fieldSize="sm"
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value as ContractType | "")}
+            className="!h-[34px] !w-full"
+          >
+            <option value="">{t("common.all")}</option>
+            {CONTRACT_TYPES.map((tp) => (
+              <option key={tp} value={tp}>
+                {contractTypeLabel(tp)}
+              </option>
+            ))}
+          </Select>
+        </FilterField>
+        <V2Button size="sm" onClick={() => void load()} icon={<RefreshCw className="h-3.5 w-3.5" aria-hidden />}>
+          Refresh
+        </V2Button>
+      </FilterCard>
 
       {err && (
-        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
+        <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
           {err}
         </div>
       )}
 
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -228,6 +238,7 @@ export default function OperatorContractsPage() {
           ))}
         </TBody>
       </Table>
+      </V2Card>
     </div>
   );
 }
