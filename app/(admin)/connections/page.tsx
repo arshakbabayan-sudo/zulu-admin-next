@@ -24,12 +24,13 @@ import {
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePrompt } from "@/contexts/PromptDialogContext";
 import {
+  Badge,
+  type BadgeTone,
   Button,
   Checkbox,
   FormField,
   Input,
   Select,
-  StatusPill,
   Table,
   TBody,
   TD,
@@ -41,7 +42,10 @@ import {
 import {
   PageHeader as V2PageHeader,
   SectionTabs,
+  V2Button,
+  V2Card,
 } from "@/components/ui/v2";
+import { Download, Plus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 function companyLabel(c: ConnectionRow): string {
@@ -266,6 +270,20 @@ export default function ConnectionsPage() {
           { label: t("admin.connections.title") },
         ]}
         title={t("admin.connections.title")}
+        actions={
+          <>
+            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            {canCreate ? (
+              <V2Button
+                variant="primary"
+                icon={<Plus className="h-4 w-4" />}
+                onClick={() => setCreateOpen((o) => !o)}
+              >
+                {t("admin.connections.create_connection")}
+              </V2Button>
+            ) : null}
+          </>
+        }
       />
 
       <SectionTabs
@@ -576,6 +594,7 @@ export default function ConnectionsPage() {
         </div>
       )}
 
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -587,7 +606,7 @@ export default function ConnectionsPage() {
             <TH>{t("admin.connections.company")}</TH>
             <TH>{t("admin.connections.client_targeting")}</TH>
             <TH>{t("admin.connections.created")}</TH>
-            <TH>{t("admin.connections.actions")}</TH>
+            <TH align="right">{t("admin.connections.actions")}</TH>
           </TR>
         </THead>
         <TBody>
@@ -598,24 +617,42 @@ export default function ConnectionsPage() {
           ) : (
             rows.map((c) => (
               <TR key={c.id}>
-                <TD className="tabular-nums font-medium">{c.id}</TD>
-                <TD>{entityLabel(c.source_type, c.source_id)}</TD>
-                <TD>{entityLabel(c.target_type, c.target_id)}</TD>
-                <TD>{c.connection_type ?? "-"}</TD>
+                <TD className="tabular-nums text-fg-t7 font-mono text-xs">#{c.id}</TD>
+                <TD className="font-mono text-xs">{entityLabel(c.source_type, c.source_id)}</TD>
+                <TD className="font-mono text-xs">{entityLabel(c.target_type, c.target_id)}</TD>
                 <TD>
-                  <StatusPill status={c.status ?? ""}>{c.status ?? "-"}</StatusPill>
+                  {c.connection_type ? (
+                    <span
+                      className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                      style={{
+                        backgroundColor: "var(--admin-bg-tertiary)",
+                        color: "var(--admin-text-secondary)",
+                      }}
+                    >
+                      {c.connection_type}
+                    </span>
+                  ) : (
+                    <span className="text-fg-t6">—</span>
+                  )}
                 </TD>
-                <TD className="max-w-[160px] truncate">{companyLabel(c)}</TD>
-                <TD className="text-xs">
+                <TD>
+                  {c.status ? (
+                    <Badge tone={connectionStatusTone(c.status)}>{c.status}</Badge>
+                  ) : (
+                    <span className="text-fg-t6">—</span>
+                  )}
+                </TD>
+                <TD className="max-w-[160px] truncate text-xs text-fg-t7">{companyLabel(c)}</TD>
+                <TD className="text-xs text-fg-t6">
                   {c.client_targeting === "selected"
                     ? t("admin.connections.targeting_selected")
                     : t("admin.connections.targeting_all")}
                 </TD>
-                <TD className="text-xs whitespace-nowrap">
-                  {c.created_at ? String(c.created_at).slice(0, 10) : "-"}
+                <TD className="text-xs text-fg-t6" title={c.created_at ?? undefined}>
+                  {formatRelativeTime(c.created_at)}
                 </TD>
-                <TD>
-                  <div className="flex flex-wrap gap-1">
+                <TD align="right">
+                  <div className="flex flex-wrap justify-end gap-1">
                     {c.status === "pending" && (
                       <>
                         <Button
@@ -653,6 +690,7 @@ export default function ConnectionsPage() {
           )}
         </TBody>
       </Table>
+      </V2Card>
 
       {meta && !loading && <PaginationBar meta={meta} onPage={setPage} />}
 
@@ -665,4 +703,34 @@ export default function ConnectionsPage() {
       </div>
     </div>
   );
+}
+
+function connectionStatusTone(status: string): BadgeTone {
+  switch (status) {
+    case "accepted":
+      return "success";
+    case "pending":
+      return "warning";
+    case "rejected":
+    case "canceled":
+      return "danger";
+    default:
+      return "gray";
+  }
+}
+
+function formatRelativeTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "—";
+  const diff = Date.now() - t;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  return new Date(iso).toLocaleDateString();
 }

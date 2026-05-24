@@ -30,7 +30,9 @@ import { useCallback, useEffect, useState } from "react";
 import { Button, FormField, Input} from "@/components/ui";
 import {
   PageHeader as V2PageHeader,
+  V2Button,
 } from "@/components/ui/v2";
+import { Download } from "lucide-react";
 
 export default function OperatorStatisticsPage() {
   const { token, user } = useAdminAuth();
@@ -95,6 +97,7 @@ export default function OperatorStatisticsPage() {
           { label: t("admin.operator_statistics.title") },
         ]}
         title={t("admin.operator_statistics.title")}
+        actions={<V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>}
       />
 
       <div className="space-y-6">

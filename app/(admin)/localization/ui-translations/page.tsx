@@ -18,7 +18,7 @@ import {
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, Save, Search } from "lucide-react";
+import { ArrowLeft, Download, Save, Search } from "lucide-react";
 import {
   Button,
   Input,
@@ -37,6 +37,7 @@ import {
   PageHeader as V2PageHeader,
   SectionTabs,
   V2Card,
+  V2Button,
 } from "@/components/ui/v2";
 
 const PER_PAGE = 50;
@@ -175,6 +176,7 @@ export default function UiTranslationsPage() {
             <Button size="sm" onClick={handleSearch}>
               <Search className="h-4 w-4" aria-hidden />
             </Button>
+            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
             <Button variant="outline" size="sm" onClick={() => router.push("/localization/languages")}>
               <ArrowLeft className="h-4 w-4" aria-hidden />
               {t("admin.localization.go_back")}
@@ -230,8 +232,8 @@ export default function UiTranslationsPage() {
             const currentValue = editedValue !== undefined ? editedValue : row.value;
             return (
               <TR key={`${selectedLang}-${row.key}`}>
-                <TD align="center" className="tabular-nums text-fg-t6">{(page - 1) * PER_PAGE + i + 1}</TD>
-                <TD className="font-medium text-fg-t8">{row.key}</TD>
+                <TD align="center" className="tabular-nums text-fg-t7 font-mono text-xs">#{(page - 1) * PER_PAGE + i + 1}</TD>
+                <TD className="font-mono text-xs font-medium text-fg-t8">{row.key}</TD>
                 <TD>
                   <Input
                     ref={(el) => { editRefs.current[row.key] = el as HTMLInputElement | null; }}

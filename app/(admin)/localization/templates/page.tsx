@@ -26,7 +26,9 @@ import {
 import {
   PageHeader as V2PageHeader,
   SectionTabs,
+  V2Button,
 } from "@/components/ui/v2";
+import { Download } from "lucide-react";
 
 const CHANNELS = ["in_app", "email"] as const;
 
@@ -129,6 +131,7 @@ export default function LocalizationTemplatesPage() {
           { label: t("admin.localization_templates.title") },
         ]}
         title={t("admin.localization_templates.title")}
+        actions={<V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>}
       />
 
       <SectionTabs

@@ -11,12 +11,12 @@ import { apiSupportTickets, type SupportTicketListRow } from "@/lib/support-api"
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useCallback, useEffect, useState } from "react";
 import {
-
+  Badge,
+  type BadgeTone,
   Input,
 
   Pagination,
   Select,
-  StatusPill,
   Table,
   TBody,
   TD,
@@ -32,7 +32,9 @@ import {
   FilterField,
   V2Card,
   V2Button,
+  IconButton,
 } from "@/components/ui/v2";
+import { Download, Eye } from "lucide-react";
 
 const STATUSES = ["open", "pending", "resolved", "closed"] as const;
 const PRIORITIES = ["low", "medium", "high"] as const;
@@ -101,6 +103,7 @@ export default function SupportTicketsPage() {
           { label: t("admin.support.tickets_title") },
         ]}
         title={t("admin.support.tickets_title")}
+        actions={<V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>}
       />
 
       <SectionTabs
@@ -178,25 +181,49 @@ export default function SupportTicketsPage() {
             <TH>{t("admin.support.table.company")}</TH>
             <TH>{t("admin.support.table.user")}</TH>
             <TH>{t("admin.support.table.msgs")}</TH>
-            <TH />
+            <TH align="right" />
           </TR>
         </THead>
         <TBody>
           {rows.length === 0 ? <TEmpty colSpan={8}>{t("admin.support.empty") || "No tickets."}</TEmpty> : null}
-          {rows.map((r) => (
+          {rows.map((r) => {
+            const userName = r.user?.name ?? "—";
+            const tone = pickAvatarTone(r.user?.id ?? r.id);
+            return (
             <TR key={r.id} href={`/support/tickets/${r.id}`}>
-              <TD className="tabular-nums">{r.id}</TD>
-              <TD className="max-w-xs">{r.subject}</TD>
-              <TD><StatusPill status={r.status} /></TD>
-              <TD>{r.priority}</TD>
-              <TD className="tabular-nums">{r.company_id ?? "—"}</TD>
-              <TD className="text-xs">{r.user?.name ?? "—"}</TD>
-              <TD className="tabular-nums">{r.messages_count ?? "—"}</TD>
-              <TD onClick={(e) => e.stopPropagation()}>
-                <span className="text-xs text-primary-500 hover:text-primary-700">{t("admin.support.open")}</span>
+              <TD className="tabular-nums text-fg-t7 font-mono text-xs">#{r.id}</TD>
+              <TD className="max-w-xs font-medium text-fg-t8">{r.subject}</TD>
+              <TD><Badge tone={ticketStatusTone(r.status)}>{r.status}</Badge></TD>
+              <TD><Badge tone={priorityTone(r.priority)}>{r.priority}</Badge></TD>
+              <TD className="tabular-nums text-xs text-fg-t7">{r.company_id ?? "—"}</TD>
+              <TD>
+                <div className="flex items-center gap-3">
+                  <span
+                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold"
+                    style={avatarStyle(tone)}
+                    aria-hidden
+                  >
+                    {getInitials(userName)}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="font-medium text-fg-t8 truncate text-xs">{userName}</div>
+                    {r.user?.id ? (
+                      <div className="text-[11px] text-fg-t6 truncate">#{r.user.id}</div>
+                    ) : null}
+                  </div>
+                </div>
+              </TD>
+              <TD className="tabular-nums text-xs text-fg-t7">{r.messages_count ?? "—"}</TD>
+              <TD align="right" onClick={(e) => e.stopPropagation()}>
+                <div className="flex justify-end gap-1">
+                  <IconButton as="link" href={`/support/tickets/${r.id}`} aria-label="View">
+                    <Eye className="h-4 w-4" />
+                  </IconButton>
+                </div>
               </TD>
             </TR>
-          ))}
+            );
+          })}
         </TBody>
       </Table>
       </V2Card>
@@ -206,4 +233,52 @@ export default function SupportTicketsPage() {
       ) : null}
     </div>
   );
+}
+
+function getInitials(name: string): string {
+  return (name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+}
+
+function pickAvatarTone(id: number | string): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  const n = typeof id === "number" ? id : id.length;
+  return tones[n % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
+}
+
+function ticketStatusTone(status: string): BadgeTone {
+  switch (status) {
+    case "open":
+    case "resolved":
+      return "success";
+    case "pending":
+    case "in_progress":
+      return "warning";
+    case "closed":
+      return "danger";
+    default:
+      return "gray";
+  }
+}
+
+function priorityTone(p: string): BadgeTone {
+  switch (p) {
+    case "high":
+      return "danger";
+    case "medium":
+      return "warning";
+    case "low":
+      return "info";
+    default:
+      return "gray";
+  }
 }

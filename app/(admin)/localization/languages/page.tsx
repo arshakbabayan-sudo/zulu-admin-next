@@ -27,10 +27,12 @@ import {
   type ScanStatusResponse,
 } from "@/lib/localization-api";
 import {
+  Badge,
   Button,
   FormField,
   Input,
   Modal,
+  StatusDot,
   Switch,
   Table,
   TBody,
@@ -44,9 +46,10 @@ import {
   PageHeader as V2PageHeader,
   SectionTabs,
   V2Card,
+  V2Button,
+  IconButton,
 } from "@/components/ui/v2";
-import { Info, Pencil, Trash2, Plus } from "lucide-react";
-import Link from "next/link";
+import { Download, Eye, Edit3, Trash2, Plus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 const LANG_TO_COUNTRY: Record<string, string> = {
@@ -480,10 +483,16 @@ export default function LocalizationLanguagesPage() {
         ]}
         title={t("admin.languages.title")}
         actions={
-          <Button size="sm" onClick={() => setShowAdd(true)}>
-            <Plus className="mr-1 h-4 w-4" />
-            {t("admin.languages.add_new")}
-          </Button>
+          <>
+            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button
+              variant="primary"
+              icon={<Plus className="h-4 w-4" />}
+              onClick={() => setShowAdd(true)}
+            >
+              {t("admin.languages.add_new")}
+            </V2Button>
+          </>
         }
       />
 
@@ -535,15 +544,22 @@ export default function LocalizationLanguagesPage() {
           ) : null}
           {rows.map((row, i) => (
             <TR key={row.id}>
-              <TD align="center" className="text-fg-t6">
-                {i + 1}
+              <TD align="center" className="tabular-nums text-fg-t7 font-mono text-xs">
+                {String(i + 1).padStart(2, "0")}
               </TD>
-              <TD className="font-medium">{row.name}</TD>
               <TD>
-                <span className="inline-flex items-center gap-2 font-mono">
+                <div className="flex items-center gap-3">
                   <FlagImg code={row.code} />
-                  {row.code}
-                </span>
+                  <div className="min-w-0">
+                    <div className="font-medium text-fg-t8 truncate">{row.name}</div>
+                    {row.name_en && row.name_en !== row.name ? (
+                      <div className="text-[11px] text-fg-t6 truncate">{row.name_en}</div>
+                    ) : null}
+                  </div>
+                </div>
+              </TD>
+              <TD>
+                <Badge tone="gray">{row.code}</Badge>
               </TD>
               <TD align="center">
                 <div className="flex justify-center">
@@ -556,42 +572,42 @@ export default function LocalizationLanguagesPage() {
                 </div>
               </TD>
               <TD align="center">
-                <div className="flex justify-center">
-                  <Switch
-                    checked={row.is_default}
-                    disabled={busyId === row.id || row.is_default}
-                    onCheckedChange={() => handleSetDefault(row)}
-                    aria-label={t("admin.languages.table_default")}
-                  />
-                </div>
+                {row.is_default ? (
+                  <StatusDot tone="success">Default</StatusDot>
+                ) : (
+                  <div className="flex justify-center">
+                    <Switch
+                      checked={row.is_default}
+                      disabled={busyId === row.id}
+                      onCheckedChange={() => handleSetDefault(row)}
+                      aria-label={t("admin.languages.table_default")}
+                    />
+                  </div>
+                )}
               </TD>
-              <TD align="center">
-                <div className="flex items-center justify-center gap-2">
-                  <Link
+              <TD align="right">
+                <div className="flex justify-end gap-1">
+                  <IconButton
+                    as="link"
                     href={`/localization/ui-translations?lang=${row.code}`}
-                    title={t("admin.languages.btn_view_translations")}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-success-500 text-white transition-colors hover:bg-success-600"
+                    aria-label={t("admin.languages.btn_view_translations")}
                   >
-                    <Info className="h-4 w-4" />
-                  </Link>
-                  <button
-                    type="button"
+                    <Eye className="h-4 w-4" />
+                  </IconButton>
+                  <IconButton
                     onClick={() => setEditRow(row)}
                     disabled={busyId === row.id}
-                    title={t("admin.languages.btn_edit")}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-primary-500 text-white transition-colors hover:bg-primary-600 disabled:opacity-50"
+                    aria-label={t("admin.languages.btn_edit")}
                   >
-                    <Pencil className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
+                    <Edit3 className="h-4 w-4" />
+                  </IconButton>
+                  <IconButton
                     onClick={() => handleDelete(row)}
                     disabled={busyId === row.id || row.is_default}
-                    title={t("admin.languages.btn_delete")}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-error-500 text-white transition-colors hover:bg-error-600 disabled:opacity-50"
+                    aria-label={t("admin.languages.btn_delete")}
                   >
                     <Trash2 className="h-4 w-4" />
-                  </button>
+                  </IconButton>
                 </div>
               </TD>
             </TR>

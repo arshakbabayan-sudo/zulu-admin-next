@@ -17,9 +17,10 @@ import {
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useCallback, useEffect, useState } from "react";
 import {
+  Badge,
+  type BadgeTone,
   Button,
   Pagination,
-  StatusPill,
   Table,
   TBody,
   TD,
@@ -31,7 +32,9 @@ import {
 import {
   PageHeader as V2PageHeader,
   V2Card,
+  V2Button,
 } from "@/components/ui/v2";
+import { Download } from "lucide-react";
 
 export default function NotificationsPage() {
   const { token, user } = useAdminAuth();
@@ -128,14 +131,17 @@ export default function NotificationsPage() {
         title={t("admin.notifications.title")}
         subtitle={unreadCount !== null ? `${t("admin.notifications.unread")}: ${unreadCount}` : undefined}
         actions={
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={busyAll || (unreadCount !== null && unreadCount === 0)}
-            onClick={() => onMarkAllRead()}
-          >
-            {busyAll ? t("admin.notifications.marking") : t("admin.notifications.mark_all_read")}
-          </Button>
+          <>
+            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={busyAll || (unreadCount !== null && unreadCount === 0)}
+              onClick={() => onMarkAllRead()}
+            >
+              {busyAll ? t("admin.notifications.marking") : t("admin.notifications.mark_all_read")}
+            </Button>
+          </>
         }
       />
 
@@ -160,15 +166,33 @@ export default function NotificationsPage() {
           {rows.length === 0 ? <TEmpty colSpan={9}>{t("admin.notifications.empty") || "No notifications."}</TEmpty> : null}
           {rows.map((r) => (
             <TR key={r.id}>
-              <TD className="tabular-nums">{r.id}</TD>
-              <TD><StatusPill status={r.status} /></TD>
-              <TD>{r.priority ?? "—"}</TD>
-              <TD className="max-w-[140px] truncate text-xs">{r.event_type}</TD>
-              <TD className="max-w-xs">{r.title}</TD>
-              <TD className="max-w-md truncate text-xs text-fg-t6">{r.message}</TD>
-              <TD className="tabular-nums">{r.related_company_id ?? "—"}</TD>
-              <TD className="whitespace-nowrap text-xs text-fg-t6">{r.created_at ?? "—"}</TD>
+              <TD className="tabular-nums text-fg-t7 font-mono text-xs">#{r.id}</TD>
+              <TD><Badge tone={notificationStatusTone(r.status)}>{r.status}</Badge></TD>
               <TD>
+                {r.priority ? (
+                  <Badge tone={priorityTone(r.priority)}>{r.priority}</Badge>
+                ) : (
+                  <span className="text-fg-t6">—</span>
+                )}
+              </TD>
+              <TD>
+                <span
+                  className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                  style={{
+                    backgroundColor: "var(--admin-bg-tertiary)",
+                    color: "var(--admin-text-secondary)",
+                  }}
+                >
+                  {r.event_type}
+                </span>
+              </TD>
+              <TD className="max-w-xs font-medium text-fg-t8">{r.title}</TD>
+              <TD className="max-w-md truncate text-xs text-fg-t6">{r.message}</TD>
+              <TD className="tabular-nums text-xs text-fg-t7">{r.related_company_id ?? "—"}</TD>
+              <TD className="text-xs text-fg-t6" title={r.created_at ?? undefined}>
+                {formatRelativeTime(r.created_at)}
+              </TD>
+              <TD align="right">
                 {r.status === "unread" ? (
                   <button
                     type="button"
@@ -195,4 +219,48 @@ export default function NotificationsPage() {
       <p className="text-xs text-fg-t7 mt-4">{t("admin.notifications.footer_help")}</p>
     </div>
   );
+}
+
+function notificationStatusTone(status: string): BadgeTone {
+  switch (status) {
+    case "read":
+    case "sent":
+      return "success";
+    case "unread":
+      return "warning";
+    case "failed":
+      return "danger";
+    default:
+      return "gray";
+  }
+}
+
+function priorityTone(p: string): BadgeTone {
+  switch (p) {
+    case "high":
+    case "urgent":
+      return "danger";
+    case "medium":
+      return "warning";
+    case "low":
+      return "info";
+    default:
+      return "gray";
+  }
+}
+
+function formatRelativeTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "—";
+  const diff = Date.now() - t;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  return new Date(iso).toLocaleDateString();
 }

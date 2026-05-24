@@ -22,7 +22,9 @@ import { Button, FormField, Input, Select } from "@/components/ui";
 import {
   PageHeader as V2PageHeader,
   SectionTabs,
+  V2Button,
 } from "@/components/ui/v2";
+import { Download } from "lucide-react";
 
 export default function LocalizationTranslationsPage() {
   const { token, user } = useAdminAuth();
@@ -177,6 +179,7 @@ export default function LocalizationTranslationsPage() {
           { label: t("admin.content_translations.title") },
         ]}
         title={t("admin.content_translations.title")}
+        actions={<V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>}
       />
 
       <SectionTabs
