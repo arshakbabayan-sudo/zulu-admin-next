@@ -7,6 +7,15 @@ import { canAccessPlatformAdminNav, isSuperAdminRole } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { Button, FormField, Input, PageHeader } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  StatCard as V2StatCard,
+  StatGrid,
+  FilterCard,
+  FilterField,
+  V2Card,
+  V2Button,
+} from "@/components/ui/v2";
 import { formatNumber } from "@/lib/format";
 
 /**
@@ -135,40 +144,51 @@ export default function PlatformRbacPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader title={t("admin.rbac.title")} subtitle={t("admin.rbac.subtitle")} />
+    <div>
+      {/* v2 admin-redesign — RBAC page chrome. Matches docs/zulu-admin-v2.html
+          page-view#roles (lines 799-859). */}
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: t("admin.rbac.title") },
+        ]}
+        title={t("admin.rbac.title")}
+        subtitle={t("admin.rbac.subtitle")}
+      />
 
-      {error && <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{error}</div>}
-      {loading && <p className="text-sm text-fg-t6">{t("common.loading")}</p>}
+      {error && <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{error}</div>}
+      {loading && <p className="mb-4 text-sm text-fg-t6">{t("common.loading")}</p>}
 
       {stats && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label={t("admin.rbac.stat_roles")} value={formatNumber(stats.total_roles, lang)} />
-          <StatCard label={t("admin.rbac.stat_permissions")} value={formatNumber(stats.total_permissions, lang)} />
-          <StatCard label={t("admin.rbac.stat_memberships")} value={formatNumber(stats.total_memberships, lang)} />
-          <StatCard
+        <StatGrid cols={4} className="mb-4">
+          <V2StatCard value={formatNumber(stats.total_roles, lang)} label={t("admin.rbac.stat_roles")} />
+          <V2StatCard value={formatNumber(stats.total_permissions, lang)} label={t("admin.rbac.stat_permissions")} />
+          <V2StatCard value={formatNumber(stats.total_memberships, lang)} label={t("admin.rbac.stat_memberships")} />
+          <V2StatCard
+            value={<span style={{ color: "var(--admin-warning)" }}>{formatNumber(stats.super_admins, lang)}</span>}
             label={t("admin.rbac.stat_super_admins")}
-            value={formatNumber(stats.super_admins, lang)}
-            tone="warn"
           />
-        </div>
+        </StatGrid>
       )}
 
-      <div className="admin-card p-4">
-        <div className="flex items-end gap-2">
-          <FormField label={t("admin.rbac.filter_permissions")} htmlFor="rbac-filter" className="flex-1">
-            <Input
-              id="rbac-filter"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              placeholder={t("admin.rbac.filter_placeholder")}
-            />
-          </FormField>
-          {filter && <Button variant="outline" size="sm" onClick={() => setFilter("")}>{t("common.reset")}</Button>}
-        </div>
-      </div>
+      <FilterCard>
+        <FilterField label={t("admin.rbac.filter_permissions")} minWidth={280}>
+          <Input
+            id="rbac-filter"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            placeholder={t("admin.rbac.filter_placeholder")}
+            className="!h-[34px]"
+          />
+        </FilterField>
+        {filter ? (
+          <V2Button size="sm" onClick={() => setFilter("")}>
+            {t("common.reset")}
+          </V2Button>
+        ) : null}
+      </FilterCard>
 
-      <div className="overflow-x-auto rounded-zulu border border-default bg-white">
+      <V2Card className="overflow-x-auto">
         <table className="min-w-full text-left text-sm">
           <thead className="border-b border-default bg-figma-bg-1 text-xs uppercase text-fg-t7 sticky top-0">
             <tr>
@@ -215,30 +235,7 @@ export default function PlatformRbacPage() {
             ))}
           </tbody>
         </table>
-      </div>
-    </div>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  tone = "neutral",
-}: {
-  label: string;
-  value: string;
-  tone?: "good" | "warn" | "neutral";
-}) {
-  const toneClass =
-    tone === "good"
-      ? "text-success-600"
-      : tone === "warn"
-        ? "text-warning-600"
-        : "text-fg-t11";
-  return (
-    <div className="admin-card p-4">
-      <div className="text-xs font-semibold uppercase tracking-wide text-fg-t6">{label}</div>
-      <div className={`mt-2 text-2xl font-bold tabular-nums ${toneClass}`}>{value}</div>
+      </V2Card>
     </div>
   );
 }

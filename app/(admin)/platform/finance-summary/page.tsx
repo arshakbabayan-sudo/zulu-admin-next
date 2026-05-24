@@ -11,16 +11,14 @@ import { apiPlatformFinanceSummary, type PlatformFinanceSummary } from "@/lib/pl
 import { formatMoney } from "@/lib/format";
 import { useCallback, useEffect, useState } from "react";
 import { Button, PageHeader } from "@/components/ui";
-
-function SummaryCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
-    <div className="admin-card p-4">
-      <div className="text-xs font-medium uppercase tracking-wide text-fg-t6">{label}</div>
-      <div className="mt-1 text-2xl font-semibold tabular-nums text-fg-t11">{value}</div>
-      {sub && <div className="mt-1 text-xs text-fg-t7">{sub}</div>}
-    </div>
-  );
-}
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  StatCard,
+  StatGrid,
+  V2Button,
+} from "@/components/ui/v2";
+import { RefreshCw } from "lucide-react";
 
 export default function PlatformFinanceSummaryPage() {
   const { token, user } = useAdminAuth();
@@ -57,37 +55,55 @@ export default function PlatformFinanceSummaryPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      {/* v2 admin-redesign — Finance summary page chrome.
+          Matches docs/zulu-admin-v2.html page-view#finance (lines 603-666). */}
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Finance" },
+        ]}
         title={t("admin.finance_summary.title")}
         actions={
-          <Button variant="outline" size="sm" onClick={() => load()}>
+          <V2Button size="sm" onClick={() => load()} icon={<RefreshCw className="h-3.5 w-3.5" aria-hidden />}>
             {t("admin.finance_summary.btn_refresh")}
-          </Button>
+          </V2Button>
         }
       />
 
+      <SectionTabs
+        activeHref="/platform/finance-summary"
+        items={[
+          { href: "/platform/finance-summary", label: "Summary" },
+          { href: "/platform/invoices", label: "Invoices" },
+          { href: "/platform/payments", label: "Payments" },
+          { href: "/platform/commissions", label: "Commissions ledger" },
+          { href: "/platform/finance", label: "Transactions" },
+          { href: "/platform/vouchers", label: "Vouchers" },
+        ]}
+      />
+
       {err && (
-        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
+        <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
       )}
 
       {data && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <SummaryCard
-            label={t("admin.finance_summary.card_total_payments")}
+        <StatGrid cols={3} className="mb-4">
+          <StatCard
             value={formatMoney(data.total_payments_paid, lang)}
-            sub={t("admin.finance_summary.sub_paid_payments").replace("{n}", String(data.payments_count_paid))}
+            label={t("admin.finance_summary.card_total_payments")}
+            footer={t("admin.finance_summary.sub_paid_payments").replace("{n}", String(data.payments_count_paid))}
           />
-          <SummaryCard
-            label={t("admin.finance_summary.card_commission_accrued")}
+          <StatCard
             value={formatMoney(data.total_commission_accrued, lang)}
+            label={t("admin.finance_summary.card_commission_accrued")}
           />
-          <SummaryCard
-            label={t("admin.finance_summary.card_commission_pending")}
+          <StatCard
             value={formatMoney(data.total_commission_pending, lang)}
-            sub={t("admin.finance_summary.sub_commission_records").replace("{n}", String(data.commission_records_count))}
+            label={t("admin.finance_summary.card_commission_pending")}
+            footer={t("admin.finance_summary.sub_commission_records").replace("{n}", String(data.commission_records_count))}
           />
-        </div>
+        </StatGrid>
       )}
     </div>
   );
