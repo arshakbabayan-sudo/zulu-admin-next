@@ -715,11 +715,22 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   key={g.key}
                   href={href}
                   aria-current={active ? "page" : undefined}
-                  className={`flex items-center rounded-lg px-3 py-2 transition ${
-                    active ? "shadow-sm" : "text-slate-700 hover:bg-slate-100"
-                  } ${sidebarOpen ? "gap-2" : "justify-center"}`}
+                  // 2026-05-24 admin-redesign — visual tuning to match
+                  // docs/zulu-admin-single.html sidebar:
+                  //   font 13px, gap 10px (gap-2.5), inactive text-secondary,
+                  //   hover bg slate-50, active uses primary-soft bg +
+                  //   primary text + medium weight.
+                  className={`flex items-center rounded-lg px-3 py-2 text-[13px] transition ${
+                    active
+                      ? "font-medium"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                  } ${sidebarOpen ? "gap-2.5" : "justify-center"}`}
                   title={label}
-                  style={active ? { backgroundColor: "var(--admin-primary-soft)", color: "var(--admin-primary)" } : undefined}
+                  style={
+                    active
+                      ? { backgroundColor: "var(--admin-primary-soft)", color: "var(--admin-primary)" }
+                      : undefined
+                  }
                 >
                   <img src={g.icon} alt="" aria-hidden className="h-4 w-4 shrink-0 opacity-80" />
                   {sidebarOpen && <span>{label}</span>}
