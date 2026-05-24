@@ -361,28 +361,80 @@ function BookingOverview({ stats }: { stats: PlatformStats }) {
   );
 }
 
-function MonthlyEarnings() {
-  const { t } = useLanguage();
-  // Placeholder until invoices/finance roll-up endpoint exists.
+function MonthlyEarnings({ token, allowed }: { token: string | null; allowed: boolean }) {
+  const { t, lang } = useLanguage();
+  // Phase Զ.15 / Item 5 — wired to /statistics/dashboard. Compares the
+  // last 30 days against the prior 30 days for the trend % .
+  const [current, setCurrent] = useState<number | null>(null);
+  const [previous, setPrevious] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!allowed || !token) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const [c, p] = await Promise.all([
+          apiFetchJson<{ success: boolean; data: { revenue: { total: number } } }>(
+            "/platform-admin/statistics/dashboard?days=30",
+            { token }
+          ),
+          apiFetchJson<{ success: boolean; data: { revenue: { total: number } } }>(
+            "/platform-admin/statistics/dashboard?days=60",
+            { token }
+          ),
+        ]);
+        if (cancelled) return;
+        const cur = c.data?.revenue?.total ?? 0;
+        const total60 = p.data?.revenue?.total ?? 0;
+        const prev = Math.max(0, total60 - cur);
+        setCurrent(cur);
+        setPrevious(prev);
+      } catch {
+        if (!cancelled) {
+          setCurrent(0);
+          setPrevious(0);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [allowed, token]);
+
+  const valueStr = current == null ? "—" : `$${formatValue(current, lang)}`;
+  const pct =
+    previous == null || current == null || previous === 0
+      ? null
+      : ((current - previous) / previous) * 100;
+  const sign: "up" | "down" | "flat" = pct == null || pct === 0 ? "flat" : pct > 0 ? "up" : "down";
+  const pctStr = pct == null ? "—" : `${pct > 0 ? "+" : ""}${pct.toFixed(1)}%`;
+  const goalPct = current == null || previous == null || previous + current === 0
+    ? 0
+    : Math.min(100, Math.round((current / Math.max(previous, current, 1)) * 100));
+
   return (
     <div className="flex items-center justify-between gap-4">
       <div>
         <p className="text-xs text-fg-t6">{t("admin.dashboard.this_month")}</p>
-        <p className="mt-1 text-3xl font-semibold tabular-nums text-fg-t11">$0</p>
-        <p className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-success-700">
+        <p className="mt-1 text-3xl font-semibold tabular-nums text-fg-t11">{valueStr}</p>
+        <p
+          className={`mt-2 inline-flex items-center gap-1 text-xs font-medium ${
+            sign === "up" ? "text-success-700" : sign === "down" ? "text-error-600" : "text-fg-t6"
+          }`}
+        >
           <TrendingUp className="size-3" aria-hidden />
-          —
+          {pctStr}
           <span className="text-fg-t6">{t("admin.dashboard.vs_previous")}</span>
         </p>
-        <button
-          type="button"
+        <Link
+          href="/platform/statistics"
           className="mt-4 inline-flex items-center gap-1 rounded-full border border-default px-3 py-1.5 text-xs font-medium text-fg-t11 hover:bg-figma-bg-1"
         >
           {t("admin.dashboard.view_more")}
           <ArrowRight className="size-3" aria-hidden />
-        </button>
+        </Link>
       </div>
-      <DonutGoal pct={0} label={t("admin.dashboard.goal")} />
+      <DonutGoal pct={goalPct} label={t("admin.dashboard.goal")} />
     </div>
   );
 }
@@ -640,18 +692,104 @@ function RecentActivity({ token, allowed }: { token: string | null; allowed: boo
   );
 }
 
-function TopOperatorsByRevenue() {
-  const { t } = useLanguage();
-  // Placeholder — needs aggregate revenue-per-company endpoint.
-  return (
-    <div className="flex h-48 items-center justify-center rounded-xl border border-dashed border-default bg-figma-bg-1">
-      <div className="text-center">
-        <PieChart className="mx-auto size-8 text-fg-t6" aria-hidden />
-        <p className="mt-2 text-sm font-medium text-fg-t11">{t("admin.dashboard.revenue_chart_pending")}</p>
-        <p className="mt-1 text-xs text-fg-t6 max-w-xs px-4">
-          {t("admin.dashboard.top_operators_chart_hint")}
-        </p>
+type TopSellerRow = {
+  company_id: number;
+  company_name: string;
+  total_revenue: number;
+  order_count: number;
+};
+
+function TopOperatorsByRevenue({ token, allowed }: { token: string | null; allowed: boolean }) {
+  const { t, lang } = useLanguage();
+  const [sellers, setSellers] = useState<TopSellerRow[] | null>(null);
+
+  useEffect(() => {
+    if (!allowed || !token) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await apiFetchJson<{ success: boolean; data: TopSellerRow[] }>(
+          "/platform-admin/statistics/sellers?days=30&limit=5",
+          { token }
+        );
+        if (!cancelled) setSellers(res.data ?? []);
+      } catch {
+        if (!cancelled) setSellers([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [allowed, token]);
+
+  if (sellers === null) {
+    return (
+      <div className="flex h-48 items-center justify-center rounded-xl border border-default bg-white">
+        <p className="text-xs text-fg-t6">{t("common.loading") || "Loading…"}</p>
       </div>
+    );
+  }
+
+  if (sellers.length === 0) {
+    return (
+      <div className="flex h-48 items-center justify-center rounded-xl border border-dashed border-default bg-figma-bg-1">
+        <div className="text-center">
+          <PieChart className="mx-auto size-8 text-fg-t6" aria-hidden />
+          <p className="mt-2 text-sm font-medium text-fg-t11">
+            {t("admin.dashboard.revenue_chart_pending")}
+          </p>
+          <p className="mt-1 text-xs text-fg-t6 max-w-xs px-4">
+            {t("admin.dashboard.top_operators_chart_hint")}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const max = Math.max(...sellers.map((s) => s.total_revenue), 1);
+  return (
+    <div className="space-y-3">
+      {sellers.map((s, i) => {
+        const pct = (s.total_revenue / max) * 100;
+        return (
+          <div key={s.company_id} className="flex items-center gap-3">
+            <span
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+              style={{
+                backgroundColor: "var(--admin-primary-light)",
+                color: "var(--admin-primary-dark)",
+              }}
+            >
+              {i + 1}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-2">
+                <Link
+                  href={`/platform/companies/${s.company_id}`}
+                  className="truncate text-sm font-medium text-fg-t11 hover:underline"
+                >
+                  {s.company_name}
+                </Link>
+                <span className="text-xs font-semibold tabular-nums text-fg-t11">
+                  ${formatValue(s.total_revenue, lang)}
+                </span>
+              </div>
+              <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-figma-bg-1">
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${pct}%`,
+                    backgroundColor: "var(--admin-primary)",
+                  }}
+                />
+              </div>
+              <div className="mt-0.5 text-[11px] text-fg-t6">
+                {s.order_count} {t("admin.dashboard.orders") || "orders"}
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -856,7 +994,7 @@ export default function DashboardPage() {
           <BookingOverview stats={stats} />
         </WidgetCard>
         <WidgetCard title={t("admin.dashboard.monthly_earnings")} icon={DollarSign}>
-          <MonthlyEarnings />
+          <MonthlyEarnings token={token} allowed={allowed} />
         </WidgetCard>
         <WidgetCard title={t("admin.dashboard.companies_on_platform")} icon={CheckCircle2}>
           <ApprovalsProgress stats={stats} />
@@ -904,7 +1042,7 @@ export default function DashboardPage() {
             icon={ArrowUpRight}
             action={<span className="text-xs text-fg-t6">{t("admin.dashboard.total_revenue_placeholder")}</span>}
           >
-            <TopOperatorsByRevenue />
+            <TopOperatorsByRevenue token={token} allowed={allowed} />
           </WidgetCard>
         </div>
         <div className="min-w-0">
