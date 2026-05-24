@@ -8,125 +8,238 @@
  *   PageHeader (breadcrumb, title "Notifications", subtitle "Your inbox",
  *               Mark all as read + Preferences actions)
  *   SectionTabs (All / Unread / Mentions / System)
- *   Card with date-grouped notification rows (Today / Yesterday)
+ *   Card with date-grouped notification rows (Today / Yesterday / This week / Earlier)
  *     each row = avatar(icon) + title + body + actions + unread dot
  *
- * Data is static demo for now; Phase Ե will wire to /api/admin/notifications.
+ * 2026-05-24 wiring: now backed by /api/notifications/paginated, /read-all,
+ * /{id}/read, /unread-count (NotificationController). No apiNotifications
+ * helper exists, so this page calls fetch() inline using getApiBaseUrl().
+ *
+ * NotificationResource shape:
+ *   { id, type, title, message, status: "unread"|"read", event_type,
+ *     subject_type, subject_id, related_company_id, priority, created_at }
  */
 
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useDocumentTitle } from "@/lib/use-document-title";
+import { getApiBaseUrl } from "@/lib/api-base";
 import { PageHeader, V2Card, V2Button } from "@/components/ui/v2";
 
-type NotificationItem = {
-  id: string;
-  group: "today" | "yesterday";
-  unread: boolean;
-  avatarTone: "purple" | "teal" | "amber" | "blue";
-  icon: "calendar" | "alert" | "receipt" | "user-plus" | "shield-x" | "edit";
-  title: string;
-  body: React.ReactNode;
-  time: string;
-  actions?: { label: string; variant: "primary" | "default" }[];
+type ApiNotification = {
+  id: number;
+  type: string | null;
+  title: string | null;
+  message: string | null;
+  status: "unread" | "read" | string;
+  event_type: string | null;
+  subject_type: string | null;
+  subject_id: number | null;
+  related_company_id: number | null;
+  priority: string | null;
+  created_at: string | null;
 };
 
-const NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: "n1",
-    group: "today",
-    unread: true,
-    avatarTone: "purple",
-    icon: "calendar",
-    title: "New booking pending approval",
-    body: (
-      <>
-        Booking <span className="font-mono">ZL-BK-892841</span> requires confirmation. Customer
-        John Smith, Marriott Athens, $1,240.00.
-      </>
-    ),
-    time: "2 min ago",
-    actions: [
-      { label: "View booking", variant: "primary" },
-      { label: "Confirm", variant: "default" },
-    ],
-  },
-  {
-    id: "n2",
-    group: "today",
-    unread: true,
-    avatarTone: "amber",
-    icon: "alert",
-    title: "Approval queue: 3 items waiting",
-    body: "3 entities in approval queue including high-priority hotel #84 (Marriott Athens).",
-    time: "15 min ago",
-    actions: [{ label: "Open queue", variant: "primary" }],
-  },
-  {
-    id: "n3",
-    group: "today",
-    unread: true,
-    avatarTone: "teal",
-    icon: "receipt",
-    title: "Invoice INV-2026-128 issued",
-    body: "Նարե Կարապետյան issued an invoice for Acme Travels — $1,240.00.",
-    time: "1 hour ago",
-  },
-  {
-    id: "n4",
-    group: "today",
-    unread: false,
-    avatarTone: "blue",
-    icon: "user-plus",
-    title: "New user registered",
-    body: "Maria Karapetyan (maria@example.com) registered as Customer.",
-    time: "3 hours ago",
-  },
-  {
-    id: "n5",
-    group: "yesterday",
-    unread: false,
-    avatarTone: "amber",
-    icon: "shield-x",
-    title: "Failed login attempts detected",
-    body: "3 failed login attempts for user sergey@zulu.am from IP 185.42.x.x.",
-    time: "Yesterday at 22:14",
-    actions: [{ label: "Review activity", variant: "default" }],
-  },
-  {
-    id: "n6",
-    group: "yesterday",
-    unread: false,
-    avatarTone: "purple",
-    icon: "edit",
-    title: "Permissions updated",
-    body: "You updated the Editor role: granted Hotels.Edit and Bookings.Export permissions.",
-    time: "Yesterday at 14:32",
-  },
-];
+type DateGroup = "today" | "yesterday" | "this_week" | "earlier";
+
+type IconKey = "calendar" | "alert" | "receipt" | "user-plus" | "shield-x" | "edit" | "bell";
+type ToneKey = "purple" | "teal" | "amber" | "blue";
 
 const TABS = [
-  { key: "all", label: "All", count: 47 },
-  { key: "unread", label: "Unread", count: 3 },
+  { key: "all", label: "All" },
+  { key: "unread", label: "Unread" },
   { key: "mentions", label: "Mentions" },
   { key: "system", label: "System" },
 ] as const;
+
+type TabKey = (typeof TABS)[number]["key"];
 
 function tx(t: (k: string) => string, key: string, fallback: string): string {
   const r = t(key);
   return r === key ? fallback : r;
 }
 
+/**
+ * Map notification type/event_type to an icon + tone tuple.
+ * Falls back to "bell" / "purple" so unknown types still render.
+ */
+function classifyNotification(n: ApiNotification): { icon: IconKey; tone: ToneKey } {
+  const key = `${n.type ?? ""} ${n.event_type ?? ""}`.toLowerCase();
+  if (/booking|reservation|order/.test(key)) return { icon: "calendar", tone: "purple" };
+  if (/approv|moderation|review/.test(key)) return { icon: "alert", tone: "amber" };
+  if (/invoice|payment|receipt/.test(key)) return { icon: "receipt", tone: "teal" };
+  if (/user|register|signup/.test(key)) return { icon: "user-plus", tone: "blue" };
+  if (/security|login|auth|failed/.test(key)) return { icon: "shield-x", tone: "amber" };
+  if (/permission|role|update|edit/.test(key)) return { icon: "edit", tone: "purple" };
+  return { icon: "bell", tone: "purple" };
+}
+
+function groupByDate(createdAt: string | null): DateGroup {
+  if (!createdAt) return "earlier";
+  const created = new Date(createdAt);
+  if (Number.isNaN(created.getTime())) return "earlier";
+  const now = new Date();
+  const ms = now.getTime() - created.getTime();
+  const sameDay =
+    created.getFullYear() === now.getFullYear() &&
+    created.getMonth() === now.getMonth() &&
+    created.getDate() === now.getDate();
+  if (sameDay) return "today";
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const sameYesterday =
+    created.getFullYear() === yesterday.getFullYear() &&
+    created.getMonth() === yesterday.getMonth() &&
+    created.getDate() === yesterday.getDate();
+  if (sameYesterday) return "yesterday";
+  if (ms < 7 * 24 * 60 * 60 * 1000) return "this_week";
+  return "earlier";
+}
+
+function formatRelativeTime(createdAt: string | null): string {
+  if (!createdAt) return "";
+  const created = new Date(createdAt);
+  if (Number.isNaN(created.getTime())) return "";
+  const ms = Date.now() - created.getTime();
+  const minutes = Math.floor(ms / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} day${days === 1 ? "" : "s"} ago`;
+  return created.toLocaleDateString();
+}
+
 export default function AdminRedesignNotificationsPage() {
   const { t } = useLanguage();
+  const { token } = useAdminAuth();
+  const router = useRouter();
   useDocumentTitle("Notifications — ZULU Admin");
-  const [activeTab, setActiveTab] = useState<(typeof TABS)[number]["key"]>("all");
 
-  const visible = NOTIFICATIONS.filter((n) =>
-    activeTab === "unread" ? n.unread : true,
-  );
-  const todayGroup = visible.filter((n) => n.group === "today");
-  const yesterdayGroup = visible.filter((n) => n.group === "yesterday");
+  const [activeTab, setActiveTab] = useState<TabKey>("all");
+  const [items, setItems] = useState<ApiNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const apiBase = getApiBaseUrl().replace(/\/$/, "");
+
+  const fetchList = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    setErr(null);
+    try {
+      const unreadOnly = activeTab === "unread" ? 1 : 0;
+      const resp = await fetch(
+        `${apiBase}/notifications/paginated?page=1&per_page=50&unread_only=${unreadOnly}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
+        },
+      );
+      if (!resp.ok) {
+        throw new Error(`HTTP ${resp.status}`);
+      }
+      const json = (await resp.json()) as { success: boolean; data: ApiNotification[] };
+      setItems(Array.isArray(json.data) ? json.data : []);
+    } catch (e) {
+      setErr(
+        e instanceof Error
+          ? e.message
+          : tx(t, "admin.notifications.err_load", "Failed to load notifications."),
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [token, apiBase, activeTab, t]);
+
+  const fetchUnreadCount = useCallback(async () => {
+    if (!token) return;
+    try {
+      const resp = await fetch(`${apiBase}/notifications/unread-count`, {
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      });
+      if (!resp.ok) return;
+      const json = (await resp.json()) as { success: boolean; data: { unread_count: number } };
+      setUnreadCount(json.data?.unread_count ?? null);
+    } catch {
+      // non-critical
+    }
+  }, [token, apiBase]);
+
+  useEffect(() => {
+    void fetchList();
+  }, [fetchList]);
+
+  useEffect(() => {
+    void fetchUnreadCount();
+  }, [fetchUnreadCount]);
+
+  async function markAllRead() {
+    if (!token) return;
+    try {
+      await fetch(`${apiBase}/notifications/read-all`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      });
+      await Promise.all([fetchList(), fetchUnreadCount()]);
+    } catch {
+      // ignore
+    }
+  }
+
+  async function markOneRead(id: number) {
+    if (!token) return;
+    try {
+      await fetch(`${apiBase}/notifications/${id}/read`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      });
+      // Optimistic update
+      setItems((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, status: "read" } : n)),
+      );
+      void fetchUnreadCount();
+    } catch {
+      // ignore
+    }
+  }
+
+  // Tab filtering applied client-side on top of the unread_only server filter.
+  const visible = useMemo(() => {
+    if (activeTab === "mentions") {
+      return items.filter((n) => /mention/i.test(`${n.type ?? ""} ${n.event_type ?? ""}`));
+    }
+    if (activeTab === "system") {
+      return items.filter((n) => /system|broadcast/i.test(`${n.type ?? ""} ${n.event_type ?? ""}`));
+    }
+    return items;
+  }, [items, activeTab]);
+
+  const grouped = useMemo(() => {
+    const buckets: Record<DateGroup, ApiNotification[]> = {
+      today: [],
+      yesterday: [],
+      this_week: [],
+      earlier: [],
+    };
+    for (const n of visible) buckets[groupByDate(n.created_at)].push(n);
+    return buckets;
+  }, [visible]);
+
+  const totalAll = items.length;
+  const totalUnread = unreadCount ?? items.filter((n) => n.status === "unread").length;
+
+  const tabCount = (key: TabKey): number | undefined => {
+    if (key === "all") return totalAll || undefined;
+    if (key === "unread") return totalUnread || undefined;
+    return undefined;
+  };
 
   return (
     <div>
@@ -139,10 +252,13 @@ export default function AdminRedesignNotificationsPage() {
         subtitle={tx(t, "admin.notifications.subtitle", "Your inbox")}
         actions={
           <>
-            <V2Button icon={<ChecksIcon />}>
+            <V2Button icon={<ChecksIcon />} onClick={() => void markAllRead()}>
               {tx(t, "admin.notifications.mark_all_read", "Mark all as read")}
             </V2Button>
-            <V2Button icon={<SettingsIcon />}>
+            <V2Button
+              icon={<SettingsIcon />}
+              onClick={() => router.push("/admin-redesign/profile")}
+            >
               {tx(t, "admin.notifications.preferences", "Preferences")}
             </V2Button>
           </>
@@ -157,6 +273,7 @@ export default function AdminRedesignNotificationsPage() {
       >
         {TABS.map((tab) => {
           const active = activeTab === tab.key;
+          const count = tabCount(tab.key);
           return (
             <button
               key={tab.key}
@@ -169,8 +286,8 @@ export default function AdminRedesignNotificationsPage() {
                 borderBottomColor: active ? "var(--admin-primary)" : "transparent",
               }}
             >
-              {tab.label}
-              {"count" in tab && tab.count !== undefined ? (
+              {tx(t, `admin.notifications.tab.${tab.key}`, tab.label)}
+              {count !== undefined ? (
                 <span
                   className="ml-1 inline-flex items-center justify-center rounded-full px-[7px] py-[1px] text-[11px] font-medium"
                   style={{
@@ -178,7 +295,7 @@ export default function AdminRedesignNotificationsPage() {
                     color: active ? "var(--admin-primary)" : "var(--admin-text-secondary)",
                   }}
                 >
-                  {tab.count}
+                  {count}
                 </span>
               ) : null}
             </button>
@@ -186,39 +303,60 @@ export default function AdminRedesignNotificationsPage() {
         })}
       </div>
 
+      {err ? (
+        <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
+          {err}
+        </div>
+      ) : null}
+
       <V2Card>
-        {todayGroup.length > 0 ? (
-          <>
-            <GroupHeader label="Today" />
-            {todayGroup.map((n) => (
-              <NotificationRow key={n.id} item={n} />
-            ))}
-          </>
-        ) : null}
-        {yesterdayGroup.length > 0 ? (
-          <>
-            <GroupHeader label="Yesterday" muted />
-            {yesterdayGroup.map((n) => (
-              <NotificationRow key={n.id} item={n} />
-            ))}
-          </>
-        ) : null}
-        {visible.length === 0 ? (
+        {(["today", "yesterday", "this_week", "earlier"] as DateGroup[]).map((bucket) => {
+          const list = grouped[bucket];
+          if (list.length === 0) return null;
+          return (
+            <div key={bucket}>
+              <GroupHeader
+                label={tx(t, `admin.notifications.group.${bucket}`, GROUP_LABEL[bucket])}
+                muted={bucket !== "today"}
+              />
+              {list.map((n) => (
+                <NotificationRow key={n.id} item={n} onMarkRead={markOneRead} />
+              ))}
+            </div>
+          );
+        })}
+        {!loading && visible.length === 0 ? (
           <div className="px-5 py-[60px] text-center">
-            <div className="text-[14px] font-semibold" style={{ color: "var(--admin-text-primary)" }}>
-              No notifications
+            <div
+              className="text-[14px] font-semibold"
+              style={{ color: "var(--admin-text-primary)" }}
+            >
+              {tx(t, "admin.notifications.empty", "No notifications")}
+            </div>
+            <div
+              className="mt-1 text-[12px]"
+              style={{ color: "var(--admin-text-secondary)" }}
+            >
+              {tx(t, "admin.notifications.empty_hint", "You're all caught up.")}
             </div>
           </div>
         ) : null}
+        {loading ? (
+          <div className="px-5 py-[60px] text-center text-[12px]" style={{ color: "var(--admin-text-secondary)" }}>
+            {tx(t, "common.loading", "Loading…")}
+          </div>
+        ) : null}
       </V2Card>
-
-      <p className="mt-4 text-[12px]" style={{ color: "var(--admin-text-secondary)" }}>
-        🚧 <strong>Placeholder data</strong> — իրական notifications wiring-ը Փուլ Ե-ում
-        (/api/admin/notifications endpoint արդեն կա, պետք է միացնել)։
-      </p>
     </div>
   );
 }
+
+const GROUP_LABEL: Record<DateGroup, string> = {
+  today: "Today",
+  yesterday: "Yesterday",
+  this_week: "This week",
+  earlier: "Earlier",
+};
 
 function GroupHeader({ label, muted }: { label: string; muted?: boolean }) {
   return (
@@ -235,39 +373,56 @@ function GroupHeader({ label, muted }: { label: string; muted?: boolean }) {
   );
 }
 
-function NotificationRow({ item }: { item: NotificationItem }) {
+function NotificationRow({
+  item,
+  onMarkRead,
+}: {
+  item: ApiNotification;
+  onMarkRead: (id: number) => void;
+}) {
+  const unread = item.status === "unread";
+  const { icon, tone } = classifyNotification(item);
   return (
     <div
       className="flex gap-3 border-b px-5 py-3.5"
       style={{
         borderColor: "var(--admin-border)",
-        backgroundColor: item.unread ? "var(--admin-primary-light)" : "transparent",
+        backgroundColor: unread ? "var(--admin-primary-light)" : "transparent",
       }}
     >
-      <NotificationAvatar tone={item.avatarTone} icon={item.icon} />
+      <NotificationAvatar tone={tone} icon={icon} />
       <div className="flex-1">
         <div className="mb-2 flex items-start justify-between gap-2">
-          <div className="text-[13px] font-medium" style={{ color: "var(--admin-text-primary)" }}>
-            {item.title}
+          <div
+            className="text-[13px] font-medium"
+            style={{ color: "var(--admin-text-primary)" }}
+          >
+            {item.title || `Notification #${item.id}`}
           </div>
-          <span className="shrink-0 text-[11px]" style={{ color: "var(--admin-text-secondary)" }}>
-            {item.time}
+          <span
+            className="shrink-0 text-[11px]"
+            style={{ color: "var(--admin-text-secondary)" }}
+          >
+            {formatRelativeTime(item.created_at)}
           </span>
         </div>
-        <div className="text-[13px]" style={{ color: "var(--admin-text-secondary)" }}>
-          {item.body}
-        </div>
-        {item.actions ? (
+        {item.message ? (
+          <div
+            className="text-[13px]"
+            style={{ color: "var(--admin-text-secondary)" }}
+          >
+            {item.message}
+          </div>
+        ) : null}
+        {unread ? (
           <div className="mt-3 flex flex-wrap gap-2">
-            {item.actions.map((a, i) => (
-              <V2Button key={i} size="xs" variant={a.variant}>
-                {a.label}
-              </V2Button>
-            ))}
+            <V2Button size="xs" variant="primary" onClick={() => onMarkRead(item.id)}>
+              Mark as read
+            </V2Button>
           </div>
         ) : null}
       </div>
-      {item.unread ? (
+      {unread ? (
         <span
           aria-hidden
           className="mt-1.5 inline-block h-2 w-2 shrink-0 rounded-full"
@@ -278,14 +433,8 @@ function NotificationRow({ item }: { item: NotificationItem }) {
   );
 }
 
-function NotificationAvatar({
-  tone,
-  icon,
-}: {
-  tone: NotificationItem["avatarTone"];
-  icon: NotificationItem["icon"];
-}) {
-  const styles: Record<string, React.CSSProperties> = {
+function NotificationAvatar({ tone, icon }: { tone: ToneKey; icon: IconKey }) {
+  const styles: Record<ToneKey, React.CSSProperties> = {
     purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
     teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
     amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
@@ -297,7 +446,21 @@ function NotificationAvatar({
       style={styles[tone]}
       aria-hidden
     >
-      {icon === "calendar" ? <CalIcon /> : icon === "alert" ? <AlertIcon /> : icon === "receipt" ? <ReceiptIcon /> : icon === "user-plus" ? <UPIcon /> : icon === "shield-x" ? <ShieldXIcon /> : <EditIcon />}
+      {icon === "calendar" ? (
+        <CalIcon />
+      ) : icon === "alert" ? (
+        <AlertIcon />
+      ) : icon === "receipt" ? (
+        <ReceiptIcon />
+      ) : icon === "user-plus" ? (
+        <UPIcon />
+      ) : icon === "shield-x" ? (
+        <ShieldXIcon />
+      ) : icon === "edit" ? (
+        <EditIcon />
+      ) : (
+        <BellIcon />
+      )}
     </span>
   );
 }
@@ -373,6 +536,14 @@ function EditIcon() {
     <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M12 20h9" />
       <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z" />
+    </svg>
+  );
+}
+function BellIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
     </svg>
   );
 }

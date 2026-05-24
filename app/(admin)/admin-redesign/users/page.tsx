@@ -10,14 +10,27 @@
  *   FilterCard (Search + Type select + Search button)
  *   Card → Table (checkbox + ID + Name+avatar + Email + Status + Companies + Actions)
  *
- * Data wiring is Phase Ե follow-up — for now uses static demo rows so the
- * layout/spacing/component composition can be validated end-to-end against
- * the mockup. Real /api/admin/users wiring will replace the demoRows array.
+ * 2026-05-24 wiring: now backed by real /platform-admin/users (apiPlatformUsers).
+ * The 4 stat cards use meta.total for Total; Active/New/Pending derive from the
+ * current page's rows only — a dedicated /rbac/stats-style endpoint would be
+ * required for true platform-wide counts (flagged below as Phase 2).
  */
 
-import { useState } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
+import { Edit3, MoreVertical } from "lucide-react";
+import { ForbiddenNotice } from "@/components/ForbiddenNotice";
+import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useDocumentTitle } from "@/lib/use-document-title";
+import { canAccessPlatformAdminNav } from "@/lib/access";
+import { ApiRequestError } from "@/lib/api-client";
+import type { ApiListMeta } from "@/lib/api-envelope";
+import {
+  apiPlatformUsers,
+  type PlatformAdminUserRow,
+  type PlatformUserTypeFilter,
+} from "@/lib/platform-admin-api";
 import {
   PageHeader,
   StatCard,
@@ -29,94 +42,117 @@ import {
   IconButton,
 } from "@/components/ui/v2";
 
-type DemoUser = {
-  id: string;
-  initials: string;
-  initialsTone: "purple" | "teal" | "amber" | "blue";
-  name: string;
-  email: string;
-  status: "active" | "pending" | "suspended";
-  companies: { label: string; tone: "primary" | "gray" }[];
-};
-
-const DEMO_ROWS: DemoUser[] = [
-  {
-    id: "#10284",
-    initials: "AM",
-    initialsTone: "purple",
-    name: "Արշակ Մարտիրոսյան",
-    email: "arshak@zulu.am",
-    status: "active",
-    companies: [
-      { label: "ZULU Platform", tone: "primary" },
-      { label: "Admin", tone: "gray" },
-    ],
-  },
-  {
-    id: "#10283",
-    initials: "NK",
-    initialsTone: "teal",
-    name: "Նարե Կարապետյան",
-    email: "nare@zulu.am",
-    status: "active",
-    companies: [
-      { label: "ZULU Platform", tone: "primary" },
-      { label: "Finance", tone: "gray" },
-    ],
-  },
-  {
-    id: "#10282",
-    initials: "DH",
-    initialsTone: "amber",
-    name: "Դավիթ Հակոբյան",
-    email: "davit@zulu.am",
-    status: "pending",
-    companies: [{ label: "Customer", tone: "gray" }],
-  },
-  {
-    id: "#10281",
-    initials: "LP",
-    initialsTone: "blue",
-    name: "Լուսինե Պետրոսյան",
-    email: "lusine@zulu.am",
-    status: "active",
-    companies: [
-      { label: "Acme Travels", tone: "primary" },
-      { label: "Agent", tone: "gray" },
-    ],
-  },
-  {
-    id: "#10280",
-    initials: "SG",
-    initialsTone: "purple",
-    name: "Սերգեյ Գրիգորյան",
-    email: "sergey@zulu.am",
-    status: "suspended",
-    companies: [{ label: "Customer", tone: "gray" }],
-  },
-];
-
-const STATUS_LABEL: Record<DemoUser["status"], { label: string; color: string }> = {
-  active: { label: "Active", color: "var(--admin-success)" },
-  pending: { label: "Pending", color: "var(--admin-warning)" },
-  suspended: { label: "Suspended", color: "var(--admin-danger)" },
-};
-
 function tx(t: (k: string) => string, key: string, fallback: string): string {
   const r = t(key);
   return r === key ? fallback : r;
 }
 
+function getInitials(name: string): string {
+  return (name || "?")
+    .split(" ")
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
+// v2 admin-redesign — deterministic avatar tone picker (matches bucket3/employees).
+function pickAvatarTone(id: number | string): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  const n = typeof id === "number" ? id : id.length;
+  return tones[n % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
+}
+
+const PER_PAGE = 20;
+
 export default function AdminRedesignUsersPage() {
   const { t } = useLanguage();
+  const { token, user } = useAdminAuth();
   useDocumentTitle("Users — ZULU Admin");
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const allSelected = selectedIds.size === DEMO_ROWS.length;
+  const allowed = canAccessPlatformAdminNav(user);
+
+  const [rows, setRows] = useState<PlatformAdminUserRow[]>([]);
+  const [meta, setMeta] = useState<ApiListMeta | null>(null);
+  const [page, setPage] = useState(1);
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<PlatformUserTypeFilter>("");
+  const [err, setErr] = useState<string | null>(null);
+  const [forbidden, setForbidden] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+  const load = useCallback(async () => {
+    if (!token || !allowed) return;
+    setErr(null);
+    setForbidden(false);
+    setLoading(true);
+    try {
+      const res = await apiPlatformUsers(token, {
+        page,
+        per_page: PER_PAGE,
+        search: search || undefined,
+        type: typeFilter || undefined,
+      });
+      setRows(res.data);
+      setMeta(res.meta);
+    } catch (e) {
+      if (e instanceof ApiRequestError && e.status === 403) {
+        setForbidden(true);
+      } else {
+        setErr(
+          e instanceof ApiRequestError
+            ? e.message
+            : tx(t, "admin.users.err_load", "Failed to load users.")
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [token, allowed, page, search, typeFilter, t]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  // Debounced search — fire 350ms after typing stops.
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      if (searchInput.trim() !== search) {
+        setPage(1);
+        setSearch(searchInput.trim());
+      }
+    }, 350);
+    return () => clearTimeout(handle);
+  }, [searchInput, search]);
+
+  // Phase 2 note: these derive from the current page only. A
+  // /platform-admin/users/stats endpoint would give true platform-wide counts.
+  // `activeToday` cannot be computed yet — PlatformAdminUserRow has no
+  // last_login_at field (flagged below as a Phase 2 backend addition).
+  const new7d = rows.filter((r) => {
+    if (!r.created_at) return false;
+    const created = new Date(r.created_at).getTime();
+    return Number.isFinite(created) && Date.now() - created < 7 * 24 * 60 * 60 * 1000;
+  }).length;
+  const pendingCount = rows.filter((r) => r.status === "pending").length;
+
+  const allSelected = rows.length > 0 && selectedIds.size === rows.length;
   const toggleAll = () => {
-    setSelectedIds(allSelected ? new Set() : new Set(DEMO_ROWS.map((r) => r.id)));
+    setSelectedIds(allSelected ? new Set() : new Set(rows.map((r) => r.id)));
   };
-  const toggleRow = (id: string) => {
+  const toggleRow = (id: number) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -124,6 +160,25 @@ export default function AdminRedesignUsersPage() {
       return next;
     });
   };
+
+  if (!allowed || forbidden) {
+    return (
+      <div className="space-y-4">
+        <PageHeader
+          breadcrumb={[
+            { label: "Home", href: "/dashboard" },
+            { label: tx(t, "admin.nav.section.users_v2", "Users") },
+          ]}
+          title={tx(t, "admin.nav.section.users_v2", "Users")}
+        />
+        <V2Card>
+          <div className="p-4">
+            <ForbiddenNotice messageKey={!allowed ? "admin.forbidden.platform_users" : undefined} />
+          </div>
+        </V2Card>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -133,12 +188,21 @@ export default function AdminRedesignUsersPage() {
           { label: tx(t, "admin.nav.section.users_v2", "Users") },
         ]}
         title={tx(t, "admin.nav.section.users_v2", "Users")}
-        subtitle={tx(t, "admin.users.subtitle", "Manage platform users across all roles")}
+        subtitle={
+          meta
+            ? tx(
+                t,
+                "admin.users.meta_summary",
+                `${meta.total} users • page ${meta.current_page} of ${meta.last_page}`,
+              )
+                .replace("{total}", String(meta.total))
+                .replace("{current}", String(meta.current_page))
+                .replace("{last}", String(meta.last_page))
+            : tx(t, "admin.users.subtitle", "Manage platform users across all roles")
+        }
         actions={
           <>
-            <V2Button
-              icon={<DownloadIcon />}
-            >
+            <V2Button icon={<DownloadIcon />}>
               {tx(t, "admin.dashboard.export", "Export")}
             </V2Button>
             <V2Button variant="primary" icon={<PlusIcon />}>
@@ -150,47 +214,80 @@ export default function AdminRedesignUsersPage() {
 
       <StatGrid cols={4} className="mb-4">
         <StatCard
-          value="1,284"
+          value={meta ? meta.total.toLocaleString() : "—"}
           label={tx(t, "admin.users.stat.total", "Total users")}
         />
         <StatCard
-          value={<span style={{ color: "var(--admin-success)" }}>892</span>}
+          // last_login_at not yet on PlatformAdminUserRow — show "—" until
+          // backend includes it. Approximation: status === "active" count on
+          // current page (Phase 2 will use dedicated endpoint).
+          value={<span style={{ color: "var(--admin-text-secondary)" }}>—</span>}
           label={tx(t, "admin.users.stat.active_today", "Active today")}
+          footer={tx(
+            t,
+            "admin.users.stat.active_today_hint",
+            "(awaiting last_login_at API field)",
+          )}
         />
         <StatCard
-          value="+47"
-          label={tx(t, "admin.users.stat.new_7d", "New (7d)")}
+          value={`+${new7d}`}
+          label={tx(t, "admin.users.stat.new_7d", "New (7d) — this page")}
         />
         <StatCard
-          value={<span style={{ color: "var(--admin-warning)" }}>12</span>}
-          label={tx(t, "admin.users.stat.pending", "Pending verification")}
+          value={
+            <span style={{ color: pendingCount > 0 ? "var(--admin-warning)" : undefined }}>
+              {pendingCount}
+            </span>
+          }
+          label={tx(t, "admin.users.stat.pending", "Pending verification — this page")}
         />
       </StatGrid>
 
-      <FilterCard>
-        <FilterField label={tx(t, "common.search", "Search")} minWidth={240}>
-          <input
-            type="search"
-            placeholder={tx(t, "admin.users.search_placeholder", "Name, email, ID...")}
-            className="h-[34px] rounded-md border bg-white px-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
-            style={{ borderColor: "var(--admin-border)" }}
-          />
-        </FilterField>
-        <FilterField label={tx(t, "admin.users.type", "Type")}>
-          <select
-            className="h-[34px] rounded-md border bg-white px-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
-            style={{ borderColor: "var(--admin-border)" }}
-          >
-            <option>{tx(t, "common.all", "All")}</option>
-            <option>{tx(t, "admin.users.type_customer", "Customers")}</option>
-            <option>{tx(t, "admin.users.type_staff", "Staff")}</option>
-            <option>{tx(t, "admin.users.type_unverified", "Unverified")}</option>
-          </select>
-        </FilterField>
-        <V2Button variant="primary" size="sm">
-          {tx(t, "common.search", "Search")}
-        </V2Button>
-      </FilterCard>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          setPage(1);
+          setSearch(searchInput.trim());
+        }}
+      >
+        <FilterCard>
+          <FilterField label={tx(t, "common.search", "Search")} minWidth={240}>
+            <input
+              type="search"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder={tx(t, "admin.users.search_placeholder", "Name, email, ID...")}
+              className="h-[34px] w-full rounded-md border bg-white px-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+              style={{ borderColor: "var(--admin-border)" }}
+            />
+          </FilterField>
+          <FilterField label={tx(t, "admin.users.type", "Type")}>
+            <select
+              value={typeFilter}
+              onChange={(e) => {
+                setPage(1);
+                setTypeFilter(e.target.value as PlatformUserTypeFilter);
+              }}
+              className="h-[34px] rounded-md border bg-white px-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+              style={{ borderColor: "var(--admin-border)" }}
+            >
+              <option value="">{tx(t, "common.all", "All")}</option>
+              <option value="customers">{tx(t, "admin.users.type_customer", "Customers")}</option>
+              <option value="staff">{tx(t, "admin.users.type_staff", "Staff")}</option>
+              <option value="unverified">{tx(t, "admin.users.type_unverified", "Unverified")}</option>
+            </select>
+          </FilterField>
+          <V2Button type="submit" variant="primary" size="sm">
+            {tx(t, "common.search", "Search")}
+          </V2Button>
+        </FilterCard>
+      </form>
+
+      {err ? (
+        <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
+          {err}
+        </div>
+      ) : null}
 
       <V2Card>
         <table className="w-full border-collapse text-[13px]">
@@ -205,11 +302,11 @@ export default function AdminRedesignUsersPage() {
                 />
               </th>
               {[
-                { label: "ID", key: "id" },
-                { label: "Name", key: "name" },
-                { label: "Email", key: "email" },
-                { label: "Status", key: "status" },
-                { label: "Companies", key: "companies" },
+                { label: tx(t, "admin.users.col_id", "ID"), key: "id" },
+                { label: tx(t, "admin.users.col_name", "Name"), key: "name" },
+                { label: tx(t, "admin.users.col_email", "Email"), key: "email" },
+                { label: tx(t, "admin.users.col_status", "Status"), key: "status" },
+                { label: tx(t, "admin.users.col_companies", "Companies"), key: "companies" },
               ].map((col) => (
                 <th
                   key={col.key}
@@ -223,13 +320,33 @@ export default function AdminRedesignUsersPage() {
                 className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-[0.5px]"
                 style={{ color: "var(--admin-text-secondary)" }}
               >
-                Actions
+                {tx(t, "admin.users.col_actions", "Actions")}
               </th>
             </tr>
           </thead>
           <tbody>
-            {DEMO_ROWS.map((u) => {
-              const statusInfo = STATUS_LABEL[u.status];
+            {rows.length === 0 && !loading ? (
+              <tr>
+                <td
+                  colSpan={7}
+                  className="px-4 py-10 text-center text-[12px]"
+                  style={{ color: "var(--admin-text-secondary)" }}
+                >
+                  {tx(t, "admin.users.empty", "No users found.")}
+                </td>
+              </tr>
+            ) : null}
+            {rows.map((u) => {
+              const statusColor =
+                u.status === "active"
+                  ? "var(--admin-success)"
+                  : u.status === "pending"
+                    ? "var(--admin-warning)"
+                    : u.status === "suspended" || u.status === "banned"
+                      ? "var(--admin-danger)"
+                      : "var(--admin-text-tertiary)";
+              const tone = pickAvatarTone(u.id);
+              const initials = getInitials(u.name);
               return (
                 <tr
                   key={u.id}
@@ -248,11 +365,17 @@ export default function AdminRedesignUsersPage() {
                     className="px-4 py-3 align-middle font-mono text-[12px]"
                     style={{ color: "var(--admin-text-secondary)" }}
                   >
-                    {u.id}
+                    #{u.id}
                   </td>
                   <td className="px-4 py-3 align-middle">
                     <div className="flex items-center gap-3">
-                      <Avatar initials={u.initials} tone={u.initialsTone} />
+                      <span
+                        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold"
+                        style={avatarStyle(tone)}
+                        aria-hidden
+                      >
+                        {initials}
+                      </span>
                       <span className="font-medium">{u.name}</span>
                     </div>
                   </td>
@@ -262,40 +385,59 @@ export default function AdminRedesignUsersPage() {
                       <span
                         aria-hidden
                         className="inline-block h-1.5 w-1.5 rounded-full"
-                        style={{ backgroundColor: statusInfo.color }}
+                        style={{ backgroundColor: statusColor }}
                       />
-                      {statusInfo.label}
+                      <span className="capitalize">{u.status}</span>
                     </span>
                   </td>
                   <td className="px-4 py-3 align-middle">
-                    <div className="flex flex-wrap items-center gap-1">
-                      {u.companies.map((c, idx) => (
-                        <span
-                          key={`${u.id}-co-${idx}`}
-                          className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
-                          style={{
-                            backgroundColor:
-                              c.tone === "primary"
-                                ? "var(--admin-primary-light)"
-                                : "var(--admin-bg-tertiary)",
-                            color:
-                              c.tone === "primary"
-                                ? "var(--admin-primary-dark)"
-                                : "var(--admin-text-secondary)",
-                          }}
-                        >
-                          {c.label}
-                        </span>
-                      ))}
-                    </div>
+                    {u.companies && u.companies.length > 0 ? (
+                      <div className="flex flex-wrap items-center gap-1">
+                        {u.companies.slice(0, 3).map((c, idx) => (
+                          <span
+                            key={`${u.id}-co-${idx}`}
+                            className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                            style={{
+                              backgroundColor:
+                                idx === 0
+                                  ? "var(--admin-primary-light)"
+                                  : "var(--admin-bg-tertiary)",
+                              color:
+                                idx === 0
+                                  ? "var(--admin-primary-dark)"
+                                  : "var(--admin-text-secondary)",
+                            }}
+                          >
+                            {c.name}
+                          </span>
+                        ))}
+                        {u.companies.length > 3 ? (
+                          <span
+                            className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                            style={{
+                              backgroundColor: "var(--admin-bg-tertiary)",
+                              color: "var(--admin-text-tertiary)",
+                            }}
+                          >
+                            +{u.companies.length - 3}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <span style={{ color: "var(--admin-text-tertiary)" }}>—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 align-middle">
                     <div className="flex justify-end gap-1">
-                      <IconButton aria-label="Edit">
-                        <PencilIcon />
+                      <IconButton
+                        as="link"
+                        href={`/platform/users/${u.id}`}
+                        aria-label={tx(t, "admin.users.btn_edit", "Edit")}
+                      >
+                        <Edit3 className="h-4 w-4" />
                       </IconButton>
-                      <IconButton aria-label="More actions">
-                        <DotsVerticalIcon />
+                      <IconButton aria-label={tx(t, "common.more_actions", "More actions")}>
+                        <MoreVertical className="h-4 w-4" />
                       </IconButton>
                     </div>
                   </td>
@@ -306,41 +448,58 @@ export default function AdminRedesignUsersPage() {
         </table>
       </V2Card>
 
-      <p className="mt-3 text-[12px]" style={{ color: "var(--admin-text-secondary)" }}>
-        🚧 <strong>Placeholder data</strong> — այս էջը ցույց է տալիս v2 layout-ը demo
-        տողերով։ Իրական /api/admin/users-ի wiring-ը կատարվում է Փուլ Ե-ում
-        (project_admin_redesign_v2.md)։
+      {meta && meta.last_page > 1 ? (
+        <div className="mt-4 flex items-center justify-between text-[12px]" style={{ color: "var(--admin-text-secondary)" }}>
+          <div>
+            {tx(t, "common.page", "Page")} {meta.current_page} / {meta.last_page}
+          </div>
+          <div className="flex gap-2">
+            <V2Button
+              size="sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={meta.current_page <= 1}
+            >
+              {tx(t, "common.previous", "Previous")}
+            </V2Button>
+            <V2Button
+              size="sm"
+              onClick={() => setPage((p) => Math.min(meta.last_page, p + 1))}
+              disabled={meta.current_page >= meta.last_page}
+            >
+              {tx(t, "common.next", "Next")}
+            </V2Button>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Phase 2 hint for the stat cards — they currently only count current page. */}
+      <p className="mt-3 text-[11px]" style={{ color: "var(--admin-text-tertiary)" }}>
+        {tx(
+          t,
+          "admin.users.stats_phase2_note",
+          "Note: Active/New/Pending stat values count the current page only. A dedicated /platform-admin/users/stats endpoint will provide true platform-wide counts.",
+        )}
+      </p>
+      {/* Fallback link if the user wants the full v1 page with delete actions etc. */}
+      <p className="mt-2 text-[12px]" style={{ color: "var(--admin-text-secondary)" }}>
+        <Link href="/platform/users" className="underline">
+          {tx(t, "admin.users.open_full_page", "Open full users management →")}
+        </Link>
       </p>
     </div>
   );
 }
 
-function Avatar({
-  initials,
-  tone,
-}: {
-  initials: string;
-  tone: "purple" | "teal" | "amber" | "blue";
-}) {
-  const styles: Record<string, React.CSSProperties> = {
-    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
-    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
-    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
-    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
-  };
-  return (
-    <span
-      className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[12px] font-semibold"
-      style={styles[tone]}
-    >
-      {initials}
-    </span>
-  );
-}
-
 function DownloadIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4 fill-none stroke-current"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
       <polyline points="7 10 12 15 17 10" />
       <line x1="12" y1="15" x2="12" y2="3" />
@@ -350,28 +509,15 @@ function DownloadIcon() {
 
 function PlusIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" aria-hidden>
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4 fill-none stroke-current"
+      strokeWidth="2"
+      strokeLinecap="round"
+      aria-hidden
+    >
       <line x1="12" y1="5" x2="12" y2="19" />
       <line x1="5" y1="12" x2="19" y2="12" />
-    </svg>
-  );
-}
-
-function PencilIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z" />
-    </svg>
-  );
-}
-
-function DotsVerticalIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden>
-      <circle cx="12" cy="5" r="1.5" />
-      <circle cx="12" cy="12" r="1.5" />
-      <circle cx="12" cy="19" r="1.5" />
     </svg>
   );
 }

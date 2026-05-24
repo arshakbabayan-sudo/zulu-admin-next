@@ -6,14 +6,16 @@
  *
  * Layout:
  *   Hero card  — gradient cover, large avatar, name + verified mark + role badge,
- *                meta row (email, location, joined), Message + Edit profile actions,
- *                4 stat values (Projects led / Revenue / Files / Status),
- *                5-tab section-nav (Overview / Settings / Security / Activity / Sessions)
+ *                meta row (email, location TBD, joined, last seen), Message + Edit
+ *                profile actions, 4 stat values, 5-tab section-nav
  *   Body 2/1   — left: Activity bar chart + Recent activity list
  *                right: Personal info + Storage breakdown
  *
- * Data is static demo for the current logged-in user; real profile/activity
- * wiring is Phase Ե.
+ * 2026-05-24 wiring: now backed by useAdminAuth().user for the current user.
+ * Activity bar chart and Recent activity render zero/empty state — there's
+ * no /api/audit-logs?user_id=X endpoint exposing per-user feed yet (the
+ * /platform-admin/audit-logs route is platform-wide and gated). Storage stays
+ * static at 0 GB until a File manager backend ships.
  */
 
 import { useState } from "react";
@@ -30,42 +32,32 @@ const TABS = [
   { key: "sessions", label: "Sessions" },
 ] as const;
 
-const ACTIVITY_HEIGHTS = [60, 85, 50, 110, 70, 95, 55, 120, 80, 100, 65, 125, 85, 75, 105, 90, 60, 115, 80, 100, 70, 110, 85, 65, 120, 95, 75, 105, 90];
-
-const RECENT_ACTIVITY = [
-  {
-    icon: "upload",
-    title: "contract-marriott.pdf",
-    body: "Uploaded",
-    time: "2 hours ago",
-    avatarTone: "teal" as const,
-  },
-  {
-    icon: "user-plus",
-    title: "Դավիթ Հակոբյան",
-    body: "Invited as Viewer",
-    time: "Yesterday at 14:32",
-    avatarTone: "purple" as const,
-  },
-  {
-    icon: "edit",
-    title: "Admin role",
-    body: "Updated permissions",
-    time: "May 20, 2026",
-    avatarTone: "amber" as const,
-  },
-  {
-    icon: "login",
-    title: "Yerevan, Armenia",
-    body: "Signed in from",
-    time: "May 19, 2026",
-    avatarTone: "blue" as const,
-  },
-];
-
 function tx(t: (k: string) => string, key: string, fallback: string): string {
   const r = t(key);
   return r === key ? fallback : r;
+}
+
+function getInitials(name: string): string {
+  return (name || "?")
+    .split(" ")
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
+function formatDateLong(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
+function humanizeRole(raw: string | undefined | null): string {
+  if (!raw) return "User";
+  return raw
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export default function AdminRedesignProfilePage() {
@@ -76,8 +68,18 @@ export default function AdminRedesignProfilePage() {
 
   const displayName = user?.name || tx(t, "admin.user.fallback_name", "User");
   const email = user?.email || "—";
-  const initial = displayName.slice(0, 2).toUpperCase();
-  const roleLabel = user?.context?.world || "User";
+  const initials = getInitials(displayName);
+  const phone = user?.phone || "—";
+
+  // Role badge: super admin > canonical_role > context.world
+  const roleLabel = user?.is_super_admin
+    ? tx(t, "admin.profile.role.super_admin", "Super admin")
+    : humanizeRole(user?.canonical_role ?? user?.context?.world ?? null);
+
+  const joinedDateText =
+    user?.created_at
+      ? `${tx(t, "admin.profile.joined", "Joined")} ${formatDateLong(user.created_at)}`
+      : tx(t, "admin.profile.joined_unknown", "Joined —");
 
   return (
     <div>
@@ -86,7 +88,8 @@ export default function AdminRedesignProfilePage() {
         <div
           style={{
             height: 120,
-            background: "linear-gradient(135deg, var(--admin-primary-light) 0%, var(--admin-success-light) 100%)",
+            background:
+              "linear-gradient(135deg, var(--admin-primary-light) 0%, var(--admin-success-light) 100%)",
           }}
         />
         <div className="px-6 pb-5">
@@ -99,41 +102,53 @@ export default function AdminRedesignProfilePage() {
                   borderColor: "white",
                 }}
               >
-                {initial}
+                {initials}
               </div>
               <div className="pb-1.5">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[20px] font-semibold leading-tight" style={{ color: "var(--admin-text-primary)" }}>
+                  <span
+                    className="text-[20px] font-semibold leading-tight"
+                    style={{ color: "var(--admin-text-primary)" }}
+                  >
                     {displayName}
                   </span>
                   <CheckBadgeIcon />
                   <span
                     className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
-                    style={{ backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" }}
+                    style={{
+                      backgroundColor: "var(--admin-primary-light)",
+                      color: "var(--admin-primary-dark)",
+                    }}
                   >
                     {roleLabel}
                   </span>
                 </div>
-                <div className="mt-2 text-[13px]" style={{ color: "var(--admin-text-secondary)" }}>
-                  ZULU Platform
+                <div
+                  className="mt-2 text-[13px]"
+                  style={{ color: "var(--admin-text-secondary)" }}
+                >
+                  {user?.companies?.[0]?.name || "ZULU Platform"}
                 </div>
-                <div className="mt-2 flex flex-wrap gap-4 text-[12px]" style={{ color: "var(--admin-text-secondary)" }}>
+                <div
+                  className="mt-2 flex flex-wrap gap-4 text-[12px]"
+                  style={{ color: "var(--admin-text-secondary)" }}
+                >
                   <span className="inline-flex items-center gap-1.5">
                     <MailIcon /> {email}
                   </span>
                   <span className="inline-flex items-center gap-1.5">
-                    <MapPinIcon /> Yerevan, Armenia
+                    <MapPinIcon /> —
                   </span>
                   <span className="inline-flex items-center gap-1.5">
-                    <CalendarIcon /> Joined Jan 2024
+                    <CalendarIcon /> {joinedDateText}
                   </span>
                 </div>
               </div>
             </div>
             <div className="flex gap-2 pb-1.5">
-              <V2Button icon={<MessageIcon />}>Message</V2Button>
+              <V2Button icon={<MessageIcon />}>{tx(t, "admin.profile.message", "Message")}</V2Button>
               <V2Button variant="primary" icon={<PencilIcon />}>
-                Edit profile
+                {tx(t, "admin.profile.edit", "Edit profile")}
               </V2Button>
             </div>
           </div>
@@ -142,10 +157,23 @@ export default function AdminRedesignProfilePage() {
             className="mt-6 grid grid-cols-2 gap-4 border-t pt-5 sm:grid-cols-4"
             style={{ borderColor: "var(--admin-border)" }}
           >
-            <ProfileStat value="142" label="Projects led" />
-            <ProfileStat value="$12,440" label="Revenue generated" />
-            <ProfileStat value="328" label="Files uploaded" />
-            <ProfileStat value="Active" label="Current status" color="var(--admin-success)" />
+            <ProfileStat
+              value={String(user?.companies?.length ?? 0)}
+              label={tx(t, "admin.profile.stat.companies", "Companies")}
+            />
+            <ProfileStat
+              value={String((user?.roles ?? []).length || (user?.canonical_role ? 1 : 0))}
+              label={tx(t, "admin.profile.stat.roles", "Roles assigned")}
+            />
+            <ProfileStat
+              value={user?.is_super_admin ? tx(t, "common.yes", "Yes") : tx(t, "common.no", "No")}
+              label={tx(t, "admin.profile.stat.super_admin", "Super admin")}
+            />
+            <ProfileStat
+              value={user?.status ? user.status : tx(t, "admin.profile.stat.active", "Active")}
+              label={tx(t, "admin.profile.stat.current_status", "Current status")}
+              color={user?.status && user.status !== "active" ? "var(--admin-warning)" : "var(--admin-success)"}
+            />
           </div>
 
           {/* Section tabs (underline) */}
@@ -168,7 +196,7 @@ export default function AdminRedesignProfilePage() {
                     borderBottomColor: active ? "var(--admin-primary)" : "transparent",
                   }}
                 >
-                  {tab.label}
+                  {tx(t, `admin.profile.tab.${tab.key}`, tab.label)}
                 </button>
               );
             })}
@@ -176,136 +204,233 @@ export default function AdminRedesignProfilePage() {
         </div>
       </V2Card>
 
-      {/* 2/1 body grid */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-4">
-          {/* Activity bar chart */}
-          <V2Card>
-            <V2CardHeader
-              title="Activity"
-              action={
-                <select
-                  defaultValue="30"
-                  className="h-[34px] rounded-md border bg-white px-3 text-[12px] outline-none"
-                  style={{ borderColor: "var(--admin-border)", color: "var(--admin-text-primary)" }}
-                >
-                  <option value="30">Last 30 days</option>
-                  <option value="7">Last 7 days</option>
-                  <option value="90">Last 90 days</option>
-                </select>
-              }
-            />
-            <V2CardBody>
-              <svg viewBox="0 0 600 160" preserveAspectRatio="none" className="h-[160px] w-full">
-                <line x1="0" y1="140" x2="600" y2="140" stroke="var(--admin-border)" />
-                <line x1="0" y1="105" x2="600" y2="105" stroke="var(--admin-border)" strokeDasharray="2 4" />
-                <line x1="0" y1="70" x2="600" y2="70" stroke="var(--admin-border)" strokeDasharray="2 4" />
-                <line x1="0" y1="35" x2="600" y2="35" stroke="var(--admin-border)" strokeDasharray="2 4" />
-                {ACTIVITY_HEIGHTS.map((h, i) => (
-                  <rect
-                    key={i}
-                    x={10 + i * 20}
-                    y={140 - h}
-                    width={14}
-                    height={h}
-                    fill="var(--admin-primary)"
-                    rx={2}
-                  />
-                ))}
-              </svg>
-            </V2CardBody>
-          </V2Card>
+      {/* Tab body */}
+      {activeTab === "overview" ? (
+        <OverviewTab
+          displayName={displayName}
+          email={email}
+          phone={phone}
+          roleLabel={roleLabel}
+          joinedDateText={joinedDateText}
+          lastSeenText={tx(
+            t,
+            "admin.profile.last_seen_unavailable",
+            "Last seen — (Phase 2: needs last_login_at)",
+          )}
+          activityHeights={EMPTY_ACTIVITY}
+          activityPhase2Hint={tx(
+            t,
+            "admin.profile.activity_phase2",
+            "Activity tracking ready in Phase 2 — needs /api/audit-logs?user_id=X endpoint.",
+          )}
+        />
+      ) : null}
 
-          {/* Recent activity */}
-          <V2Card>
-            <V2CardHeader title="Recent activity" />
-            <V2CardBody>
-              {RECENT_ACTIVITY.map((item, idx) => {
-                const isLast = idx === RECENT_ACTIVITY.length - 1;
-                return (
-                  <div
-                    key={idx}
-                    className={`flex gap-3 ${isLast ? "" : "mb-4 border-b pb-3.5"}`}
-                    style={isLast ? undefined : { borderColor: "var(--admin-border)" }}
-                  >
-                    <ActivityAvatar tone={item.avatarTone} icon={item.icon} />
-                    <div className="flex-1">
-                      <div className="text-[13px]">
-                        {item.body} <span className="font-medium">{item.title}</span>
-                      </div>
-                      <div className="mt-1 text-[11px]" style={{ color: "var(--admin-text-secondary)" }}>
-                        {item.time}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </V2CardBody>
-          </V2Card>
-        </div>
+      {activeTab !== "overview" ? (
+        <V2Card>
+          <V2CardBody>
+            <div className="py-10 text-center">
+              <div
+                className="text-[14px] font-semibold"
+                style={{ color: "var(--admin-text-primary)" }}
+              >
+                {tx(t, `admin.profile.tab.${activeTab}`, activeTab)}
+              </div>
+              <div
+                className="mt-1 text-[12px]"
+                style={{ color: "var(--admin-text-secondary)" }}
+              >
+                {tx(
+                  t,
+                  "admin.profile.tab.phase2_placeholder",
+                  "Coming in Phase 2 — backend support needed.",
+                )}
+              </div>
+            </div>
+          </V2CardBody>
+        </V2Card>
+      ) : null}
+    </div>
+  );
+}
 
-        <div className="space-y-4">
-          {/* Personal info */}
-          <V2Card>
-            <V2CardHeader title="Personal info" />
-            <V2CardBody>
-              <InfoRow label="Full name" value={displayName} />
-              <InfoRow label="Email" value={email} />
-              <InfoRow label="Phone" value="+374 99 12 34 56" />
-              <InfoRow
-                label="Role"
-                value={
-                  <span
-                    className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
-                    style={{ backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" }}
-                  >
-                    {roleLabel}
-                  </span>
-                }
-              />
-              <InfoRow
-                label="2-factor auth"
-                value={
-                  <span className="inline-flex items-center gap-2" style={{ color: "var(--admin-success)" }}>
-                    <ShieldCheckIcon />
-                    <span className="font-medium">Enabled</span>
-                  </span>
-                }
-                last
-              />
-            </V2CardBody>
-          </V2Card>
+const EMPTY_ACTIVITY = new Array(29).fill(0) as number[];
 
-          {/* Storage */}
-          <V2Card>
-            <V2CardHeader title="Storage" />
-            <V2CardBody>
-              <div className="text-[22px] font-semibold">
-                6.8 GB <span className="text-[13px] font-normal" style={{ color: "var(--admin-text-secondary)" }}>of 10 GB</span>
+function OverviewTab({
+  displayName,
+  email,
+  phone,
+  roleLabel,
+  joinedDateText,
+  lastSeenText,
+  activityHeights,
+  activityPhase2Hint,
+}: {
+  displayName: string;
+  email: string;
+  phone: string;
+  roleLabel: string;
+  joinedDateText: string;
+  lastSeenText: string;
+  activityHeights: number[];
+  activityPhase2Hint: string;
+}) {
+  return (
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="lg:col-span-2 space-y-4">
+        {/* Activity bar chart */}
+        <V2Card>
+          <V2CardHeader
+            title="Activity"
+            action={
+              <select
+                defaultValue="30"
+                className="h-[34px] rounded-md border bg-white px-3 text-[12px] outline-none"
+                style={{
+                  borderColor: "var(--admin-border)",
+                  color: "var(--admin-text-primary)",
+                }}
+                disabled
+              >
+                <option value="30">Last 30 days</option>
+                <option value="7">Last 7 days</option>
+                <option value="90">Last 90 days</option>
+              </select>
+            }
+          />
+          <V2CardBody>
+            <svg
+              viewBox="0 0 600 160"
+              preserveAspectRatio="none"
+              className="h-[160px] w-full"
+            >
+              <line x1="0" y1="140" x2="600" y2="140" stroke="var(--admin-border)" />
+              <line x1="0" y1="105" x2="600" y2="105" stroke="var(--admin-border)" strokeDasharray="2 4" />
+              <line x1="0" y1="70" x2="600" y2="70" stroke="var(--admin-border)" strokeDasharray="2 4" />
+              <line x1="0" y1="35" x2="600" y2="35" stroke="var(--admin-border)" strokeDasharray="2 4" />
+              {activityHeights.map((h, i) => (
+                <rect
+                  key={i}
+                  x={10 + i * 20}
+                  y={140 - h}
+                  width={14}
+                  height={h}
+                  fill="var(--admin-primary)"
+                  rx={2}
+                />
+              ))}
+            </svg>
+            <div
+              className="mt-3 text-center text-[11px]"
+              style={{ color: "var(--admin-text-tertiary)" }}
+            >
+              {activityPhase2Hint}
+            </div>
+          </V2CardBody>
+        </V2Card>
+
+        {/* Recent activity */}
+        <V2Card>
+          <V2CardHeader title="Recent activity" />
+          <V2CardBody>
+            <div className="py-8 text-center">
+              <div
+                className="text-[13px] font-medium"
+                style={{ color: "var(--admin-text-primary)" }}
+              >
+                No recent activity yet
               </div>
-              <div className="mt-3 h-2 overflow-hidden rounded-full" style={{ backgroundColor: "var(--admin-bg-tertiary)" }}>
-                <div className="h-full rounded-full" style={{ width: "68%", backgroundColor: "var(--admin-primary)" }} />
+              <div
+                className="mt-1 text-[11px]"
+                style={{ color: "var(--admin-text-secondary)" }}
+              >
+                Phase 2 — needs a per-user audit-logs endpoint.
               </div>
-              <div className="mt-3.5 text-[12px]">
-                <StorageRow color="var(--admin-primary)" label="Documents" value="3.2 GB" />
-                <StorageRow color="var(--admin-success)" label="Images" value="2.1 GB" />
-                <StorageRow color="var(--admin-warning)" label="Other" value="1.5 GB" last />
-              </div>
-            </V2CardBody>
-          </V2Card>
-        </div>
+            </div>
+          </V2CardBody>
+        </V2Card>
       </div>
 
-      <p className="mt-4 text-[12px]" style={{ color: "var(--admin-text-secondary)" }}>
-        🚧 <strong>Placeholder data</strong> — իրական profile/activity/storage wiring-ը Փուլ Ե-ում։
-      </p>
+      <div className="space-y-4">
+        {/* Personal info */}
+        <V2Card>
+          <V2CardHeader title="Personal info" />
+          <V2CardBody>
+            <InfoRow label="Full name" value={displayName} />
+            <InfoRow label="Email" value={email} />
+            <InfoRow label="Phone" value={phone} />
+            <InfoRow label="Joined" value={joinedDateText} />
+            <InfoRow label="Location" value="—" />
+            <InfoRow label="Last seen" value={lastSeenText} />
+            <InfoRow
+              label="Role"
+              value={
+                <span
+                  className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                  style={{
+                    backgroundColor: "var(--admin-primary-light)",
+                    color: "var(--admin-primary-dark)",
+                  }}
+                >
+                  {roleLabel}
+                </span>
+              }
+              last
+            />
+          </V2CardBody>
+        </V2Card>
+
+        {/* Storage — placeholder until File manager backend ships */}
+        <V2Card>
+          <V2CardHeader title="Storage" />
+          <V2CardBody>
+            <div className="text-[22px] font-semibold">
+              0 GB{" "}
+              <span
+                className="text-[13px] font-normal"
+                style={{ color: "var(--admin-text-secondary)" }}
+              >
+                of 10 GB
+              </span>
+            </div>
+            <div
+              className="mt-3 h-2 overflow-hidden rounded-full"
+              style={{ backgroundColor: "var(--admin-bg-tertiary)" }}
+            >
+              <div
+                className="h-full rounded-full"
+                style={{ width: "0%", backgroundColor: "var(--admin-primary)" }}
+              />
+            </div>
+            <div className="mt-3.5 text-[12px]">
+              <StorageRow color="var(--admin-primary)" label="Documents" value="0 GB" />
+              <StorageRow color="var(--admin-success)" label="Images" value="0 GB" />
+              <StorageRow color="var(--admin-warning)" label="Other" value="0 GB" last />
+            </div>
+            <div
+              className="mt-3 text-[11px]"
+              style={{ color: "var(--admin-text-tertiary)" }}
+            >
+              Real storage data available when File manager backend ships.
+            </div>
+          </V2CardBody>
+        </V2Card>
+      </div>
     </div>
   );
 }
 
 /* ─── small render helpers ─────────────────────────────────────────────── */
 
-function ProfileStat({ value, label, color }: { value: string; label: string; color?: string }) {
+function ProfileStat({
+  value,
+  label,
+  color,
+}: {
+  value: string;
+  label: string;
+  color?: string;
+}) {
   return (
     <div>
       <div className="text-[22px] font-semibold" style={color ? { color } : undefined}>
@@ -351,29 +476,15 @@ function StorageRow({
   return (
     <div className={`flex justify-between ${last ? "" : "mb-2"}`}>
       <span className="inline-flex items-center gap-2">
-        <span aria-hidden className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
+        <span
+          aria-hidden
+          className="inline-block h-2 w-2 rounded-full"
+          style={{ backgroundColor: color }}
+        />
         {label}
       </span>
       <span style={{ color: "var(--admin-text-secondary)" }}>{value}</span>
     </div>
-  );
-}
-
-function ActivityAvatar({ tone, icon }: { tone: "teal" | "purple" | "amber" | "blue"; icon: string }) {
-  const styles: Record<string, React.CSSProperties> = {
-    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
-    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
-    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
-    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
-  };
-  return (
-    <span
-      className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
-      style={styles[tone]}
-      aria-hidden
-    >
-      {icon === "upload" ? <UploadIcon /> : icon === "user-plus" ? <UserPlusIcon /> : icon === "edit" ? <PencilIcon /> : <LoginIcon />}
-    </span>
   );
 }
 
@@ -427,39 +538,4 @@ function PencilIcon() {
     </svg>
   );
 }
-function ShieldCheckIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M12 3l8 3v6c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V6l8-3z" />
-      <polyline points="9 12 11 14 15 10" />
-    </svg>
-  );
-}
-function UploadIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="17 8 12 3 7 8" />
-      <line x1={12} y1={3} x2={12} y2={15} />
-    </svg>
-  );
-}
-function UserPlusIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-      <circle cx={9} cy={7} r={4} />
-      <line x1={20} y1={8} x2={20} y2={14} />
-      <line x1={17} y1={11} x2={23} y2={11} />
-    </svg>
-  );
-}
-function LoginIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-      <polyline points="10 17 15 12 10 7" />
-      <line x1={15} y1={12} x2={3} y2={12} />
-    </svg>
-  );
-}
+
