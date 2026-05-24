@@ -25,7 +25,9 @@ import { Button, FormField, Input} from "@/components/ui";
 import {
   PageHeader as V2PageHeader,
   SectionTabs,
+  V2Button,
 } from "@/components/ui/v2";
+import { Download, Save } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 type PinStatus = { is_set: boolean; set_at: string | null };
@@ -172,6 +174,19 @@ export default function Bucket3PinSettingsPage() {
         ]}
         title={t("admin.bucket3.pin_settings.title")}
         subtitle={t("admin.bucket3.pin_settings.subtitle")}
+        actions={
+          <>
+            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button
+              variant="primary"
+              icon={<Save className="h-4 w-4" />}
+              onClick={() => void handleSetOrChange()}
+              disabled={busy}
+            >
+              {status?.is_set ? t("admin.bucket3.pin_settings.change_pin") : t("admin.bucket3.pin_settings.set_pin")}
+            </V2Button>
+          </>
+        }
       />
 
       <SectionTabs

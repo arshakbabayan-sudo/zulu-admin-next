@@ -19,6 +19,7 @@ import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
 import { formatDateTime } from "@/lib/format";
+// formatDateTime kept for tooltip; relative time is rendered in cell.
 import {
 
   Pagination,
@@ -37,8 +38,9 @@ import {
   FilterCard,
   FilterField,
   V2Card,
+  V2Button,
 } from "@/components/ui/v2";
-import { Search } from "lucide-react";
+import { Download, Search } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
@@ -133,12 +135,15 @@ export default function Bucket3ServiceLogsPage() {
             : t("admin.bucket3.service_logs.subtitle")
         }
         actions={
-          <Link
-            href="/platform/audit-logs"
-            className="inline-flex h-10 items-center rounded-md border-2 border-primary-500 px-4 text-ds-button-s font-ds-button-s font-semibold text-primary-500 transition hover:bg-primary-50"
-          >
-            {t("admin.bucket3.service_logs.full_audit_log")}
-          </Link>
+          <>
+            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <Link
+              href="/platform/audit-logs"
+              className="inline-flex h-10 items-center rounded-md border-2 border-primary-500 px-4 text-ds-button-s font-ds-button-s font-semibold text-primary-500 transition hover:bg-primary-50"
+            >
+              {t("admin.bucket3.service_logs.full_audit_log")}
+            </Link>
+          </>
         }
       />
 
@@ -224,8 +229,15 @@ export default function Bucket3ServiceLogsPage() {
           ) : null}
           {rows.map((r) => (
             <TR key={r.id}>
-              <TD className="tabular-nums text-fg-t7">{r.id}</TD>
-              <TD className="text-xs text-fg-t7">{r.category}</TD>
+              <TD className="tabular-nums text-fg-t7 font-mono text-xs">LOG-{String(r.id).padStart(4, "0")}</TD>
+              <TD>
+                <span
+                  className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                  style={{ backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }}
+                >
+                  {r.category}
+                </span>
+              </TD>
               <TD className="font-mono text-xs text-fg-t8">{r.action}</TD>
               <TD className="text-xs text-fg-t6">
                 {r.actor_id ? (
@@ -242,7 +254,9 @@ export default function Bucket3ServiceLogsPage() {
               <TD className="text-xs text-fg-t7">
                 {r.subject_type ? `${r.subject_type}${r.subject_id != null ? ` #${r.subject_id}` : ""}` : "—"}
               </TD>
-              <TD className="text-xs text-fg-t6">{formatDateTime(r.created_at, lang)}</TD>
+              <TD className="text-xs text-fg-t6" title={formatDateTime(r.created_at, lang)}>
+                {formatRelativeTime(r.created_at)}
+              </TD>
             </TR>
           ))}
         </TBody>
@@ -258,4 +272,20 @@ export default function Bucket3ServiceLogsPage() {
       )}
     </div>
   );
+}
+
+function formatRelativeTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "—";
+  const diff = Date.now() - t;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  return new Date(iso).toLocaleDateString();
 }

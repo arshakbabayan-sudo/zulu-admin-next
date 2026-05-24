@@ -37,7 +37,10 @@ import {
 import {
   PageHeader as V2PageHeader,
   SectionTabs,
+  V2Button,
+  IconButton,
 } from "@/components/ui/v2";
+import { Download, Plus, Edit3, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 const UNITS = ["per_person", "per_group", "flat", "per_hour", "per_day"] as const;
@@ -238,6 +241,14 @@ export default function Bucket3ServiceCatalogPage() {
             ? t("admin.bucket3.service_catalog.subtitle_count").replace("{count}", String(meta.total))
             : t("admin.bucket3.service_catalog.subtitle")
         }
+        actions={
+          <>
+            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
+              Add service
+            </V2Button>
+          </>
+        }
       />
 
       <SectionTabs
@@ -383,35 +394,57 @@ export default function Bucket3ServiceCatalogPage() {
           ) : null}
           {rows.map((r) => (
             <TR key={r.id}>
-              <TD className="tabular-nums text-fg-t7">{r.id}</TD>
-              <TD className="font-medium text-fg-t8">{r.name}</TD>
-              <TD className="text-xs text-fg-t7">{r.category ?? "—"}</TD>
+              <TD className="tabular-nums text-fg-t7 font-mono text-xs">SVC-{String(r.id).padStart(3, "0")}</TD>
+              <TD>
+                <div className="font-medium text-fg-t8">{r.name}</div>
+              </TD>
+              <TD>
+                {r.category ? (
+                  <span
+                    className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                    style={{ backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }}
+                  >
+                    {r.category}
+                  </span>
+                ) : (
+                  <span className="text-xs text-fg-t6">—</span>
+                )}
+              </TD>
               <TD className="tabular-nums">
                 {r.base_price != null
                   ? `${r.currency ?? ""} ${r.base_price.toFixed(2)}`
                   : "—"}
               </TD>
-              <TD className="text-xs text-fg-t7">{r.unit ?? "—"}</TD>
               <TD>
-                {r.is_active ? (
-                  <span className="text-xs font-medium text-success-700">{t("admin.bucket3.service_catalog.status.active")}</span>
+                {r.unit ? (
+                  <span
+                    className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                    style={{ backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }}
+                  >
+                    {r.unit}
+                  </span>
                 ) : (
-                  <span className="text-xs text-fg-t6">{t("admin.bucket3.service_catalog.status.inactive")}</span>
+                  <span className="text-xs text-fg-t6">—</span>
                 )}
               </TD>
+              <TD>
+                <span className="inline-flex items-center gap-1.5 text-[12px]">
+                  <span
+                    aria-hidden
+                    className="inline-block h-1.5 w-1.5 rounded-full"
+                    style={{ backgroundColor: r.is_active ? "var(--admin-success)" : "var(--admin-text-tertiary)" }}
+                  />
+                  <span className="capitalize">{r.is_active ? t("admin.bucket3.service_catalog.status.active") : t("admin.bucket3.service_catalog.status.inactive")}</span>
+                </span>
+              </TD>
               <TD align="right">
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" size="sm" disabled={busy} onClick={() => startEdit(r)}>
-                    {t("common.edit")}
-                  </Button>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    disabled={busy}
-                    onClick={() => void handleDelete(r.id)}
-                  >
-                    {t("common.remove")}
-                  </Button>
+                <div className="flex justify-end gap-1">
+                  <IconButton onClick={() => startEdit(r)} aria-label="Edit" disabled={busy}>
+                    <Edit3 className="h-4 w-4" />
+                  </IconButton>
+                  <IconButton onClick={() => void handleDelete(r.id)} aria-label="Delete" disabled={busy}>
+                    <Trash2 className="h-4 w-4" />
+                  </IconButton>
                 </div>
               </TD>
             </TR>

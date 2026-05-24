@@ -18,7 +18,6 @@ import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
 import {
 
   Pagination,
-  StatusPill,
   Table,
   TBody,
   TD,
@@ -33,8 +32,9 @@ import {
   FilterCard,
   FilterField,
   V2Card,
+  V2Button,
 } from "@/components/ui/v2";
-import { Search } from "lucide-react";
+import { Download, Search } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 type UnverifiedRow = {
@@ -118,6 +118,9 @@ export default function Bucket3UnverifiedAccountsPage() {
             ? t("admin.bucket3.unverified_accounts.subtitle_count").replace("{count}", String(meta.total))
             : t("admin.bucket3.unverified_accounts.subtitle")
         }
+        actions={
+          <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+        }
       />
 
       <SectionTabs
@@ -184,19 +187,54 @@ export default function Bucket3UnverifiedAccountsPage() {
           {rows.length === 0 ? (
             <TEmpty colSpan={8}>{t("admin.bucket3.unverified_accounts.empty")}</TEmpty>
           ) : null}
-          {rows.map((u) => (
+          {rows.map((u) => {
+            const tone = pickAvatarTone(u.id);
+            return (
             <TR key={u.id} href={`/platform/users/${u.id}`}>
-              <TD className="tabular-nums text-fg-t7">{u.id}</TD>
-              <TD className="font-medium text-fg-t8">{u.name}</TD>
+              <TD className="tabular-nums text-fg-t7 font-mono text-xs">#{u.id}</TD>
+              <TD>
+                <div className="flex items-center gap-3">
+                  <span
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                    style={avatarStyle(tone)}
+                    aria-hidden
+                  >
+                    {getInitials(u.name)}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="font-medium text-fg-t8 truncate">{u.name}</div>
+                    <div className="text-[11px] text-fg-t6 truncate">{u.email}</div>
+                  </div>
+                </div>
+              </TD>
               <TD className="text-xs">{u.email}</TD>
               <TD>
-                <StatusPill status={u.status}>{u.status}</StatusPill>
+                <span
+                  className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                  style={statusBadgeStyle(u.status)}
+                >
+                  {u.status}
+                </span>
               </TD>
               <TD>
                 {u.email_verified_at ? (
-                  <span className="text-xs text-success-700">{formatDate(u.email_verified_at, lang)}</span>
+                  <span className="inline-flex items-center gap-1.5 text-[12px]">
+                    <span
+                      aria-hidden
+                      className="inline-block h-1.5 w-1.5 rounded-full"
+                      style={{ backgroundColor: "var(--admin-success)" }}
+                    />
+                    <span>{formatDate(u.email_verified_at, lang)}</span>
+                  </span>
                 ) : (
-                  <span className="text-xs text-warning-700">{t("admin.bucket3.unverified_accounts.not_verified")}</span>
+                  <span className="inline-flex items-center gap-1.5 text-[12px]">
+                    <span
+                      aria-hidden
+                      className="inline-block h-1.5 w-1.5 rounded-full"
+                      style={{ backgroundColor: "var(--admin-warning)" }}
+                    />
+                    <span>{t("admin.bucket3.unverified_accounts.not_verified")}</span>
+                  </span>
                 )}
               </TD>
               <TD className="text-xs text-fg-t7 capitalize">{u.intended_role ?? "—"}</TD>
@@ -205,9 +243,10 @@ export default function Bucket3UnverifiedAccountsPage() {
                   ? t("admin.bucket3.unverified_accounts.b2c_no_company")
                   : u.companies.map((c) => c.name).join(", ")}
               </TD>
-              <TD className="text-xs text-fg-t6">{formatDate(u.created_at, lang)}</TD>
+              <TD className="text-xs text-fg-t6" title={u.created_at ?? undefined}>{formatRelativeTime(u.created_at)}</TD>
             </TR>
-          ))}
+            );
+          })}
         </TBody>
       </Table>
       </V2Card>
@@ -221,4 +260,58 @@ export default function Bucket3UnverifiedAccountsPage() {
       )}
     </div>
   );
+}
+
+// v2 admin-redesign helpers.
+function getInitials(name: string): string {
+  return (name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+}
+
+function pickAvatarTone(id: number | string): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  const n = typeof id === "number" ? id : id.length;
+  return tones[n % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
+}
+
+function statusBadgeStyle(status: string): React.CSSProperties {
+  switch (status) {
+    case "approved":
+    case "active":
+    case "verified":
+      return { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" };
+    case "pending":
+      return { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" };
+    case "rejected":
+    case "disabled":
+    case "unverified":
+      return { backgroundColor: "var(--admin-danger-light)", color: "var(--admin-danger-dark)" };
+    default:
+      return { backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" };
+  }
+}
+
+function formatRelativeTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "—";
+  const diff = Date.now() - t;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  return new Date(iso).toLocaleDateString();
 }

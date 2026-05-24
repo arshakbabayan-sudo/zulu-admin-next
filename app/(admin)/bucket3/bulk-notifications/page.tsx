@@ -29,7 +29,9 @@ import {
 import {
   PageHeader as V2PageHeader,
   SectionTabs,
+  V2Button,
 } from "@/components/ui/v2";
+import { Download, Send } from "lucide-react";
 import { useState } from "react";
 
 type Target = "all_b2c" | "all_staff" | "by_company" | "specific_users";
@@ -124,6 +126,19 @@ export default function Bucket3BulkNotificationsPage() {
         ]}
         title={t("admin.bucket3.bulk_notifications.title")}
         subtitle={t("admin.bucket3.bulk_notifications.subtitle")}
+        actions={
+          <>
+            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button
+              variant="primary"
+              icon={<Send className="h-4 w-4" />}
+              onClick={() => void handleSend()}
+              disabled={busy}
+            >
+              {busy ? t("admin.bucket3.bulk_notifications.sending") : t("admin.bucket3.bulk_notifications.send")}
+            </V2Button>
+          </>
+        }
       />
 
       <SectionTabs

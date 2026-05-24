@@ -33,7 +33,10 @@ import {
 import {
   PageHeader as V2PageHeader,
   SectionTabs,
+  V2Button,
+  IconButton,
 } from "@/components/ui/v2";
+import { Download, Plus, Edit3, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 type FieldType = "text" | "number" | "boolean" | "select" | "multi_select" | "date";
@@ -232,6 +235,14 @@ export default function Bucket3CustomFieldsPage() {
             ? t("admin.bucket3.custom_fields.subtitle_count").replace("{count}", String(data.fields.length))
             : t("admin.bucket3.custom_fields.subtitle")
         }
+        actions={
+          <>
+            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
+              Add field
+            </V2Button>
+          </>
+        }
       />
 
       <SectionTabs
@@ -400,10 +411,26 @@ export default function Bucket3CustomFieldsPage() {
           ) : null}
           {data?.fields.map((f) => (
             <TR key={f.id}>
-              <TD className="text-xs">{f.scope}</TD>
+              <TD>
+                <span
+                  className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                  style={{ backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }}
+                >
+                  {f.scope}
+                </span>
+              </TD>
               <TD className="font-mono text-xs text-fg-t8">{f.key}</TD>
-              <TD className="font-medium">{f.label}</TD>
-              <TD className="text-xs">{f.field_type}</TD>
+              <TD>
+                <div className="font-medium text-fg-t8">{f.label}</div>
+              </TD>
+              <TD>
+                <span
+                  className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                  style={{ backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }}
+                >
+                  {f.field_type}
+                </span>
+              </TD>
               <TD className="text-xs text-fg-t6">
                 {[f.is_required ? "required" : null, f.show_in_filter ? "filter" : null]
                   .filter(Boolean)
@@ -411,25 +438,23 @@ export default function Bucket3CustomFieldsPage() {
               </TD>
               <TD className="tabular-nums">{f.display_order}</TD>
               <TD>
-                {f.is_active ? (
-                  <span className="text-xs font-medium text-success-700">{t("admin.bucket3.custom_fields.status.active")}</span>
-                ) : (
-                  <span className="text-xs text-fg-t6">{t("admin.bucket3.custom_fields.status.inactive")}</span>
-                )}
+                <span className="inline-flex items-center gap-1.5 text-[12px]">
+                  <span
+                    aria-hidden
+                    className="inline-block h-1.5 w-1.5 rounded-full"
+                    style={{ backgroundColor: f.is_active ? "var(--admin-success)" : "var(--admin-text-tertiary)" }}
+                  />
+                  <span className="capitalize">{f.is_active ? t("admin.bucket3.custom_fields.status.active") : t("admin.bucket3.custom_fields.status.inactive")}</span>
+                </span>
               </TD>
               <TD align="right">
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" size="sm" disabled={busy} onClick={() => startEdit(f)}>
-                    {t("common.edit")}
-                  </Button>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    disabled={busy}
-                    onClick={() => void handleDelete(f.id)}
-                  >
-                    {t("common.remove")}
-                  </Button>
+                <div className="flex justify-end gap-1">
+                  <IconButton onClick={() => startEdit(f)} aria-label="Edit" disabled={busy}>
+                    <Edit3 className="h-4 w-4" />
+                  </IconButton>
+                  <IconButton onClick={() => void handleDelete(f.id)} aria-label="Delete" disabled={busy}>
+                    <Trash2 className="h-4 w-4" />
+                  </IconButton>
                 </div>
               </TD>
             </TR>

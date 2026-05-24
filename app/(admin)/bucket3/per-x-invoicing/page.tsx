@@ -36,7 +36,7 @@ import {
   V2Card,
   V2Button,
 } from "@/components/ui/v2";
-import { RefreshCw } from "lucide-react";
+import { Download, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 type GroupBy = "status" | "currency" | "month" | "operator";
@@ -127,6 +127,9 @@ export default function Bucket3PerXInvoicingPage() {
         ]}
         title={t("admin.bucket3.per_x_invoicing.title")}
         subtitle={t("admin.bucket3.per_x_invoicing.subtitle")}
+        actions={
+          <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+        }
       />
 
       <SectionTabs
@@ -210,9 +213,22 @@ export default function Bucket3PerXInvoicingPage() {
           ) : null}
           {data?.buckets.map((b, i) => (
             <TR key={`${b.bucket ?? "null"}-${b.currency ?? ""}-${i}`}>
-              <TD className="font-medium text-fg-t8">{describeBucket(b, groupBy)}</TD>
+              <TD>
+                <div className="font-medium text-fg-t8">{describeBucket(b, groupBy)}</div>
+              </TD>
               {groupBy !== "currency" && (
-                <TD className="text-xs text-fg-t7 uppercase">{b.currency ?? "—"}</TD>
+                <TD>
+                  {b.currency ? (
+                    <span
+                      className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                      style={{ backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }}
+                    >
+                      {b.currency}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-fg-t6">—</span>
+                  )}
+                </TD>
               )}
               <TD className="tabular-nums">{b.invoice_count}</TD>
               <TD align="right" className="tabular-nums font-medium text-fg-t8">

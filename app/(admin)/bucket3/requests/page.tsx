@@ -49,7 +49,9 @@ import {
 import {
   PageHeader as V2PageHeader,
   SectionTabs,
+  V2Button,
 } from "@/components/ui/v2";
+import { Download, Plus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 export default function Bucket3RequestsPage() {
@@ -161,9 +163,16 @@ export default function Bucket3RequestsPage() {
             : t("admin.bucket3.requests.subtitle")
         }
         actions={
-          <Button size="sm" onClick={() => setComposeOpen(true)}>
-            {t("admin.bucket3.requests.new_request")}
-          </Button>
+          <>
+            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button
+              variant="primary"
+              icon={<Plus className="h-4 w-4" />}
+              onClick={() => setComposeOpen(true)}
+            >
+              {t("admin.bucket3.requests.new_request")}
+            </V2Button>
+          </>
         }
       />
 
@@ -244,22 +253,57 @@ export default function Bucket3RequestsPage() {
           {rows.length === 0 ? (
             <TEmpty colSpan={6}>{t("admin.bucket3.requests.empty")}</TEmpty>
           ) : null}
-          {rows.map((r) => (
+          {rows.map((r) => {
+            const fromName = r.requester_company?.name ?? r.requester?.name ?? "—";
+            const toName = r.target_company?.name ?? "—";
+            return (
             <TR key={r.id} onClick={() => setSelected(r)}>
-              <TD className="tabular-nums text-fg-t7">{r.id}</TD>
-              <TD className="font-medium text-fg-t8 max-w-[280px] truncate">{r.subject}</TD>
-              <TD className="text-xs text-fg-t7">
-                {r.requester_company?.name ?? r.requester?.name ?? "—"}
-              </TD>
-              <TD className="text-xs text-fg-t7">{r.target_company?.name ?? "—"}</TD>
+              <TD className="tabular-nums text-fg-t7 font-mono text-xs">REQ-{String(r.id).padStart(4, "0")}</TD>
               <TD>
-                <StatusPill status={requestStatusTier(r.status)}>
-                  {requestStatusLabel(r.status)}
-                </StatusPill>
+                <div className="font-medium text-fg-t8 max-w-[280px] truncate">{r.subject}</div>
               </TD>
-              <TD className="text-xs text-fg-t6">{formatDateTime(r.created_at, lang)}</TD>
+              <TD>
+                <div className="flex items-center gap-3">
+                  <span
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                    style={avatarStyle(pickAvatarTone(`from-${r.id}`))}
+                    aria-hidden
+                  >
+                    {getInitials(fromName)}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="font-medium text-fg-t8 truncate">{fromName}</div>
+                  </div>
+                </div>
+              </TD>
+              <TD>
+                <div className="flex items-center gap-3">
+                  <span
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                    style={avatarStyle(pickAvatarTone(`to-${r.id}`))}
+                    aria-hidden
+                  >
+                    {getInitials(toName)}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="font-medium text-fg-t8 truncate">{toName}</div>
+                  </div>
+                </div>
+              </TD>
+              <TD>
+                <span
+                  className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                  style={tierBadgeStyle(requestStatusTier(r.status))}
+                >
+                  {requestStatusLabel(r.status)}
+                </span>
+              </TD>
+              <TD className="text-xs text-fg-t6" title={formatDateTime(r.created_at, lang)}>
+                {formatRelativeTime(r.created_at)}
+              </TD>
             </TR>
-          ))}
+            );
+          })}
         </TBody>
       </Table>
 
@@ -417,4 +461,57 @@ export default function Bucket3RequestsPage() {
       </div>
     </div>
   );
+}
+
+// v2 admin-redesign helpers.
+function getInitials(name: string): string {
+  return (name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+}
+
+function pickAvatarTone(id: number | string): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  const n = typeof id === "number" ? id : id.length;
+  return tones[n % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
+}
+
+function tierBadgeStyle(tier: "neutral" | "info" | "success" | "warning" | "danger"): React.CSSProperties {
+  switch (tier) {
+    case "success":
+      return { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" };
+    case "warning":
+      return { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" };
+    case "danger":
+      return { backgroundColor: "var(--admin-danger-light)", color: "var(--admin-danger-dark)" };
+    case "info":
+      return { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" };
+    case "neutral":
+    default:
+      return { backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" };
+  }
+}
+
+function formatRelativeTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "—";
+  const diff = Date.now() - t;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  return new Date(iso).toLocaleDateString();
 }

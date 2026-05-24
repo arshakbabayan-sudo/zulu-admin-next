@@ -25,7 +25,6 @@ import {
 
   Pagination,
   Select,
-  StatusPill,
   Table,
   TBody,
   TD,
@@ -37,7 +36,10 @@ import {
 import {
   PageHeader as V2PageHeader,
   SectionTabs,
+  V2Button,
+  IconButton,
 } from "@/components/ui/v2";
+import { Download, Plus, Check, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 const TYPES = ["vacation", "sick", "personal", "unpaid", "other"] as const;
@@ -62,16 +64,17 @@ type TimeOffRow = {
   created_at: string | null;
 };
 
-function statusTier(s: Status): "neutral" | "info" | "success" | "warning" | "danger" {
+function statusBadgeStyle(s: Status): React.CSSProperties {
   switch (s) {
     case "pending":
-      return "warning";
+      return { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" };
     case "approved":
-      return "success";
+      return { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" };
     case "rejected":
-      return "danger";
+      return { backgroundColor: "var(--admin-danger-light)", color: "var(--admin-danger-dark)" };
     case "cancelled":
-      return "neutral";
+    default:
+      return { backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" };
   }
 }
 
@@ -293,6 +296,14 @@ export default function Bucket3NonServiceHoursPage() {
         ]}
         title={t("admin.bucket3.non_service_hours.title")}
         subtitle={t("admin.bucket3.non_service_hours.subtitle")}
+        actions={
+          <>
+            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
+              Add request
+            </V2Button>
+          </>
+        }
       />
 
       <SectionTabs
@@ -348,11 +359,25 @@ export default function Bucket3NonServiceHoursPage() {
           </THead>
           <TBody>
             {punches.length === 0 ? <TEmpty colSpan={5}>{t("admin.bucket3.non_service_hours.empty_shifts")}</TEmpty> : null}
-            {punches.map((p) => (
+            {punches.map((p) => {
+              const name = p.user?.name ?? "—";
+              const tone = pickAvatarTone(p.id);
+              return (
               <TR key={p.id}>
                 <TD>
-                  <div className="font-medium text-fg-t8">{p.user?.name ?? "—"}</div>
-                  <div className="text-xs text-fg-t6">{p.user?.email ?? ""}</div>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                      style={avatarStyle(tone)}
+                      aria-hidden
+                    >
+                      {getInitials(name)}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="font-medium text-fg-t8 truncate">{name}</div>
+                      <div className="text-[11px] text-fg-t6 truncate">{p.user?.email ?? ""}</div>
+                    </div>
+                  </div>
                 </TD>
                 <TD className="text-xs tabular-nums">{formatTime(p.punched_in_at)}</TD>
                 <TD className="text-xs tabular-nums">
@@ -367,7 +392,8 @@ export default function Bucket3NonServiceHoursPage() {
                   )}
                 </TD>
               </TR>
-            ))}
+              );
+            })}
           </TBody>
         </Table>
       </section>
@@ -479,46 +505,71 @@ export default function Bucket3NonServiceHoursPage() {
           {rows.length === 0 ? (
             <TEmpty colSpan={8}>{t("admin.bucket3.non_service_hours.empty_records")}</TEmpty>
           ) : null}
-          {rows.map((r) => (
+          {rows.map((r) => {
+            const name = r.user?.name ?? "—";
+            const tone = pickAvatarTone(r.id);
+            return (
             <TR key={r.id}>
-              <TD className="tabular-nums text-fg-t7">{r.id}</TD>
+              <TD className="tabular-nums text-fg-t7 font-mono text-xs">#{r.id}</TD>
               <TD>
-                <div className="font-medium text-fg-t8">{r.user?.name ?? "—"}</div>
-                <div className="text-xs text-fg-t6">{r.user?.email ?? ""}</div>
+                <div className="flex items-center gap-3">
+                  <span
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                    style={avatarStyle(tone)}
+                    aria-hidden
+                  >
+                    {getInitials(name)}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="font-medium text-fg-t8 truncate">{name}</div>
+                    <div className="text-[11px] text-fg-t6 truncate">{r.user?.email ?? ""}</div>
+                  </div>
+                </div>
               </TD>
-              <TD className="text-xs">{r.type}</TD>
+              <TD>
+                <span
+                  className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                  style={{ backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }}
+                >
+                  {r.type}
+                </span>
+              </TD>
               <TD className="text-xs">{formatDate(r.starts_on, lang)}</TD>
               <TD className="text-xs">{formatDate(r.ends_on, lang)}</TD>
               <TD className="tabular-nums text-xs">{r.hours_total ?? "—"}</TD>
               <TD>
-                <StatusPill status={statusTier(r.status)}>{r.status}</StatusPill>
+                <span
+                  className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                  style={statusBadgeStyle(r.status)}
+                >
+                  {r.status}
+                </span>
               </TD>
               <TD align="right">
                 {r.status === "pending" ? (
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      size="sm"
-                      variant="primary"
-                      disabled={busy}
+                  <div className="flex justify-end gap-1">
+                    <IconButton
                       onClick={() => void decide(r.id, "approved")}
-                    >
-                      {t("admin.bucket3.non_service_hours.approve")}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="danger"
+                      aria-label="Approve"
                       disabled={busy}
-                      onClick={() => void decide(r.id, "rejected")}
                     >
-                      {t("admin.bucket3.non_service_hours.reject")}
-                    </Button>
+                      <Check className="h-4 w-4" />
+                    </IconButton>
+                    <IconButton
+                      onClick={() => void decide(r.id, "rejected")}
+                      aria-label="Reject"
+                      disabled={busy}
+                    >
+                      <X className="h-4 w-4" />
+                    </IconButton>
                   </div>
                 ) : (
                   <span className="text-xs text-fg-t6">—</span>
                 )}
               </TD>
             </TR>
-          ))}
+            );
+          })}
         </TBody>
       </Table>
 
@@ -532,4 +583,25 @@ export default function Bucket3NonServiceHoursPage() {
       </div>
     </div>
   );
+}
+
+// v2 admin-redesign helpers — avatar tone + initials.
+function getInitials(name: string): string {
+  return (name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+}
+
+function pickAvatarTone(id: number | string): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  const n = typeof id === "number" ? id : id.length;
+  return tones[n % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
 }

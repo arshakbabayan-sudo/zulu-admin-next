@@ -23,7 +23,6 @@ import {
 
   Pagination,
   Select,
-  StatusPill,
   Table,
   TBody,
   TD,
@@ -35,7 +34,9 @@ import {
 import {
   PageHeader as V2PageHeader,
   SectionTabs,
+  V2Button,
 } from "@/components/ui/v2";
+import { Download, Plus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 type FeatureValue = boolean | number;
@@ -75,16 +76,17 @@ type CompanySubscription = {
   notes: string | null;
 };
 
-function statusTier(s: CompanySubscription["status"]): "neutral" | "info" | "success" | "warning" | "danger" {
+function statusBadgeStyle(s: CompanySubscription["status"]): React.CSSProperties {
   switch (s) {
     case "active":
-      return "success";
+      return { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" };
     case "trial":
-      return "info";
+      return { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" };
     case "past_due":
-      return "warning";
+      return { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" };
     case "cancelled":
-      return "neutral";
+    default:
+      return { backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" };
   }
 }
 
@@ -258,6 +260,14 @@ export default function Bucket3SubscriptionsPage() {
         ]}
         title={t("admin.bucket3.subscriptions.title")}
         subtitle={t("admin.bucket3.subscriptions.subtitle")}
+        actions={
+          <>
+            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
+              Add plan
+            </V2Button>
+          </>
+        }
       />
 
       <SectionTabs
@@ -302,8 +312,17 @@ export default function Bucket3SubscriptionsPage() {
             ) : null}
             {plans.map((p) => (
               <TR key={p.id}>
-                <TD className="font-mono text-xs">{p.code}</TD>
-                <TD className="font-medium">{p.name}</TD>
+                <TD>
+                  <span
+                    className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                    style={{ backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }}
+                  >
+                    {p.code}
+                  </span>
+                </TD>
+                <TD>
+                  <div className="font-medium text-fg-t8">{p.name}</div>
+                </TD>
                 <TD className="tabular-nums">
                   {p.currency} {p.monthly_price.toFixed(2)}
                 </TD>
@@ -315,11 +334,14 @@ export default function Bucket3SubscriptionsPage() {
                 </TD>
                 <TD className="tabular-nums">{p.display_order}</TD>
                 <TD>
-                  {p.is_active ? (
-                    <span className="text-xs font-medium text-success-700">{t("admin.bucket3.subscriptions.status.active")}</span>
-                  ) : (
-                    <span className="text-xs text-fg-t6">{t("admin.bucket3.subscriptions.status.inactive")}</span>
-                  )}
+                  <span className="inline-flex items-center gap-1.5 text-[12px]">
+                    <span
+                      aria-hidden
+                      className="inline-block h-1.5 w-1.5 rounded-full"
+                      style={{ backgroundColor: p.is_active ? "var(--admin-success)" : "var(--admin-text-tertiary)" }}
+                    />
+                    <span className="capitalize">{p.is_active ? t("admin.bucket3.subscriptions.status.active") : t("admin.bucket3.subscriptions.status.inactive")}</span>
+                  </span>
                 </TD>
               </TR>
             ))}
@@ -551,16 +573,45 @@ export default function Bucket3SubscriptionsPage() {
             {subs.length === 0 ? (
               <TEmpty colSpan={6}>{t("admin.bucket3.subscriptions.empty_subscriptions")}</TEmpty>
             ) : null}
-            {subs.map((s) => (
+            {subs.map((s) => {
+              const companyName = s.company?.name ?? "—";
+              const tone = pickAvatarTone(s.id);
+              return (
               <TR key={s.id}>
-                <TD>{s.company?.name ?? "—"}</TD>
+                <TD>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                      style={avatarStyle(tone)}
+                      aria-hidden
+                    >
+                      {getInitials(companyName)}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="font-medium text-fg-t8 truncate">{companyName}</div>
+                      <div className="text-[11px] text-fg-t6 truncate">SUB-{String(s.id).padStart(3, "0")}</div>
+                    </div>
+                  </div>
+                </TD>
                 <TD className="text-xs">
                   {s.plan ? `${s.plan.code} — ${s.plan.name}` : "—"}
                 </TD>
                 <TD>
-                  <StatusPill status={statusTier(s.status)}>{s.status}</StatusPill>
+                  <span
+                    className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                    style={statusBadgeStyle(s.status)}
+                  >
+                    {s.status}
+                  </span>
                 </TD>
-                <TD className="text-xs">{s.billing_period}</TD>
+                <TD>
+                  <span
+                    className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                    style={{ backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }}
+                  >
+                    {s.billing_period}
+                  </span>
+                </TD>
                 <TD className="text-xs text-fg-t6">
                   {formatDate(s.period_starts_at, lang)}
                   {" → "}
@@ -568,7 +619,8 @@ export default function Bucket3SubscriptionsPage() {
                 </TD>
                 <TD className="text-xs text-fg-t6">{s.notes ?? "—"}</TD>
               </TR>
-            ))}
+              );
+            })}
           </TBody>
         </Table>
         {subMeta && subMeta.last_page > 1 && (
@@ -582,4 +634,25 @@ export default function Bucket3SubscriptionsPage() {
       </div>
     </div>
   );
+}
+
+// v2 admin-redesign helpers.
+function getInitials(name: string): string {
+  return (name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+}
+
+function pickAvatarTone(id: number | string): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  const n = typeof id === "number" ? id : id.length;
+  return tones[n % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
 }

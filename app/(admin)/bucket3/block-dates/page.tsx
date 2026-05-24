@@ -36,7 +36,10 @@ import {
 import {
   PageHeader as V2PageHeader,
   SectionTabs,
+  V2Button,
+  IconButton,
 } from "@/components/ui/v2";
+import { Download, Plus, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 const ITEM_TYPES = ["hotel", "flight", "car", "transfer", "excursion", "visa", "package", "offer"] as const;
@@ -197,6 +200,14 @@ export default function Bucket3BlockDatesPage() {
             ? t("admin.bucket3.block_dates.subtitle_count").replace("{count}", String(meta.total))
             : t("admin.bucket3.block_dates.subtitle")
         }
+        actions={
+          <>
+            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
+              Add block
+            </V2Button>
+          </>
+        }
       />
 
       <SectionTabs
@@ -344,22 +355,30 @@ export default function Bucket3BlockDatesPage() {
           ) : null}
           {rows.map((r) => (
             <TR key={r.id}>
-              <TD className="tabular-nums text-fg-t7">{r.id}</TD>
-              <TD className="text-xs">{r.item_type}</TD>
+              <TD className="tabular-nums text-fg-t7 font-mono text-xs">#{r.id}</TD>
+              <TD>
+                <span
+                  className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                  style={{ backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }}
+                >
+                  {r.item_type}
+                </span>
+              </TD>
               <TD className="tabular-nums">{r.item_id ?? <span className="text-fg-t6">all</span>}</TD>
               <TD className="text-xs">{formatDate(r.blocked_from, lang)}</TD>
               <TD className="text-xs">{formatDate(r.blocked_to, lang)}</TD>
               <TD className="text-xs text-fg-t6">{r.reason ?? "—"}</TD>
               <TD className="text-xs text-fg-t6">{r.company_name ?? `#${r.company_id}`}</TD>
               <TD align="right">
-                <Button
-                  variant="danger"
-                  size="sm"
-                  disabled={busy}
-                  onClick={() => void handleDelete(r.id)}
-                >
-                  {t("common.remove")}
-                </Button>
+                <div className="flex justify-end gap-1">
+                  <IconButton
+                    onClick={() => void handleDelete(r.id)}
+                    aria-label="Delete"
+                    disabled={busy}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </IconButton>
+                </div>
               </TD>
             </TR>
           ))}
