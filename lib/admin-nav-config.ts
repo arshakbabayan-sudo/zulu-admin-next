@@ -58,6 +58,15 @@ export type AdminNavGroup = {
   /** Sidebar link points here. Usually the first tab. */
   defaultHref: string;
   tabs: AdminNavTab[];
+  /**
+   * v2 admin-redesign (2026-05-24) — when present, the sidebar item renders
+   * a small pill badge after the label. Source identifier resolved at runtime
+   * in AdminShell.tsx (e.g. "notifications_unread", "users_pending").
+   * No badge when omitted.
+   */
+  badgeSource?: "notifications_unread" | "users_pending";
+  /** Badge color variant — `primary` (purple) or `warn` (amber). Defaults to primary. */
+  badgeKind?: "primary" | "warn";
   /** Visibility predicate name — wired in AdminShell.tsx. */
   visibility:
     // legacy keys kept for back-compat with any external importer:
@@ -227,7 +236,62 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     visibility: "section_marketplace_ops",
   },
 
-  // 8 ── Settings (full for super, company-scoped for non-super) ────────
+  // ── 8–12 ── v2 redesign new groups (2026-05-24, ordered per zulu-admin-v2.html) ──
+  // Users / Roles / Files / Profile come AFTER Marketplace ops and BEFORE Settings
+  // to match the v2 spec sidebar. Settings (#13) is the final group — moved from
+  // its earlier position #8. Pages live under /admin-redesign/<slug> (or existing
+  // routes once the v2 layout is built on top of them).
+  {
+    key: "users_v2",
+    labelKey: "admin.nav.section.users_v2",
+    labelFallback: "Users",
+    icon: "/icons/menu/users.svg",
+    defaultHref: "/admin-redesign/users",
+    tabs: [],
+    visibility: "always",
+    badgeSource: "users_pending",
+    badgeKind: "primary",
+  },
+  {
+    key: "roles_permissions",
+    labelKey: "admin.nav.section.roles_permissions",
+    labelFallback: "Roles & permissions",
+    icon: "/icons/menu/shield.svg",
+    defaultHref: "/admin-redesign/roles-permissions",
+    tabs: [],
+    visibility: "always",
+  },
+  {
+    key: "file_manager",
+    labelKey: "admin.nav.section.file_manager",
+    labelFallback: "File manager",
+    icon: "/icons/menu/folder.svg",
+    defaultHref: "/admin-redesign/files",
+    tabs: [],
+    visibility: "always",
+  },
+  {
+    key: "my_profile",
+    labelKey: "admin.nav.section.my_profile",
+    labelFallback: "My profile",
+    icon: "/icons/menu/profile.svg",
+    defaultHref: "/admin-redesign/profile",
+    tabs: [],
+    visibility: "always",
+  },
+  {
+    key: "notifications_v2",
+    labelKey: "admin.nav.section.notifications_v2",
+    labelFallback: "Notifications",
+    icon: "/icons/menu/bell.svg",
+    defaultHref: "/admin-redesign/notifications",
+    tabs: [],
+    visibility: "always",
+    badgeSource: "notifications_unread",
+    badgeKind: "warn",
+  },
+
+  // 13 ── Settings (moved from #8 to last per v2 spec, 2026-05-24) ──────
   {
     key: "settings",
     labelKey: "admin.nav.section.settings",
@@ -272,84 +336,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/platform/reviews", labelKey: "admin.nav.tab.reviews", moduleKey: "ops.reviews" },
     ],
     visibility: "section_settings",
-  },
-
-  // ── 9–16 ── New design placeholders (2026-05-24) ─────────────────────
-  // Appended below the existing 8 sections per user spec: existing items
-  // keep their position, new items added below as placeholders. Pages
-  // live under /admin-redesign/<slug> and render a "🚧 շուտով կլինի"
-  // placeholder until the real implementation lands.
-  {
-    key: "users_v2",
-    labelKey: "admin.nav.section.users_v2",
-    labelFallback: "Users",
-    icon: "/icons/menu/users.svg",
-    defaultHref: "/admin-redesign/users",
-    tabs: [],
-    visibility: "always",
-  },
-  {
-    key: "roles_permissions",
-    labelKey: "admin.nav.section.roles_permissions",
-    labelFallback: "Roles & permissions",
-    icon: "/icons/menu/shield.svg",
-    defaultHref: "/admin-redesign/roles-permissions",
-    tabs: [],
-    visibility: "always",
-  },
-  {
-    key: "file_manager",
-    labelKey: "admin.nav.section.file_manager",
-    labelFallback: "File manager",
-    icon: "/icons/menu/folder.svg",
-    defaultHref: "/admin-redesign/files",
-    tabs: [],
-    visibility: "always",
-  },
-  {
-    key: "billing_v2",
-    labelKey: "admin.nav.section.billing_v2",
-    labelFallback: "Billing",
-    icon: "/icons/menu/credit-card.svg",
-    defaultHref: "/admin-redesign/billing",
-    tabs: [],
-    visibility: "always",
-  },
-  {
-    key: "invoices_v2",
-    labelKey: "admin.nav.section.invoices_v2",
-    labelFallback: "Invoices",
-    icon: "/icons/menu/invoice.svg",
-    defaultHref: "/admin-redesign/invoices",
-    tabs: [],
-    visibility: "always",
-  },
-  {
-    key: "reports_v2",
-    labelKey: "admin.nav.section.reports_v2",
-    labelFallback: "Reports",
-    icon: "/icons/menu/chart-bar.svg",
-    defaultHref: "/admin-redesign/reports",
-    tabs: [],
-    visibility: "always",
-  },
-  {
-    key: "my_profile",
-    labelKey: "admin.nav.section.my_profile",
-    labelFallback: "My profile",
-    icon: "/icons/menu/profile.svg",
-    defaultHref: "/admin-redesign/profile",
-    tabs: [],
-    visibility: "always",
-  },
-  {
-    key: "notifications_v2",
-    labelKey: "admin.nav.section.notifications_v2",
-    labelFallback: "Notifications",
-    icon: "/icons/menu/bell.svg",
-    defaultHref: "/admin-redesign/notifications",
-    tabs: [],
-    visibility: "always",
   },
 ];
 

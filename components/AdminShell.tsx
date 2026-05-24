@@ -126,6 +126,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const notificationsRef = useRef<HTMLDivElement>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [recentNotifications, setRecentNotifications] = useState<NotificationRow[]>([]);
+  // v2 admin-redesign (2026-05-24) — pending-verification user count for Users
+  // sidebar badge. TODO: wire to /api/admin/users/pending-count once that
+  // endpoint exists (backend follow-up). For now stays at 0 so badge is hidden.
+  const [pendingUsersCount] = useState(0);
   const [appsOpen, setAppsOpen] = useState(false);
   const appsRef = useRef<HTMLDivElement>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -735,21 +739,33 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               // names readable until the ui_translations rows ship.
               const rawLabel = t(g.labelKey);
               const label = rawLabel === g.labelKey && g.labelFallback ? g.labelFallback : rawLabel;
+              // v2 admin-redesign (2026-05-24) — sidebar badge resolution
+              const badgeValue =
+                g.badgeSource === "notifications_unread"
+                  ? unreadCount
+                  : g.badgeSource === "users_pending"
+                  ? pendingUsersCount
+                  : 0;
+              const showBadge = sidebarOpen && badgeValue > 0;
+              const badgeBg =
+                g.badgeKind === "warn"
+                  ? "var(--warning, #FFA000)"
+                  : "var(--admin-primary)";
               return (
                 <Link
                   key={g.key}
                   href={href}
                   aria-current={active ? "page" : undefined}
-                  // 2026-05-24 admin-redesign — visual tuning to match
-                  // docs/zulu-admin-single.html sidebar:
-                  //   font 13px, gap 10px (gap-2.5), inactive text-secondary,
+                  // v2 admin-redesign — visual tuning to match
+                  // docs/zulu-admin-v2.html .sidebar-item:
+                  //   font 13px, gap 12px (gap-3), inactive text-secondary,
                   //   hover bg slate-50, active uses primary-soft bg +
                   //   primary text + medium weight.
                   className={`flex items-center rounded-lg px-3 py-2 text-[13px] transition ${
                     active
                       ? "font-medium"
                       : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                  } ${sidebarOpen ? "gap-2.5" : "justify-center"}`}
+                  } ${sidebarOpen ? "gap-3" : "justify-center"}`}
                   title={label}
                   style={
                     active
@@ -757,8 +773,17 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                       : undefined
                   }
                 >
-                  <img src={g.icon} alt="" aria-hidden className="h-4 w-4 shrink-0 opacity-80" />
-                  {sidebarOpen && <span>{label}</span>}
+                  <img src={g.icon} alt="" aria-hidden className="h-[18px] w-[18px] shrink-0 opacity-80" />
+                  {sidebarOpen && <span className="flex-1 truncate">{label}</span>}
+                  {showBadge ? (
+                    <span
+                      className="ml-auto rounded-full px-[7px] py-[1px] text-[10px] font-semibold text-white"
+                      style={{ backgroundColor: badgeBg }}
+                      aria-label={`${badgeValue} ${g.badgeSource === "notifications_unread" ? "unread" : "pending"}`}
+                    >
+                      {badgeValue > 99 ? "99+" : badgeValue}
+                    </span>
+                  ) : null}
                 </Link>
               );
             });
