@@ -23,6 +23,12 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  V2Card,
+  V2Button,
+} from "@/components/ui/v2";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { canAccessOperatorToolsNav, userHasSellerServiceType } from "@/lib/access";
@@ -525,8 +531,13 @@ export default function OperatorVisasPage() {
     );
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Inventory", href: "/operator/hotels" },
+          { label: t("admin.crud.visas.title") },
+        ]}
         title={
           <span className="inline-flex items-center gap-3">
             {t("admin.crud.visas.title")}
@@ -553,11 +564,25 @@ export default function OperatorVisasPage() {
               }}
               onImport={() => setImportOpen(true)}
             />
-            <Button size="sm" disabled={busy} onClick={openCreate}>
-              {t("admin.crud.visas.new_btn")}
-            </Button>
+            <V2Button variant="primary" size="sm" disabled={busy} onClick={openCreate}>
+              + {t("admin.crud.visas.new_btn")}
+            </V2Button>
           </div>
         }
+      />
+
+      <SectionTabs
+        activeHref="/operator/visas"
+        items={[
+          { href: "/operator/hotels", label: "Hotels" },
+          { href: "/operator/flights", label: "Flights" },
+          { href: "/operator/transfers", label: "Transfers" },
+          { href: "/operator/cars", label: "Cars" },
+          { href: "/operator/excursions", label: "Excursions" },
+          { href: "/operator/visas", label: "Visas", count: meta?.total },
+          { href: "/operator/packages", label: "Packages" },
+          { href: "/operator/offers", label: "Offers" },
+        ]}
       />
 
       <CsvImportModal
@@ -811,6 +836,7 @@ export default function OperatorVisasPage() {
           </div>
         </section>
       )}
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -882,6 +908,7 @@ export default function OperatorVisasPage() {
           ))}
         </TBody>
       </Table>
+      </V2Card>
       {meta && <PaginationBar meta={meta} onPage={setPage} />}
     </div>
   );

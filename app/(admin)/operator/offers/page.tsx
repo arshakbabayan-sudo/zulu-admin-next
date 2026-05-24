@@ -28,6 +28,14 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  FilterCard,
+  FilterField,
+  V2Card,
+  V2Button,
+} from "@/components/ui/v2";
 
 const STATUSES = ["", "draft", "published", "archived"];
 
@@ -93,8 +101,13 @@ export default function OperatorOffersPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Inventory", href: "/operator/hotels" },
+          { label: t("admin.crud.offers.title") },
+        ]}
         title={
           <span className="flex items-center gap-3">
             {t("admin.crud.offers.title")}
@@ -103,26 +116,40 @@ export default function OperatorOffersPage() {
         }
       />
 
-      <div className="admin-card p-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <FormField label={t("admin.crud.offers.filter.status")} htmlFor="off-status" className="max-w-xs">
-            <Select
-              id="off-status"
-              fieldSize="sm"
-              value={statusFilter}
-              onChange={(e) => { setPage(1); setStatusFilter(e.target.value); }}
-            >
-              {STATUSES.map((s) => <option key={s} value={s}>{s || t("admin.crud.common.all")}</option>)}
-            </Select>
-          </FormField>
-          <Button variant="outline" size="sm" onClick={load}>{t("admin.crud.common.refresh")}</Button>
-        </div>
-      </div>
+      <SectionTabs
+        activeHref="/operator/offers"
+        items={[
+          { href: "/operator/hotels", label: "Hotels" },
+          { href: "/operator/flights", label: "Flights" },
+          { href: "/operator/transfers", label: "Transfers" },
+          { href: "/operator/cars", label: "Cars" },
+          { href: "/operator/excursions", label: "Excursions" },
+          { href: "/operator/visas", label: "Visas" },
+          { href: "/operator/packages", label: "Packages" },
+          { href: "/operator/offers", label: "Offers", count: meta?.total },
+        ]}
+      />
+
+      <FilterCard>
+        <FilterField label={t("admin.crud.offers.filter.status")} minWidth={180}>
+          <Select
+            id="off-status"
+            fieldSize="sm"
+            value={statusFilter}
+            onChange={(e) => { setPage(1); setStatusFilter(e.target.value); }}
+            className="!h-[34px]"
+          >
+            {STATUSES.map((s) => <option key={s} value={s}>{s || t("admin.crud.common.all")}</option>)}
+          </Select>
+        </FilterField>
+        <V2Button variant="default" size="sm" onClick={load}>{t("admin.crud.common.refresh")}</V2Button>
+      </FilterCard>
 
       {err && (
-        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
+        <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
       )}
 
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -165,6 +192,7 @@ export default function OperatorOffersPage() {
           ))}
         </TBody>
       </Table>
+      </V2Card>
 
       {meta && meta.last_page > 1 ? (
         <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />

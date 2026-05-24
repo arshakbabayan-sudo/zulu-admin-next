@@ -24,6 +24,12 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  FilterCard,
+  V2Card,
+} from "@/components/ui/v2";
 
 export type InventoryColumn = {
   header: string;
@@ -103,23 +109,50 @@ export function InventoryOversightList({
     );
   }
 
+  const segmentLabel = (s: OperatorInventorySegment): string => {
+    switch (s) {
+      case "hotels": return "Hotels";
+      case "flights": return "Flights";
+      case "transfers": return "Transfers";
+      case "cars": return "Cars";
+      case "excursions": return "Excursions";
+      default: return s;
+    }
+  };
+
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      {/* v2 admin-redesign — Inventory oversight (super-admin). 5-tab list. */}
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Inventory", href: "/inventory/hotels" },
+          { label: segmentLabel(segment) },
+        ]}
         title={title}
         subtitle={meta ? `${meta.total} total · page ${meta.current_page} of ${meta.last_page}` : undefined}
       />
 
+      <SectionTabs
+        activeHref={`/inventory/${segment}`}
+        items={[
+          { href: "/inventory/hotels", label: "Hotels" },
+          { href: "/inventory/flights", label: "Flights" },
+          { href: "/inventory/transfers", label: "Transfers" },
+          { href: "/inventory/cars", label: "Cars" },
+          { href: "/inventory/excursions", label: "Excursions" },
+        ]}
+      />
+
       {filterBar ? (
-        <div className="admin-card p-4">
-          <div className="flex flex-wrap items-end gap-3">{filterBar}</div>
-        </div>
+        <FilterCard>{filterBar}</FilterCard>
       ) : null}
 
       {err ? (
-        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
+        <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
       ) : null}
 
+      <V2Card>
       <div className={`transition-opacity ${isLoading ? "opacity-50 pointer-events-none" : "opacity-100"}`}>
         <Table>
           <THead>
@@ -148,6 +181,7 @@ export function InventoryOversightList({
           </TBody>
         </Table>
       </div>
+      </V2Card>
 
       {meta && meta.last_page > 1 ? (
         <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />

@@ -27,6 +27,12 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  V2Card,
+  V2Button,
+} from "@/components/ui/v2";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useExcursionWizardStepper } from "@/hooks/useExcursionWizardStepper";
@@ -415,8 +421,13 @@ export default function OperatorExcursionsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Inventory", href: "/operator/hotels" },
+          { label: t("admin.crud.excursions.title") },
+        ]}
         title={
           <span className="inline-flex items-center gap-3">
             {t("admin.crud.excursions.title")}
@@ -443,11 +454,25 @@ export default function OperatorExcursionsPage() {
               }}
               onImport={() => setImportOpen(true)}
             />
-            <Button size="sm" disabled={busy} onClick={() => void openCreate()}>
-              {busy ? "Loading…" : t("admin.crud.excursions.new_btn")}
-            </Button>
+            <V2Button variant="primary" size="sm" disabled={busy} onClick={() => void openCreate()}>
+              + {busy ? "Loading…" : t("admin.crud.excursions.new_btn")}
+            </V2Button>
           </div>
         }
+      />
+
+      <SectionTabs
+        activeHref="/operator/excursions"
+        items={[
+          { href: "/operator/hotels", label: "Hotels" },
+          { href: "/operator/flights", label: "Flights" },
+          { href: "/operator/transfers", label: "Transfers" },
+          { href: "/operator/cars", label: "Cars" },
+          { href: "/operator/excursions", label: "Excursions", count: meta?.total },
+          { href: "/operator/visas", label: "Visas" },
+          { href: "/operator/packages", label: "Packages" },
+          { href: "/operator/offers", label: "Offers" },
+        ]}
       />
       <CsvImportModal
         open={importOpen}
@@ -1083,6 +1108,7 @@ export default function OperatorExcursionsPage() {
           </div>
         </section>
       )}
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -1137,6 +1163,7 @@ export default function OperatorExcursionsPage() {
           ))}
         </TBody>
       </Table>
+      </V2Card>
       {meta && <PaginationBar meta={meta} onPage={setPage} />}
     </div>
   );

@@ -28,6 +28,14 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  FilterCard,
+  FilterField,
+  V2Card,
+  V2Button,
+} from "@/components/ui/v2";
 import { useCallback, useEffect, useState } from "react";
 
 export default function PlatformPackagesGovernancePage() {
@@ -117,45 +125,65 @@ export default function PlatformPackagesGovernancePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader title={t("admin.packages.title_long")} />
+    <div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Inventory", href: "/operator/hotels" },
+          { label: "Packages oversight" },
+        ]}
+        title={t("admin.packages.title_long")}
+      />
 
-      <div className="admin-card p-4">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <FormField label={t("admin.packages.filter_status")} htmlFor="pp-status">
-            <Input
-              id="pp-status"
-              value={statusFilter}
-              onChange={(e) => {
-                setPage(1);
-                setStatusFilter(e.target.value);
-              }}
-              placeholder={t("admin.packages.placeholder_status")}
-            />
-          </FormField>
-          <FormField label={t("admin.packages.filter_company_id")} htmlFor="pp-company">
-            <Input
-              id="pp-company"
-              value={companyIdDraft}
-              onChange={(e) => setCompanyIdDraft(e.target.value)}
-              placeholder={t("admin.packages.placeholder_optional")}
-              className="tabular-nums"
-            />
-          </FormField>
-        </div>
-        <div className="mt-4 flex justify-end">
-          <Button size="sm" onClick={applyCompanyFilter}>
-            {t("admin.packages.btn_apply_company")}
-          </Button>
-        </div>
-      </div>
+      <SectionTabs
+        activeHref="/platform/packages"
+        items={[
+          { href: "/operator/hotels", label: "Hotels" },
+          { href: "/operator/flights", label: "Flights" },
+          { href: "/operator/transfers", label: "Transfers" },
+          { href: "/operator/cars", label: "Cars" },
+          { href: "/operator/excursions", label: "Excursions" },
+          { href: "/operator/visas", label: "Visas" },
+          { href: "/operator/packages", label: "Packages" },
+          { href: "/operator/offers", label: "Offers" },
+          { href: "/platform/packages", label: "Packages oversight", count: meta?.total },
+        ]}
+      />
+
+      <FilterCard>
+        <FilterField label={t("admin.packages.filter_status")} minWidth={200}>
+          <Input
+            id="pp-status"
+            value={statusFilter}
+            onChange={(e) => {
+              setPage(1);
+              setStatusFilter(e.target.value);
+            }}
+            placeholder={t("admin.packages.placeholder_status")}
+            className="!h-[34px]"
+          />
+        </FilterField>
+        <FilterField label={t("admin.packages.filter_company_id")} minWidth={180}>
+          <Input
+            id="pp-company"
+            value={companyIdDraft}
+            onChange={(e) => setCompanyIdDraft(e.target.value)}
+            placeholder={t("admin.packages.placeholder_optional")}
+            className="!h-[34px] tabular-nums"
+          />
+        </FilterField>
+        <V2Button size="sm" variant="primary" onClick={applyCompanyFilter}>
+          {t("admin.packages.btn_apply_company")}
+        </V2Button>
+      </FilterCard>
 
       {err && (
-        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
+        <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
           {err}
         </div>
       )}
 
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -208,6 +236,7 @@ export default function PlatformPackagesGovernancePage() {
           ))}
         </TBody>
       </Table>
+      </V2Card>
 
       {meta && <PaginationBar meta={meta} onPage={setPage} />}
 

@@ -15,6 +15,7 @@ import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessOperatorToolsNav } from "@/lib/access";
 import { Button, FormField, Input, PageHeader } from "@/components/ui";
+import { PageHeader as V2PageHeader } from "@/components/ui/v2";
 import { useState } from "react";
 
 type ConnectionStatus = "not_connected" | "testing" | "connected" | "error";
@@ -84,8 +85,12 @@ export default function OperatorExternalApiPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "External API" },
+        ]}
         title="External API integration"
         subtitle={
           <span className="inline-flex items-center gap-3">

@@ -44,6 +44,10 @@ import {
   type PlatformCompanyRow,
 } from "@/lib/platform-admin-api";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+} from "@/components/ui/v2";
 
 type SortDir = "asc" | "desc";
 type SortField = "id" | "name" | "type" | "status" | "governance_status" | "is_seller";
@@ -445,28 +449,47 @@ export default function PlatformCompaniesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="admin-page-title">{t("admin.platform_companies.title")}</h1>
-          {meta && (
-            <p className="mt-1 text-sm text-fg-t6">
-              {t("admin.platform_companies.meta")
+    <div>
+      {/* v2 admin-redesign — Marketplace ops → Companies page chrome. */}
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Marketplace ops", href: "/platform/approvals" },
+          { label: t("admin.platform_companies.title") },
+        ]}
+        title={t("admin.platform_companies.title")}
+        subtitle={
+          meta
+            ? t("admin.platform_companies.meta")
                 .replace("{total}", String(meta.total))
                 .replace("{page}", String(meta.current_page))
-                .replace("{lastPage}", String(meta.last_page))}
-              {pendingApps.length > 0 && (
-                <span className="ml-2 inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">
-                  {t("admin.platform_companies.pending_apps_count").replace(
-                    "{count}",
-                    String(pendingApps.length),
-                  )}
-                </span>
-              )}
-            </p>
+                .replace("{lastPage}", String(meta.last_page))
+            : undefined
+        }
+      />
+
+      <SectionTabs
+        activeHref="/platform/companies"
+        items={[
+          { href: "/platform/approvals", label: "Approval queue" },
+          { href: "/platform/companies", label: "Companies access", count: meta?.total },
+          { href: "/platform/seller-applications", label: "Seller applications" },
+          { href: "/platform/contracts", label: "Partnership agreements" },
+          { href: "/platform/contract-templates", label: "Contract templates" },
+          { href: "/platform/audit-logs", label: "Audit logs" },
+          { href: "/bucket3/service-logs", label: "Service logs" },
+          { href: "/bucket3/unverified-accounts", label: "Unverified accounts" },
+        ]}
+      />
+
+      {pendingApps.length > 0 && (
+        <div className="mb-4 inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">
+          {t("admin.platform_companies.pending_apps_count").replace(
+            "{count}",
+            String(pendingApps.length),
           )}
         </div>
-      </header>
+      )}
 
       <div className="admin-card p-4">
         <div className="flex flex-wrap items-end gap-3">

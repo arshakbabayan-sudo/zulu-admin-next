@@ -39,6 +39,12 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  V2Card,
+  V2Button,
+} from "@/components/ui/v2";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -464,8 +470,13 @@ export default function OperatorFlightsPage() {
     setOpenSection((s) => ({ ...s, [k]: !s[k] }));
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Inventory", href: "/operator/hotels" },
+          { label: t("admin.crud.flights.title") },
+        ]}
         title={
           <span className="inline-flex items-center gap-3">
             {t("admin.crud.flights.title")}
@@ -492,15 +503,29 @@ export default function OperatorFlightsPage() {
               }}
               onImport={() => setImportOpen(true)}
             />
-            <Button size="sm" onClick={openCreate}>
-              {t("admin.crud.flights.new_btn")}
-            </Button>
+            <V2Button variant="primary" size="sm" onClick={openCreate}>
+              + {t("admin.crud.flights.new_btn")}
+            </V2Button>
           </div>
         }
       />
 
+      <SectionTabs
+        activeHref="/operator/flights"
+        items={[
+          { href: "/operator/hotels", label: "Hotels" },
+          { href: "/operator/flights", label: "Flights", count: meta?.total },
+          { href: "/operator/transfers", label: "Transfers" },
+          { href: "/operator/cars", label: "Cars" },
+          { href: "/operator/excursions", label: "Excursions" },
+          { href: "/operator/visas", label: "Visas" },
+          { href: "/operator/packages", label: "Packages" },
+          { href: "/operator/offers", label: "Offers" },
+        ]}
+      />
+
       {err && (
-        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
+        <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
       )}
 
       {formLoading && editId != null && !form && (
@@ -1205,6 +1230,7 @@ export default function OperatorFlightsPage() {
       )}
 
       {/* List of flights */}
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -1270,6 +1296,7 @@ export default function OperatorFlightsPage() {
           ))}
         </TBody>
       </Table>
+      </V2Card>
       {meta && <PaginationBar meta={meta} onPage={setPage} />}
       <CsvImportModal
         open={importOpen}

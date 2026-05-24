@@ -15,6 +15,10 @@ import { ApiRequestError } from "@/lib/api-client";
 import { apiPatchPlatformSetting, apiPlatformSettings, type PlatformSettingRow } from "@/lib/platform-admin-api";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button, Input, PageHeader } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+} from "@/components/ui/v2";
 
 function categoryOf(key: string): string {
   const head = key.split(/[._-]/)[0]?.toLowerCase() ?? "general";
@@ -107,14 +111,43 @@ export default function PlatformSettingsPage() {
   const visibleRows = activeCategory ? grouped.find(([c]) => c === activeCategory)?.[1] ?? [] : rows;
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Settings", href: "/settings/pricing-rules" },
+          { label: "General" },
+        ]}
         title="Platform settings"
         subtitle="Configure global platform behavior. Changes apply immediately."
       />
 
-      {msg && <div className="rounded-zulu border border-success-100 bg-success-50 px-4 py-2 text-sm text-success-700">{msg}</div>}
-      {err && <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
+      <SectionTabs
+        activeHref="/platform/settings"
+        items={[
+          { href: "/settings/pricing-rules", label: "Pricing rules" },
+          { href: "/settings/money-flow", label: "Money flow" },
+          { href: "/localization/languages", label: "Languages" },
+          { href: "/localization/templates", label: "Email templates" },
+          { href: "/platform/banners", label: "Banners" },
+          { href: "/pages", label: "CMS pages" },
+          { href: "/platform/notifications", label: "System notifications" },
+          { href: "/platform/newsletter", label: "Newsletter" },
+          { href: "/platform/loyalty", label: "Loyalty" },
+          { href: "/bucket3/block-dates", label: "Block dates" },
+          { href: "/bucket3/custom-fields", label: "Custom fields" },
+          { href: "/platform/security", label: "Security" },
+          { href: "/platform/webhooks", label: "Webhooks" },
+          { href: "/platform/locations", label: "Locations" },
+          { href: "/platform/settings/brand", label: "Brand" },
+          { href: "/connections", label: "Connections" },
+          { href: "/support/tickets", label: "Support" },
+          { href: "/platform/reviews", label: "Reviews" },
+        ]}
+      />
+
+      {msg && <div className="mb-4 rounded-md border border-success-100 bg-success-50 px-4 py-2 text-sm text-success-700">{msg}</div>}
+      {err && <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
 
       {rows.length === 0 ? (
         <div className="admin-card p-6 text-center text-sm text-fg-t6">

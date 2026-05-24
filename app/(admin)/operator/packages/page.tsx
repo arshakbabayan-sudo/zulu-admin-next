@@ -40,6 +40,14 @@ import {
   THead,
   TR,
 } from "@/components/ui";
+import {
+  PageHeader as V2PageHeader,
+  SectionTabs,
+  FilterCard,
+  FilterField,
+  V2Card,
+  V2Button,
+} from "@/components/ui/v2";
 import { useCallback, useEffect, useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -219,8 +227,13 @@ export default function OperatorPackagesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "Inventory", href: "/operator/hotels" },
+          { label: t("admin.crud.packages.title") },
+        ]}
         title={
           <span className="inline-flex items-center gap-3">
             {t("admin.crud.packages.title")}
@@ -228,39 +241,49 @@ export default function OperatorPackagesPage() {
           </span>
         }
         actions={
-          <Button size="sm" onClick={openCreate}>
-            {t("admin.crud.packages.new_btn")}
-          </Button>
+          <V2Button variant="primary" size="sm" onClick={openCreate}>
+            + {t("admin.crud.packages.new_btn")}
+          </V2Button>
         }
       />
 
-      <div className="admin-card p-4">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <FormField
-            label={t("admin.crud.packages.filter.status")}
-            htmlFor="pkg-status"
+      <SectionTabs
+        activeHref="/operator/packages"
+        items={[
+          { href: "/operator/hotels", label: "Hotels" },
+          { href: "/operator/flights", label: "Flights" },
+          { href: "/operator/transfers", label: "Transfers" },
+          { href: "/operator/cars", label: "Cars" },
+          { href: "/operator/excursions", label: "Excursions" },
+          { href: "/operator/visas", label: "Visas" },
+          { href: "/operator/packages", label: "Packages", count: meta?.total },
+          { href: "/operator/offers", label: "Offers" },
+        ]}
+      />
+
+      <FilterCard>
+        <FilterField label={t("admin.crud.packages.filter.status")} minWidth={180}>
+          <Select
+            id="pkg-status"
+            fieldSize="sm"
+            value={statusFilter}
+            onChange={(e) => {
+              setPage(1);
+              setStatusFilter(e.target.value);
+            }}
+            className="!h-[34px]"
           >
-            <Select
-              id="pkg-status"
-              fieldSize="sm"
-              value={statusFilter}
-              onChange={(e) => {
-                setPage(1);
-                setStatusFilter(e.target.value);
-              }}
-            >
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s || t("admin.crud.common.all")}
-                </option>
-              ))}
-            </Select>
-          </FormField>
-        </div>
-      </div>
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s || t("admin.crud.common.all")}
+              </option>
+            ))}
+          </Select>
+        </FilterField>
+      </FilterCard>
 
       {err && (
-        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
+        <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
           {err}
         </div>
       )}
@@ -506,6 +529,7 @@ export default function OperatorPackagesPage() {
         </section>
       )}
 
+      <V2Card>
       <Table>
         <THead>
           <TR>
@@ -585,6 +609,7 @@ export default function OperatorPackagesPage() {
           ))}
         </TBody>
       </Table>
+      </V2Card>
 
       {meta && <PaginationBar meta={meta} onPage={setPage} />}
     </div>
