@@ -9,7 +9,6 @@ import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { formatDate } from "@/lib/format";
 import {
   apiCommissions,
   apiCommissionRecords,
@@ -20,9 +19,9 @@ import {
   type CommissionRecordRow,
 } from "@/lib/commissions-api";
 import { useCallback, useEffect, useState } from "react";
+import { Plus } from "lucide-react";
 import {
   Pagination,
-  StatusPill,
   Table,
   TBody,
   TD,
@@ -43,7 +42,7 @@ type Tab = "policies" | "records";
 
 export default function CommissionsPage() {
   const { token, user } = useAdminAuth();
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);
   const [tab, setTab] = useState<Tab>("policies");
@@ -178,7 +177,7 @@ export default function CommissionsPage() {
         ]}
         title={t("admin.platform_commissions.title")}
         actions={
-          <V2Button variant="primary" onClick={() => setNewOpen(true)}>
+          <V2Button variant="primary" icon={<Plus className="h-4 w-4" />} onClick={() => setNewOpen(true)}>
             {t("admin.platform_commissions.btn_new")}
           </V2Button>
         }
@@ -230,13 +229,25 @@ export default function CommissionsPage() {
               ) : null}
               {policies.map((r) => (
                 <TR key={r.id}>
-                  <TD className="tabular-nums">{r.id}</TD>
-                  <TD>{r.name ?? "—"}</TD>
-                  <TD>{r.type}</TD>
-                  <TD className="tabular-nums">{r.rate}%</TD>
-                  <TD>{r.service_type ?? t("common.all")}</TD>
+                  <TD className="tabular-nums font-mono text-xs text-fg-t7">#{r.id}</TD>
+                  <TD className="font-medium text-fg-t8">{r.name ?? "—"}</TD>
                   <TD>
-                    <StatusPill status={r.status} />
+                    <span
+                      className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                      style={{ backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }}
+                    >
+                      {r.type}
+                    </span>
+                  </TD>
+                  <TD className="tabular-nums font-medium text-fg-t8">{r.rate}%</TD>
+                  <TD className="text-fg-t8">{r.service_type ?? t("common.all")}</TD>
+                  <TD>
+                    <span
+                      className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                      style={commissionStatusBadgeStyle(r.status)}
+                    >
+                      {r.status}
+                    </span>
                   </TD>
                   <TD>
                     {r.status === "active" && (
@@ -244,7 +255,12 @@ export default function CommissionsPage() {
                         type="button"
                         disabled={busyId === r.id}
                         onClick={() => void handleDeactivate(r.id)}
-                        className="text-xs text-error-600 underline disabled:opacity-40"
+                        className="inline-flex h-7 items-center rounded-md border px-2.5 text-[11px] font-medium transition disabled:opacity-40"
+                        style={{
+                          color: "var(--admin-danger)",
+                          borderColor: "var(--admin-danger-light)",
+                          backgroundColor: "transparent",
+                        }}
                       >
                         {t("admin.platform_commissions.deactivate")}
                       </button>
@@ -281,18 +297,21 @@ export default function CommissionsPage() {
               ) : null}
               {records.map((r) => (
                 <TR key={r.id}>
-                  <TD className="tabular-nums">{r.id}</TD>
-                  <TD className="tabular-nums font-medium">
+                  <TD className="tabular-nums font-mono text-xs text-fg-t7">#{r.id}</TD>
+                  <TD className="tabular-nums font-medium text-fg-t8">
                     {r.currency} {Number(r.amount).toFixed(2)}
                   </TD>
                   <TD>
-                    <StatusPill status={r.status} />
+                    <span
+                      className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                      style={commissionStatusBadgeStyle(r.status)}
+                    >
+                      {r.status}
+                    </span>
                   </TD>
-                  <TD>{r.company?.name ?? r.company_id ?? "—"}</TD>
-                  <TD className="tabular-nums">{r.booking_id ?? "—"}</TD>
-                  <TD className="text-xs text-fg-t6">
-                    {formatDate(r.created_at, lang)}
-                  </TD>
+                  <TD className="text-fg-t8">{r.company?.name ?? r.company_id ?? "—"}</TD>
+                  <TD className="tabular-nums font-mono text-xs">{r.booking_id ?? "—"}</TD>
+                  <TD className="text-xs text-fg-t6">{formatRelativeTime(r.created_at)}</TD>
                 </TR>
               ))}
             </TBody>
@@ -463,4 +482,39 @@ export default function CommissionsPage() {
       )}
     </div>
   );
+}
+
+// v2 admin-redesign helpers — colored status pill + relative time.
+function commissionStatusBadgeStyle(status: string): React.CSSProperties {
+  switch (status) {
+    case "active":
+    case "paid":
+    case "settled":
+      return { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" };
+    case "inactive":
+    case "cancelled":
+      return { backgroundColor: "var(--admin-danger-light)", color: "var(--admin-danger-dark)" };
+    case "scheduled":
+      return { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" };
+    case "pending":
+      return { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" };
+    default:
+      return { backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" };
+  }
+}
+
+function formatRelativeTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "—";
+  const diff = Date.now() - t;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  return new Date(iso).toLocaleDateString();
 }

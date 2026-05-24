@@ -14,10 +14,10 @@ import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { apiPlatformPayments, downloadPaymentsCsv, type PlatformPaymentRow } from "@/lib/platform-admin-api";
 import { useCallback, useEffect, useState } from "react";
+import { Download } from "lucide-react";
 import {
   Pagination,
   Select,
-  StatusPill,
   Table,
   TBody,
   TD,
@@ -115,6 +115,7 @@ export default function PlatformPaymentsPage() {
         title={t("admin.payments.title")}
         actions={
           <V2Button
+            icon={<Download className="h-4 w-4" />}
             onClick={() => void handleExport()}
             disabled={exporting}
           >
@@ -210,19 +211,24 @@ export default function PlatformPaymentsPage() {
           ) : null}
           {rows.map((r) => (
             <TR key={r.id}>
-              <TD className="tabular-nums">{r.id}</TD>
-              <TD className="tabular-nums">{r.amount}</TD>
-              <TD>{r.currency}</TD>
+              <TD className="tabular-nums font-mono text-xs text-fg-t7">#{r.id}</TD>
+              <TD className="tabular-nums font-medium text-fg-t8">{r.amount}</TD>
+              <TD className="text-fg-t8">{r.currency}</TD>
               <TD>
-                <StatusPill status={r.status} />
+                <span
+                  className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                  style={paymentStatusBadgeStyle(r.status)}
+                >
+                  {r.status}
+                </span>
               </TD>
-              <TD>{r.payment_method ?? "—"}</TD>
-              <TD className="text-xs text-fg-t6">{r.paid_at ?? "—"}</TD>
+              <TD className="text-fg-t8">{r.payment_method ?? "—"}</TD>
+              <TD className="text-xs text-fg-t6">{formatRelativeTime(r.paid_at)}</TD>
               <TD className="text-xs">
                 {r.invoice ? (
                   <Link
                     href={`/platform/invoices?focus=${r.invoice.id}`}
-                    className="text-primary underline hover:opacity-80"
+                    className="font-mono text-primary underline hover:opacity-80"
                   >
                     #{r.invoice.id}
                     {r.invoice.unique_booking_reference ? ` ${r.invoice.unique_booking_reference}` : ""}
@@ -230,7 +236,7 @@ export default function PlatformPaymentsPage() {
                 ) : r.invoice_id ? (
                   <Link
                     href={`/platform/invoices?focus=${r.invoice_id}`}
-                    className="text-primary underline hover:opacity-80"
+                    className="font-mono text-primary underline hover:opacity-80"
                   >
                     #{r.invoice_id}
                   </Link>
@@ -249,4 +255,38 @@ export default function PlatformPaymentsPage() {
       ) : null}
     </div>
   );
+}
+
+// v2 admin-redesign helpers — colored status pill + relative time.
+function paymentStatusBadgeStyle(status: string): React.CSSProperties {
+  switch (status) {
+    case "paid":
+      return { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" };
+    case "failed":
+    case "cancelled":
+      return { backgroundColor: "var(--admin-danger-light)", color: "var(--admin-danger-dark)" };
+    case "refunded":
+      return { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" };
+    case "processing":
+      return { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" };
+    case "pending":
+    default:
+      return { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" };
+  }
+}
+
+function formatRelativeTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "—";
+  const diff = Date.now() - t;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  return new Date(iso).toLocaleDateString();
 }

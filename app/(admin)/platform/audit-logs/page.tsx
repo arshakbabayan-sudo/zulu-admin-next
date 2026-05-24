@@ -449,30 +449,48 @@ export default function PlatformAuditLogsPage() {
           ) : rows.length === 0 ? (
             <TEmpty colSpan={7}>{t("admin.platform_audit_logs.empty")}</TEmpty>
           ) : null}
-          {rows.map((r) => (
+          {rows.map((r) => {
+            const actorName = r.actor_name_snapshot ?? r.actor_type;
+            const initials = (actorName || "?").split(/[ _\\]/).map((w) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
+            const tone = pickAvatarTone(r.actor_id ?? r.id);
+            return (
             <TR key={r.id} onClick={() => setSelected(r)}>
-              <TD className="text-xs whitespace-nowrap">
-                {formatDateTime(r.created_at, lang)}
+              <TD className="text-xs whitespace-nowrap text-fg-t6">
+                <span title={formatDateTime(r.created_at, lang)}>{formatRelativeTime(r.created_at)}</span>
               </TD>
               <TD>
                 <CategoryBadge category={r.category} />
               </TD>
-              <TD className="font-mono text-xs">{r.action}</TD>
+              <TD className="font-mono text-xs text-fg-t8">{r.action}</TD>
               <TD className="text-xs">
-                {r.actor_name_snapshot ?? r.actor_type}
-                {r.actor_id ? <span className="text-fg-t6"> #{r.actor_id}</span> : null}
+                <div className="flex items-center gap-3">
+                  <span
+                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold"
+                    style={avatarStyle(tone)}
+                    aria-hidden
+                  >
+                    {initials || "?"}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="font-medium text-fg-t8 truncate">{actorName}</div>
+                    <div className="text-[11px] text-fg-t6 truncate">
+                      {r.actor_type}
+                      {r.actor_id ? ` #${r.actor_id}` : ""}
+                    </div>
+                  </div>
+                </div>
               </TD>
-              <TD className="text-xs">
+              <TD className="font-mono text-xs">
                 {r.subject_type ? (
                   <>
                     <span className="text-fg-t6">{shortType(r.subject_type)}</span>
-                    {r.subject_id ? <span> #{r.subject_id}</span> : null}
+                    {r.subject_id ? <span className="text-fg-t8"> #{r.subject_id}</span> : null}
                   </>
                 ) : (
                   "—"
                 )}
               </TD>
-              <TD className="text-xs">{r.ip_address ?? "—"}</TD>
+              <TD className="font-mono text-xs text-fg-t6">{r.ip_address ?? "—"}</TD>
               <TD align="right" onClick={(e) => e.stopPropagation()}>
                 <button
                   type="button"
@@ -483,7 +501,8 @@ export default function PlatformAuditLogsPage() {
                 </button>
               </TD>
             </TR>
-          ))}
+            );
+          })}
         </TBody>
       </Table>
       </V2Card>
@@ -660,4 +679,37 @@ function DetailRow({
       </dd>
     </div>
   );
+}
+
+// v2 admin-redesign helpers — avatar tone + relative time.
+function pickAvatarTone(id: number | string): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  const n = typeof id === "number" ? id : id.length;
+  return tones[Math.abs(n) % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
+}
+
+function formatRelativeTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "—";
+  const diff = Date.now() - t;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  return new Date(iso).toLocaleDateString();
 }

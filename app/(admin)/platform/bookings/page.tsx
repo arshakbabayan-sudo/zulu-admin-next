@@ -18,7 +18,7 @@ import { apiBookings, apiConfirmBooking, apiCancelBooking, type BookingRow } fro
 import { formatDate, formatMoney } from "@/lib/format";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useCallback, useEffect, useState } from "react";
-import { RefreshCw, Search } from "lucide-react";
+import { Download, RefreshCw, Search } from "lucide-react";
 import {
   Pagination,
   Select,
@@ -152,15 +152,7 @@ export default function PlatformBookingsPage() {
         title={t("admin.platform_bookings.title")}
         subtitle={subtitleText}
         actions={
-          <V2Button
-            icon={
-              <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-            }
-          >
+          <V2Button icon={<Download className="h-4 w-4" />}>
             {t("admin.platform_bookings.export_csv") !== "admin.platform_bookings.export_csv"
               ? t("admin.platform_bookings.export_csv")
               : "Export CSV"}
@@ -261,16 +253,19 @@ export default function PlatformBookingsPage() {
             ) : null}
             {filteredRows.map((r) => (
               <TR key={r.id}>
-                <TD className="tabular-nums">{r.id}</TD>
-                <TD className="font-mono text-xs text-fg-t8">{r.booking_reference ?? "—"}</TD>
+                <TD className="tabular-nums font-mono text-xs text-fg-t7">#{r.id}</TD>
+                <TD className="font-mono text-xs font-semibold text-fg-t8">{r.booking_reference ?? "—"}</TD>
                 <TD>
-                  <StatusPill status={r.status}>
+                  <span
+                    className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                    style={bookingStatusBadgeStyle(r.status)}
+                  >
                     {r.status ? t(`admin.platform_bookings.status_${r.status}`) : "—"}
-                  </StatusPill>
+                  </span>
                 </TD>
                 <TD className="tabular-nums text-fg-t8">{formatMoney(r.total_amount, lang, r.currency)}</TD>
                 <TD className="text-fg-t8">{r.company?.name ?? "—"}</TD>
-                <TD>{r.user?.name ?? "—"}</TD>
+                <TD className="text-fg-t8">{r.user?.name ?? "—"}</TD>
                 <TD>
                   {r.offer ? (
                     <span>
@@ -281,7 +276,7 @@ export default function PlatformBookingsPage() {
                     "—"
                   )}
                 </TD>
-                <TD className="text-xs text-fg-t6">{formatDate(r.created_at, lang)}</TD>
+                <TD className="text-xs text-fg-t6">{formatRelativeTime(r.created_at)}</TD>
                 <TD align="right">
                   <div className="flex justify-end gap-2">
                     {r.status === "pending" && (
@@ -390,4 +385,35 @@ export default function PlatformBookingsPage() {
       ) : null}
     </div>
   );
+}
+
+// v2 admin-redesign helpers — colored status pill + relative time.
+function bookingStatusBadgeStyle(status: string): React.CSSProperties {
+  switch (status) {
+    case "confirmed":
+      return { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" };
+    case "cancelled":
+      return { backgroundColor: "var(--admin-danger-light)", color: "var(--admin-danger-dark)" };
+    case "completed":
+      return { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" };
+    case "pending":
+    default:
+      return { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" };
+  }
+}
+
+function formatRelativeTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "—";
+  const diff = Date.now() - t;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  return new Date(iso).toLocaleDateString();
 }

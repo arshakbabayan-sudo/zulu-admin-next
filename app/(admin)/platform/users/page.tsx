@@ -30,7 +30,7 @@ import {
   type PlatformUserTypeFilter,
 } from "@/lib/platform-admin-api";
 import { useCallback, useEffect, useState } from "react";
-import { Search } from "lucide-react";
+import { Download, Edit3, MoreVertical, Plus, Search } from "lucide-react";
 import {
   Pagination,
   StatusPill,
@@ -49,6 +49,7 @@ import {
   FilterField,
   V2Card,
   V2Button,
+  IconButton,
 } from "@/components/ui/v2";
 
 export default function PlatformUsersPage() {
@@ -218,6 +219,14 @@ export default function PlatformUsersPage() {
                 .replace("{last}", String(meta.last_page))
             : undefined
         }
+        actions={
+          <>
+            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
+              Add user
+            </V2Button>
+          </>
+        }
       />
 
       <SectionTabs
@@ -302,13 +311,48 @@ export default function PlatformUsersPage() {
             {rows.length === 0 ? (
               <TEmpty colSpan={6}>{t("admin.users.empty")}</TEmpty>
             ) : null}
-            {rows.map((r) => (
+            {rows.map((r) => {
+              const initials = (r.name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+              const tone = pickAvatarTone(r.id);
+              const primaryRole = r.companies && r.companies.length > 0 ? r.companies[0]!.role : null;
+              const statusColor =
+                r.status === "active"
+                  ? "var(--admin-success)"
+                  : r.status === "pending"
+                    ? "var(--admin-warning)"
+                    : r.status === "suspended" || r.status === "banned"
+                      ? "var(--admin-danger)"
+                      : "var(--admin-text-tertiary)";
+              return (
               <TR key={r.id} href={`/platform/users/${r.id}`}>
-                <TD className="tabular-nums">{r.id}</TD>
-                <TD className="font-medium text-fg-t8">{r.name}</TD>
-                <TD>{r.email}</TD>
+                <TD className="tabular-nums font-mono text-xs text-fg-t7">#{r.id}</TD>
                 <TD>
-                  <StatusPill status={r.status} />
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                      style={avatarStyle(tone)}
+                      aria-hidden
+                    >
+                      {initials}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="font-medium text-fg-t8 truncate">{r.name}</div>
+                      {primaryRole ? (
+                        <div className="text-[11px] text-fg-t6 truncate">{primaryRole}</div>
+                      ) : null}
+                    </div>
+                  </div>
+                </TD>
+                <TD className="text-xs">{r.email}</TD>
+                <TD>
+                  <span className="inline-flex items-center gap-1.5 text-[12px]">
+                    <span
+                      aria-hidden
+                      className="inline-block h-1.5 w-1.5 rounded-full"
+                      style={{ backgroundColor: statusColor }}
+                    />
+                    <span className="capitalize">{r.status}</span>
+                  </span>
                 </TD>
                 <TD>
                   {r.companies && r.companies.length > 0 ? (
@@ -316,14 +360,23 @@ export default function PlatformUsersPage() {
                       {r.companies.slice(0, 3).map((c, i) => (
                         <span
                           key={i}
-                          className="rounded-full border border-default bg-figma-bg-1 px-2 py-0.5 text-xs text-fg-t7"
+                          className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                          style={{
+                            backgroundColor: "var(--admin-bg-tertiary)",
+                            color: "var(--admin-text-secondary)",
+                          }}
                         >
                           {c.name}
-                          <span className="ml-1 text-fg-t6">({c.role})</span>
                         </span>
                       ))}
                       {r.companies.length > 3 ? (
-                        <span className="rounded-full border border-default bg-white px-2 py-0.5 text-xs text-fg-t6">
+                        <span
+                          className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                          style={{
+                            backgroundColor: "var(--admin-bg-tertiary)",
+                            color: "var(--admin-text-tertiary)",
+                          }}
+                        >
                           +{r.companies.length - 3}
                         </span>
                       ) : null}
@@ -333,13 +386,10 @@ export default function PlatformUsersPage() {
                   )}
                 </TD>
                 <TD align="right" onClick={(e) => e.stopPropagation()}>
-                  <div className="inline-flex items-center gap-2">
-                    <Link
-                      href={`/platform/users/${r.id}`}
-                      className="inline-flex h-8 items-center rounded-zulu border border-default bg-white px-3 text-xs font-medium text-primary transition hover:bg-figma-bg-1"
-                    >
-                      {k("admin.users.btn_edit", "Edit")}
-                    </Link>
+                  <div className="flex items-center justify-end gap-1">
+                    <IconButton as="link" href={`/platform/users/${r.id}`} aria-label={k("admin.users.btn_edit", "Edit")}>
+                      <Edit3 className="h-4 w-4" />
+                    </IconButton>
                     <button
                       type="button"
                       disabled={busyId === r.id || r.status === "inactive"}
@@ -347,7 +397,12 @@ export default function PlatformUsersPage() {
                         e.stopPropagation();
                         deactivate(r.id);
                       }}
-                      className="inline-flex h-8 items-center rounded-zulu border border-warning-200 bg-white px-3 text-xs font-medium text-warning-700 transition hover:bg-warning-50 disabled:opacity-40"
+                      className="inline-flex h-7 items-center rounded-md border px-2.5 text-[11px] font-medium transition disabled:opacity-40"
+                      style={{
+                        color: "var(--admin-warning)",
+                        borderColor: "var(--admin-warning-light)",
+                        backgroundColor: "transparent",
+                      }}
                     >
                       {t("admin.users.btn_deactivate")}
                     </button>
@@ -359,7 +414,12 @@ export default function PlatformUsersPage() {
                         anonymize(r);
                       }}
                       title={t("admin.users.btn_anonymize_tooltip")}
-                      className="inline-flex h-8 items-center rounded-zulu border border-error-200 bg-white px-3 text-xs font-medium text-error-700 transition hover:bg-error-50 disabled:opacity-40"
+                      className="inline-flex h-7 items-center rounded-md border px-2.5 text-[11px] font-medium transition disabled:opacity-40"
+                      style={{
+                        color: "var(--admin-danger)",
+                        borderColor: "var(--admin-danger-light)",
+                        backgroundColor: "transparent",
+                      }}
                     >
                       {t("admin.users.btn_anonymize")}
                     </button>
@@ -372,15 +432,20 @@ export default function PlatformUsersPage() {
                           hardDelete(r);
                         }}
                         title={t("admin.users.btn_hard_delete_tooltip")}
-                        className="inline-flex h-8 items-center rounded-zulu border border-error-500 bg-error-600 px-3 text-xs font-semibold text-white transition hover:bg-error-700 disabled:opacity-40"
+                        className="inline-flex h-7 items-center rounded-md border border-error-500 bg-error-600 px-2.5 text-[11px] font-semibold text-white transition hover:bg-error-700 disabled:opacity-40"
                       >
                         {t("admin.users.btn_hard_delete")}
                       </button>
-                    ) : null}
+                    ) : (
+                      <IconButton aria-label="More">
+                        <MoreVertical className="h-4 w-4" />
+                      </IconButton>
+                    )}
                   </div>
                 </TD>
               </TR>
-            ))}
+              );
+            })}
           </TBody>
         </Table>
         </V2Card>
@@ -457,4 +522,21 @@ export default function PlatformUsersPage() {
       ) : null}
     </div>
   );
+}
+
+// v2 admin-redesign helpers — avatar tone deterministic by id.
+function pickAvatarTone(id: number | string): "purple" | "teal" | "amber" | "blue" {
+  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
+  const n = typeof id === "number" ? id : id.length;
+  return tones[n % tones.length]!;
+}
+
+function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
+  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
+    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
+    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
+    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
+    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
+  };
+  return map[tone];
 }
