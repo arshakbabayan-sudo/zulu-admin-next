@@ -581,6 +581,19 @@ html.dark input[type="radio"] {
   --admin-text-muted: var(--text-t6);
   --admin-border: var(--border-default);
   --admin-header-bg: #ffffff;
+
+  /* Phase 3 admin-redesign 2026-05-24 — design tokens from
+     docs/zulu-admin-single.html (lines 35-48). Used by sidebar,
+     header, cards, buttons, forms across the admin surface. */
+  --admin-radius-sm: 6px;
+  --admin-radius-md: 8px;
+  --admin-radius-lg: 12px;
+  --admin-text-primary: #161343;
+  --admin-text-secondary: #717689;
+  --admin-text-tertiary: #9CA0B0;
+  --admin-bg-secondary: #FAFBFC;
+  --admin-bg-tertiary: #F4F5F7;
+  --admin-border-hover: #C2C3CC;
 }
 
 @layer utilities {
