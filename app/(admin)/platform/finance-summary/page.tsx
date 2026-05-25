@@ -31,10 +31,21 @@ import {
   apiFinanceSummaryV2,
   apiRevenueByService,
   apiPaymentMethods,
+  apiRecentTransactions,
   type FinanceSummaryV2,
   type RevenueByServiceRow,
   type PaymentMethodsBreakdown,
+  type RecentTransactionRow,
 } from "@/lib/finance-stats-api";
+import {
+  STATUS_BADGE_CLASS,
+  avatarInitials,
+  avatarStyle,
+  formatRelativeTime,
+  pickAvatarTone,
+  statusBadgeStyle,
+  type StatusTone,
+} from "@/lib/admin-v2-helpers";
 import { formatMoney } from "@/lib/format";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -77,6 +88,7 @@ export default function PlatformFinanceSummaryPage() {
   const [v2, setV2] = useState<FinanceSummaryV2 | null>(null);
   const [revenueByService, setRevenueByService] = useState<RevenueByServiceRow[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodsBreakdown | null>(null);
+  const [recentTx, setRecentTx] = useState<RecentTransactionRow[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [range, setRange] = useState<RangeKey>("30d");
@@ -86,16 +98,18 @@ export default function PlatformFinanceSummaryPage() {
     setErr(null);
     setForbidden(false);
     try {
-      const [res, resV2, resRev, resMethods] = await Promise.all([
+      const [res, resV2, resRev, resMethods, resTx] = await Promise.all([
         apiPlatformFinanceSummary(token),
         apiFinanceSummaryV2(token, range).catch(() => null),
         apiRevenueByService(token, range).catch(() => null),
         apiPaymentMethods(token, range).catch(() => null),
+        apiRecentTransactions(token, 8).catch(() => null),
       ]);
       setData(res.data);
       if (resV2) setV2(resV2.data);
       if (resRev) setRevenueByService(resRev.data);
       if (resMethods) setPaymentMethods(resMethods.data);
+      if (resTx) setRecentTx(resTx.data);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
       else setErr(e instanceof ApiRequestError ? e.message : t("admin.finance_summary.err_load"));
@@ -398,33 +412,80 @@ export default function PlatformFinanceSummaryPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="px-4 py-10 text-center text-sm"
-                      style={{ color: "var(--admin-text-secondary)" }}
-                    >
-                      Recent transactions feed — backend follow-up.
-                      <br />
-                      For now, see the full lists under{" "}
-                      <Link
-                        href="/platform/payments"
-                        className="underline"
-                        style={{ color: "var(--admin-primary)" }}
+                  {recentTx.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="px-4 py-10 text-center text-sm"
+                        style={{ color: "var(--admin-text-secondary)" }}
                       >
-                        Payments
-                      </Link>{" "}
-                      and{" "}
-                      <Link
-                        href="/platform/finance"
-                        className="underline"
-                        style={{ color: "var(--admin-primary)" }}
-                      >
-                        Transactions
-                      </Link>
-                      .
-                    </td>
-                  </tr>
+                        No recent transactions yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    recentTx.map((tx) => {
+                      const typeLabel = ({
+                        payment_in: "Payment in",
+                        commission: "Commission",
+                        refund: "Refund",
+                        voucher_issued: "Voucher issued",
+                        payout: "Payout",
+                      } as const)[tx.type];
+                      const statusTone: StatusTone =
+                        tx.status === "settled" || tx.status === "completed"
+                          ? "success"
+                          : tx.status === "failed"
+                          ? "danger"
+                          : tx.status === "processing"
+                          ? "info"
+                          : "warning";
+                      const statusLabel = tx.status.charAt(0).toUpperCase() + tx.status.slice(1);
+                      const tone = pickAvatarTone(tx.company?.id ?? tx.id);
+                      return (
+                        <tr
+                          key={tx.id}
+                          className="border-t"
+                          style={{ borderColor: "var(--admin-border)" }}
+                        >
+                          <td className="px-4 py-3 font-mono text-[12px] text-fg-t7">{tx.id}</td>
+                          <td className="px-4 py-3 text-[13px]">{typeLabel}</td>
+                          <td
+                            className="px-4 py-3 font-semibold tabular-nums"
+                            style={{ color: tx.amount < 0 ? "var(--admin-danger)" : "var(--admin-text-primary)" }}
+                          >
+                            {tx.amount < 0
+                              ? `-${formatMoney(Math.abs(tx.amount), lang, tx.currency)}`
+                              : formatMoney(tx.amount, lang, tx.currency)}
+                          </td>
+                          <td className="px-4 py-3">
+                            {tx.company ? (
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold"
+                                  style={avatarStyle(tone)}
+                                >
+                                  {avatarInitials(tx.company.name)}
+                                </span>
+                                <span className="text-fg-t8">{tx.company.name}</span>
+                              </div>
+                            ) : (
+                              <span className="text-[12px]" style={{ color: "var(--admin-text-tertiary)" }}>
+                                —
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-[12px]" style={{ color: "var(--admin-text-secondary)" }}>
+                            {formatRelativeTime(tx.when)}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <span className={STATUS_BADGE_CLASS} style={statusBadgeStyle(statusTone)}>
+                              {statusLabel}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>

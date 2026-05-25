@@ -119,6 +119,30 @@ export async function apiPaymentMethods(
   return apiFetchJson(withRange("/platform-admin/finance/payment-methods", range), { method: "GET", token });
 }
 
+export type RecentTransactionType =
+  | "payment_in"
+  | "commission"
+  | "refund"
+  | "voucher_issued"
+  | "payout";
+
+export type RecentTransactionRow = {
+  id: string;
+  type: RecentTransactionType;
+  amount: number;
+  currency: string;
+  company: { id: number; name: string } | null;
+  when: string;
+  status: string;
+};
+
+export async function apiRecentTransactions(
+  token: string,
+  limit: number = 10
+): Promise<ApiSuccessEnvelope<RecentTransactionRow[]>> {
+  return apiFetchJson(`/platform-admin/finance/recent-transactions?limit=${limit}`, { method: "GET", token });
+}
+
 /**
  * Triggers a PDF download for a paid payment receipt.
  * Backend: PaymentController::receiptPdf → PaymentReceiptPdfService.
