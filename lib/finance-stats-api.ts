@@ -99,6 +99,30 @@ export async function apiFinanceSummaryV2(
 }
 
 /**
+ * Triggers a PDF download for a paid payment receipt.
+ * Backend: PaymentController::receiptPdf → PaymentReceiptPdfService.
+ */
+export async function downloadPaymentReceiptPdf(token: string, paymentId: number): Promise<void> {
+  const base = process.env.NEXT_PUBLIC_API_URL || "/api";
+  const res = await fetch(`${base}/payments/${paymentId}/receipt-pdf`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Receipt PDF failed (${res.status}): ${body || res.statusText}`);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `receipt-${paymentId}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/**
  * Triggers a CSV download for the Transactions page (entitlements + settlements
  * combined). Returns nothing — opens the browser download dialog.
  */

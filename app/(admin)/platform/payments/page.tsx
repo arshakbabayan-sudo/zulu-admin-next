@@ -28,7 +28,7 @@ import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { apiPlatformPayments, downloadPaymentsCsv, type PlatformPaymentRow } from "@/lib/platform-admin-api";
-import { apiPaymentsStats, type PaymentsStats } from "@/lib/finance-stats-api";
+import { apiPaymentsStats, downloadPaymentReceiptPdf, type PaymentsStats } from "@/lib/finance-stats-api";
 import { formatMoney } from "@/lib/format";
 import {
   STATUS_BADGE_CLASS,
@@ -523,7 +523,17 @@ export default function PlatformPaymentsPage() {
                             <Eye />
                           </IconButton>
                           {r.status === "paid" ? (
-                            <IconButton aria-label="Download receipt">
+                            <IconButton
+                              aria-label="Download receipt"
+                              onClick={async () => {
+                                if (!token) return;
+                                try {
+                                  await downloadPaymentReceiptPdf(token, r.id);
+                                } catch (e) {
+                                  alert(e instanceof Error ? e.message : "Receipt download failed");
+                                }
+                              }}
+                            >
                               <Download />
                             </IconButton>
                           ) : null}
