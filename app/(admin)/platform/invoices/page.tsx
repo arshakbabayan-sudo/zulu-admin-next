@@ -1,7 +1,25 @@
 "use client";
 
-/** Phase-2 migration to shared @/components/ui primitives. */
+/**
+ * v2 admin-redesign — Invoices list page (Finance group).
+ *
+ * Source spec: docs/admin_designe/finance_group_mocks.html (PAGE 2 INVOICES)
+ * Migration prompt: docs/admin_designe/finance_group_implementation_prompt.md §3.B
+ *
+ * Chrome:
+ *   - V2PageHeader + breadcrumb + Export + New invoice
+ *   - FinanceSectionTabs
+ *   - 4 plain stat cards (Total / Paid / Issued / Overdue)
+ *   - FilterCard + active filter chips
+ *   - V2Card wrapping table with bulk-select checkbox
+ *   - Status badges with icons (check, clock, alert-circle, edit, ban)
+ *   - Company column with avatar + name
+ *   - Due date in danger color when overdue
+ *   - IconButton row for actions (View / Issue / Mark paid / Send reminder / More)
+ *   - Pagination inside V2Card
+ */
 
+import Link from "next/link";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
@@ -10,52 +28,100 @@ import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { apiInvoices, apiIssueInvoice, apiCancelInvoice, downloadInvoicesCsv, type InvoiceRow } from "@/lib/invoices-api";
-import { useCallback, useEffect, useState } from "react";
-import { Download } from "lucide-react";
+import { formatMoney } from "@/lib/format";
 import {
-
-  Pagination,
-  Select,
-  Table,
-  TBody,
-  TD,
-  TEmpty,
-  TH,
-  THead,
-  TR,
-} from "@/components/ui";
+  STATUS_BADGE_CLASS,
+  avatarInitials,
+  avatarStyle,
+  formatRelativeTime,
+  pickAvatarTone,
+  statusBadgeStyle,
+  type StatusTone,
+} from "@/lib/admin-v2-helpers";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Check,
+  Clock,
+  AlertCircle,
+  Edit3,
+  Ban,
+  Download,
+  RefreshCw,
+  Plus,
+  Eye,
+  Send,
+  Mail,
+  MoreVertical,
+  XCircle,
+  X as XIcon,
+  FileText,
+  CircleCheck,
+  Clock as ClockIcon2,
+  AlertCircle as AlertCircle2,
+} from "lucide-react";
+import { Pagination } from "@/components/ui";
 import {
   PageHeader as V2PageHeader,
-  SectionTabs,
   FilterCard,
   FilterField,
   V2Card,
   V2Button,
+  StatCard,
+  StatGrid,
+  IconButton,
 } from "@/components/ui/v2";
+import { FinanceSectionTabs } from "@/components/finance/FinanceSectionTabs";
 
-const STATUSES = ["", "draft", "issued", "paid", "cancelled", "overdue"];
+const STATUSES = ["", "draft", "issued", "paid", "cancelled", "overdue"] as const;
+
+type InvoiceStatusMeta = { tone: StatusTone; label: string; icon: React.ReactNode };
+
+const STATUS_META: Record<string, InvoiceStatusMeta> = {
+  paid: { tone: "success", label: "Paid", icon: <Check className="h-3 w-3" /> },
+  issued: { tone: "warning", label: "Issued", icon: <Clock className="h-3 w-3" /> },
+  overdue: { tone: "danger", label: "Overdue", icon: <AlertCircle className="h-3 w-3" /> },
+  draft: { tone: "gray", label: "Draft", icon: <Edit3 className="h-3 w-3" /> },
+  cancelled: { tone: "gray", label: "Cancelled", icon: <Ban className="h-3 w-3" /> },
+};
+
+function dueLabel(due: string | null | undefined, status: string): { text: string; tone: "default" | "warning" | "danger" } {
+  if (!due) return { text: "—", tone: "default" };
+  const d = new Date(due);
+  if (Number.isNaN(d.getTime())) return { text: "—", tone: "default" };
+  const diffMs = d.getTime() - Date.now();
+  const days = Math.round(diffMs / 86_400_000);
+  if (status === "overdue" || (days < 0 && status !== "paid" && status !== "cancelled")) {
+    const lateDays = Math.abs(days);
+    return { text: `${lateDays} day${lateDays === 1 ? "" : "s"} late`, tone: "danger" };
+  }
+  if (days >= 0 && days <= 5 && status === "issued") return { text: `In ${days} day${days === 1 ? "" : "s"}`, tone: "warning" };
+  return { text: d.toLocaleDateString(), tone: "default" };
+}
 
 export default function PlatformInvoicesPage() {
   const { token, user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<InvoiceRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("");
-  // Phase 7.6 — date range filters (ISO YYYY-MM-DD)
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
   const [exporting, setExporting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
     if (!token || !allowed) return;
     setErr(null);
     setForbidden(false);
+    setLoading(true);
     try {
       const res = await apiInvoices(token, {
         page,
@@ -69,10 +135,11 @@ export default function PlatformInvoicesPage() {
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
       else setErr(e instanceof ApiRequestError ? e.message : t("admin.invoices.err_load"));
+    } finally {
+      setLoading(false);
     }
   }, [token, allowed, page, statusFilter, fromDate, toDate, t]);
 
-  // Phase 7.6 — CSV export with same filters
   async function handleExport() {
     if (!token) return;
     setExporting(true);
@@ -89,16 +156,23 @@ export default function PlatformInvoicesPage() {
     }
   }
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   async function handleIssue(id: number) {
     if (!token) return;
     const ok = await confirm({ messageKey: "admin.invoices.confirm_issue" });
     if (!ok) return;
     setBusyId(id);
-    try { await apiIssueInvoice(token, id); await load(); }
-    catch (e) { alert(e instanceof ApiRequestError ? e.message : t("admin.invoices.err_generic")); }
-    finally { setBusyId(null); }
+    try {
+      await apiIssueInvoice(token, id);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : t("admin.invoices.err_generic"));
+    } finally {
+      setBusyId(null);
+    }
   }
 
   async function handleCancel(id: number) {
@@ -106,9 +180,57 @@ export default function PlatformInvoicesPage() {
     const ok = await confirm({ messageKey: "admin.invoices.confirm_cancel", variant: "danger" });
     if (!ok) return;
     setBusyId(id);
-    try { await apiCancelInvoice(token, id); await load(); }
-    catch (e) { alert(e instanceof ApiRequestError ? e.message : t("admin.invoices.err_generic")); }
-    finally { setBusyId(null); }
+    try {
+      await apiCancelInvoice(token, id);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : t("admin.invoices.err_generic"));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  const activeChips = useMemo(() => {
+    const chips: Array<{ key: string; label: string; clear: () => void }> = [];
+    if (statusFilter)
+      chips.push({
+        key: "status",
+        label: `Status: ${STATUS_META[statusFilter]?.label ?? statusFilter}`,
+        clear: () => {
+          setPage(1);
+          setStatusFilter("");
+        },
+      });
+    if (fromDate || toDate) {
+      const label = fromDate && toDate ? `${fromDate} → ${toDate}` : fromDate ? `From ${fromDate}` : `Until ${toDate}`;
+      chips.push({
+        key: "date",
+        label,
+        clear: () => {
+          setPage(1);
+          setFromDate("");
+          setToDate("");
+        },
+      });
+    }
+    if (search.trim())
+      chips.push({
+        key: "search",
+        label: `“${search.trim()}”`,
+        clear: () => {
+          setPage(1);
+          setSearch("");
+        },
+      });
+    return chips;
+  }, [statusFilter, fromDate, toDate, search]);
+
+  function clearAllFilters() {
+    setPage(1);
+    setStatusFilter("");
+    setFromDate("");
+    setToDate("");
+    setSearch("");
   }
 
   if (!allowed || forbidden) {
@@ -122,9 +244,38 @@ export default function PlatformInvoicesPage() {
     );
   }
 
+  const filteredRows = search.trim()
+    ? rows.filter((r) => {
+        const q = search.trim().toLowerCase();
+        return (
+          String(r.id).includes(q) ||
+          r.invoice_number?.toLowerCase().includes(q) ||
+          r.company?.name?.toLowerCase().includes(q)
+        );
+      })
+    : rows;
+
+  function toggleRow(id: number) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAll(checked: boolean) {
+    if (!checked) {
+      setSelected(new Set());
+      return;
+    }
+    setSelected(new Set(filteredRows.map((r) => r.id)));
+  }
+
+  const allSelected = filteredRows.length > 0 && filteredRows.every((r) => selected.has(r.id));
+
   return (
     <div>
-      {/* v2 admin-redesign — Invoices page chrome (Finance section). */}
       <V2PageHeader
         breadcrumb={[
           { label: "Home", href: "/dashboard" },
@@ -132,189 +283,322 @@ export default function PlatformInvoicesPage() {
           { label: t("admin.invoices.title") },
         ]}
         title={t("admin.invoices.title")}
+        subtitle={
+          t("admin.invoices.subtitle") !== "admin.invoices.subtitle"
+            ? t("admin.invoices.subtitle")
+            : "Platform invoices with status tracking and CSV export"
+        }
         actions={
-          <V2Button
-            icon={<Download className="h-4 w-4" />}
-            onClick={() => void handleExport()}
-            disabled={exporting}
-          >
-            {exporting ? t("admin.invoices.exporting") : t("admin.invoices.btn_export_csv")}
-          </V2Button>
+          <>
+            <V2Button onClick={() => void load()} icon={<RefreshCw className="h-4 w-4" />} aria-label="Refresh">
+              {""}
+            </V2Button>
+            <V2Button
+              icon={<Download className="h-4 w-4" />}
+              onClick={() => void handleExport()}
+              disabled={exporting}
+            >
+              {exporting ? t("admin.invoices.exporting") : t("admin.invoices.btn_export_csv")}
+            </V2Button>
+            <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
+              New invoice
+            </V2Button>
+          </>
         }
       />
 
-      <SectionTabs
-        activeHref="/platform/invoices"
-        items={[
-          { href: "/platform/finance-summary", label: "Summary" },
-          { href: "/platform/invoices", label: "Invoices", count: meta?.total },
-          { href: "/platform/payments", label: "Payments" },
-          { href: "/platform/commissions", label: "Commissions ledger" },
-          { href: "/platform/finance", label: "Transactions" },
-          { href: "/platform/vouchers", label: "Vouchers" },
-        ]}
-      />
+      <FinanceSectionTabs activeHref="/platform/invoices" counts={{ invoices: meta?.total }} />
+
+      <StatGrid cols={4} className="mb-5">
+        <StatCard
+          icon={<FileText style={{ color: "var(--admin-primary)" }} className="h-[22px] w-[22px]" />}
+          value="—"
+          label="Total invoices (30d)"
+        />
+        <StatCard
+          icon={<CircleCheck style={{ color: "var(--admin-success)" }} className="h-[22px] w-[22px]" />}
+          value="—"
+          label="Paid"
+        />
+        <StatCard
+          icon={<ClockIcon2 style={{ color: "var(--admin-warning)" }} className="h-[22px] w-[22px]" />}
+          value="—"
+          label="Issued (pending)"
+        />
+        <StatCard
+          icon={<AlertCircle2 style={{ color: "var(--admin-danger)" }} className="h-[22px] w-[22px]" />}
+          value="—"
+          label="Overdue total"
+        />
+      </StatGrid>
 
       <FilterCard>
         <FilterField label={t("admin.approvals.filter_status")}>
-          <Select
-            id="inv-status"
-            fieldSize="sm"
+          <select
             value={statusFilter}
-            onChange={(e) => { setPage(1); setStatusFilter(e.target.value); }}
-            className="!h-[34px]"
+            onChange={(e) => {
+              setPage(1);
+              setStatusFilter(e.target.value);
+            }}
+            className="h-[34px] rounded-md border bg-white px-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+            style={{ borderColor: "var(--admin-border)" }}
           >
-            {STATUSES.map((s) => <option key={s} value={s}>{s || t("common.all")}</option>)}
-          </Select>
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s ? STATUS_META[s]?.label ?? s : t("common.all")}
+              </option>
+            ))}
+          </select>
         </FilterField>
         <FilterField label={t("admin.invoices.filter_from")}>
           <input
-            id="inv-from"
             type="date"
             value={fromDate}
-            onChange={(e) => { setPage(1); setFromDate(e.target.value); }}
+            onChange={(e) => {
+              setPage(1);
+              setFromDate(e.target.value);
+            }}
             className="h-[34px] rounded-md border bg-white px-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
             style={{ borderColor: "var(--admin-border)" }}
           />
         </FilterField>
         <FilterField label={t("admin.invoices.filter_to")}>
           <input
-            id="inv-to"
             type="date"
             value={toDate}
-            onChange={(e) => { setPage(1); setToDate(e.target.value); }}
+            onChange={(e) => {
+              setPage(1);
+              setToDate(e.target.value);
+            }}
             className="h-[34px] rounded-md border bg-white px-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
             style={{ borderColor: "var(--admin-border)" }}
           />
         </FilterField>
-        {(statusFilter || fromDate || toDate) && (
-          <V2Button
-            size="sm"
-            onClick={() => {
-              setPage(1);
-              setStatusFilter("");
-              setFromDate("");
-              setToDate("");
-            }}
-          >
-            {t("admin.invoices.btn_clear_filters")}
-          </V2Button>
-        )}
-        <V2Button size="sm" onClick={load}>{t("admin.finance_summary.btn_refresh")}</V2Button>
+        <FilterField label="Search" minWidth={240}>
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Invoice number, company..."
+            className="h-[34px] rounded-md border bg-white px-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+            style={{ borderColor: "var(--admin-border)" }}
+          />
+        </FilterField>
+        <V2Button variant="primary" onClick={() => void load()}>
+          Apply
+        </V2Button>
+        {activeChips.length > 0 ? <V2Button onClick={clearAllFilters}>Clear</V2Button> : null}
       </FilterCard>
 
-      {err && <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
+      {activeChips.length > 0 ? (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <span className="text-[11px] font-medium" style={{ color: "var(--admin-text-secondary)" }}>
+            Active filters:
+          </span>
+          {activeChips.map((chip) => (
+            <button
+              key={chip.key}
+              type="button"
+              onClick={chip.clear}
+              className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[12px] font-medium transition hover:opacity-80"
+              style={{
+                backgroundColor: "var(--admin-primary-soft)",
+                borderColor: "var(--admin-primary-light)",
+                color: "var(--admin-primary)",
+              }}
+            >
+              {chip.label}
+              <XIcon className="h-3 w-3 opacity-70" />
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={clearAllFilters}
+            className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium opacity-80 hover:opacity-100"
+            style={{ color: "var(--admin-text-secondary)" }}
+          >
+            <XCircle className="h-3 w-3" />
+            Clear all
+          </button>
+        </div>
+      ) : null}
+
+      {err ? (
+        <div
+          className="mb-4 rounded-md border px-4 py-2 text-sm"
+          style={{
+            borderColor: "var(--admin-danger-light)",
+            backgroundColor: "var(--admin-danger-light)",
+            color: "var(--admin-danger-dark)",
+          }}
+        >
+          {err}
+        </div>
+      ) : null}
 
       <V2Card>
-      <Table>
-        <THead>
-          <TR>
-            <TH>{t("admin.invoices.col_id")}</TH>
-            <TH>{t("admin.invoices.col_invoice_number")}</TH>
-            <TH>{t("admin.invoices.col_status")}</TH>
-            <TH>{t("admin.invoices.col_amount")}</TH>
-            <TH>{t("admin.invoices.col_company")}</TH>
-            <TH>{t("admin.invoices.col_issued")}</TH>
-            <TH>{t("admin.invoices.col_due")}</TH>
-            <TH>{t("admin.invoices.col_actions")}</TH>
-          </TR>
-        </THead>
-        <TBody>
-          {rows.length === 0 ? <TEmpty colSpan={8}>{t("admin.invoices.empty")}</TEmpty> : null}
-          {rows.map((r) => (
-            <TR key={r.id}>
-              <TD className="tabular-nums font-mono text-xs text-fg-t7">#{r.id}</TD>
-              <TD className="font-mono text-xs font-semibold text-fg-t8">{r.invoice_number ?? "—"}</TD>
-              <TD>
-                <span
-                  className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
-                  style={invoiceStatusBadgeStyle(r.status)}
-                >
-                  {r.status}
-                </span>
-              </TD>
-              <TD className="tabular-nums font-medium text-fg-t8">
-                {r.currency} {Number(r.total_amount).toFixed(2)}
-              </TD>
-              <TD className="text-fg-t8">{r.company?.name ?? "—"}</TD>
-              <TD className="text-xs text-fg-t6">{formatRelativeTime(r.issued_at)}</TD>
-              <TD className="text-xs text-fg-t6">{formatRelativeTime(r.due_date)}</TD>
-              <TD>
-                <div className="flex flex-wrap gap-2">
-                  {r.status === "draft" && (
-                    <button
-                      type="button"
-                      disabled={busyId === r.id}
-                      onClick={() => void handleIssue(r.id)}
-                      className="inline-flex h-7 items-center rounded-md border px-2.5 text-[11px] font-medium transition disabled:opacity-40"
-                      style={{
-                        color: "var(--admin-info-dark)",
-                        borderColor: "var(--admin-info-light)",
-                        backgroundColor: "transparent",
-                      }}
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-[13px]">
+            <thead
+              className="text-[11px] font-semibold uppercase tracking-[0.5px]"
+              style={{ backgroundColor: "var(--admin-bg-secondary)", color: "var(--admin-text-secondary)" }}
+            >
+              <tr>
+                <th className="px-4 py-2.5 text-left" style={{ width: 32 }}>
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={(e) => toggleAll(e.target.checked)}
+                    aria-label="Select all"
+                  />
+                </th>
+                <th className="px-4 py-2.5 text-left">{t("admin.invoices.col_id")}</th>
+                <th className="px-4 py-2.5 text-left">{t("admin.invoices.col_invoice_number")}</th>
+                <th className="px-4 py-2.5 text-left">{t("admin.invoices.col_status")}</th>
+                <th className="px-4 py-2.5 text-left">{t("admin.invoices.col_amount")}</th>
+                <th className="px-4 py-2.5 text-left">{t("admin.invoices.col_company")}</th>
+                <th className="px-4 py-2.5 text-left">{t("admin.invoices.col_issued")}</th>
+                <th className="px-4 py-2.5 text-left">{t("admin.invoices.col_due")}</th>
+                <th className="px-4 py-2.5 text-right">{t("admin.invoices.col_actions")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredRows.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="px-4 py-10 text-center text-sm" style={{ color: "var(--admin-text-secondary)" }}>
+                    {loading ? "Loading…" : t("admin.invoices.empty")}
+                  </td>
+                </tr>
+              ) : (
+                filteredRows.map((r) => {
+                  const statusMeta = STATUS_META[r.status] ?? STATUS_META.draft!;
+                  const due = dueLabel(r.due_date, r.status);
+                  const tone = pickAvatarTone(r.company?.id ?? r.id);
+                  return (
+                    <tr
+                      key={r.id}
+                      className="border-t transition hover:bg-[color:var(--admin-bg-secondary)]"
+                      style={{ borderColor: "var(--admin-border)" }}
                     >
-                      {t("admin.invoices.btn_issue")}
-                    </button>
-                  )}
-                  {(r.status === "draft" || r.status === "issued") && (
-                    <button
-                      type="button"
-                      disabled={busyId === r.id}
-                      onClick={() => void handleCancel(r.id)}
-                      className="inline-flex h-7 items-center rounded-md border px-2.5 text-[11px] font-medium transition disabled:opacity-40"
-                      style={{
-                        color: "var(--admin-danger)",
-                        borderColor: "var(--admin-danger-light)",
-                        backgroundColor: "transparent",
-                      }}
-                    >
-                      {t("common.cancel")}
-                    </button>
-                  )}
-                </div>
-              </TD>
-            </TR>
-          ))}
-        </TBody>
-      </Table>
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(r.id)}
+                          onChange={() => toggleRow(r.id)}
+                          aria-label={`Select invoice ${r.id}`}
+                        />
+                      </td>
+                      <td className="px-4 py-3 font-mono text-[12px] text-fg-t7">#{r.id}</td>
+                      <td className="px-4 py-3 font-mono text-[12px]">
+                        <Link
+                          href={`/platform/invoices?focus=${r.id}`}
+                          className="hover:opacity-80"
+                          style={{ color: "var(--admin-primary)" }}
+                        >
+                          {r.invoice_number ?? "—"}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={STATUS_BADGE_CLASS} style={statusBadgeStyle(statusMeta.tone)}>
+                          {statusMeta.icon}
+                          {statusMeta.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-fg-t8 tabular-nums">
+                        {formatMoney(r.total_amount, lang, r.currency)}
+                      </td>
+                      <td className="px-4 py-3">
+                        {r.company?.name ? (
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold"
+                              style={avatarStyle(tone)}
+                            >
+                              {avatarInitials(r.company.name)}
+                            </span>
+                            <span className="text-fg-t8">{r.company.name}</span>
+                          </div>
+                        ) : (
+                          <span className="text-[12px]" style={{ color: "var(--admin-text-tertiary)" }}>
+                            —
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-[12px]" style={{ color: "var(--admin-text-secondary)" }}>
+                        {formatRelativeTime(r.issued_at)}
+                      </td>
+                      <td
+                        className="px-4 py-3 text-[12px]"
+                        style={{
+                          color:
+                            due.tone === "danger"
+                              ? "var(--admin-danger)"
+                              : due.tone === "warning"
+                              ? "var(--admin-warning-dark)"
+                              : "var(--admin-text-secondary)",
+                          fontWeight: due.tone === "default" ? 400 : 500,
+                        }}
+                      >
+                        {due.text}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <IconButton aria-label="View">
+                            <Eye />
+                          </IconButton>
+                          {r.status === "draft" ? (
+                            <IconButton
+                              aria-label="Issue"
+                              onClick={() => void handleIssue(r.id)}
+                              disabled={busyId === r.id}
+                            >
+                              <Send />
+                            </IconButton>
+                          ) : null}
+                          {r.status === "issued" ? (
+                            <IconButton aria-label="Mark paid">
+                              <Check />
+                            </IconButton>
+                          ) : null}
+                          {r.status === "overdue" ? (
+                            <IconButton aria-label="Send reminder">
+                              <Mail />
+                            </IconButton>
+                          ) : null}
+                          {(r.status === "draft" || r.status === "issued") ? (
+                            <IconButton
+                              aria-label={t("common.cancel")}
+                              onClick={() => void handleCancel(r.id)}
+                              disabled={busyId === r.id}
+                            >
+                              <Ban />
+                            </IconButton>
+                          ) : null}
+                          <IconButton aria-label="More">
+                            <MoreVertical />
+                          </IconButton>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+        {meta && meta.last_page > 1 ? (
+          <div
+            className="flex flex-wrap items-center justify-between gap-2 border-t px-5 py-3.5 text-[12px]"
+            style={{ borderColor: "var(--admin-border)", color: "var(--admin-text-secondary)" }}
+          >
+            <span>
+              Showing {(meta.current_page - 1) * meta.per_page + 1}–
+              {Math.min(meta.current_page * meta.per_page, meta.total)} of {meta.total} invoices
+            </span>
+            <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />
+          </div>
+        ) : null}
       </V2Card>
-
-      {meta && meta.last_page > 1 ? (
-        <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />
-      ) : null}
     </div>
   );
-}
-
-// v2 admin-redesign helpers — colored status pill + relative time.
-function invoiceStatusBadgeStyle(status: string): React.CSSProperties {
-  switch (status) {
-    case "paid":
-      return { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" };
-    case "cancelled":
-      return { backgroundColor: "var(--admin-danger-light)", color: "var(--admin-danger-dark)" };
-    case "overdue":
-      return { backgroundColor: "var(--admin-danger-light)", color: "var(--admin-danger-dark)" };
-    case "issued":
-      return { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" };
-    case "draft":
-    default:
-      return { backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" };
-  }
-}
-
-function formatRelativeTime(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  const t = new Date(iso).getTime();
-  if (Number.isNaN(t)) return "—";
-  const diff = Date.now() - t;
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins} min ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
-  const days = Math.floor(hours / 24);
-  if (days === 1) return "Yesterday";
-  if (days < 7) return `${days} days ago`;
-  return new Date(iso).toLocaleDateString();
 }
