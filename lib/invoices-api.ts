@@ -100,3 +100,15 @@ export async function apiPayInvoice(
 ): Promise<ApiSuccessEnvelope<InvoiceRow>> {
   return apiFetchJson(`/invoices/${id}/pay`, { method: "POST", token, body: {} });
 }
+
+/**
+ * Finance group v2 — overdue invoice "Send reminder" action.
+ * Backend: InvoiceController::sendReminder dispatches SendInvoiceReminderJob.
+ * Throttled to once per 24h per invoice — backend returns 429 if hit too soon.
+ */
+export async function apiSendInvoiceReminder(
+  token: string,
+  id: number
+): Promise<ApiSuccessEnvelope<{ message: string }>> {
+  return apiFetchJson(`/invoices/${id}/send-reminder`, { method: "POST", token, body: {} });
+}

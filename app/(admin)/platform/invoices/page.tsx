@@ -27,7 +27,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
-import { apiInvoices, apiIssueInvoice, apiCancelInvoice, apiPayInvoice, downloadInvoicesCsv, type InvoiceRow } from "@/lib/invoices-api";
+import { apiInvoices, apiIssueInvoice, apiCancelInvoice, apiPayInvoice, apiSendInvoiceReminder, downloadInvoicesCsv, type InvoiceRow } from "@/lib/invoices-api";
 import { apiInvoicesStats, type InvoicesStats } from "@/lib/finance-stats-api";
 import { formatMoney } from "@/lib/format";
 import {
@@ -209,6 +209,22 @@ export default function PlatformInvoicesPage() {
       await load();
     } catch (e) {
       alert(e instanceof ApiRequestError ? e.message : t("admin.invoices.err_generic"));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleSendReminder(id: number) {
+    if (!token) return;
+    const ok = await confirm({ messageKey: "admin.invoices.confirm_send_reminder" });
+    if (!ok) return;
+    setBusyId(id);
+    try {
+      const res = await apiSendInvoiceReminder(token, id);
+      alert(res.data.message || "Reminder sent.");
+    } catch (e) {
+      const msg = e instanceof ApiRequestError ? e.message : t("admin.invoices.err_generic");
+      alert(msg);
     } finally {
       setBusyId(null);
     }
@@ -590,8 +606,12 @@ export default function PlatformInvoicesPage() {
                               <Check />
                             </IconButton>
                           ) : null}
-                          {r.status === "overdue" ? (
-                            <IconButton aria-label="Send reminder">
+                          {r.status === "overdue" || r.status === "issued" ? (
+                            <IconButton
+                              aria-label="Send reminder"
+                              onClick={() => void handleSendReminder(r.id)}
+                              disabled={busyId === r.id}
+                            >
                               <Mail />
                             </IconButton>
                           ) : null}
