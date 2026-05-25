@@ -1,5 +1,26 @@
 "use client";
 
+/**
+ * v2 admin-redesign — Vouchers list + detail drawer (Finance group).
+ *
+ * Source spec: docs/admin_designe/finance_group_mocks.html (PAGE 6 VOUCHERS)
+ * Migration prompt: docs/admin_designe/finance_group_implementation_prompt.md §3.E
+ *
+ * Chrome:
+ *   - V2PageHeader + breadcrumb + Export + Issue voucher
+ *   - FinanceSectionTabs
+ *   - 4 plain stat cards (Total / Active / Verifications / Voided)
+ *   - FilterCard + active filter chips
+ *   - V2Card wrapping table
+ *   - Status badges with Tabler-style icons
+ *   - Avatar + holder name
+ *   - IconButton row (View / More)
+ *   - Right-side detail drawer (Variant B) with sections:
+ *       Holder information, Voucher details, Verification log table, Files
+ *     Drawer footer: Close · Void (danger) · Reissue (primary) — visible per status
+ *   - ESC closes drawer; click overlay closes drawer
+ */
+
 import { useEffect, useState } from "react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
@@ -15,49 +36,47 @@ import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { formatDate, formatDateTime } from "@/lib/format";
 import {
-  Input,
-  Pagination,
-  Select,
-  Table,
-  TBody,
-  TD,
-  TEmpty,
-  TH,
-  THead,
-  TR,
-} from "@/components/ui";
+  STATUS_BADGE_CLASS,
+  avatarInitials,
+  avatarStyle,
+  formatRelativeTime,
+  pickAvatarTone,
+  statusBadgeStyle,
+  type StatusTone,
+} from "@/lib/admin-v2-helpers";
+import { Pagination } from "@/components/ui";
 import {
   PageHeader as V2PageHeader,
-  SectionTabs,
   FilterCard,
   FilterField,
   V2Card,
   V2Button,
+  StatCard,
+  StatGrid,
   IconButton,
 } from "@/components/ui/v2";
-import { Download, Eye, Plus } from "lucide-react";
-
-/**
- * Platform-admin voucher viewer (Sprint 56, PART 09).
- *
- * Wires to backend:
- *   GET  /api/platform-admin/vouchers
- *   GET  /api/platform-admin/vouchers/{id}
- *   POST /api/platform-admin/vouchers/{id}/void
- *   POST /api/platform-admin/vouchers/{id}/reissue
- */
+import {
+  Download,
+  Eye,
+  Plus,
+  MoreVertical,
+  X as XIcon,
+  Check,
+  Eye as EyeIcon,
+  Ban,
+  RotateCcw,
+  Clock as ClockOff,
+  Ticket,
+  CircleCheck,
+  ScanEye as EyeCheck,
+  Ban as BanIcon2,
+  FileDown,
+  XCircle,
+} from "lucide-react";
+import { FinanceSectionTabs } from "@/components/finance/FinanceSectionTabs";
 
 const STATUSES = ["issued", "used", "void", "reissued", "expired"] as const;
-const SERVICE_TYPES = [
-  "flight",
-  "hotel",
-  "transfer",
-  "car",
-  "excursion",
-  "visa",
-  "insurance",
-  "package",
-] as const;
+const SERVICE_TYPES = ["flight", "hotel", "transfer", "car", "excursion", "visa", "insurance", "package"] as const;
 
 type VoucherRow = {
   id: number;
@@ -86,11 +105,14 @@ type VerificationLog = {
   result: string;
 };
 
-type Meta = {
-  total: number;
-  per_page: number;
-  current_page: number;
-  last_page: number;
+type Meta = { total: number; per_page: number; current_page: number; last_page: number };
+
+const VOUCHER_STATUS_META: Record<string, { tone: StatusTone; label: string; icon: React.ReactNode }> = {
+  issued: { tone: "success", label: "Issued", icon: <Check className="h-3 w-3" /> },
+  used: { tone: "info", label: "Used", icon: <EyeIcon className="h-3 w-3" /> },
+  void: { tone: "gray", label: "Void", icon: <Ban className="h-3 w-3" /> },
+  reissued: { tone: "warning", label: "Reissued", icon: <RotateCcw className="h-3 w-3" /> },
+  expired: { tone: "danger", label: "Expired", icon: <ClockOff className="h-3 w-3" /> },
 };
 
 export default function PlatformVouchersPage() {
@@ -117,7 +139,6 @@ export default function PlatformVouchersPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  // Phase 8.5 — typed API client (replaces raw fetch + manual error parsing)
   useEffect(() => {
     if (!allowed || !token) return;
     let cancelled = false;
@@ -142,7 +163,6 @@ export default function PlatformVouchersPage() {
         if (e instanceof ApiRequestError && e.status === 403) {
           setForbidden(true);
         } else if (e instanceof ApiRequestError && (e.status === 404 || /not found/i.test(e.message))) {
-          // Treat backend "Not found" as empty list, not as an error
           setRows([]);
           setMeta(null);
         } else {
@@ -157,6 +177,16 @@ export default function PlatformVouchersPage() {
       cancelled = true;
     };
   }, [token, allowed, page, appliedFilters, status, serviceType, q, t]);
+
+  // ESC closes drawer
+  useEffect(() => {
+    if (!selected) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setSelected(null);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [selected]);
 
   const applyFilters = () => {
     setPage(1);
@@ -230,9 +260,37 @@ export default function PlatformVouchersPage() {
     );
   }
 
+  const activeChips: Array<{ key: string; label: string; clear: () => void }> = [];
+  if (status)
+    activeChips.push({
+      key: "status",
+      label: `Status: ${VOUCHER_STATUS_META[status]?.label ?? status}`,
+      clear: () => {
+        setStatus("");
+        applyFilters();
+      },
+    });
+  if (serviceType)
+    activeChips.push({
+      key: "service",
+      label: `Service: ${serviceType}`,
+      clear: () => {
+        setServiceType("");
+        applyFilters();
+      },
+    });
+  if (q.trim())
+    activeChips.push({
+      key: "search",
+      label: `“${q.trim()}”`,
+      clear: () => {
+        setQ("");
+        applyFilters();
+      },
+    });
+
   return (
     <div>
-      {/* v2 admin-redesign — Vouchers page chrome (Finance section). */}
       <V2PageHeader
         breadcrumb={[
           { label: "Home", href: "/dashboard" },
@@ -240,10 +298,14 @@ export default function PlatformVouchersPage() {
           { label: t("admin.platform_vouchers.title") },
         ]}
         title={t("admin.platform_vouchers.title")}
-        subtitle={t("admin.platform_vouchers.subtitle")}
+        subtitle={
+          t("admin.platform_vouchers.subtitle") !== "admin.platform_vouchers.subtitle"
+            ? t("admin.platform_vouchers.subtitle")
+            : "Issue and manage service vouchers with verification logs"
+        }
         actions={
           <>
-            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button icon={<Download className="h-4 w-4" />}>Export CSV</V2Button>
             <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
               Issue voucher
             </V2Button>
@@ -251,333 +313,452 @@ export default function PlatformVouchersPage() {
         }
       />
 
-      <SectionTabs
-        activeHref="/platform/vouchers"
-        items={[
-          { href: "/platform/finance-summary", label: "Summary" },
-          { href: "/platform/invoices", label: "Invoices" },
-          { href: "/platform/payments", label: "Payments" },
-          { href: "/platform/commissions", label: "Commissions ledger" },
-          { href: "/platform/finance", label: "Transactions" },
-          { href: "/platform/vouchers", label: "Vouchers", count: meta?.total },
-        ]}
-      />
+      <FinanceSectionTabs activeHref="/platform/vouchers" counts={{ vouchers: meta?.total }} />
 
-      {error && (
-        <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{error}</div>
-      )}
+      <StatGrid cols={4} className="mb-5">
+        <StatCard
+          icon={<Ticket style={{ color: "var(--admin-primary)" }} className="h-[22px] w-[22px]" />}
+          value={meta?.total ?? "—"}
+          label="Total vouchers (30d)"
+        />
+        <StatCard
+          icon={<CircleCheck style={{ color: "var(--admin-success)" }} className="h-[22px] w-[22px]" />}
+          value="—"
+          label="Active (issued)"
+        />
+        <StatCard
+          icon={<EyeCheck style={{ color: "var(--admin-info)" }} className="h-[22px] w-[22px]" />}
+          value="—"
+          label="Verifications (7d)"
+        />
+        <StatCard
+          icon={<BanIcon2 style={{ color: "var(--admin-danger)" }} className="h-[22px] w-[22px]" />}
+          value="—"
+          label="Voided"
+        />
+      </StatGrid>
+
+      {error ? (
+        <div
+          className="mb-4 rounded-md border px-4 py-2 text-sm"
+          style={{
+            borderColor: "var(--admin-danger-light)",
+            backgroundColor: "var(--admin-danger-light)",
+            color: "var(--admin-danger-dark)",
+          }}
+        >
+          {error}
+        </div>
+      ) : null}
 
       <FilterCard>
-        <FilterField label={t("admin.platform_vouchers.status")} minWidth={160}>
-          <Select
-            id="v-status"
-            fieldSize="sm"
+        <FilterField label={t("admin.platform_vouchers.status")}>
+          <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="!h-[34px]"
+            className="h-[34px] rounded-md border bg-white px-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+            style={{ borderColor: "var(--admin-border)" }}
           >
             <option value="">{t("common.all")}</option>
             {STATUSES.map((s) => (
-              <option key={s} value={s}>{s}</option>
+              <option key={s} value={s}>
+                {VOUCHER_STATUS_META[s]?.label ?? s}
+              </option>
             ))}
-          </Select>
+          </select>
         </FilterField>
-        <FilterField label={t("admin.platform_vouchers.service_type")} minWidth={160}>
-          <Select
-            id="v-svc"
-            fieldSize="sm"
+        <FilterField label={t("admin.platform_vouchers.service_type")}>
+          <select
             value={serviceType}
             onChange={(e) => setServiceType(e.target.value)}
-            className="!h-[34px]"
+            className="h-[34px] rounded-md border bg-white px-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+            style={{ borderColor: "var(--admin-border)" }}
           >
             <option value="">{t("common.all")}</option>
             {SERVICE_TYPES.map((s) => (
-              <option key={s} value={s}>{s}</option>
+              <option key={s} value={s}>
+                {s}
+              </option>
             ))}
-          </Select>
+          </select>
         </FilterField>
         <FilterField label={t("common.search")} minWidth={240}>
-          <Input
-            id="v-q"
+          <input
+            type="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder={t("admin.platform_vouchers.search_placeholder")}
-            className="!h-[34px]"
+            className="h-[34px] rounded-md border bg-white px-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+            style={{ borderColor: "var(--admin-border)" }}
           />
         </FilterField>
-        <V2Button size="sm" onClick={resetFilters}>{t("common.reset")}</V2Button>
-        <V2Button size="sm" variant="primary" onClick={applyFilters}>{t("common.apply")}</V2Button>
+        <V2Button variant="primary" onClick={applyFilters}>
+          {t("common.apply")}
+        </V2Button>
+        {activeChips.length > 0 ? <V2Button onClick={resetFilters}>{t("common.reset")}</V2Button> : null}
       </FilterCard>
 
-      {/* Table */}
-      <V2Card>
-      <Table>
-        <THead>
-          <TR>
-            <TH>{t("admin.platform_vouchers.number")}</TH>
-            <TH>{t("admin.platform_vouchers.service")}</TH>
-            <TH>{t("admin.platform_vouchers.holder")}</TH>
-            <TH>{t("admin.platform_vouchers.status")}</TH>
-            <TH>{t("admin.platform_vouchers.valid")}</TH>
-            <TH>{t("admin.platform_vouchers.scans")}</TH>
-            <TH>{t("admin.platform_vouchers.created")}</TH>
-            <TH />
-          </TR>
-        </THead>
-        <TBody>
-          {loading ? (
-            <TEmpty colSpan={8}>{t("admin.platform_vouchers.loading")}</TEmpty>
-          ) : rows.length === 0 ? (
-            <TEmpty colSpan={8}>{t("admin.platform_vouchers.empty")}</TEmpty>
-          ) : null}
-          {rows.map((r) => {
-            const initials = (r.holder_name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
-            const tone = pickAvatarTone(r.id);
-            return (
-            <TR key={r.id} onClick={() => openDetail(r)}>
-              <TD className="font-mono text-xs text-fg-t8">{r.voucher_number}</TD>
-              <TD>
-                <span
-                  className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
-                  style={{
-                    backgroundColor: "var(--admin-bg-tertiary)",
-                    color: "var(--admin-text-secondary)",
-                  }}
-                >
-                  {r.service_type}
-                </span>
-              </TD>
-              <TD>
-                <div className="flex items-center gap-3">
-                  <span
-                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
-                    style={avatarStyle(tone)}
-                    aria-hidden
-                  >
-                    {initials || "?"}
-                  </span>
-                  <div className="min-w-0">
-                    <div className="font-medium text-fg-t8 truncate">{r.holder_name}</div>
-                    <div className="text-[11px] text-fg-t6 truncate">{r.language?.toUpperCase()}</div>
-                  </div>
-                </div>
-              </TD>
-              <TD><VoucherStatusBadge status={r.status} /></TD>
-              <TD className="text-xs text-fg-t6">
-                {formatDate(r.valid_from, lang)}
-                {r.valid_to ? ` → ${formatDate(r.valid_to, lang)}` : ""}
-              </TD>
-              <TD className="tabular-nums text-xs">{r.verification_count}</TD>
-              <TD className="text-xs text-fg-t6">{formatRelativeTime(r.created_at)}</TD>
-              <TD align="right" onClick={(e) => e.stopPropagation()}>
-                <div className="flex justify-end gap-1">
-                  <IconButton onClick={() => openDetail(r)} aria-label="View">
-                    <Eye className="h-4 w-4" />
-                  </IconButton>
-                </div>
-              </TD>
-            </TR>
-            );
-          })}
-        </TBody>
-      </Table>
-      </V2Card>
-
-      {meta && meta.last_page > 1 ? (
-        <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />
+      {activeChips.length > 0 ? (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <span className="text-[11px] font-medium" style={{ color: "var(--admin-text-secondary)" }}>
+            Active filters:
+          </span>
+          {activeChips.map((chip) => (
+            <button
+              key={chip.key}
+              type="button"
+              onClick={chip.clear}
+              className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[12px] font-medium transition hover:opacity-80"
+              style={{
+                backgroundColor: "var(--admin-primary-soft)",
+                borderColor: "var(--admin-primary-light)",
+                color: "var(--admin-primary)",
+              }}
+            >
+              {chip.label}
+              <XIcon className="h-3 w-3 opacity-70" />
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium opacity-80 hover:opacity-100"
+            style={{ color: "var(--admin-text-secondary)" }}
+          >
+            <XCircle className="h-3 w-3" />
+            Clear all
+          </button>
+        </div>
       ) : null}
 
-      {/* Detail drawer */}
-      {selected && (
-        <div
-          className="fixed inset-0 z-50 flex justify-end bg-black/30"
-          onClick={() => setSelected(null)}
-        >
-          <div
-            className="h-full w-full max-w-xl overflow-y-auto bg-white p-6 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <h2 className="text-lg font-semibold">{t("admin.platform_vouchers.voucher")} {selected.voucher_number}</h2>
-                <p className="mt-1 text-xs text-fg-t6">
-                  {selected.service_type} В· {selected.language.toUpperCase()}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelected(null)}
-                className="rounded p-1 text-fg-t6 hover:bg-figma-bg-1"
-                aria-label={t("common.close")}
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              {selected.pdf_url && (
-                <a
-                  href={selected.pdf_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded border border-default bg-white px-3 py-1.5 text-xs hover:bg-figma-bg-1"
-                >
-                  {t("admin.platform_vouchers.open_pdf")}
-                </a>
+      <V2Card>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-[13px]">
+            <thead
+              className="text-[11px] font-semibold uppercase tracking-[0.5px]"
+              style={{ backgroundColor: "var(--admin-bg-secondary)", color: "var(--admin-text-secondary)" }}
+            >
+              <tr>
+                <th className="px-4 py-2.5 text-left">{t("admin.platform_vouchers.number")}</th>
+                <th className="px-4 py-2.5 text-left">{t("admin.platform_vouchers.service")}</th>
+                <th className="px-4 py-2.5 text-left">{t("admin.platform_vouchers.holder")}</th>
+                <th className="px-4 py-2.5 text-left">{t("admin.platform_vouchers.status")}</th>
+                <th className="px-4 py-2.5 text-left">{t("admin.platform_vouchers.valid")}</th>
+                <th className="px-4 py-2.5 text-left">{t("admin.platform_vouchers.scans")}</th>
+                <th className="px-4 py-2.5 text-left">{t("admin.platform_vouchers.created")}</th>
+                <th className="px-4 py-2.5 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-10 text-center text-sm" style={{ color: "var(--admin-text-secondary)" }}>
+                    {t("admin.platform_vouchers.loading")}
+                  </td>
+                </tr>
+              ) : rows.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-10 text-center text-sm" style={{ color: "var(--admin-text-secondary)" }}>
+                    {t("admin.platform_vouchers.empty")}
+                  </td>
+                </tr>
+              ) : (
+                rows.map((r) => {
+                  const statusMeta = VOUCHER_STATUS_META[r.status] ?? VOUCHER_STATUS_META.issued!;
+                  const tone = pickAvatarTone(r.id);
+                  const isSelected = selected?.id === r.id;
+                  return (
+                    <tr
+                      key={r.id}
+                      className="cursor-pointer border-t transition hover:bg-[color:var(--admin-bg-secondary)]"
+                      style={{
+                        borderColor: "var(--admin-border)",
+                        backgroundColor: isSelected ? "var(--admin-primary-soft)" : undefined,
+                      }}
+                      onClick={() => void openDetail(r)}
+                    >
+                      <td className="px-4 py-3 font-mono text-[12px] text-fg-t8">{r.voucher_number}</td>
+                      <td className="px-4 py-3 text-[12px]">
+                        <span className={STATUS_BADGE_CLASS} style={statusBadgeStyle("gray")}>
+                          {r.service_type}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold"
+                            style={avatarStyle(tone)}
+                          >
+                            {avatarInitials(r.holder_name) || "?"}
+                          </span>
+                          <span className="text-fg-t8">{r.holder_name}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={STATUS_BADGE_CLASS} style={statusBadgeStyle(statusMeta.tone)}>
+                          {statusMeta.icon}
+                          {statusMeta.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-[12px]" style={{ color: "var(--admin-text-secondary)" }}>
+                        {r.valid_from ? (
+                          <>
+                            {formatDate(r.valid_from, lang)}
+                            {r.valid_to ? ` → ${formatDate(r.valid_to, lang)}` : ""}
+                          </>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-fg-t8 tabular-nums">{r.verification_count}</td>
+                      <td className="px-4 py-3 text-[12px]" style={{ color: "var(--admin-text-secondary)" }}>
+                        {formatRelativeTime(r.created_at)}
+                      </td>
+                      <td
+                        className="px-4 py-3"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex items-center justify-end gap-1.5">
+                          <IconButton aria-label="View" onClick={() => void openDetail(r)}>
+                            <Eye />
+                          </IconButton>
+                          <IconButton aria-label="More">
+                            <MoreVertical />
+                          </IconButton>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
-              {selected.status === "issued" && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => reissueVoucher(selected.id)}
-                    disabled={actionLoading !== null}
-                    className="rounded border border-default bg-white px-3 py-1.5 text-xs hover:bg-figma-bg-1 disabled:opacity-50"
-                  >
-                    {actionLoading === "reissue" ? t("admin.platform_vouchers.reissuing") : t("admin.platform_vouchers.reissue")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => voidVoucher(selected.id)}
-                    disabled={actionLoading !== null}
-                    className="rounded border border-error-300 bg-error-50 px-3 py-1.5 text-xs text-error-700 hover:bg-error-100 disabled:opacity-50"
-                  >
-                    {actionLoading === "void" ? t("admin.platform_vouchers.voiding") : t("admin.platform_vouchers.void")}
-                  </button>
-                </>
-              )}
-            </div>
-
-            <dl className="mt-6 space-y-2 text-sm">
-              <DetailRow label={t("admin.platform_vouchers.status")} value={selected.status} />
-              <DetailRow label={t("admin.platform_vouchers.holder")} value={selected.holder_name} />
-              <DetailRow
-                label={t("admin.platform_vouchers.order")}
-                value={selected.order?.order_number ?? `#${selected.order_id}`}
-              />
-              <DetailRow
-                label={t("admin.platform_vouchers.issuer")}
-                value={selected.issuer_company?.name ?? "—"}
-              />
-              <DetailRow
-                label={t("admin.platform_vouchers.valid")}
-                value={
-                  selected.valid_from
-                    ? `${formatDate(selected.valid_from, lang)}${
-                        selected.valid_to
-                          ? " в†’ " + formatDate(selected.valid_to, lang)
-                          : ""
-                      }`
-                    : "—"
-                }
-              />
-              <DetailRow
-                label={t("admin.platform_vouchers.used_at")}
-                value={formatDateTime(selected.used_at, lang)}
-              />
-              <DetailRow label={t("admin.platform_vouchers.scan_count")} value={String(selected.verification_count)} />
-              {selected.reissued_from_id && (
-                <DetailRow
-                  label={t("admin.platform_vouchers.reissued_from")}
-                  value={`#${selected.reissued_from_id}`}
-                />
-              )}
-            </dl>
-
-            <div className="mt-6">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-fg-t6">
-                {t("admin.platform_vouchers.verification_log")} {logs.length > 0 && `(${logs.length})`}
-              </h3>
-              {detailLoading && <p className="mt-2 text-xs text-fg-t6">{t("admin.platform_vouchers.loading")}</p>}
-              {!detailLoading && logs.length === 0 && (
-                <p className="mt-2 text-xs text-fg-t6">{t("admin.platform_vouchers.no_scans")}</p>
-              )}
-              {logs.length > 0 && (
-                <div className="mt-2 max-h-80 overflow-y-auto rounded border border-default">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-figma-bg-1 text-fg-t7">
-                      <tr>
-                        <th scope="col" className="px-2 py-1">{t("admin.platform_vouchers.when")}</th>
-                        <th scope="col" className="px-2 py-1">{t("admin.platform_vouchers.ip")}</th>
-                        <th scope="col" className="px-2 py-1">{t("admin.platform_vouchers.result")}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {logs.map((l) => (
-                        <tr key={l.id} className="border-t border-default">
-                          <td className="px-2 py-1">{formatDateTime(l.scanned_at, lang)}</td>
-                          <td className="px-2 py-1 font-mono">{l.scanner_ip ?? "—"}</td>
-                          <td className="px-2 py-1">{l.result}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
+            </tbody>
+          </table>
         </div>
-      )}
+        {meta && meta.last_page > 1 ? (
+          <div
+            className="flex flex-wrap items-center justify-between gap-2 border-t px-5 py-3.5 text-[12px]"
+            style={{ borderColor: "var(--admin-border)", color: "var(--admin-text-secondary)" }}
+          >
+            <span>
+              Showing {(meta.current_page - 1) * meta.per_page + 1}–
+              {Math.min(meta.current_page * meta.per_page, meta.total)} of {meta.total} vouchers
+            </span>
+            <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />
+          </div>
+        ) : null}
+      </V2Card>
+
+      {/* Detail drawer — Variant B */}
+      {selected ? (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/30 transition-opacity"
+            onClick={() => setSelected(null)}
+            aria-hidden
+          />
+          <aside
+            className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[520px] flex-col bg-white shadow-2xl"
+            style={{ borderLeft: "1px solid var(--admin-border)" }}
+            role="dialog"
+            aria-label="Voucher details"
+          >
+            <header className="border-b px-5 py-4" style={{ borderColor: "var(--admin-border)" }}>
+              <div className="mb-3 flex items-center justify-between">
+                <IconButton aria-label="Close" onClick={() => setSelected(null)}>
+                  <XIcon />
+                </IconButton>
+                <IconButton aria-label="More">
+                  <MoreVertical />
+                </IconButton>
+              </div>
+              <div className="mb-1 flex items-center gap-2">
+                <span className="font-mono text-[14px] font-semibold" style={{ color: "var(--admin-text-primary)" }}>
+                  {selected.voucher_number}
+                </span>
+                {(() => {
+                  const sm = VOUCHER_STATUS_META[selected.status] ?? VOUCHER_STATUS_META.issued!;
+                  return (
+                    <span className={STATUS_BADGE_CLASS} style={statusBadgeStyle(sm.tone)}>
+                      {sm.icon}
+                      {sm.label}
+                    </span>
+                  );
+                })()}
+              </div>
+              <div className="text-[12px]" style={{ color: "var(--admin-text-secondary)" }}>
+                {selected.service_type} · {selected.language?.toUpperCase()}
+              </div>
+            </header>
+
+            <div className="flex-1 space-y-6 overflow-y-auto p-5">
+              <section>
+                <h3
+                  className="mb-3 text-[11px] font-semibold uppercase tracking-[0.5px]"
+                  style={{ color: "var(--admin-text-secondary)" }}
+                >
+                  Holder information
+                </h3>
+                <div className="grid gap-2">
+                  <InfoRow label="Name" value={selected.holder_name} />
+                  <InfoRow label="Order" value={selected.order?.order_number ?? `#${selected.order_id ?? "—"}`} />
+                  <InfoRow label="Language" value={selected.language?.toUpperCase()} />
+                </div>
+              </section>
+
+              <section>
+                <h3
+                  className="mb-3 text-[11px] font-semibold uppercase tracking-[0.5px]"
+                  style={{ color: "var(--admin-text-secondary)" }}
+                >
+                  Voucher details
+                </h3>
+                <div className="grid gap-2">
+                  <InfoRow label="Service" value={selected.service_type} />
+                  <InfoRow label="Issuer" value={selected.issuer_company?.name ?? "—"} />
+                  <InfoRow
+                    label="Valid"
+                    value={
+                      selected.valid_from
+                        ? `${formatDate(selected.valid_from, lang)}${
+                            selected.valid_to ? ` → ${formatDate(selected.valid_to, lang)}` : ""
+                          }`
+                        : "—"
+                    }
+                  />
+                  <InfoRow label="Used at" value={formatDateTime(selected.used_at, lang)} />
+                  <InfoRow label="Scan count" value={String(selected.verification_count)} />
+                  {selected.reissued_from_id ? (
+                    <InfoRow label="Reissued from" value={`#${selected.reissued_from_id}`} />
+                  ) : null}
+                </div>
+              </section>
+
+              <section>
+                <h3
+                  className="mb-3 text-[11px] font-semibold uppercase tracking-[0.5px]"
+                  style={{ color: "var(--admin-text-secondary)" }}
+                >
+                  Verification log {logs.length > 0 ? `(${logs.length} scans)` : ""}
+                </h3>
+                {detailLoading ? (
+                  <p className="text-[12px]" style={{ color: "var(--admin-text-secondary)" }}>
+                    {t("admin.platform_vouchers.loading")}
+                  </p>
+                ) : logs.length === 0 ? (
+                  <p className="text-[12px]" style={{ color: "var(--admin-text-secondary)" }}>
+                    {t("admin.platform_vouchers.no_scans")}
+                  </p>
+                ) : (
+                  <div className="rounded-md border overflow-hidden" style={{ borderColor: "var(--admin-border)" }}>
+                    <table className="w-full text-[12px]">
+                      <thead
+                        className="text-[11px] font-semibold uppercase tracking-[0.5px]"
+                        style={{
+                          backgroundColor: "var(--admin-bg-secondary)",
+                          color: "var(--admin-text-secondary)",
+                        }}
+                      >
+                        <tr>
+                          <th className="px-3 py-2 text-left">When</th>
+                          <th className="px-3 py-2 text-left">IP</th>
+                          <th className="px-3 py-2 text-left">Result</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {logs.map((l) => (
+                          <tr key={l.id} className="border-t" style={{ borderColor: "var(--admin-border)" }}>
+                            <td className="px-3 py-2" style={{ color: "var(--admin-text-secondary)" }}>
+                              {formatDateTime(l.scanned_at, lang)}
+                            </td>
+                            <td className="px-3 py-2 font-mono">{l.scanner_ip ?? "—"}</td>
+                            <td className="px-3 py-2">
+                              <span
+                                className={STATUS_BADGE_CLASS}
+                                style={statusBadgeStyle(l.result === "valid" ? "success" : "warning")}
+                              >
+                                {l.result}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+
+              <section>
+                <h3
+                  className="mb-3 text-[11px] font-semibold uppercase tracking-[0.5px]"
+                  style={{ color: "var(--admin-text-secondary)" }}
+                >
+                  Files
+                </h3>
+                {selected.pdf_url ? (
+                  <a
+                    href={selected.pdf_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex h-[36px] w-full items-center justify-center gap-1.5 rounded-md border bg-white px-3.5 text-[13px] font-medium transition hover:bg-[color:var(--admin-bg-secondary)]"
+                    style={{ borderColor: "var(--admin-border)", color: "var(--admin-text-primary)" }}
+                  >
+                    <FileDown className="h-4 w-4" />
+                    Download voucher PDF
+                  </a>
+                ) : (
+                  <p className="text-[12px]" style={{ color: "var(--admin-text-secondary)" }}>
+                    No PDF available
+                  </p>
+                )}
+              </section>
+            </div>
+
+            <footer
+              className="flex items-center gap-2 border-t px-5 py-3.5"
+              style={{ borderColor: "var(--admin-border)", backgroundColor: "var(--admin-bg-secondary)" }}
+            >
+              <V2Button onClick={() => setSelected(null)}>Close</V2Button>
+              <div className="flex-1" />
+              {selected.status === "issued" ? (
+                <>
+                  <V2Button
+                    onClick={() => void voidVoucher(selected.id)}
+                    disabled={actionLoading !== null}
+                    icon={<Ban className="h-4 w-4" />}
+                    className="text-[color:var(--admin-danger)]"
+                  >
+                    {actionLoading === "void" ? t("admin.platform_vouchers.voiding") : "Void"}
+                  </V2Button>
+                  <V2Button
+                    variant="primary"
+                    onClick={() => void reissueVoucher(selected.id)}
+                    disabled={actionLoading !== null}
+                    icon={<RotateCcw className="h-4 w-4" />}
+                  >
+                    {actionLoading === "reissue" ? t("admin.platform_vouchers.reissuing") : "Reissue"}
+                  </V2Button>
+                </>
+              ) : null}
+            </footer>
+          </aside>
+        </>
+      ) : null}
     </div>
   );
 }
 
-function VoucherStatusBadge({ status }: { status: string }) {
-  const { t } = useLanguage();
-  const tone =
-    status === "issued"
-      ? "bg-success-50 text-success-700"
-      : status === "used"
-        ? "bg-figma-bg-1 text-fg-t7"
-        : status === "void"
-          ? "bg-error-50 text-error-700"
-          : status === "reissued"
-            ? "bg-warning-50 text-warning-700"
-            : "bg-figma-bg-1 text-fg-t6";
+function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${tone}`}>
-      {t(`admin.platform_vouchers.status_${status}`)}
-    </span>
-  );
-}
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="grid grid-cols-[120px_1fr] gap-2">
-      <dt className="text-xs uppercase tracking-wide text-fg-t6">{label}</dt>
-      <dd className="text-sm break-words">{value}</dd>
+    <div
+      className="grid grid-cols-[120px_1fr] gap-3 py-1.5"
+      style={{ borderBottom: "1px dashed var(--admin-border)" }}
+    >
+      <span className="text-[12px] font-medium" style={{ color: "var(--admin-text-secondary)" }}>
+        {label}
+      </span>
+      <span className="text-[13px]" style={{ color: "var(--admin-text-primary)" }}>
+        {value}
+      </span>
     </div>
   );
-}
-
-// v2 admin-redesign helpers — avatar tone + relative time.
-function pickAvatarTone(id: number | string): "purple" | "teal" | "amber" | "blue" {
-  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
-  const n = typeof id === "number" ? id : id.length;
-  return tones[Math.abs(n) % tones.length]!;
-}
-
-function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
-  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
-    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
-    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
-    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
-    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
-  };
-  return map[tone];
-}
-
-function formatRelativeTime(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  const t = new Date(iso).getTime();
-  if (Number.isNaN(t)) return "—";
-  const diff = Date.now() - t;
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins} min ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
-  const days = Math.floor(hours / 24);
-  if (days === 1) return "Yesterday";
-  if (days < 7) return `${days} days ago`;
-  return new Date(iso).toLocaleDateString();
 }
