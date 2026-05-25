@@ -1,0 +1,126 @@
+/**
+ * Finance group v2 — stats endpoint clients.
+ *
+ * One helper per stat card row (Payments / Invoices / Commissions / Vouchers)
+ * plus the extended Finance summary v2. Each backend endpoint:
+ *  - Platform-admin gated
+ *  - Cached 60s server-side
+ *  - Accepts ?range=7d|30d|90d|year (default 30d) where it makes sense
+ *
+ * Backend: app/Http/Controllers/Api/FinanceStatsController.php
+ */
+
+import { apiFetchJson } from "./api-client";
+import type { ApiSuccessEnvelope } from "./api-envelope";
+
+export type FinanceRange = "7d" | "30d" | "90d" | "year";
+
+export type PaymentsStats = {
+  total_count: number;
+  paid_amount: number;
+  paid_count: number;
+  pending_amount: number;
+  pending_count: number;
+  failed_amount: number;
+  failed_count: number;
+};
+
+export type InvoicesStats = {
+  total_count: number;
+  paid_count: number;
+  paid_pct: number;
+  issued_pending_count: number;
+  overdue_amount: number;
+  overdue_count: number;
+};
+
+export type CommissionsStats = {
+  active_policies_count: number;
+  recorded_amount: number;
+  pending_amount: number;
+  pending_count: number;
+  avg_rate_pct: number;
+};
+
+export type VouchersStats = {
+  total_count: number;
+  active_issued_count: number;
+  verifications_7d: number;
+  voided_count: number;
+};
+
+export type FinanceSummaryV2 = {
+  total_payments_paid: number;
+  total_commission_accrued: number;
+  total_commission_pending: number;
+  payments_count_paid: number;
+  commission_records_count: number;
+  currency_breakdown: Record<string, number>;
+  commission_split: { platform: number; agent: number };
+  pending_meta: { count: number; avg_age_days: number; oldest_days: number };
+};
+
+function withRange(base: string, range?: FinanceRange): string {
+  return range ? `${base}?range=${range}` : base;
+}
+
+export async function apiPaymentsStats(
+  token: string,
+  range: FinanceRange = "30d"
+): Promise<ApiSuccessEnvelope<PaymentsStats>> {
+  return apiFetchJson(withRange("/platform-admin/payments/stats", range), { method: "GET", token });
+}
+
+export async function apiInvoicesStats(
+  token: string,
+  range: FinanceRange = "30d"
+): Promise<ApiSuccessEnvelope<InvoicesStats>> {
+  return apiFetchJson(withRange("/platform-admin/invoices/stats", range), { method: "GET", token });
+}
+
+export async function apiCommissionsStats(
+  token: string
+): Promise<ApiSuccessEnvelope<CommissionsStats>> {
+  return apiFetchJson("/platform-admin/commissions/stats", { method: "GET", token });
+}
+
+export async function apiVouchersStats(
+  token: string,
+  range: FinanceRange = "30d"
+): Promise<ApiSuccessEnvelope<VouchersStats>> {
+  return apiFetchJson(withRange("/platform-admin/vouchers/stats", range), { method: "GET", token });
+}
+
+export async function apiFinanceSummaryV2(
+  token: string,
+  range: FinanceRange = "30d"
+): Promise<ApiSuccessEnvelope<FinanceSummaryV2>> {
+  return apiFetchJson(withRange("/platform-admin/finance-summary/v2", range), { method: "GET", token });
+}
+
+/**
+ * Triggers a CSV download for the Transactions page (entitlements + settlements
+ * combined). Returns nothing — opens the browser download dialog.
+ */
+export async function downloadFinanceCsv(
+  token: string,
+  companyId: number,
+  kind: "entitlements" | "settlements" | "all" = "all"
+): Promise<void> {
+  const base = process.env.NEXT_PUBLIC_API_URL || "/api";
+  const url = `${base}/finance/export-csv?company_id=${companyId}&kind=${kind}`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`CSV export failed (${res.status}): ${body || res.statusText}`);
+  }
+  const blob = await res.blob();
+  const objUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = objUrl;
+  a.download = `finance-${kind}-${companyId}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(objUrl);
+}

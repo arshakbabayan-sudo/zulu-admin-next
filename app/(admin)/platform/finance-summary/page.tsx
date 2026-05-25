@@ -27,6 +27,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { apiPlatformFinanceSummary, type PlatformFinanceSummary } from "@/lib/platform-admin-api";
+import { apiFinanceSummaryV2, type FinanceSummaryV2 } from "@/lib/finance-stats-api";
 import { formatMoney } from "@/lib/format";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -66,6 +67,7 @@ export default function PlatformFinanceSummaryPage() {
   const { t, lang } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [data, setData] = useState<PlatformFinanceSummary | null>(null);
+  const [v2, setV2] = useState<FinanceSummaryV2 | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [range, setRange] = useState<RangeKey>("30d");
@@ -75,13 +77,17 @@ export default function PlatformFinanceSummaryPage() {
     setErr(null);
     setForbidden(false);
     try {
-      const res = await apiPlatformFinanceSummary(token);
+      const [res, resV2] = await Promise.all([
+        apiPlatformFinanceSummary(token),
+        apiFinanceSummaryV2(token, range).catch(() => null),
+      ]);
       setData(res.data);
+      if (resV2) setV2(resV2.data);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
       else setErr(e instanceof ApiRequestError ? e.message : t("admin.finance_summary.err_load"));
     }
-  }, [token, allowed, t]);
+  }, [token, allowed, range, t]);
 
   useEffect(() => {
     void load();
@@ -157,22 +163,40 @@ export default function PlatformFinanceSummaryPage() {
           icon={<DollarSign className="h-[22px] w-[22px]" />}
           value={data ? formatMoney(data.total_payments_paid, lang) : "—"}
           label={`Total revenue (${range})`}
-          footer="Currency breakdown coming soon"
+          footer={
+            v2 && Object.keys(v2.currency_breakdown).length > 0
+              ? Object.entries(v2.currency_breakdown)
+                  .map(([cur, amt]) => `${cur}: ${formatMoney(amt, lang)}`)
+                  .join(" · ")
+              : "—"
+          }
         />
         <StatCard
           tone="green"
           icon={<Percent className="h-[22px] w-[22px]" />}
           value={data ? formatMoney(data.total_commission_accrued, lang) : "—"}
           label="Commissions accrued"
-          footer="Platform / Agent split — backend follow-up"
+          footer={
+            v2
+              ? `Platform: ${formatMoney(v2.commission_split.platform, lang)} · Agent: ${formatMoney(v2.commission_split.agent, lang)}`
+              : "—"
+          }
         />
         <StatCard
           tone="amber"
           icon={<Clock className="h-[22px] w-[22px]" />}
-          value={data ? formatMoney(data.total_commission_pending, lang) : "—"}
+          value={
+            v2 && v2.pending_meta.count > 0
+              ? `${v2.pending_meta.count} pending`
+              : data
+              ? formatMoney(data.total_commission_pending, lang)
+              : "—"
+          }
           label="Pending payments"
           footer={
-            data
+            v2 && v2.pending_meta.avg_age_days > 0
+              ? `Avg. age: ${v2.pending_meta.avg_age_days.toFixed(1)} days · Oldest: ${v2.pending_meta.oldest_days.toFixed(0)} days`
+              : data
               ? `${data.commission_records_count} pending record${data.commission_records_count === 1 ? "" : "s"}`
               : "—"
           }

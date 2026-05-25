@@ -27,6 +27,7 @@ import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { formatDate, formatMoney } from "@/lib/format";
+import { downloadFinanceCsv } from "@/lib/finance-stats-api";
 import {
   apiFinanceSummary,
   apiFinanceEntitlements,
@@ -104,6 +105,7 @@ export default function FinancePage() {
   const [forbidden, setForbidden] = useState(false);
   const [busy, setBusy] = useState(false);
   const [selectedEnt, setSelectedEnt] = useState<Set<number>>(new Set());
+  const [exporting, setExporting] = useState(false);
   const hasValidCompanyId = companyId != null && Number.isInteger(companyId) && companyId > 0;
 
   const loadSummary = useCallback(async () => {
@@ -169,6 +171,19 @@ export default function FinancePage() {
       alert(e instanceof ApiRequestError ? e.message : t("admin.platform_finance.err_failed"));
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleExportCsv() {
+    if (!token || !hasValidCompanyId) return;
+    setExporting(true);
+    try {
+      const kind = tab === "settlements" ? "settlements" : tab === "entitlements" ? "entitlements" : "all";
+      await downloadFinanceCsv(token, companyId, kind);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Export failed");
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -264,8 +279,13 @@ export default function FinancePage() {
             >
               {""}
             </V2Button>
-            <V2Button variant="primary" icon={<Download className="h-4 w-4" />}>
-              Export
+            <V2Button
+              variant="primary"
+              icon={<Download className="h-4 w-4" />}
+              onClick={() => void handleExportCsv()}
+              disabled={exporting || !hasValidCompanyId}
+            >
+              {exporting ? "Exporting..." : "Export"}
             </V2Button>
           </>
         }

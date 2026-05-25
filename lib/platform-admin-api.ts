@@ -746,6 +746,10 @@ export type PlatformPaymentRow = {
     total_amount: number;
     status: string;
     unique_booking_reference?: string | null;
+    /** Finance group v2 — surfaced via invoice.order eager-load. */
+    order_id?: number;
+    company?: { id: number; name: string };
+    agent_company?: { id: number; name: string };
   };
 };
 

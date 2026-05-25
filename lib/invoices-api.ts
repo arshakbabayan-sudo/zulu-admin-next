@@ -88,3 +88,15 @@ export async function apiCancelInvoice(
 ): Promise<ApiSuccessEnvelope<InvoiceRow>> {
   return apiFetchJson(`/invoices/${id}/cancel`, { method: "POST", token, body: {} });
 }
+
+/**
+ * Finance group v2 — Mark paid action on issued invoices.
+ * Hits POST /invoices/{id}/pay which flips the status to paid and stamps
+ * paid_at. Backend: InvoiceController::pay.
+ */
+export async function apiPayInvoice(
+  token: string,
+  id: number
+): Promise<ApiSuccessEnvelope<InvoiceRow>> {
+  return apiFetchJson(`/invoices/${id}/pay`, { method: "POST", token, body: {} });
+}

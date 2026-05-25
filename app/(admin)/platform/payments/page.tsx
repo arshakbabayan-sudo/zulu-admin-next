@@ -28,6 +28,7 @@ import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { apiPlatformPayments, downloadPaymentsCsv, type PlatformPaymentRow } from "@/lib/platform-admin-api";
+import { apiPaymentsStats, type PaymentsStats } from "@/lib/finance-stats-api";
 import { formatMoney } from "@/lib/format";
 import {
   STATUS_BADGE_CLASS,
@@ -109,6 +110,7 @@ export default function PlatformPaymentsPage() {
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState<PaymentsStats | null>(null);
 
   const load = useCallback(async () => {
     if (!token || !allowed) return;
@@ -152,6 +154,13 @@ export default function PlatformPaymentsPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!token || !allowed) return;
+    void apiPaymentsStats(token, "30d")
+      .then((res) => setStats(res.data))
+      .catch(() => setStats(null));
+  }, [token, allowed]);
 
   const activeChips = useMemo(() => {
     const chips: Array<{ key: string; label: string; clear: () => void }> = [];
@@ -264,28 +273,30 @@ export default function PlatformPaymentsPage() {
 
       <FinanceSectionTabs activeHref="/platform/payments" counts={{ payments: meta?.total }} />
 
-      {/* 4 plain stat cards. Values render "—" until the backend exposes
-          /platform-admin/payments/stats (Phase 2 backend follow-up). */}
+      {/* 4 plain stat cards — values from /platform-admin/payments/stats. */}
       <StatGrid cols={4} className="mb-5">
         <StatCard
           icon={<CreditCard style={{ color: "var(--admin-primary)" }} className="h-[22px] w-[22px]" />}
-          value="—"
+          value={stats ? stats.total_count.toLocaleString() : "—"}
           label="Total payments (30d)"
         />
         <StatCard
           icon={<CircleCheck style={{ color: "var(--admin-success)" }} className="h-[22px] w-[22px]" />}
-          value="—"
+          value={stats ? formatMoney(stats.paid_amount, lang) : "—"}
           label="Paid this month"
+          footer={stats ? `${stats.paid_count} payment${stats.paid_count === 1 ? "" : "s"}` : undefined}
         />
         <StatCard
           icon={<Clock style={{ color: "var(--admin-warning)" }} className="h-[22px] w-[22px]" />}
-          value="—"
+          value={stats ? formatMoney(stats.pending_amount, lang) : "—"}
           label="Pending"
+          footer={stats && stats.pending_count > 0 ? `${stats.pending_count} new` : undefined}
         />
         <StatCard
           icon={<CircleX style={{ color: "var(--admin-danger)" }} className="h-[22px] w-[22px]" />}
-          value="—"
+          value={stats ? formatMoney(stats.failed_amount, lang) : "—"}
           label="Failed (last 7d)"
+          footer={stats && stats.failed_count > 0 ? `${stats.failed_count} failed` : undefined}
         />
       </StatGrid>
 
@@ -443,11 +454,10 @@ export default function PlatformPaymentsPage() {
               ) : (
                 filteredRows.map((r) => {
                   const statusMeta = STATUS_META[r.status] ?? STATUS_META.pending!;
-                  // Backend currently doesn't expose company on the payment payload;
-                  // when the invoice eager-load includes it later, prefer that field.
-                  // For now we fall back to the invoice reference as the row identifier.
-                  const companyName: string | null = null; // TODO: backend wiring
-                  const companyKey = r.invoice?.id ?? r.id;
+                  // Finance group v2 — backend now surfaces invoice.order.company
+                  // via the eager-load chain in PlatformAdminService.
+                  const companyName = r.invoice?.company?.name ?? r.invoice?.agent_company?.name ?? null;
+                  const companyKey = r.invoice?.company?.id ?? r.invoice?.agent_company?.id ?? r.invoice?.id ?? r.id;
                   const tone = pickAvatarTone(companyKey);
                   return (
                     <tr

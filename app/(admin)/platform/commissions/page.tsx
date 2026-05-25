@@ -37,6 +37,7 @@ import {
   type CommissionRecordRow,
 } from "@/lib/commissions-api";
 import { formatMoney } from "@/lib/format";
+import { apiCommissionsStats, type CommissionsStats } from "@/lib/finance-stats-api";
 import {
   STATUS_BADGE_CLASS,
   avatarInitials,
@@ -122,6 +123,7 @@ export default function CommissionsPage() {
     notes: "",
   });
   const [newSaving, setNewSaving] = useState(false);
+  const [stats, setStats] = useState<CommissionsStats | null>(null);
 
   const loadPolicies = useCallback(async () => {
     if (!token || !allowed) return;
@@ -157,6 +159,13 @@ export default function CommissionsPage() {
   useEffect(() => {
     if (tab === "records") void loadRecords();
   }, [tab, loadRecords]);
+
+  useEffect(() => {
+    if (!token || !allowed) return;
+    void apiCommissionsStats(token)
+      .then((res) => setStats(res.data))
+      .catch(() => setStats(null));
+  }, [token, allowed]);
 
   async function handleDeactivate(id: string) {
     if (!token) return;
@@ -286,22 +295,23 @@ export default function CommissionsPage() {
       <StatGrid cols={4} className="mb-5">
         <StatCard
           icon={<Percent style={{ color: "var(--admin-primary)" }} className="h-[22px] w-[22px]" />}
-          value={policiesMeta?.total ?? "—"}
+          value={stats ? stats.active_policies_count.toLocaleString() : policiesMeta?.total ?? "—"}
           label="Active policies"
         />
         <StatCard
           icon={<Receipt style={{ color: "var(--admin-success)" }} className="h-[22px] w-[22px]" />}
-          value="—"
+          value={stats ? formatMoney(stats.recorded_amount, lang) : "—"}
           label="Recorded (30d)"
         />
         <StatCard
           icon={<Clock style={{ color: "var(--admin-warning)" }} className="h-[22px] w-[22px]" />}
-          value="—"
+          value={stats ? formatMoney(stats.pending_amount, lang) : "—"}
           label="Pending settlement"
+          footer={stats && stats.pending_count > 0 ? `${stats.pending_count} pending` : undefined}
         />
         <StatCard
           icon={<TrendingUp style={{ color: "var(--admin-info)" }} className="h-[22px] w-[22px]" />}
-          value="—"
+          value={stats ? `${stats.avg_rate_pct.toFixed(1)}%` : "—"}
           label="Avg. commission rate"
         />
       </StatGrid>

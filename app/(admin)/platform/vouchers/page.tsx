@@ -35,6 +35,7 @@ import {
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { formatDate, formatDateTime } from "@/lib/format";
+import { apiVouchersStats, type VouchersStats } from "@/lib/finance-stats-api";
 import {
   STATUS_BADGE_CLASS,
   avatarInitials,
@@ -138,6 +139,7 @@ export default function PlatformVouchersPage() {
   const [logs, setLogs] = useState<VerificationLog[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [stats, setStats] = useState<VouchersStats | null>(null);
 
   useEffect(() => {
     if (!allowed || !token) return;
@@ -177,6 +179,13 @@ export default function PlatformVouchersPage() {
       cancelled = true;
     };
   }, [token, allowed, page, appliedFilters, status, serviceType, q, t]);
+
+  useEffect(() => {
+    if (!token || !allowed) return;
+    void apiVouchersStats(token, "30d")
+      .then((res) => setStats(res.data))
+      .catch(() => setStats(null));
+  }, [token, allowed]);
 
   // ESC closes drawer
   useEffect(() => {
@@ -318,22 +327,22 @@ export default function PlatformVouchersPage() {
       <StatGrid cols={4} className="mb-5">
         <StatCard
           icon={<Ticket style={{ color: "var(--admin-primary)" }} className="h-[22px] w-[22px]" />}
-          value={meta?.total ?? "—"}
+          value={stats ? stats.total_count.toLocaleString() : meta?.total ?? "—"}
           label="Total vouchers (30d)"
         />
         <StatCard
           icon={<CircleCheck style={{ color: "var(--admin-success)" }} className="h-[22px] w-[22px]" />}
-          value="—"
+          value={stats ? stats.active_issued_count.toLocaleString() : "—"}
           label="Active (issued)"
         />
         <StatCard
           icon={<EyeCheck style={{ color: "var(--admin-info)" }} className="h-[22px] w-[22px]" />}
-          value="—"
+          value={stats ? stats.verifications_7d.toLocaleString() : "—"}
           label="Verifications (7d)"
         />
         <StatCard
           icon={<BanIcon2 style={{ color: "var(--admin-danger)" }} className="h-[22px] w-[22px]" />}
-          value="—"
+          value={stats ? stats.voided_count.toLocaleString() : "—"}
           label="Voided"
         />
       </StatGrid>

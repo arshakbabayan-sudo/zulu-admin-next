@@ -27,7 +27,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
-import { apiInvoices, apiIssueInvoice, apiCancelInvoice, downloadInvoicesCsv, type InvoiceRow } from "@/lib/invoices-api";
+import { apiInvoices, apiIssueInvoice, apiCancelInvoice, apiPayInvoice, downloadInvoicesCsv, type InvoiceRow } from "@/lib/invoices-api";
+import { apiInvoicesStats, type InvoicesStats } from "@/lib/finance-stats-api";
 import { formatMoney } from "@/lib/format";
 import {
   STATUS_BADGE_CLASS,
@@ -116,6 +117,7 @@ export default function PlatformInvoicesPage() {
   const [forbidden, setForbidden] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState<InvoicesStats | null>(null);
 
   const load = useCallback(async () => {
     if (!token || !allowed) return;
@@ -160,6 +162,13 @@ export default function PlatformInvoicesPage() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (!token || !allowed) return;
+    void apiInvoicesStats(token, "30d")
+      .then((res) => setStats(res.data))
+      .catch(() => setStats(null));
+  }, [token, allowed]);
+
   async function handleIssue(id: number) {
     if (!token) return;
     const ok = await confirm({ messageKey: "admin.invoices.confirm_issue" });
@@ -182,6 +191,21 @@ export default function PlatformInvoicesPage() {
     setBusyId(id);
     try {
       await apiCancelInvoice(token, id);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : t("admin.invoices.err_generic"));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleMarkPaid(id: number) {
+    if (!token) return;
+    const ok = await confirm({ messageKey: "admin.invoices.confirm_mark_paid" });
+    if (!ok) return;
+    setBusyId(id);
+    try {
+      await apiPayInvoice(token, id);
       await load();
     } catch (e) {
       alert(e instanceof ApiRequestError ? e.message : t("admin.invoices.err_generic"));
@@ -312,23 +336,25 @@ export default function PlatformInvoicesPage() {
       <StatGrid cols={4} className="mb-5">
         <StatCard
           icon={<FileText style={{ color: "var(--admin-primary)" }} className="h-[22px] w-[22px]" />}
-          value="—"
+          value={stats ? stats.total_count.toLocaleString() : "—"}
           label="Total invoices (30d)"
         />
         <StatCard
           icon={<CircleCheck style={{ color: "var(--admin-success)" }} className="h-[22px] w-[22px]" />}
-          value="—"
+          value={stats ? stats.paid_count.toLocaleString() : "—"}
           label="Paid"
+          footer={stats ? `${stats.paid_pct.toFixed(0)}% of total` : undefined}
         />
         <StatCard
           icon={<ClockIcon2 style={{ color: "var(--admin-warning)" }} className="h-[22px] w-[22px]" />}
-          value="—"
+          value={stats ? stats.issued_pending_count.toLocaleString() : "—"}
           label="Issued (pending)"
         />
         <StatCard
           icon={<AlertCircle2 style={{ color: "var(--admin-danger)" }} className="h-[22px] w-[22px]" />}
-          value="—"
+          value={stats ? formatMoney(stats.overdue_amount, lang) : "—"}
           label="Overdue total"
+          footer={stats && stats.overdue_count > 0 ? `${stats.overdue_count} overdue` : undefined}
         />
       </StatGrid>
 
@@ -556,7 +582,11 @@ export default function PlatformInvoicesPage() {
                             </IconButton>
                           ) : null}
                           {r.status === "issued" ? (
-                            <IconButton aria-label="Mark paid">
+                            <IconButton
+                              aria-label="Mark paid"
+                              onClick={() => void handleMarkPaid(r.id)}
+                              disabled={busyId === r.id}
+                            >
                               <Check />
                             </IconButton>
                           ) : null}
