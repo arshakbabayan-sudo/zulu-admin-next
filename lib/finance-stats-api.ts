@@ -98,6 +98,27 @@ export async function apiFinanceSummaryV2(
   return apiFetchJson(withRange("/platform-admin/finance-summary/v2", range), { method: "GET", token });
 }
 
+export type RevenueByServiceRow = { service: string; amount: number; pct: number };
+
+export async function apiRevenueByService(
+  token: string,
+  range: FinanceRange = "30d"
+): Promise<ApiSuccessEnvelope<RevenueByServiceRow[]>> {
+  return apiFetchJson(withRange("/platform-admin/finance/revenue-by-service", range), { method: "GET", token });
+}
+
+export type PaymentMethodsBreakdown = {
+  total: number;
+  breakdown: Array<{ method: string; amount: number; pct: number }>;
+};
+
+export async function apiPaymentMethods(
+  token: string,
+  range: FinanceRange = "30d"
+): Promise<ApiSuccessEnvelope<PaymentMethodsBreakdown>> {
+  return apiFetchJson(withRange("/platform-admin/finance/payment-methods", range), { method: "GET", token });
+}
+
 /**
  * Triggers a PDF download for a paid payment receipt.
  * Backend: PaymentController::receiptPdf → PaymentReceiptPdfService.

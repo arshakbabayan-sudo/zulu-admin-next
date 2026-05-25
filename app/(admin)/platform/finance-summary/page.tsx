@@ -27,7 +27,14 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { apiPlatformFinanceSummary, type PlatformFinanceSummary } from "@/lib/platform-admin-api";
-import { apiFinanceSummaryV2, type FinanceSummaryV2 } from "@/lib/finance-stats-api";
+import {
+  apiFinanceSummaryV2,
+  apiRevenueByService,
+  apiPaymentMethods,
+  type FinanceSummaryV2,
+  type RevenueByServiceRow,
+  type PaymentMethodsBreakdown,
+} from "@/lib/finance-stats-api";
 import { formatMoney } from "@/lib/format";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -68,6 +75,8 @@ export default function PlatformFinanceSummaryPage() {
   const allowed = canAccessPlatformAdminNav(user);
   const [data, setData] = useState<PlatformFinanceSummary | null>(null);
   const [v2, setV2] = useState<FinanceSummaryV2 | null>(null);
+  const [revenueByService, setRevenueByService] = useState<RevenueByServiceRow[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodsBreakdown | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [range, setRange] = useState<RangeKey>("30d");
@@ -77,12 +86,16 @@ export default function PlatformFinanceSummaryPage() {
     setErr(null);
     setForbidden(false);
     try {
-      const [res, resV2] = await Promise.all([
+      const [res, resV2, resRev, resMethods] = await Promise.all([
         apiPlatformFinanceSummary(token),
         apiFinanceSummaryV2(token, range).catch(() => null),
+        apiRevenueByService(token, range).catch(() => null),
+        apiPaymentMethods(token, range).catch(() => null),
       ]);
       setData(res.data);
       if (resV2) setV2(resV2.data);
+      if (resRev) setRevenueByService(resRev.data);
+      if (resMethods) setPaymentMethods(resMethods.data);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
       else setErr(e instanceof ApiRequestError ? e.message : t("admin.finance_summary.err_load"));
@@ -210,40 +223,48 @@ export default function PlatformFinanceSummaryPage() {
           <V2CardHeader title="Revenue by service" />
           <V2CardBody>
             <div className="space-y-3">
-              {[
-                { label: "Hotels", value: "—", pct: 0, bar: "primary" as const },
-                { label: "Flights", value: "—", pct: 0, bar: "success" as const },
-                { label: "Transfers", value: "—", pct: 0, bar: "warning" as const },
-                { label: "Excursions", value: "—", pct: 0, bar: "danger" as const },
-              ].map((it) => (
-                <div key={it.label}>
-                  <div className="mb-1.5 flex items-center justify-between text-[12px]">
-                    <span>{it.label}</span>
-                    <span className="font-semibold" style={{ color: "var(--admin-text-secondary)" }}>
-                      {it.value}
-                    </span>
-                  </div>
-                  <div className="h-1.5 overflow-hidden rounded-full" style={{ backgroundColor: "var(--admin-bg-tertiary)" }}>
-                    <div
-                      className="h-full"
-                      style={{
-                        width: `${it.pct}%`,
-                        backgroundColor:
-                          it.bar === "success"
-                            ? "var(--admin-success)"
-                            : it.bar === "warning"
-                            ? "var(--admin-warning)"
-                            : it.bar === "danger"
-                            ? "var(--admin-danger)"
-                            : "var(--admin-primary)",
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
-              <p className="pt-2 text-[11px]" style={{ color: "var(--admin-text-tertiary)" }}>
-                Per-service revenue breakdown — backend follow-up
-              </p>
+              {revenueByService.length === 0 ? (
+                <p className="py-4 text-center text-[12px]" style={{ color: "var(--admin-text-tertiary)" }}>
+                  No paid payments in this range yet.
+                </p>
+              ) : (
+                revenueByService.slice(0, 6).map((row, i) => {
+                  const bar =
+                    i === 0
+                      ? "primary"
+                      : i === 1
+                      ? "success"
+                      : i === 2
+                      ? "warning"
+                      : "danger";
+                  return (
+                    <div key={row.service}>
+                      <div className="mb-1.5 flex items-center justify-between text-[12px]">
+                        <span className="capitalize">{row.service}</span>
+                        <span className="font-semibold" style={{ color: "var(--admin-text-secondary)" }}>
+                          {formatMoney(row.amount, lang)}
+                        </span>
+                      </div>
+                      <div className="h-1.5 overflow-hidden rounded-full" style={{ backgroundColor: "var(--admin-bg-tertiary)" }}>
+                        <div
+                          className="h-full"
+                          style={{
+                            width: `${Math.min(row.pct, 100)}%`,
+                            backgroundColor:
+                              bar === "success"
+                                ? "var(--admin-success)"
+                                : bar === "warning"
+                                ? "var(--admin-warning)"
+                                : bar === "danger"
+                                ? "var(--admin-danger)"
+                                : "var(--admin-primary)",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </V2CardBody>
         </V2Card>
@@ -297,43 +318,49 @@ export default function PlatformFinanceSummaryPage() {
               className="mb-3 text-[24px] font-semibold tabular-nums"
               style={{ color: "var(--admin-text-primary)" }}
             >
-              {data ? formatMoney(totalCollected, lang) : "—"}
+              {paymentMethods ? formatMoney(paymentMethods.total, lang) : data ? formatMoney(totalCollected, lang) : "—"}
             </div>
             <div className="space-y-3">
-              {[
-                { label: "Bank transfer", pct: 0, bar: "primary" as const },
-                { label: "Card", pct: 0, bar: "success" as const },
-                { label: "Wallet · Other", pct: 0, bar: "warning" as const },
-              ].map((it) => (
-                <div key={it.label}>
-                  <div className="flex items-center justify-between text-[12px]">
-                    <span>{it.label}</span>
-                    <span className="font-semibold" style={{ color: "var(--admin-text-secondary)" }}>
-                      —
-                    </span>
-                  </div>
-                  <div
-                    className="mt-1.5 h-1.5 overflow-hidden rounded-full"
-                    style={{ backgroundColor: "var(--admin-bg-tertiary)" }}
-                  >
-                    <div
-                      className="h-full"
-                      style={{
-                        width: `${it.pct}%`,
-                        backgroundColor:
-                          it.bar === "success"
-                            ? "var(--admin-success)"
-                            : it.bar === "warning"
-                            ? "var(--admin-warning)"
-                            : "var(--admin-primary)",
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
-              <p className="pt-2 text-[11px]" style={{ color: "var(--admin-text-tertiary)" }}>
-                Payment-method split — backend follow-up
-              </p>
+              {paymentMethods && paymentMethods.breakdown.length > 0 ? (
+                paymentMethods.breakdown.slice(0, 5).map((m, i) => {
+                  const bar = i === 0 ? "primary" : i === 1 ? "success" : "warning";
+                  const label = m.method
+                    .split("_")
+                    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+                    .join(" ");
+                  return (
+                    <div key={m.method}>
+                      <div className="flex items-center justify-between text-[12px]">
+                        <span>{label}</span>
+                        <span className="font-semibold" style={{ color: "var(--admin-text-secondary)" }}>
+                          {formatMoney(m.amount, lang)} ({m.pct}%)
+                        </span>
+                      </div>
+                      <div
+                        className="mt-1.5 h-1.5 overflow-hidden rounded-full"
+                        style={{ backgroundColor: "var(--admin-bg-tertiary)" }}
+                      >
+                        <div
+                          className="h-full"
+                          style={{
+                            width: `${Math.min(m.pct, 100)}%`,
+                            backgroundColor:
+                              bar === "success"
+                                ? "var(--admin-success)"
+                                : bar === "warning"
+                                ? "var(--admin-warning)"
+                                : "var(--admin-primary)",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="py-4 text-center text-[12px]" style={{ color: "var(--admin-text-tertiary)" }}>
+                  No paid payments in this range yet.
+                </p>
+              )}
             </div>
           </V2CardBody>
         </V2Card>
