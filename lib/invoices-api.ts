@@ -112,3 +112,15 @@ export async function apiSendInvoiceReminder(
 ): Promise<ApiSuccessEnvelope<{ message: string }>> {
   return apiFetchJson(`/invoices/${id}/send-reminder`, { method: "POST", token, body: {} });
 }
+
+/**
+ * Finance group v2 — Phase 2e Quick Actions.
+ * Creates a new invoice for the given order. Backend computes the invoice
+ * lines from the order's items (see InvoiceService::createForOrder).
+ */
+export async function apiStoreInvoice(
+  token: string,
+  orderId: string
+): Promise<ApiSuccessEnvelope<InvoiceRow>> {
+  return apiFetchJson("/invoices", { method: "POST", token, body: { order_id: orderId } });
+}

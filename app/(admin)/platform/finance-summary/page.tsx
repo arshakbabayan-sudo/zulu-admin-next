@@ -71,6 +71,7 @@ import {
   FileDown,
 } from "lucide-react";
 import { FinanceSectionTabs } from "@/components/finance/FinanceSectionTabs";
+import { FinanceQuickActionDrawer, type QuickActionMode } from "@/components/finance/FinanceQuickActionDrawer";
 
 type RangeKey = "7d" | "30d" | "90d" | "year";
 const RANGE_LABELS: Record<RangeKey, string> = {
@@ -89,6 +90,7 @@ export default function PlatformFinanceSummaryPage() {
   const [revenueByService, setRevenueByService] = useState<RevenueByServiceRow[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodsBreakdown | null>(null);
   const [recentTx, setRecentTx] = useState<RecentTransactionRow[]>([]);
+  const [quickMode, setQuickMode] = useState<QuickActionMode | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [range, setRange] = useState<RangeKey>("30d");
@@ -496,10 +498,18 @@ export default function PlatformFinanceSummaryPage() {
           <V2CardHeader title="Quick actions" />
           <V2CardBody>
             <div className="flex flex-col gap-2">
-              <V2Button icon={<FilePlus2 className="h-4 w-4" />}>Issue invoice</V2Button>
-              <V2Button icon={<Wallet className="h-4 w-4" />}>Record payment</V2Button>
-              <V2Button icon={<Receipt className="h-4 w-4" />}>Issue voucher</V2Button>
-              <V2Button icon={<ReceiptText className="h-4 w-4" />}>Run reconciliation</V2Button>
+              <V2Button icon={<FilePlus2 className="h-4 w-4" />} onClick={() => setQuickMode("issue-invoice")}>
+                Issue invoice
+              </V2Button>
+              <V2Button icon={<Wallet className="h-4 w-4" />} onClick={() => setQuickMode("record-payment")}>
+                Record payment
+              </V2Button>
+              <V2Button icon={<Receipt className="h-4 w-4" />} onClick={() => setQuickMode("issue-voucher")}>
+                Issue voucher
+              </V2Button>
+              <V2Button icon={<ReceiptText className="h-4 w-4" />} disabled title="Reconciliation tool coming soon">
+                Run reconciliation
+              </V2Button>
               <div className="my-1 h-px" style={{ backgroundColor: "var(--admin-border)" }} />
               <Link
                 href="/bucket3/per-x-invoicing"
@@ -527,6 +537,17 @@ export default function PlatformFinanceSummaryPage() {
           </V2CardBody>
         </V2Card>
       </div>
+
+      <FinanceQuickActionDrawer
+        mode={quickMode}
+        token={token ?? null}
+        onClose={() => setQuickMode(null)}
+        onSuccess={(_m, payload) => {
+          setQuickMode(null);
+          alert(payload.message);
+          void load();
+        }}
+      />
     </div>
   );
 }

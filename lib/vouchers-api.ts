@@ -86,3 +86,31 @@ export async function apiReissueVoucher(
     body: {},
   });
 }
+
+/**
+ * Finance group v2 — Phase 2e (Item 4.1).
+ *
+ * Admin-side manual voucher issue. Used for compensation, gifts, and
+ * one-off cases outside the normal order flow. Backend generates a
+ * voucher number with `ADM-` prefix (e.g. `ADM-2026-0042`).
+ */
+export type ManualVoucherPayload = {
+  service_type: "hotel" | "flight" | "transfer" | "car" | "excursion" | "visa" | "insurance" | "package";
+  holder_name: string;
+  holder_passport?: string | null;
+  language?: "hy" | "en" | "ru";
+  valid_from?: string | null;
+  valid_to?: string | null;
+  issuer_company_id?: number | null;
+  order_id?: number | null;
+  notes?: string | null;
+  amount?: number | null;
+  currency?: string | null;
+};
+
+export async function apiIssueManualVoucher(
+  token: string,
+  payload: ManualVoucherPayload
+): Promise<ApiSuccessEnvelope<VoucherRow>> {
+  return apiFetchJson("/platform-admin/vouchers", { method: "POST", token, body: payload });
+}

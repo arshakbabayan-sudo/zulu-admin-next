@@ -75,6 +75,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { FinanceSectionTabs } from "@/components/finance/FinanceSectionTabs";
+import { FinanceQuickActionDrawer, type QuickActionMode } from "@/components/finance/FinanceQuickActionDrawer";
 
 const STATUSES = ["issued", "used", "void", "reissued", "expired"] as const;
 const SERVICE_TYPES = ["flight", "hotel", "transfer", "car", "excursion", "visa", "insurance", "package"] as const;
@@ -140,6 +141,7 @@ export default function PlatformVouchersPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [stats, setStats] = useState<VouchersStats | null>(null);
+  const [quickMode, setQuickMode] = useState<QuickActionMode | null>(null);
 
   useEffect(() => {
     if (!allowed || !token) return;
@@ -315,7 +317,7 @@ export default function PlatformVouchersPage() {
         actions={
           <>
             <V2Button icon={<Download className="h-4 w-4" />}>Export CSV</V2Button>
-            <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
+            <V2Button variant="primary" icon={<Plus className="h-4 w-4" />} onClick={() => setQuickMode("issue-voucher")}>
               Issue voucher
             </V2Button>
           </>
@@ -752,6 +754,17 @@ export default function PlatformVouchersPage() {
           </aside>
         </>
       ) : null}
+
+      <FinanceQuickActionDrawer
+        mode={quickMode}
+        token={token ?? null}
+        onClose={() => setQuickMode(null)}
+        onSuccess={(_m, payload) => {
+          setQuickMode(null);
+          alert(payload.message);
+          setAppliedFilters((n) => n + 1);
+        }}
+      />
     </div>
   );
 }
