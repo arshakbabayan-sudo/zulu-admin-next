@@ -1,6 +1,24 @@
 "use client";
 
-/** Phase-2 migration to shared @/components/ui primitives. */
+/**
+ * v2 admin-redesign — Commissions page (Finance group).
+ *
+ * Source spec: docs/admin_designe/finance_group_mocks.html (PAGE 4 COMMISSIONS)
+ * Migration prompt: docs/admin_designe/finance_group_implementation_prompt.md §3.C
+ *
+ * Chrome:
+ *   - V2PageHeader + breadcrumb + Export + New commission
+ *   - FinanceSectionTabs
+ *   - 4 plain stat cards (Active policies / Recorded / Pending settlement / Avg rate)
+ *   - Pill-style sub-tabs (Policies / Records) — distinct from section tabs
+ *   - FilterCard (status / service type / type / search) — visible on policies tab
+ *   - Active filter chips
+ *   - V2Card wrapping table; row-cell-stack for policy name + description
+ *   - Status badges with success/gray for policy status; multiple tones for record status
+ *   - Avatar + company name (where present)
+ *   - IconButton row (Edit / More) on policies; modal for new commission
+ *   - Pagination inside V2Card
+ */
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
@@ -18,31 +36,62 @@ import {
   type CommissionPolicyRow,
   type CommissionRecordRow,
 } from "@/lib/commissions-api";
-import { useCallback, useEffect, useState } from "react";
-import { Plus } from "lucide-react";
+import { formatMoney } from "@/lib/format";
 import {
-  Pagination,
-  Table,
-  TBody,
-  TD,
-  TEmpty,
-  TH,
-  THead,
-  Tabs,
-  TR,
-} from "@/components/ui";
+  STATUS_BADGE_CLASS,
+  avatarInitials,
+  avatarStyle,
+  formatRelativeTime,
+  pickAvatarTone,
+  statusBadgeStyle,
+  type StatusTone,
+} from "@/lib/admin-v2-helpers";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Plus,
+  Download,
+  Edit3,
+  MoreVertical,
+  Ban,
+  Percent,
+  Receipt,
+  Clock,
+  TrendingUp,
+  X as XIcon,
+  XCircle,
+} from "lucide-react";
+import { Pagination } from "@/components/ui";
 import {
   PageHeader as V2PageHeader,
-  SectionTabs,
+  FilterCard,
+  FilterField,
   V2Card,
   V2Button,
+  StatCard,
+  StatGrid,
+  IconButton,
 } from "@/components/ui/v2";
+import { FinanceSectionTabs } from "@/components/finance/FinanceSectionTabs";
 
 type Tab = "policies" | "records";
 
+const POLICY_STATUS_META: Record<string, { tone: StatusTone; label: string }> = {
+  active: { tone: "success", label: "Active" },
+  inactive: { tone: "gray", label: "Inactive" },
+  scheduled: { tone: "info", label: "Scheduled" },
+};
+
+const RECORD_STATUS_META: Record<string, { tone: StatusTone; label: string }> = {
+  paid: { tone: "success", label: "Paid" },
+  settled: { tone: "success", label: "Settled" },
+  pending: { tone: "warning", label: "Pending" },
+  cancelled: { tone: "danger", label: "Cancelled" },
+  processing: { tone: "info", label: "Processing" },
+};
+
 export default function CommissionsPage() {
   const { token, user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);
   const [tab, setTab] = useState<Tab>("policies");
@@ -55,10 +104,14 @@ export default function CommissionsPage() {
   const [recordsMeta, setRecordsMeta] = useState<ApiListMeta | null>(null);
   const [recordsPage, setRecordsPage] = useState(1);
 
+  const [statusFilter, setStatusFilter] = useState("");
+  const [serviceFilter, setServiceFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
+  const [search, setSearch] = useState("");
+
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
-  // Phase 7.4 — "+ New" modal state
   const [newOpen, setNewOpen] = useState(false);
   const [newDraft, setNewDraft] = useState<CommissionPolicyCreate>({
     company_id: 0,
@@ -98,8 +151,12 @@ export default function CommissionsPage() {
     }
   }, [token, allowed, recordsPage, t]);
 
-  useEffect(() => { if (tab === "policies") void loadPolicies(); }, [tab, loadPolicies]);
-  useEffect(() => { if (tab === "records") void loadRecords(); }, [tab, loadRecords]);
+  useEffect(() => {
+    if (tab === "policies") void loadPolicies();
+  }, [tab, loadPolicies]);
+  useEffect(() => {
+    if (tab === "records") void loadRecords();
+  }, [tab, loadRecords]);
 
   async function handleDeactivate(id: string) {
     if (!token) return;
@@ -116,7 +173,6 @@ export default function CommissionsPage() {
     }
   }
 
-  // Phase 7.4 — Create new commission policy
   async function handleCreatePolicy() {
     if (!token) return;
     if (!newDraft.company_id || newDraft.company_id <= 0) {
@@ -155,6 +211,27 @@ export default function CommissionsPage() {
     }
   }
 
+  const activeChips = useMemo(() => {
+    const chips: Array<{ key: string; label: string; clear: () => void }> = [];
+    if (statusFilter)
+      chips.push({
+        key: "status",
+        label: `Status: ${POLICY_STATUS_META[statusFilter]?.label ?? statusFilter}`,
+        clear: () => setStatusFilter(""),
+      });
+    if (serviceFilter) chips.push({ key: "service", label: `Service: ${serviceFilter}`, clear: () => setServiceFilter("") });
+    if (typeFilter) chips.push({ key: "type", label: `Type: ${typeFilter}`, clear: () => setTypeFilter("") });
+    if (search.trim()) chips.push({ key: "search", label: `“${search.trim()}”`, clear: () => setSearch("") });
+    return chips;
+  }, [statusFilter, serviceFilter, typeFilter, search]);
+
+  function clearAllFilters() {
+    setStatusFilter("");
+    setServiceFilter("");
+    setTypeFilter("");
+    setSearch("");
+  }
+
   if (!allowed || forbidden) {
     return (
       <div className="space-y-4">
@@ -166,9 +243,19 @@ export default function CommissionsPage() {
     );
   }
 
+  const filteredPolicies = policies.filter((r) => {
+    if (statusFilter && r.status !== statusFilter) return false;
+    if (serviceFilter && r.service_type !== serviceFilter) return false;
+    if (typeFilter && r.type !== typeFilter) return false;
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      if (!r.name?.toLowerCase().includes(q) && !String(r.id).toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+
   return (
     <div>
-      {/* v2 admin-redesign — Commissions ledger page chrome (Finance section). */}
       <V2PageHeader
         breadcrumb={[
           { label: "Home", href: "/dashboard" },
@@ -176,154 +263,426 @@ export default function CommissionsPage() {
           { label: t("admin.platform_commissions.title") },
         ]}
         title={t("admin.platform_commissions.title")}
+        subtitle={
+          t("admin.platform_commissions.subtitle") !== "admin.platform_commissions.subtitle"
+            ? t("admin.platform_commissions.subtitle")
+            : "Commission policies and recorded commission transactions"
+        }
         actions={
-          <V2Button variant="primary" icon={<Plus className="h-4 w-4" />} onClick={() => setNewOpen(true)}>
-            {t("admin.platform_commissions.btn_new")}
-          </V2Button>
+          <>
+            <V2Button icon={<Download className="h-4 w-4" />}>Export CSV</V2Button>
+            <V2Button variant="primary" icon={<Plus className="h-4 w-4" />} onClick={() => setNewOpen(true)}>
+              {t("admin.platform_commissions.btn_new")}
+            </V2Button>
+          </>
         }
       />
 
-      <SectionTabs
+      <FinanceSectionTabs
         activeHref="/platform/commissions"
-        items={[
-          { href: "/platform/finance-summary", label: "Summary" },
-          { href: "/platform/invoices", label: "Invoices" },
-          { href: "/platform/payments", label: "Payments" },
-          { href: "/platform/commissions", label: "Commissions ledger" },
-          { href: "/platform/finance", label: "Transactions" },
-          { href: "/platform/vouchers", label: "Vouchers" },
-        ]}
+        counts={{ commissions: policiesMeta?.total ?? recordsMeta?.total }}
       />
 
-      <Tabs
-        value={tab}
-        onChange={(v) => setTab(v as Tab)}
-        items={[
-          { id: "policies", label: t("admin.platform_commissions.policies") },
-          { id: "records", label: t("admin.platform_commissions.records") },
-        ]}
-      />
+      <StatGrid cols={4} className="mb-5">
+        <StatCard
+          icon={<Percent style={{ color: "var(--admin-primary)" }} className="h-[22px] w-[22px]" />}
+          value={policiesMeta?.total ?? "—"}
+          label="Active policies"
+        />
+        <StatCard
+          icon={<Receipt style={{ color: "var(--admin-success)" }} className="h-[22px] w-[22px]" />}
+          value="—"
+          label="Recorded (30d)"
+        />
+        <StatCard
+          icon={<Clock style={{ color: "var(--admin-warning)" }} className="h-[22px] w-[22px]" />}
+          value="—"
+          label="Pending settlement"
+        />
+        <StatCard
+          icon={<TrendingUp style={{ color: "var(--admin-info)" }} className="h-[22px] w-[22px]" />}
+          value="—"
+          label="Avg. commission rate"
+        />
+      </StatGrid>
 
-      {err ? (
-        <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
+      {/* Pill-style sub-tabs (Policies / Records) */}
+      <div
+        className="mb-4 inline-flex w-fit gap-1 rounded-[12px] border bg-white p-1"
+        style={{ borderColor: "var(--admin-border)" }}
+        role="tablist"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "policies"}
+          onClick={() => setTab("policies")}
+          className="inline-flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-[13px] font-medium transition"
+          style={
+            tab === "policies"
+              ? { backgroundColor: "var(--admin-primary)", color: "white" }
+              : { backgroundColor: "transparent", color: "var(--admin-text-secondary)" }
+          }
+        >
+          {t("admin.platform_commissions.policies") || "Policies"}
+          <span
+            className="rounded-full px-1.5 py-px text-[10px] font-semibold"
+            style={
+              tab === "policies"
+                ? { backgroundColor: "rgba(255,255,255,0.2)", color: "white" }
+                : { backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }
+            }
+          >
+            {policiesMeta?.total ?? 0}
+          </span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "records"}
+          onClick={() => setTab("records")}
+          className="inline-flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-[13px] font-medium transition"
+          style={
+            tab === "records"
+              ? { backgroundColor: "var(--admin-primary)", color: "white" }
+              : { backgroundColor: "transparent", color: "var(--admin-text-secondary)" }
+          }
+        >
+          {t("admin.platform_commissions.records") || "Records"}
+          <span
+            className="rounded-full px-1.5 py-px text-[10px] font-semibold"
+            style={
+              tab === "records"
+                ? { backgroundColor: "rgba(255,255,255,0.2)", color: "white" }
+                : { backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }
+            }
+          >
+            {recordsMeta?.total ?? 0}
+          </span>
+        </button>
+      </div>
+
+      {tab === "policies" ? (
+        <FilterCard>
+          <FilterField label="Status">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="h-[34px] rounded-md border bg-white px-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+              style={{ borderColor: "var(--admin-border)" }}
+            >
+              <option value="">All</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="scheduled">Scheduled</option>
+            </select>
+          </FilterField>
+          <FilterField label="Service type">
+            <select
+              value={serviceFilter}
+              onChange={(e) => setServiceFilter(e.target.value)}
+              className="h-[34px] rounded-md border bg-white px-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+              style={{ borderColor: "var(--admin-border)" }}
+            >
+              <option value="">All services</option>
+              <option value="hotel">Hotel</option>
+              <option value="flight">Flight</option>
+              <option value="transfer">Transfer</option>
+              <option value="excursion">Excursion</option>
+              <option value="car">Car</option>
+              <option value="visa">Visa</option>
+              <option value="package">Package</option>
+            </select>
+          </FilterField>
+          <FilterField label="Type">
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="h-[34px] rounded-md border bg-white px-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+              style={{ borderColor: "var(--admin-border)" }}
+            >
+              <option value="">All</option>
+              <option value="percentage">Percentage</option>
+              <option value="fixed">Fixed</option>
+            </select>
+          </FilterField>
+          <FilterField label="Search" minWidth={240}>
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Policy name or company..."
+              className="h-[34px] rounded-md border bg-white px-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+              style={{ borderColor: "var(--admin-border)" }}
+            />
+          </FilterField>
+          {activeChips.length > 0 ? <V2Button onClick={clearAllFilters}>Clear</V2Button> : null}
+        </FilterCard>
       ) : null}
 
-      {tab === "policies" && (
-        <>
-          <V2Card>
-          <Table>
-            <THead>
-              <TR>
-                <TH>{t("admin.crud.common.id")}</TH>
-                <TH>{t("admin.platform_commissions.name")}</TH>
-                <TH>{t("admin.platform_commissions.type")}</TH>
-                <TH>{t("admin.platform_commissions.rate")}</TH>
-                <TH>{t("admin.platform_commissions.service")}</TH>
-                <TH>{t("admin.platform_commissions.status")}</TH>
-                <TH>{t("admin.platform_commissions.actions")}</TH>
-              </TR>
-            </THead>
-            <TBody>
-              {policies.length === 0 ? (
-                <TEmpty colSpan={7}>{t("admin.platform_commissions.no_policies")}</TEmpty>
-              ) : null}
-              {policies.map((r) => (
-                <TR key={r.id}>
-                  <TD className="tabular-nums font-mono text-xs text-fg-t7">#{r.id}</TD>
-                  <TD className="font-medium text-fg-t8">{r.name ?? "—"}</TD>
-                  <TD>
-                    <span
-                      className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
-                      style={{ backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }}
-                    >
-                      {r.type}
-                    </span>
-                  </TD>
-                  <TD className="tabular-nums font-medium text-fg-t8">{r.rate}%</TD>
-                  <TD className="text-fg-t8">{r.service_type ?? t("common.all")}</TD>
-                  <TD>
-                    <span
-                      className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
-                      style={commissionStatusBadgeStyle(r.status)}
-                    >
-                      {r.status}
-                    </span>
-                  </TD>
-                  <TD>
-                    {r.status === "active" && (
-                      <button
-                        type="button"
-                        disabled={busyId === r.id}
-                        onClick={() => void handleDeactivate(r.id)}
-                        className="inline-flex h-7 items-center rounded-md border px-2.5 text-[11px] font-medium transition disabled:opacity-40"
-                        style={{
-                          color: "var(--admin-danger)",
-                          borderColor: "var(--admin-danger-light)",
-                          backgroundColor: "transparent",
-                        }}
+      {tab === "policies" && activeChips.length > 0 ? (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <span className="text-[11px] font-medium" style={{ color: "var(--admin-text-secondary)" }}>
+            Active filters:
+          </span>
+          {activeChips.map((chip) => (
+            <button
+              key={chip.key}
+              type="button"
+              onClick={chip.clear}
+              className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[12px] font-medium transition hover:opacity-80"
+              style={{
+                backgroundColor: "var(--admin-primary-soft)",
+                borderColor: "var(--admin-primary-light)",
+                color: "var(--admin-primary)",
+              }}
+            >
+              {chip.label}
+              <XIcon className="h-3 w-3 opacity-70" />
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={clearAllFilters}
+            className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium opacity-80 hover:opacity-100"
+            style={{ color: "var(--admin-text-secondary)" }}
+          >
+            <XCircle className="h-3 w-3" />
+            Clear all
+          </button>
+        </div>
+      ) : null}
+
+      {err ? (
+        <div
+          className="mb-4 rounded-md border px-4 py-2 text-sm"
+          style={{
+            borderColor: "var(--admin-danger-light)",
+            backgroundColor: "var(--admin-danger-light)",
+            color: "var(--admin-danger-dark)",
+          }}
+        >
+          {err}
+        </div>
+      ) : null}
+
+      {tab === "policies" ? (
+        <V2Card>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-[13px]">
+              <thead
+                className="text-[11px] font-semibold uppercase tracking-[0.5px]"
+                style={{ backgroundColor: "var(--admin-bg-secondary)", color: "var(--admin-text-secondary)" }}
+              >
+                <tr>
+                  <th className="px-4 py-2.5 text-left">{t("admin.crud.common.id")}</th>
+                  <th className="px-4 py-2.5 text-left">Policy name</th>
+                  <th className="px-4 py-2.5 text-left">Type</th>
+                  <th className="px-4 py-2.5 text-left">Rate</th>
+                  <th className="px-4 py-2.5 text-left">Service</th>
+                  <th className="px-4 py-2.5 text-left">Company</th>
+                  <th className="px-4 py-2.5 text-left">Status</th>
+                  <th className="px-4 py-2.5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredPolicies.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-10 text-center text-sm" style={{ color: "var(--admin-text-secondary)" }}>
+                      {t("admin.platform_commissions.no_policies")}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredPolicies.map((r) => {
+                    const statusMeta = POLICY_STATUS_META[r.status] ?? { tone: "gray" as StatusTone, label: r.status };
+                    const isPercentage = (r.type ?? "percentage") === "percentage";
+                    const tone = pickAvatarTone(r.company_id ?? r.id);
+                    return (
+                      <tr
+                        key={r.id}
+                        className="border-t transition hover:bg-[color:var(--admin-bg-secondary)]"
+                        style={{ borderColor: "var(--admin-border)" }}
                       >
-                        {t("admin.platform_commissions.deactivate")}
-                      </button>
-                    )}
-                  </TD>
-                </TR>
-              ))}
-            </TBody>
-          </Table>
-          </V2Card>
+                        <td className="px-4 py-3 font-mono text-[12px] text-fg-t7">#{r.id.slice(0, 8)}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="font-medium text-fg-t8">{r.name ?? "—"}</span>
+                            {r.commission_mode ? (
+                              <span className="text-[11px]" style={{ color: "var(--admin-text-secondary)" }}>
+                                {r.commission_mode}
+                              </span>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={STATUS_BADGE_CLASS}
+                            style={statusBadgeStyle(isPercentage ? "info" : "primary")}
+                          >
+                            {isPercentage ? "Percentage" : "Fixed"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 font-semibold text-fg-t8 tabular-nums">
+                          {isPercentage
+                            ? `${Number(r.percent ?? r.rate ?? 0).toFixed(2)}%`
+                            : formatMoney(r.rate, lang, "USD")}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={STATUS_BADGE_CLASS} style={statusBadgeStyle("gray")}>
+                            {r.service_type ?? "All"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {r.company_id ? (
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold"
+                                style={avatarStyle(tone)}
+                              >
+                                {avatarInitials(`#${r.company_id}`)}
+                              </span>
+                              <span className="text-fg-t8">Company #{r.company_id}</span>
+                            </div>
+                          ) : (
+                            <span className="text-[12px]" style={{ color: "var(--admin-text-tertiary)" }}>
+                              —
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={STATUS_BADGE_CLASS} style={statusBadgeStyle(statusMeta.tone)}>
+                            {statusMeta.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <IconButton aria-label="Edit">
+                              <Edit3 />
+                            </IconButton>
+                            {r.status === "active" ? (
+                              <IconButton
+                                aria-label="Deactivate"
+                                onClick={() => void handleDeactivate(r.id)}
+                                disabled={busyId === r.id}
+                              >
+                                <Ban />
+                              </IconButton>
+                            ) : null}
+                            <IconButton aria-label="More">
+                              <MoreVertical />
+                            </IconButton>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
           {policiesMeta && policiesMeta.last_page > 1 ? (
-            <Pagination page={policiesMeta.current_page} lastPage={policiesMeta.last_page} onPage={setPoliciesPage} />
+            <div
+              className="flex flex-wrap items-center justify-between gap-2 border-t px-5 py-3.5 text-[12px]"
+              style={{ borderColor: "var(--admin-border)", color: "var(--admin-text-secondary)" }}
+            >
+              <span>
+                Showing {(policiesMeta.current_page - 1) * policiesMeta.per_page + 1}–
+                {Math.min(policiesMeta.current_page * policiesMeta.per_page, policiesMeta.total)} of {policiesMeta.total}{" "}
+                policies
+              </span>
+              <Pagination page={policiesMeta.current_page} lastPage={policiesMeta.last_page} onPage={setPoliciesPage} />
+            </div>
           ) : null}
-        </>
-      )}
-
-      {tab === "records" && (
-        <>
-          <V2Card>
-          <Table>
-            <THead>
-              <TR>
-                <TH>{t("admin.crud.common.id")}</TH>
-                <TH>{t("admin.platform_commissions.amount")}</TH>
-                <TH>{t("admin.platform_commissions.status")}</TH>
-                <TH>{t("admin.platform_commissions.company")}</TH>
-                <TH>{t("admin.platform_commissions.booking_id")}</TH>
-                <TH>{t("admin.platform_commissions.created")}</TH>
-              </TR>
-            </THead>
-            <TBody>
-              {records.length === 0 ? (
-                <TEmpty colSpan={6}>{t("admin.platform_commissions.no_records")}</TEmpty>
-              ) : null}
-              {records.map((r) => (
-                <TR key={r.id}>
-                  <TD className="tabular-nums font-mono text-xs text-fg-t7">#{r.id}</TD>
-                  <TD className="tabular-nums font-medium text-fg-t8">
-                    {r.currency} {Number(r.amount).toFixed(2)}
-                  </TD>
-                  <TD>
-                    <span
-                      className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
-                      style={commissionStatusBadgeStyle(r.status)}
-                    >
-                      {r.status}
-                    </span>
-                  </TD>
-                  <TD className="text-fg-t8">{r.company?.name ?? r.company_id ?? "—"}</TD>
-                  <TD className="tabular-nums font-mono text-xs">{r.booking_id ?? "—"}</TD>
-                  <TD className="text-xs text-fg-t6">{formatRelativeTime(r.created_at)}</TD>
-                </TR>
-              ))}
-            </TBody>
-          </Table>
-          </V2Card>
+        </V2Card>
+      ) : (
+        <V2Card>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-[13px]">
+              <thead
+                className="text-[11px] font-semibold uppercase tracking-[0.5px]"
+                style={{ backgroundColor: "var(--admin-bg-secondary)", color: "var(--admin-text-secondary)" }}
+              >
+                <tr>
+                  <th className="px-4 py-2.5 text-left">{t("admin.crud.common.id")}</th>
+                  <th className="px-4 py-2.5 text-left">Amount</th>
+                  <th className="px-4 py-2.5 text-left">Status</th>
+                  <th className="px-4 py-2.5 text-left">Company</th>
+                  <th className="px-4 py-2.5 text-left">Booking</th>
+                  <th className="px-4 py-2.5 text-left">Created</th>
+                </tr>
+              </thead>
+              <tbody>
+                {records.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-10 text-center text-sm" style={{ color: "var(--admin-text-secondary)" }}>
+                      {t("admin.platform_commissions.no_records")}
+                    </td>
+                  </tr>
+                ) : (
+                  records.map((r) => {
+                    const statusMeta = RECORD_STATUS_META[r.status] ?? { tone: "gray" as StatusTone, label: r.status };
+                    const tone = pickAvatarTone(r.company?.id ?? r.company_id ?? r.id);
+                    return (
+                      <tr
+                        key={r.id}
+                        className="border-t transition hover:bg-[color:var(--admin-bg-secondary)]"
+                        style={{ borderColor: "var(--admin-border)" }}
+                      >
+                        <td className="px-4 py-3 font-mono text-[12px] text-fg-t7">#{r.id}</td>
+                        <td className="px-4 py-3 font-semibold text-fg-t8 tabular-nums">
+                          {formatMoney(r.amount, lang, r.currency)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={STATUS_BADGE_CLASS} style={statusBadgeStyle(statusMeta.tone)}>
+                            {statusMeta.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {r.company?.name ? (
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold"
+                                style={avatarStyle(tone)}
+                              >
+                                {avatarInitials(r.company.name)}
+                              </span>
+                              <span className="text-fg-t8">{r.company.name}</span>
+                            </div>
+                          ) : (
+                            <span className="text-[12px]" style={{ color: "var(--admin-text-tertiary)" }}>
+                              {r.company_id ? `Company #${r.company_id}` : "—"}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 font-mono text-[12px]" style={{ color: "var(--admin-primary)" }}>
+                          {r.booking_id ? `#${r.booking_id}` : "—"}
+                        </td>
+                        <td className="px-4 py-3 text-[12px]" style={{ color: "var(--admin-text-secondary)" }}>
+                          {formatRelativeTime(r.created_at)}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
           {recordsMeta && recordsMeta.last_page > 1 ? (
-            <Pagination page={recordsMeta.current_page} lastPage={recordsMeta.last_page} onPage={setRecordsPage} />
+            <div
+              className="flex flex-wrap items-center justify-between gap-2 border-t px-5 py-3.5 text-[12px]"
+              style={{ borderColor: "var(--admin-border)", color: "var(--admin-text-secondary)" }}
+            >
+              <span>
+                Showing {(recordsMeta.current_page - 1) * recordsMeta.per_page + 1}–
+                {Math.min(recordsMeta.current_page * recordsMeta.per_page, recordsMeta.total)} of {recordsMeta.total} records
+              </span>
+              <Pagination page={recordsMeta.current_page} lastPage={recordsMeta.last_page} onPage={setRecordsPage} />
+            </div>
           ) : null}
-        </>
+        </V2Card>
       )}
 
-      {/* Phase 7.4 — "+ New" commission policy modal */}
+      {/* New commission policy modal */}
       {newOpen && (
         <div
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-4 sm:items-center"
@@ -333,38 +692,39 @@ export default function CommissionsPage() {
             if (e.target === e.currentTarget) setNewOpen(false);
           }}
         >
-          <div className="w-full max-w-zulu-modal overflow-hidden rounded-t-zulu-modal bg-white shadow-zulu-modal sm:rounded-zulu-modal">
-            <div className="flex items-start justify-between gap-3 border-b border-default p-5">
-              <h2 className="text-lg font-semibold text-fg-t8">
+          <div className="w-full max-w-[480px] overflow-hidden rounded-t-[12px] bg-white shadow-2xl sm:rounded-[12px]">
+            <div className="flex items-start justify-between gap-3 border-b p-5" style={{ borderColor: "var(--admin-border)" }}>
+              <h2 className="text-lg font-semibold" style={{ color: "var(--admin-text-primary)" }}>
                 {t("admin.platform_commissions.new_modal_title")}
               </h2>
-              <button
-                type="button"
-                onClick={() => setNewOpen(false)}
-                className="text-fg-t6 transition hover:text-fg-t8"
-                aria-label="Close"
-              >
-                ✕
-              </button>
+              <IconButton aria-label="Close" onClick={() => setNewOpen(false)}>
+                <XIcon />
+              </IconButton>
             </div>
             <div className="space-y-4 p-5">
               <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-fg-t7">{t("admin.platform_commissions.field_company_id")}</span>
+                <span className="font-medium" style={{ color: "var(--admin-text-secondary)" }}>
+                  {t("admin.platform_commissions.field_company_id")}
+                </span>
                 <input
                   type="number"
                   min="1"
                   value={newDraft.company_id || ""}
                   onChange={(e) => setNewDraft({ ...newDraft, company_id: Number(e.target.value) || 0 })}
-                  className="h-10 rounded-zulu border border-default px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+                  className="h-[36px] rounded-md border bg-white px-3 text-[13px] outline-none focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+                  style={{ borderColor: "var(--admin-border)" }}
                   placeholder={t("admin.platform_commissions.field_company_id_placeholder")}
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-fg-t7">{t("admin.platform_commissions.field_service_type")}</span>
+                <span className="font-medium" style={{ color: "var(--admin-text-secondary)" }}>
+                  {t("admin.platform_commissions.field_service_type")}
+                </span>
                 <select
                   value={newDraft.service_type ?? ""}
                   onChange={(e) => setNewDraft({ ...newDraft, service_type: e.target.value || null })}
-                  className="h-10 rounded-zulu border border-default bg-white px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+                  className="h-[36px] rounded-md border bg-white px-3 text-[13px] outline-none focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+                  style={{ borderColor: "var(--admin-border)" }}
                 >
                   <option value="">{t("common.all")}</option>
                   <option value="hotel">Hotel</option>
@@ -377,7 +737,9 @@ export default function CommissionsPage() {
                 </select>
               </label>
               <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-fg-t7">{t("admin.platform_commissions.field_type")}</span>
+                <span className="font-medium" style={{ color: "var(--admin-text-secondary)" }}>
+                  {t("admin.platform_commissions.field_type")}
+                </span>
                 <select
                   value={newDraft.type}
                   onChange={(e) =>
@@ -388,7 +750,8 @@ export default function CommissionsPage() {
                       fixed_value: e.target.value === "fixed" ? newDraft.fixed_value : null,
                     })
                   }
-                  className="h-10 rounded-zulu border border-default bg-white px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+                  className="h-[36px] rounded-md border bg-white px-3 text-[13px] outline-none focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+                  style={{ borderColor: "var(--admin-border)" }}
                 >
                   <option value="percentage">{t("admin.platform_commissions.type_percentage")}</option>
                   <option value="fixed">{t("admin.platform_commissions.type_fixed")}</option>
@@ -396,7 +759,9 @@ export default function CommissionsPage() {
               </label>
               {newDraft.type === "percentage" ? (
                 <label className="flex flex-col gap-1 text-sm">
-                  <span className="font-medium text-fg-t7">{t("admin.platform_commissions.field_percent")}</span>
+                  <span className="font-medium" style={{ color: "var(--admin-text-secondary)" }}>
+                    {t("admin.platform_commissions.field_percent")}
+                  </span>
                   <input
                     type="number"
                     step="0.01"
@@ -404,30 +769,37 @@ export default function CommissionsPage() {
                     max="100"
                     value={newDraft.percent ?? ""}
                     onChange={(e) => setNewDraft({ ...newDraft, percent: Number(e.target.value) })}
-                    className="h-10 rounded-zulu border border-default px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+                    className="h-[36px] rounded-md border bg-white px-3 text-[13px] outline-none focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+                    style={{ borderColor: "var(--admin-border)" }}
                     placeholder="0.00"
                   />
                 </label>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2">
                   <label className="flex flex-col gap-1 text-sm">
-                    <span className="font-medium text-fg-t7">{t("admin.platform_commissions.field_fixed_value")}</span>
+                    <span className="font-medium" style={{ color: "var(--admin-text-secondary)" }}>
+                      {t("admin.platform_commissions.field_fixed_value")}
+                    </span>
                     <input
                       type="number"
                       step="0.01"
                       min="0"
                       value={newDraft.fixed_value ?? ""}
                       onChange={(e) => setNewDraft({ ...newDraft, fixed_value: Number(e.target.value) })}
-                      className="h-10 rounded-zulu border border-default px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+                      className="h-[36px] rounded-md border bg-white px-3 text-[13px] outline-none focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+                      style={{ borderColor: "var(--admin-border)" }}
                       placeholder="0.00"
                     />
                   </label>
                   <label className="flex flex-col gap-1 text-sm">
-                    <span className="font-medium text-fg-t7">{t("admin.platform_commissions.field_currency")}</span>
+                    <span className="font-medium" style={{ color: "var(--admin-text-secondary)" }}>
+                      {t("admin.platform_commissions.field_currency")}
+                    </span>
                     <select
                       value={newDraft.fixed_currency ?? "AMD"}
                       onChange={(e) => setNewDraft({ ...newDraft, fixed_currency: e.target.value })}
-                      className="h-10 rounded-zulu border border-default bg-white px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+                      className="h-[36px] rounded-md border bg-white px-3 text-[13px] outline-none focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+                      style={{ borderColor: "var(--admin-border)" }}
                     >
                       <option value="AMD">AMD</option>
                       <option value="USD">USD</option>
@@ -438,13 +810,16 @@ export default function CommissionsPage() {
                 </div>
               )}
               <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-fg-t7">{t("admin.platform_commissions.field_status")}</span>
+                <span className="font-medium" style={{ color: "var(--admin-text-secondary)" }}>
+                  {t("admin.platform_commissions.field_status")}
+                </span>
                 <select
                   value={newDraft.status ?? "active"}
                   onChange={(e) =>
                     setNewDraft({ ...newDraft, status: e.target.value as "active" | "inactive" | "scheduled" })
                   }
-                  className="h-10 rounded-zulu border border-default bg-white px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+                  className="h-[36px] rounded-md border bg-white px-3 text-[13px] outline-none focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+                  style={{ borderColor: "var(--admin-border)" }}
                 >
                   <option value="active">{t("admin.platform_commissions.status_active")}</option>
                   <option value="inactive">{t("admin.platform_commissions.status_inactive")}</option>
@@ -452,69 +827,29 @@ export default function CommissionsPage() {
                 </select>
               </label>
               <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-fg-t7">{t("admin.platform_commissions.field_notes")}</span>
+                <span className="font-medium" style={{ color: "var(--admin-text-secondary)" }}>
+                  {t("admin.platform_commissions.field_notes")}
+                </span>
                 <textarea
                   value={newDraft.notes ?? ""}
                   onChange={(e) => setNewDraft({ ...newDraft, notes: e.target.value })}
-                  className="min-h-[60px] rounded-zulu border border-default px-2 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+                  className="min-h-[60px] rounded-md border bg-white px-3 py-2 text-[13px] outline-none focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+                  style={{ borderColor: "var(--admin-border)" }}
                 />
               </label>
             </div>
-            <div className="flex items-center justify-end gap-2 border-t border-default p-5">
-              <button
-                type="button"
-                onClick={() => setNewOpen(false)}
-                className="inline-flex h-10 items-center rounded-zulu border border-default bg-white px-4 text-sm font-medium text-fg-t8 transition hover:bg-figma-bg-1"
-              >
-                {t("common.cancel")}
-              </button>
-              <button
-                type="button"
-                disabled={newSaving}
-                onClick={() => void handleCreatePolicy()}
-                className="inline-flex h-10 items-center rounded-zulu bg-primary px-4 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
-              >
+            <div
+              className="flex items-center justify-end gap-2 border-t p-5"
+              style={{ borderColor: "var(--admin-border)" }}
+            >
+              <V2Button onClick={() => setNewOpen(false)}>{t("common.cancel")}</V2Button>
+              <V2Button variant="primary" disabled={newSaving} onClick={() => void handleCreatePolicy()}>
                 {newSaving ? t("common.saving") : t("admin.platform_commissions.btn_create")}
-              </button>
+              </V2Button>
             </div>
           </div>
         </div>
       )}
     </div>
   );
-}
-
-// v2 admin-redesign helpers — colored status pill + relative time.
-function commissionStatusBadgeStyle(status: string): React.CSSProperties {
-  switch (status) {
-    case "active":
-    case "paid":
-    case "settled":
-      return { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" };
-    case "inactive":
-    case "cancelled":
-      return { backgroundColor: "var(--admin-danger-light)", color: "var(--admin-danger-dark)" };
-    case "scheduled":
-      return { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" };
-    case "pending":
-      return { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" };
-    default:
-      return { backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" };
-  }
-}
-
-function formatRelativeTime(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  const t = new Date(iso).getTime();
-  if (Number.isNaN(t)) return "—";
-  const diff = Date.now() - t;
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins} min ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
-  const days = Math.floor(hours / 24);
-  if (days === 1) return "Yesterday";
-  if (days < 7) return `${days} days ago`;
-  return new Date(iso).toLocaleDateString();
 }
