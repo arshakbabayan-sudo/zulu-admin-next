@@ -305,43 +305,52 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     labelFallback: "Settings",
     icon: "/icons/menu/settings.svg",
     defaultHref: "/settings/pricing-rules",
+    // Tabs grouped logically per Bucket B audit: Pricing & money → Permissions
+    // → Localization → Content/CMS → Layout → Promotions → Inventory config →
+    // System integrations → Support. Order is what the sidebar renders top-down.
     tabs: [
-      // NEW placeholder — replaces /operator/commission-settings and will
-      // later host unified Markup + Commission rules.
+      // ── Pricing & money ───────────────────────────────────────────────
       { href: "/settings/pricing-rules", labelKey: "admin.nav.tab.pricing_rules" },
-      // Phase 1 / D.2 — money-flow terms CRUD (super-admin only).
       { href: "/settings/money-flow", labelKey: "admin.nav.tab.money_flow", superAdminOnly: true },
-      // Phase Զ.15 / Item 16-17 — manual FX rate overrides (read open,
-      // write super-admin only).
       { href: "/settings/exchange-rates", labelKey: "admin.nav.tab.exchange_rates" },
-      // RBAC — UI-level filters company-scoped roles for non-super viewers
-      // (see /platform/rbac/page.tsx). Backend whitelist is a separate task.
+
+      // ── Permissions ───────────────────────────────────────────────────
+      // UI-level filter for company-scoped roles (see /platform/rbac/page.tsx).
       { href: "/platform/rbac", labelKey: "admin.nav.tab.rbac" },
-      // Localization
+
+      // ── Localization ──────────────────────────────────────────────────
       { href: "/localization/languages", labelKey: "admin.nav.tab.languages", superAdminOnly: true },
       { href: "/localization/ui-translations", labelKey: "admin.nav.tab.ui_strings", superAdminOnly: true },
       { href: "/localization/translations", labelKey: "admin.nav.tab.content_translations" },
-      // Content templates
       { href: "/localization/templates", labelKey: "admin.nav.tab.email_templates" },
-      { href: "/platform/banners", labelKey: "admin.nav.tab.banners", superAdminOnly: true },
+
+      // ── Content & CMS ─────────────────────────────────────────────────
       { href: "/pages", labelKey: "admin.nav.tab.cms_pages" },
+      { href: "/platform/banners", labelKey: "admin.nav.tab.banners", superAdminOnly: true },
       { href: "/platform/notifications", labelKey: "admin.nav.tab.system_notifications" },
       { href: "/platform/newsletter", labelKey: "admin.nav.tab.newsletter", moduleKey: "ops.newsletter" },
+
+      // ── Layout (storefront chrome) ────────────────────────────────────
       { href: "/platform/settings/header-menu", labelKey: "admin.nav.tab.header_menu", superAdminOnly: true },
       { href: "/platform/settings/footer", labelKey: "admin.nav.tab.footer", superAdminOnly: true },
-      // Loyalty & promo rules
+      { href: "/platform/settings/brand", labelKey: "admin.nav.tab.brand_settings", superAdminOnly: true },
+
+      // ── Promotions ────────────────────────────────────────────────────
       { href: "/platform/loyalty", labelKey: "admin.nav.tab.loyalty_programs", moduleKey: "ops.loyalty" },
-      // Inventory configuration (formerly Bucket3 admin-only)
+
+      // ── Inventory configuration ───────────────────────────────────────
       { href: "/bucket3/block-dates", labelKey: "admin.nav.tab.bucket3.block_dates" },
       { href: "/bucket3/custom-fields", labelKey: "admin.nav.tab.bucket3.custom_fields" },
       { href: "/bucket3/service-catalog", labelKey: "admin.nav.tab.bucket3.service_catalog" },
-      // General platform settings
+
+      // ── System (integrations, security, geography) ────────────────────
       { href: "/platform/security", labelKey: "admin.nav.tab.security", superAdminOnly: true },
       { href: "/platform/webhooks", labelKey: "admin.nav.tab.webhooks", superAdminOnly: true },
       { href: "/platform/locations", labelKey: "admin.nav.tab.locations", superAdminOnly: true },
       { href: "/platform/api-docs", labelKey: "admin.nav.tab.api_docs", superAdminOnly: true },
-      { href: "/platform/settings/brand", labelKey: "admin.nav.tab.brand_settings", superAdminOnly: true },
       { href: "/connections", labelKey: "admin.nav.tab.connections", moduleKey: "ops.connections" },
+
+      // ── Support & feedback ────────────────────────────────────────────
       { href: "/support/tickets", labelKey: "admin.nav.tab.support" },
       { href: "/platform/reviews", labelKey: "admin.nav.tab.reviews", moduleKey: "ops.reviews" },
     ],
