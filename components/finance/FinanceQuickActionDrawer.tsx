@@ -175,7 +175,7 @@ export function FinanceQuickActionDrawer({ mode, token, onClose, onSuccess }: Pr
                 />
               </label>
               <p className="text-[11px]" style={{ color: "var(--admin-text-tertiary)" }}>
-                Backend computes invoice lines from the order's items.
+                Backend computes invoice lines from the order&apos;s items.
               </p>
             </div>
           )}
