@@ -593,14 +593,11 @@ export default function PlatformBookingsPage() {
                                 e.stopPropagation();
                                 void handleConfirm(r.id);
                               }}
-                              className="inline-flex h-7 items-center rounded-md border px-2.5 text-[11px] font-medium transition disabled:opacity-40"
-                              style={{
-                                color: "var(--admin-success)",
-                                borderColor: "var(--admin-success-light)",
-                                backgroundColor: "transparent",
-                              }}
+                              aria-label={t("admin.platform_bookings.confirm")}
+                              title={t("admin.platform_bookings.confirm")}
+                              className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-md border border-success-300 bg-success-50 text-success-800 transition hover:bg-success-100 disabled:opacity-40 [&>svg]:h-[18px] [&>svg]:w-[18px]"
                             >
-                              {t("admin.platform_bookings.confirm")}
+                              <Check />
                             </button>
                           )}
                           {(r.status === "pending_payment" ||
@@ -614,17 +611,14 @@ export default function PlatformBookingsPage() {
                                 e.stopPropagation();
                                 void handleCancel(r.id);
                               }}
-                              className="inline-flex h-7 items-center rounded-md border px-2.5 text-[11px] font-medium transition disabled:opacity-40"
-                              style={{
-                                color: "var(--admin-danger)",
-                                borderColor: "var(--admin-danger-light)",
-                                backgroundColor: "transparent",
-                              }}
+                              aria-label={t("common.cancel")}
+                              title={t("common.cancel")}
+                              className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-md border border-error-300 bg-error-50 text-error-800 transition hover:bg-error-100 disabled:opacity-40 [&>svg]:h-[18px] [&>svg]:w-[18px]"
                             >
-                              {t("common.cancel")}
+                              <XSimple />
                             </button>
                           )}
-                          <IconButton aria-label="View">
+                          <IconButton as="link" href={`/platform/bookings/${r.id}`} aria-label="View">
                             <Eye />
                           </IconButton>
                           <IconButton aria-label="More">
