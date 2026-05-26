@@ -498,6 +498,26 @@ export async function apiPlatformStats(
   return apiFetchJson(`${PA}/stats`, { method: "GET", token });
 }
 
+/**
+ * Marketplace ops v2 (2026-05-26) — Users page 4-stat-card row.
+ *
+ * Backend: PlatformAdminController::userStats (Phase Զ.16).
+ *   GET /api/platform-admin/users/stats
+ *     → { total, active_today, new_7d, pending_verification }
+ */
+export type PlatformUsersStats = {
+  total: number;
+  active_today: number;
+  new_7d: number;
+  pending_verification: number;
+};
+
+export async function apiPlatformUsersStats(
+  token: string
+): Promise<ApiSuccessEnvelope<PlatformUsersStats>> {
+  return apiFetchJson(`${PA}/users/stats`, { method: "GET", token });
+}
+
 export type PlatformAdminUserRow = {
   id: number;
   name: string;

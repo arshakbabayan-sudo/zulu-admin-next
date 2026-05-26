@@ -1,6 +1,14 @@
 "use client";
 
-/** Phase-2 migration to shared @/components/ui primitives. */
+/**
+ * v2 admin-redesign — Seller applications page (Marketplace ops group).
+ *
+ * Source spec: docs/admin_designe/marketplace_ops/marketplace_ops_mocks.html (PAGE 3)
+ * Migration prompt: docs/admin_designe/marketplace_ops/marketplace_ops_implementation_prompt.md §3.C
+ *
+ * Reject reason uses the ZULU PromptDialog (Variant C modal) — kept from
+ * the previous chrome since the user explicitly wanted optional reasons.
+ */
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
@@ -15,29 +23,69 @@ import {
   apiSellerApplications,
   type SellerApplicationRow,
 } from "@/lib/platform-admin-api";
-import { useCallback, useEffect, useState } from "react";
-import {
-
-  Pagination,
-  Select,
-  Table,
-  TBody,
-  TD,
-  TEmpty,
-  TH,
-  THead,
-  TR,
-} from "@/components/ui";
+import { apiSellerApplicationsStats, type SellerApplicationsStats } from "@/lib/marketplace-stats-api";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Pagination } from "@/components/ui";
 import {
   PageHeader as V2PageHeader,
-  SectionTabs,
   FilterCard,
   FilterField,
   V2Card,
   V2Button,
+  StatCard,
+  StatGrid,
   IconButton,
 } from "@/components/ui/v2";
-import { Download, Eye, Plus } from "lucide-react";
+import { MarketplaceOpsSectionTabs } from "@/components/marketplace/MarketplaceOpsSectionTabs";
+import {
+  STATUS_BADGE_CLASS,
+  avatarInitials,
+  avatarStyle,
+  formatRelativeTime,
+  pickAvatarTone,
+  statusBadgeStyle,
+  type StatusTone,
+} from "@/lib/admin-v2-helpers";
+import {
+  Briefcase as BriefcaseIcon,
+  CheckCircle2 as CircleCheckIcon,
+  XCircle as CircleXIcon,
+  Clock as ClockIcon,
+  Check as CheckIcon,
+  X as XIcon,
+  Eye,
+  Download,
+  RefreshCw,
+} from "lucide-react";
+
+const SERVICE_TYPE_EMOJI: Record<string, string> = {
+  hotel: "🏨",
+  flight: "✈️",
+  transfer: "🚐",
+  excursion: "🎯",
+  visa: "📄",
+};
+
+function statusMeta(status: string): { tone: StatusTone; label: string; icon: React.ReactNode } {
+  switch (status) {
+    case "approved":
+      return { tone: "success", label: "Approved", icon: <CheckIcon className="h-3 w-3" /> };
+    case "rejected":
+      return { tone: "danger", label: "Rejected", icon: <XIcon className="h-3 w-3" /> };
+    case "under_review":
+      return { tone: "info", label: "Under review", icon: <ClockIcon className="h-3 w-3" /> };
+    case "pending":
+    default:
+      return { tone: "warning", label: "Pending", icon: <ClockIcon className="h-3 w-3" /> };
+  }
+}
+
+function formatServiceType(s: string): string {
+  if (!s) return "—";
+  const emoji = SERVICE_TYPE_EMOJI[s.toLowerCase()] ?? "";
+  const label = s.charAt(0).toUpperCase() + s.slice(1);
+  return emoji ? `${emoji} ${label}` : label;
+}
 
 export default function SellerApplicationsPage() {
   const { token, user } = useAdminAuth();
@@ -48,14 +96,19 @@ export default function SellerApplicationsPage() {
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [serviceFilter, setServiceFilter] = useState<string>("");
+  const [search, setSearch] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState<SellerApplicationsStats | null>(null);
 
   const load = useCallback(async () => {
     if (!token || !allowed) return;
     setErr(null);
     setForbidden(false);
+    setLoading(true);
     try {
       const res = await apiSellerApplications(token, {
         page,
@@ -67,10 +120,21 @@ export default function SellerApplicationsPage() {
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
       else setErr(e instanceof ApiRequestError ? e.message : t("admin.seller_applications.err_load"));
+    } finally {
+      setLoading(false);
     }
   }, [token, allowed, page, statusFilter, t]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  useEffect(() => {
+    if (!token || !allowed) return;
+    void apiSellerApplicationsStats(token)
+      .then((res) => setStats(res.data))
+      .catch(() => setStats(null));
+  }, [token, allowed]);
 
   async function approve(id: number) {
     if (!token) return;
@@ -88,9 +152,6 @@ export default function SellerApplicationsPage() {
 
   async function reject(id: number) {
     if (!token) return;
-    // Phase 8.6 — reason is now OPTIONAL via the ZULU PromptModal (the
-    // legacy window.prompt + alert+abort flow forced a reason; the user
-    // wanted the ability to reject without a reason for low-info cases).
     const rejection_reason = await prompt({
       title: t("admin.seller_applications.prompt_rejection_reason"),
       description: t("admin.seller_applications.reject_reason_optional_hint"),
@@ -98,7 +159,7 @@ export default function SellerApplicationsPage() {
       variant: "danger",
       confirmLabel: t("admin.seller_applications.btn_reject"),
     });
-    if (rejection_reason === null) return; // user cancelled
+    if (rejection_reason === null) return;
     setBusyId(id);
     try {
       await apiRejectSellerApplication(token, id, rejection_reason.trim() || "");
@@ -108,6 +169,64 @@ export default function SellerApplicationsPage() {
     } finally {
       setBusyId(null);
     }
+  }
+
+  // Client-side filters that the backend doesn't yet support.
+  const filteredRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return rows.filter((r) => {
+      if (serviceFilter && r.service_type?.toLowerCase() !== serviceFilter) return false;
+      if (q) {
+        const hit =
+          String(r.id).includes(q) ||
+          r.company_name?.toLowerCase().includes(q) ||
+          String(r.company_id).includes(q);
+        if (!hit) return false;
+      }
+      return true;
+    });
+  }, [rows, serviceFilter, search]);
+
+  const activeChips = useMemo(() => {
+    const chips: Array<{ key: string; label: string; clear: () => void }> = [];
+    if (statusFilter) {
+      chips.push({
+        key: "status",
+        label: `Status: ${statusMeta(statusFilter).label}`,
+        clear: () => {
+          setPage(1);
+          setStatusFilter("");
+        },
+      });
+    }
+    if (serviceFilter) {
+      chips.push({
+        key: "service",
+        label: `Service: ${formatServiceType(serviceFilter)}`,
+        clear: () => {
+          setPage(1);
+          setServiceFilter("");
+        },
+      });
+    }
+    if (search.trim()) {
+      chips.push({
+        key: "search",
+        label: `“${search.trim()}”`,
+        clear: () => {
+          setPage(1);
+          setSearch("");
+        },
+      });
+    }
+    return chips;
+  }, [statusFilter, serviceFilter, search]);
+
+  function clearAllFilters() {
+    setPage(1);
+    setStatusFilter("");
+    setServiceFilter("");
+    setSearch("");
   }
 
   if (!allowed || forbidden) {
@@ -123,7 +242,6 @@ export default function SellerApplicationsPage() {
 
   return (
     <div>
-      {/* v2 admin-redesign — Seller applications page chrome (Marketplace ops). */}
       <V2PageHeader
         breadcrumb={[
           { label: "Home", href: "/dashboard" },
@@ -131,208 +249,279 @@ export default function SellerApplicationsPage() {
           { label: t("admin.seller_applications.title") },
         ]}
         title={t("admin.seller_applications.title")}
+        subtitle="Companies applying to sell specific service types on the platform"
         actions={
           <>
-            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
-            <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
-              New application
+            <V2Button onClick={() => void load()} icon={<RefreshCw className="h-4 w-4" />} aria-label="Refresh">
+              {""}
             </V2Button>
+            <V2Button icon={<Download className="h-4 w-4" />}>Export CSV</V2Button>
           </>
         }
       />
 
-      <SectionTabs
+      <MarketplaceOpsSectionTabs
         activeHref="/platform/seller-applications"
-        items={[
-          { href: "/platform/approvals", label: "Approval queue" },
-          { href: "/platform/companies", label: "Companies access" },
-          { href: "/platform/seller-applications", label: "Seller applications", count: meta?.total },
-          { href: "/platform/contracts", label: "Partnership agreements" },
-          { href: "/platform/contract-templates", label: "Contract templates" },
-          { href: "/platform/audit-logs", label: "Audit logs" },
-          { href: "/bucket3/service-logs", label: "Service logs" },
-          { href: "/bucket3/unverified-accounts", label: "Unverified accounts" },
-        ]}
+        counts={{ sellerApplications: stats?.pending ?? meta?.total }}
       />
 
+      <StatGrid cols={4} className="mb-5">
+        <StatCard
+          icon={<BriefcaseIcon style={{ color: "var(--admin-primary)" }} className="h-[22px] w-[22px]" />}
+          value={stats ? stats.pending.toLocaleString() : "—"}
+          label="Pending applications"
+        />
+        <StatCard
+          icon={<CircleCheckIcon style={{ color: "var(--admin-success)" }} className="h-[22px] w-[22px]" />}
+          value={stats ? stats.approved.toLocaleString() : "—"}
+          label="Approved (all-time)"
+        />
+        <StatCard
+          icon={<CircleXIcon style={{ color: "var(--admin-danger)" }} className="h-[22px] w-[22px]" />}
+          value={stats ? stats.rejected.toLocaleString() : "—"}
+          label="Rejected (all-time)"
+        />
+        <StatCard
+          icon={<ClockIcon style={{ color: "var(--admin-info)" }} className="h-[22px] w-[22px]" />}
+          value={stats && stats.avg_review_hours != null ? `${stats.avg_review_hours.toFixed(1)}h` : "—"}
+          label="Avg. review time"
+        />
+      </StatGrid>
+
       <FilterCard>
-        <FilterField label={t("admin.seller_applications.filter_status")} minWidth={220}>
-          <Select
-            id="sa-status"
-            fieldSize="sm"
+        <FilterField label={t("admin.seller_applications.filter_status")}>
+          <select
             value={statusFilter}
-            onChange={(e) => { setPage(1); setStatusFilter(e.target.value); }}
-            className="!h-[34px]"
+            onChange={(e) => {
+              setPage(1);
+              setStatusFilter(e.target.value);
+            }}
+            className="h-[34px] rounded-md border bg-white px-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+            style={{ borderColor: "var(--admin-border)" }}
           >
-            <option value="">{t("admin.seller_applications.filter_default_queue")}</option>
-            <option value="pending">{t("admin.seller_applications.status_pending")}</option>
-            <option value="under_review">{t("admin.seller_applications.status_under_review")}</option>
-            <option value="approved">{t("admin.seller_applications.status_approved")}</option>
-            <option value="rejected">{t("admin.seller_applications.status_rejected")}</option>
-          </Select>
+            <option value="">All statuses</option>
+            <option value="pending">Pending</option>
+            <option value="under_review">Under review</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
         </FilterField>
+        <FilterField label="Service type">
+          <select
+            value={serviceFilter}
+            onChange={(e) => {
+              setPage(1);
+              setServiceFilter(e.target.value);
+            }}
+            className="h-[34px] rounded-md border bg-white px-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+            style={{ borderColor: "var(--admin-border)" }}
+          >
+            <option value="">All</option>
+            <option value="hotel">Hotel</option>
+            <option value="flight">Flight</option>
+            <option value="transfer">Transfer</option>
+            <option value="excursion">Excursion</option>
+            <option value="visa">Visa</option>
+          </select>
+        </FilterField>
+        <FilterField label="Search" minWidth={240}>
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Company name or application ID..."
+            className="h-[34px] rounded-md border bg-white px-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+            style={{ borderColor: "var(--admin-border)" }}
+          />
+        </FilterField>
+        <V2Button variant="primary" size="md" onClick={() => void load()}>
+          Apply
+        </V2Button>
+        {activeChips.length > 0 ? (
+          <V2Button size="md" onClick={clearAllFilters}>
+            Clear
+          </V2Button>
+        ) : null}
       </FilterCard>
 
-      {err && <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
+      {activeChips.length > 0 ? (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <span className="text-[11px] font-medium" style={{ color: "var(--admin-text-secondary)" }}>
+            Active filters:
+          </span>
+          {activeChips.map((chip) => (
+            <button
+              key={chip.key}
+              type="button"
+              onClick={chip.clear}
+              className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[12px] font-medium transition hover:opacity-80"
+              style={{
+                backgroundColor: "var(--admin-primary-soft)",
+                borderColor: "var(--admin-primary-light)",
+                color: "var(--admin-primary)",
+              }}
+            >
+              {chip.label}
+              <XIcon className="h-3 w-3 opacity-70" />
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={clearAllFilters}
+            className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium opacity-80 hover:opacity-100"
+            style={{ color: "var(--admin-text-secondary)" }}
+          >
+            <XIcon className="h-3 w-3" />
+            Clear all
+          </button>
+        </div>
+      ) : null}
+
+      {err ? (
+        <div
+          className="mb-4 rounded-md border px-4 py-2 text-sm"
+          style={{
+            borderColor: "var(--admin-danger-light)",
+            backgroundColor: "var(--admin-danger-light)",
+            color: "var(--admin-danger-dark)",
+          }}
+        >
+          {err}
+        </div>
+      ) : null}
 
       <V2Card>
-      <Table>
-        <THead>
-          <TR>
-            <TH>{t("admin.seller_applications.col_id")}</TH>
-            <TH>{t("admin.seller_applications.col_company")}</TH>
-            <TH>{t("admin.seller_applications.col_service")}</TH>
-            <TH>{t("admin.seller_applications.col_status")}</TH>
-            <TH>{t("admin.seller_applications.col_applied")}</TH>
-            <TH align="right">{t("admin.seller_applications.col_actions")}</TH>
-          </TR>
-        </THead>
-        <TBody>
-          {rows.length === 0 ? <TEmpty colSpan={6}>{t("admin.seller_applications.empty") || "No applications."}</TEmpty> : null}
-          {rows.map((r) => {
-            const companyName = r.company_name ?? `Company #${r.company_id}`;
-            const initials = getInitials(companyName);
-            const tone = pickAvatarTone(r.id);
-            return (
-              <TR key={r.id}>
-                <TD className="tabular-nums font-mono text-xs text-fg-t7">APP-{String(r.id).padStart(3, "0")}</TD>
-                <TD>
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
-                      style={avatarStyle(tone)}
-                      aria-hidden
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-[13px]">
+            <thead
+              className="text-[11px] font-semibold uppercase tracking-[0.5px]"
+              style={{ backgroundColor: "var(--admin-bg-secondary)", color: "var(--admin-text-secondary)" }}
+            >
+              <tr>
+                <th className="px-4 py-2.5 text-left">{t("admin.seller_applications.col_id")}</th>
+                <th className="px-4 py-2.5 text-left">{t("admin.seller_applications.col_company")}</th>
+                <th className="px-4 py-2.5 text-left">{t("admin.seller_applications.col_service")}</th>
+                <th className="px-4 py-2.5 text-left">{t("admin.seller_applications.col_status")}</th>
+                <th className="px-4 py-2.5 text-left">{t("admin.seller_applications.col_applied")}</th>
+                <th className="px-4 py-2.5 text-right">{t("admin.seller_applications.col_actions")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredRows.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-10 text-center text-sm" style={{ color: "var(--admin-text-secondary)" }}>
+                    {loading ? "Loading…" : t("admin.seller_applications.empty") || "No applications."}
+                  </td>
+                </tr>
+              ) : (
+                filteredRows.map((r) => {
+                  const companyName = r.company_name ?? `Company #${r.company_id}`;
+                  const tone = pickAvatarTone(r.company_id);
+                  const sMeta = statusMeta(r.status);
+                  const canAct = r.status === "pending" || r.status === "under_review";
+                  return (
+                    <tr
+                      key={r.id}
+                      className="border-t transition hover:bg-[color:var(--admin-bg-secondary)]"
+                      style={{ borderColor: "var(--admin-border)" }}
                     >
-                      {initials}
-                    </span>
-                    <div className="min-w-0">
-                      <div className="font-medium text-fg-t8 truncate">{companyName}</div>
-                      <div className="text-[11px] text-fg-t6 truncate">#{r.company_id}</div>
-                    </div>
-                  </div>
-                </TD>
-                <TD>
-                  <span
-                    className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
-                    style={{ backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" }}
-                  >
-                    {r.service_type}
-                  </span>
-                </TD>
-                <TD>
-                  <span
-                    className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
-                    style={statusBadgeStyle(r.status)}
-                  >
-                    {r.status}
-                  </span>
-                </TD>
-                <TD className="text-xs text-fg-t6" title={r.applied_at ?? undefined}>
-                  {formatRelativeTime(r.applied_at)}
-                </TD>
-                <TD align="right">
-                  <div className="flex justify-end gap-2">
-                    <button
-                      type="button"
-                      disabled={busyId === r.id}
-                      onClick={() => approve(r.id)}
-                      className="inline-flex h-7 items-center rounded-md border px-2.5 text-[11px] font-medium transition disabled:opacity-40"
-                      style={{
-                        color: "var(--admin-success)",
-                        borderColor: "var(--admin-success-light)",
-                        backgroundColor: "transparent",
-                      }}
-                    >
-                      {t("admin.seller_applications.btn_approve")}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={busyId === r.id}
-                      onClick={() => reject(r.id)}
-                      className="inline-flex h-7 items-center rounded-md border px-2.5 text-[11px] font-medium transition disabled:opacity-40"
-                      style={{
-                        color: "var(--admin-danger)",
-                        borderColor: "var(--admin-danger-light)",
-                        backgroundColor: "transparent",
-                      }}
-                    >
-                      {t("admin.seller_applications.btn_reject")}
-                    </button>
-                    <IconButton
-                      as="link"
-                      href={`/platform/companies/${r.company_id}`}
-                      aria-label="View company"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </IconButton>
-                  </div>
-                </TD>
-              </TR>
-            );
-          })}
-        </TBody>
-      </Table>
+                      <td className="px-4 py-3 font-mono text-[12px] text-fg-t7">
+                        #APP-{String(r.id).padStart(3, "0")}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <span
+                            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                            style={avatarStyle(tone)}
+                            aria-hidden
+                          >
+                            {avatarInitials(companyName)}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="font-medium text-fg-t8 truncate">{companyName}</div>
+                            <div className="text-[11px] truncate" style={{ color: "var(--admin-text-tertiary)" }}>
+                              #{r.company_id}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={STATUS_BADGE_CLASS} style={statusBadgeStyle("gray")}>
+                          {formatServiceType(r.service_type)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={STATUS_BADGE_CLASS} style={statusBadgeStyle(sMeta.tone)}>
+                          {sMeta.icon}
+                          {sMeta.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-[12px]" style={{ color: "var(--admin-text-secondary)" }} title={r.applied_at ?? undefined}>
+                        {formatRelativeTime(r.applied_at)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {canAct ? (
+                            <>
+                              <button
+                                type="button"
+                                disabled={busyId === r.id}
+                                onClick={() => approve(r.id)}
+                                className="inline-flex h-7 items-center gap-1 rounded-md border px-2.5 text-[11px] font-medium transition disabled:opacity-40 hover:bg-[color:var(--admin-success-light)]"
+                                style={{
+                                  color: "var(--admin-success)",
+                                  borderColor: "var(--admin-success-light)",
+                                  backgroundColor: "transparent",
+                                }}
+                              >
+                                <CheckIcon className="h-3 w-3" />
+                                Approve
+                              </button>
+                              <button
+                                type="button"
+                                disabled={busyId === r.id}
+                                onClick={() => reject(r.id)}
+                                className="inline-flex h-7 items-center gap-1 rounded-md border px-2.5 text-[11px] font-medium transition disabled:opacity-40 hover:bg-[color:var(--admin-danger-light)]"
+                                style={{
+                                  color: "var(--admin-danger)",
+                                  borderColor: "var(--admin-danger-light)",
+                                  backgroundColor: "transparent",
+                                }}
+                              >
+                                <XIcon className="h-3 w-3" />
+                                Reject
+                              </button>
+                            </>
+                          ) : null}
+                          <IconButton
+                            as="link"
+                            href={`/platform/companies/${r.company_id}`}
+                            aria-label="View company"
+                          >
+                            <Eye />
+                          </IconButton>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+        {meta && meta.last_page > 1 ? (
+          <div
+            className="flex flex-wrap items-center justify-between gap-2 border-t px-5 py-3.5 text-[12px]"
+            style={{ borderColor: "var(--admin-border)", color: "var(--admin-text-secondary)" }}
+          >
+            <span>
+              Showing {(meta.current_page - 1) * meta.per_page + 1}–
+              {Math.min(meta.current_page * meta.per_page, meta.total)} of {meta.total} applications
+            </span>
+            <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />
+          </div>
+        ) : null}
       </V2Card>
-
-      {meta && meta.last_page > 1 ? (
-        <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />
-      ) : null}
     </div>
   );
-}
-
-// v2 admin-redesign helpers — deterministic avatar tones + status pills + relative time.
-function getInitials(name: string): string {
-  return (name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
-}
-
-function pickAvatarTone(id: number | string): "purple" | "teal" | "amber" | "blue" {
-  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
-  const n = typeof id === "number" ? id : id.length;
-  return tones[n % tones.length]!;
-}
-
-function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
-  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
-    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
-    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
-    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
-    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
-  };
-  return map[tone];
-}
-
-function statusBadgeStyle(status: string): React.CSSProperties {
-  switch (status) {
-    case "approved":
-    case "active":
-    case "published":
-      return { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" };
-    case "pending":
-    case "under_review":
-    case "draft":
-      return { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" };
-    case "rejected":
-    case "expired":
-    case "archived":
-      return { backgroundColor: "var(--admin-danger-light)", color: "var(--admin-danger-dark)" };
-    default:
-      return { backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" };
-  }
-}
-
-function formatRelativeTime(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  const t = new Date(iso).getTime();
-  if (Number.isNaN(t)) return "—";
-  const diff = Date.now() - t;
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins} min ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
-  const days = Math.floor(hours / 24);
-  if (days === 1) return "Yesterday";
-  if (days < 7) return `${days} days ago`;
-  return new Date(iso).toLocaleDateString();
 }

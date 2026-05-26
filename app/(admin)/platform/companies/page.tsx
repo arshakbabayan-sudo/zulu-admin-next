@@ -43,13 +43,31 @@ import {
   SELLER_SERVICE_TYPES,
   type PlatformCompanyRow,
 } from "@/lib/platform-admin-api";
+import { apiCompaniesStats, type CompaniesStats } from "@/lib/marketplace-stats-api";
+import { STATUS_BADGE_CLASS, statusBadgeStyle } from "@/lib/admin-v2-helpers";
+import { MarketplaceOpsSectionTabs } from "@/components/marketplace/MarketplaceOpsSectionTabs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   PageHeader as V2PageHeader,
-  SectionTabs,
+  FilterCard,
+  FilterField,
+  V2Card,
   V2Button,
+  StatCard,
+  StatGrid,
 } from "@/components/ui/v2";
-import { Download, Plus } from "lucide-react";
+import {
+  Archive,
+  Briefcase,
+  Building,
+  CircleCheck,
+  Download,
+  Plus,
+  RefreshCw,
+  Search,
+  X as XIcon,
+  XCircle,
+} from "lucide-react";
 
 type SortDir = "asc" | "desc";
 type SortField = "id" | "name" | "type" | "status" | "governance_status" | "is_seller";
@@ -94,6 +112,8 @@ export default function PlatformCompaniesPage() {
   // Full list of countries from the location tree (one fetch on modal open).
   const [countriesAll, setCountriesAll] = useState<Array<{ code: string; name: string; flag: string | null }>>([]);
   const [countryFilter, setCountryFilter] = useState<string>("");
+  // v2 admin-redesign — Marketplace ops stat cards (Companies & access).
+  const [stats, setStats] = useState<CompaniesStats | null>(null);
 
   const sellerParam = useMemo((): boolean | undefined => {
     if (sellerFilter === "1") return true;
@@ -203,6 +223,69 @@ export default function PlatformCompaniesPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!token || !allowed) return;
+    void apiCompaniesStats(token)
+      .then((res) => setStats(res.data))
+      .catch(() => setStats(null));
+  }, [token, allowed]);
+
+  // v2 admin-redesign — active filter chips (Companies page).
+  const activeChips = useMemo(() => {
+    const chips: Array<{ key: string; label: string; clear: () => void }> = [];
+    if (governanceFilter) {
+      chips.push({
+        key: "governance",
+        label: `Governance: ${governanceFilter.charAt(0).toUpperCase() + governanceFilter.slice(1)}`,
+        clear: () => {
+          setPage(1);
+          setGovernanceFilter("");
+        },
+      });
+    }
+    if (sellerFilter) {
+      chips.push({
+        key: "seller",
+        label: `Seller: ${sellerFilter === "1" ? "Yes" : "No"}`,
+        clear: () => {
+          setPage(1);
+          setSellerFilter("");
+        },
+      });
+    }
+    if (archiveFilter !== "active") {
+      chips.push({
+        key: "archive",
+        label: `Archive: ${archiveFilter}`,
+        clear: () => {
+          setPage(1);
+          setArchiveFilter("active");
+        },
+      });
+    }
+    if (search.trim()) {
+      chips.push({
+        key: "search",
+        label: `“${search.trim()}”`,
+        clear: () => {
+          setPage(1);
+          setSearch("");
+          setSearchDraft("");
+        },
+      });
+    }
+    return chips;
+  }, [governanceFilter, sellerFilter, archiveFilter, search]);
+
+  function clearAllFilters() {
+    setPage(1);
+    setGovernanceFilter("");
+    setSellerFilter("");
+    setArchiveFilter("active");
+    setSearch("");
+    setSearchDraft("");
+  }
 
   async function openPermissionsModal(row: PlatformCompanyRow) {
     if (!token) return;
@@ -470,6 +553,9 @@ export default function PlatformCompaniesPage() {
         }
         actions={
           <>
+            <V2Button onClick={() => void load()} icon={<RefreshCw className="h-4 w-4" />} aria-label="Refresh">
+              {""}
+            </V2Button>
             <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
             <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
               Add company
@@ -478,37 +564,105 @@ export default function PlatformCompaniesPage() {
         }
       />
 
-      <SectionTabs
-        activeHref="/platform/companies"
-        items={[
-          { href: "/platform/approvals", label: "Approval queue" },
-          { href: "/platform/companies", label: "Companies access", count: meta?.total },
-          { href: "/platform/seller-applications", label: "Seller applications" },
-          { href: "/platform/contracts", label: "Partnership agreements" },
-          { href: "/platform/contract-templates", label: "Contract templates" },
-          { href: "/platform/audit-logs", label: "Audit logs" },
-          { href: "/bucket3/service-logs", label: "Service logs" },
-          { href: "/bucket3/unverified-accounts", label: "Unverified accounts" },
-        ]}
-      />
+      <MarketplaceOpsSectionTabs activeHref="/platform/companies" counts={{ companies: stats?.total }} />
+
+      {/* 4 stat cards — values from /platform-admin/companies/stats. */}
+      <StatGrid cols={4} className="mb-5">
+        <StatCard
+          icon={<Building style={{ color: "var(--admin-primary)" }} className="h-[22px] w-[22px]" />}
+          value={stats ? stats.total.toLocaleString() : "—"}
+          label="Total companies"
+        />
+        <StatCard
+          icon={<CircleCheck style={{ color: "var(--admin-success)" }} className="h-[22px] w-[22px]" />}
+          value={stats ? stats.active.toLocaleString() : "—"}
+          label="Active"
+        />
+        <StatCard
+          icon={<Briefcase style={{ color: "var(--admin-info)" }} className="h-[22px] w-[22px]" />}
+          value={stats ? stats.sellers.toLocaleString() : "—"}
+          label="Verified sellers"
+        />
+        <StatCard
+          icon={<Archive style={{ color: "var(--admin-text-tertiary)" }} className="h-[22px] w-[22px]" />}
+          value={stats ? stats.archived.toLocaleString() : "—"}
+          label="Archived"
+        />
+      </StatGrid>
 
       {pendingApps.length > 0 && (
-        <div className="mb-4 inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">
-          {t("admin.platform_companies.pending_apps_count").replace(
-            "{count}",
-            String(pendingApps.length),
-          )}
+        <div
+          className="mb-3 inline-flex items-center rounded-md border px-3 py-1 text-[12px] font-semibold"
+          style={{
+            backgroundColor: "var(--admin-warning-light)",
+            borderColor: "var(--admin-warning-light)",
+            color: "var(--admin-warning-dark)",
+          }}
+        >
+          {t("admin.platform_companies.pending_apps_count").replace("{count}", String(pendingApps.length))}
         </div>
       )}
 
-      <div className="admin-card p-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="relative min-w-[220px] flex-1">
-            <svg viewBox="0 0 24 24" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 fill-none stroke-current text-fg-t6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.3-4.3" />
-            </svg>
+      <FilterCard>
+        <FilterField label={t("admin.platform_companies.governance")}>
+          <select
+            value={governanceFilter}
+            onChange={(e) => {
+              setPage(1);
+              setGovernanceFilter(e.target.value);
+            }}
+            className="h-[34px] rounded-md border bg-white px-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+            style={{ borderColor: "var(--admin-border)" }}
+          >
+            <option value="">{t("common.all")}</option>
+            {GOVERNANCE_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s.charAt(0).toUpperCase() + s.slice(1)}
+              </option>
+            ))}
+          </select>
+        </FilterField>
+        <FilterField label={t("admin.platform_companies.seller")}>
+          <select
+            value={sellerFilter}
+            onChange={(e) => {
+              setPage(1);
+              setSellerFilter(e.target.value);
+            }}
+            className="h-[34px] rounded-md border bg-white px-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+            style={{ borderColor: "var(--admin-border)" }}
+          >
+            <option value="">{t("common.all")}</option>
+            <option value="1">Verified seller</option>
+            <option value="0">Not a seller</option>
+          </select>
+        </FilterField>
+        {isSuperAdmin ? (
+          <FilterField label={t("admin.platform_companies.archive")}>
+            <select
+              value={archiveFilter}
+              onChange={(e) => {
+                setPage(1);
+                setArchiveFilter(e.target.value as CompanyArchiveFilter);
+              }}
+              className="h-[34px] rounded-md border bg-white px-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+              style={{ borderColor: "var(--admin-border)" }}
+            >
+              <option value="active">{t("admin.platform_companies.archive_active")}</option>
+              <option value="archived">{t("admin.platform_companies.archive_only")}</option>
+              <option value="all">{t("admin.platform_companies.archive_all")}</option>
+            </select>
+          </FilterField>
+        ) : null}
+        <FilterField label="Search" minWidth={240}>
+          <div className="relative">
+            <Search
+              aria-hidden
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2"
+              style={{ color: "var(--admin-text-tertiary)" }}
+            />
             <input
+              type="search"
               value={searchDraft}
               onChange={(e) => setSearchDraft(e.target.value)}
               onKeyDown={(e) => {
@@ -518,81 +672,81 @@ export default function PlatformCompaniesPage() {
                 }
               }}
               placeholder={t("admin.platform_companies.search_placeholder")}
-              className="h-10 w-full rounded-zulu border border-default bg-white pl-10 pr-3 text-sm placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+              className="h-[34px] w-full rounded-md border bg-white pl-9 pr-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+              style={{ borderColor: "var(--admin-border)" }}
             />
           </div>
+        </FilterField>
+        <V2Button
+          variant="primary"
+          size="md"
+          onClick={() => {
+            setPage(1);
+            setSearch(searchDraft.trim());
+          }}
+        >
+          {t("common.apply")}
+        </V2Button>
+        {activeChips.length > 0 ? (
+          <V2Button size="md" onClick={clearAllFilters}>
+            Clear
+          </V2Button>
+        ) : null}
+      </FilterCard>
+
+      {activeChips.length > 0 ? (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <span className="text-[11px] font-medium" style={{ color: "var(--admin-text-secondary)" }}>
+            Active filters:
+          </span>
+          {activeChips.map((chip) => (
+            <button
+              key={chip.key}
+              type="button"
+              onClick={chip.clear}
+              className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[12px] font-medium transition hover:opacity-80"
+              style={{
+                backgroundColor: "var(--admin-primary-soft)",
+                borderColor: "var(--admin-primary-light)",
+                color: "var(--admin-primary)",
+              }}
+            >
+              {chip.label}
+              <XIcon className="h-3 w-3 opacity-70" />
+            </button>
+          ))}
           <button
             type="button"
-            onClick={() => {
-              setPage(1);
-              setSearch(searchDraft.trim());
-            }}
-            className="inline-flex h-10 items-center rounded-zulu bg-primary px-4 text-sm font-semibold text-white transition hover:opacity-90"
+            onClick={clearAllFilters}
+            className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium opacity-80 hover:opacity-100"
+            style={{ color: "var(--admin-text-secondary)" }}
           >
-            {t("common.apply")}
+            <XCircle className="h-3 w-3" />
+            Clear all
           </button>
-          <label className="flex items-center gap-2 text-sm text-fg-t6">
-            <span className="font-medium text-fg-t7">{t("admin.platform_companies.governance")}</span>
-            <select
-              value={governanceFilter}
-              onChange={(e) => {
-                setPage(1);
-                setGovernanceFilter(e.target.value);
-              }}
-              className="h-10 rounded-zulu border border-default bg-white px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
-            >
-              <option value="">{t("common.any")}</option>
-              {GOVERNANCE_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s.charAt(0).toUpperCase() + s.slice(1)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex items-center gap-2 text-sm text-fg-t6">
-            <span className="font-medium text-fg-t7">{t("admin.platform_companies.seller")}</span>
-            <select
-              value={sellerFilter}
-              onChange={(e) => {
-                setPage(1);
-                setSellerFilter(e.target.value);
-              }}
-              className="h-10 rounded-zulu border border-default bg-white px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
-            >
-              <option value="">{t("common.any")}</option>
-              <option value="1">{t("admin.platform_companies.yes")}</option>
-              <option value="0">{t("admin.platform_companies.no")}</option>
-            </select>
-          </label>
-          {/* Phase 7.2 — archive filter (super-admin only) */}
-          {isSuperAdmin ? (
-            <label className="flex items-center gap-2 text-sm text-fg-t6">
-              <span className="font-medium text-fg-t7">{t("admin.platform_companies.archive")}</span>
-              <select
-                value={archiveFilter}
-                onChange={(e) => {
-                  setPage(1);
-                  setArchiveFilter(e.target.value as CompanyArchiveFilter);
-                }}
-                className="h-10 rounded-zulu border border-default bg-white px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
-              >
-                <option value="active">{t("admin.platform_companies.archive_active")}</option>
-                <option value="archived">{t("admin.platform_companies.archive_only")}</option>
-                <option value="all">{t("admin.platform_companies.archive_all")}</option>
-              </select>
-            </label>
-          ) : null}
         </div>
-      </div>
+      ) : null}
 
       {err && (
-        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
+        <div
+          className="mb-4 rounded-md border px-4 py-2 text-sm"
+          style={{
+            borderColor: "var(--admin-danger-light)",
+            backgroundColor: "var(--admin-danger-light)",
+            color: "var(--admin-danger-dark)",
+          }}
+        >
+          {err}
+        </div>
       )}
 
-      <div className="admin-card overflow-hidden">
+      <V2Card>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[960px] text-left text-sm">
-            <thead className="border-b border-default bg-figma-bg-1 text-xs font-medium uppercase tracking-wide text-fg-t6">
+          <table className="w-full min-w-[960px] border-collapse text-left text-[13px]">
+            <thead
+              className="text-[11px] font-semibold uppercase tracking-[0.5px]"
+              style={{ backgroundColor: "var(--admin-bg-secondary)", color: "var(--admin-text-secondary)" }}
+            >
               <tr>
                 <th scope="col" className="px-4 py-3">
                   <button
@@ -668,15 +822,22 @@ export default function PlatformCompaniesPage() {
               {/* Pending applications — rendered above company rows. Each has
                   a distinct visual treatment (amber band + "Pending application"
                   badge) + inline Approve / Reject / Open-detail actions. */}
-              {pendingApps.map((a) => (
+              {pendingApps.map((a) => {
+                // Spec §3.B — pending applications waiting >7 days get danger badge.
+                const createdMs = a.submitted_at ? new Date(a.submitted_at).getTime() : NaN;
+                const ageDays = !Number.isNaN(createdMs) ? Math.floor((Date.now() - createdMs) / 86_400_000) : 0;
+                const isStale = ageDays > 7;
+                return (
                 <tr
                   key={`app-${a.id}`}
-                  className="border-b border-default bg-amber-50/40 transition hover:bg-amber-50"
+                  className="border-t transition hover:bg-[color:var(--admin-bg-secondary)]"
+                  style={{ borderColor: "var(--admin-border)" }}
                 >
-                  <td className="px-4 py-3 tabular-nums text-fg-t7">
+                  <td className="px-4 py-3 tabular-nums font-mono text-[12px]">
                     <Link
                       href={`/platform/company-applications/${a.id}`}
-                      className="text-amber-700 transition hover:underline"
+                      className="hover:underline"
+                      style={{ color: "var(--admin-warning-dark)" }}
                       title={t("admin.platform_companies.app_id_tooltip")}
                     >
                       A-{a.id}
@@ -692,8 +853,9 @@ export default function PlatformCompaniesPage() {
                   </td>
                   <td className="px-4 py-3 text-fg-t7 capitalize">{a.company_type ?? "—"}</td>
                   <td className="px-4 py-3" colSpan={3}>
-                    <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+                    <span className={STATUS_BADGE_CLASS} style={statusBadgeStyle(isStale ? "danger" : "warning")}>
                       {t("admin.platform_companies.pending_application")}
+                      {ageDays > 0 ? ` · ${ageDays}d` : ""}
                     </span>
                     <span className="ml-2 text-xs text-fg-t6">{a.business_email}</span>
                   </td>
@@ -724,7 +886,8 @@ export default function PlatformCompaniesPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
               {rows.map((r) => {
                 const initials = (r.name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
                 const tone = pickAvatarTone(r.id);
@@ -916,8 +1079,19 @@ export default function PlatformCompaniesPage() {
             </tbody>
           </table>
         </div>
-      </div>
-      {meta && <PaginationBar meta={meta} onPage={setPage} />}
+        {meta && meta.last_page > 1 ? (
+          <div
+            className="flex flex-wrap items-center justify-between gap-2 border-t px-5 py-3.5 text-[12px]"
+            style={{ borderColor: "var(--admin-border)", color: "var(--admin-text-secondary)" }}
+          >
+            <span>
+              Showing {(meta.current_page - 1) * meta.per_page + 1}–
+              {Math.min(meta.current_page * meta.per_page, meta.total)} of {meta.total} companies
+            </span>
+            <PaginationBar meta={meta} onPage={setPage} />
+          </div>
+        ) : null}
+      </V2Card>
 
       {permModalCompany && (
         <div

@@ -1,17 +1,17 @@
 "use client";
 
 /**
- * Figma layout reference: Quest CRM Copy template
- *   - Client Table (list pattern):           4393:6787
- *   - Settings/Admins (admin-list view):     10013:24500
- * Brand tokens: ZULU purple primary (--admin-primary).
- * Mobile rule: table converts to card list at <md.
+ * v2 admin-redesign — Users list (Marketplace ops group).
  *
- * Phase-2 migration: ported to shared `@/components/ui` primitives
- * (PageHeader, Table, TR/TH/TD/TEmpty, Pagination, Input, Button).
+ * Source spec: docs/admin_designe/marketplace_ops/marketplace_ops_implementation_prompt.md §3.D
+ * Mockup: docs/admin_designe/marketplace_ops/marketplace_ops_mocks.html (PAGE 4 USERS).
+ *
+ * Migrated 2026-05-26 to consume the shared MarketplaceOpsSectionTabs and
+ * admin-v2-helpers utilities. PinPromptDialog hard-delete flow and the
+ * anonymise/deactivate/hard-delete API contract is preserved verbatim from
+ * the previous v1 page.
  */
 
-import Link from "next/link";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { PinPromptDialog } from "@/components/PinPromptDialog";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
@@ -27,31 +27,87 @@ import {
   apiDeactivatePlatformUser,
   apiHardDeletePlatformUser,
   apiPlatformUsers,
+  apiPlatformUsersStats,
   type PlatformAdminUserRow,
   type PlatformUserTypeFilter,
+  type PlatformUsersStats,
 } from "@/lib/platform-admin-api";
-import { useCallback, useEffect, useState } from "react";
-import { Download, Edit3, MoreVertical, Plus, Search } from "lucide-react";
 import {
-  Pagination,
-  StatusPill,
-  Table,
-  TBody,
-  TD,
-  TEmpty,
-  TH,
-  THead,
-  TR,
-} from "@/components/ui";
+  STATUS_BADGE_CLASS,
+  avatarInitials,
+  avatarStyle,
+  formatRelativeTime,
+  pickAvatarTone,
+  statusBadgeStyle,
+  type StatusTone,
+} from "@/lib/admin-v2-helpers";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  CircleCheck,
+  Clock,
+  Download,
+  Edit3,
+  Eye,
+  MoreVertical,
+  Plus,
+  RefreshCw,
+  Search,
+  UserPlus,
+  Users,
+  XCircle,
+  X as XIcon,
+} from "lucide-react";
+import { Pagination } from "@/components/ui";
 import {
   PageHeader as V2PageHeader,
-  SectionTabs,
   FilterCard,
   FilterField,
   V2Card,
   V2Button,
+  StatCard,
+  StatGrid,
   IconButton,
 } from "@/components/ui/v2";
+import { MarketplaceOpsSectionTabs } from "@/components/marketplace/MarketplaceOpsSectionTabs";
+
+const STATUS_FILTERS = ["", "active", "inactive", "pending"] as const;
+
+function statusToneFor(status: string | null | undefined): StatusTone {
+  switch ((status ?? "").toLowerCase()) {
+    case "active":
+      return "success";
+    case "pending":
+      return "warning";
+    case "suspended":
+    case "banned":
+      return "danger";
+    case "inactive":
+      return "gray";
+    default:
+      return "gray";
+  }
+}
+
+function statusLabelFor(status: string | null | undefined): string {
+  if (!status) return "—";
+  return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+function typeToneFor(role: string | null | undefined): StatusTone {
+  const r = (role ?? "").toLowerCase();
+  if (r === "super_admin" || r === "super-admin" || r === "superadmin") return "primary";
+  if (r === "admin") return "info";
+  return "gray";
+}
+
+function typeLabelFor(role: string | null | undefined): string {
+  if (!role) return "Customer";
+  const r = role.toLowerCase();
+  if (r === "super_admin" || r === "super-admin" || r === "superadmin") return "Super admin";
+  if (r === "admin") return "Admin";
+  if (r === "staff") return "Staff";
+  return role.charAt(0).toUpperCase() + role.slice(1);
+}
 
 export default function PlatformUsersPage() {
   const { token, user } = useAdminAuth();
@@ -63,13 +119,17 @@ export default function PlatformUsersPage() {
   const isSuperAdmin = user?.is_super_admin === true;
   const [rows, setRows] = useState<PlatformAdminUserRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
+  const [stats, setStats] = useState<PlatformUsersStats | null>(null);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   // Phase 6.4 — type filter merges customers / staff / unverified
   const [typeFilter, setTypeFilter] = useState<PlatformUserTypeFilter>("");
+  const [companyFilter, setCompanyFilter] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
   // Phase Զ.15 / Item 15 — PIN gate state.
   const [pinGate, setPinGate] = useState<{
@@ -82,24 +142,56 @@ export default function PlatformUsersPage() {
     if (!token || !allowed) return;
     setErr(null);
     setForbidden(false);
+    setLoading(true);
     try {
       const res = await apiPlatformUsers(token, {
         page,
         per_page: 20,
         search: search || undefined,
         type: typeFilter || undefined,
+        status: statusFilter || undefined,
       });
       setRows(res.data);
       setMeta(res.meta);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
       else setErr(e instanceof ApiRequestError ? e.message : t("admin.users.err_load"));
+    } finally {
+      setLoading(false);
     }
-  }, [token, allowed, page, search, typeFilter, t]);
+  }, [token, allowed, page, search, typeFilter, statusFilter, t]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!token || !allowed) return;
+    void apiPlatformUsersStats(token)
+      .then((res) => setStats(res.data))
+      .catch(() => setStats(null));
+  }, [token, allowed]);
+
+  // Build dropdown list of companies from the current page rows.
+  const companyOptions = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const r of rows) {
+      for (const c of r.companies ?? []) {
+        if (!map.has(c.id)) map.set(c.id, c.name);
+      }
+    }
+    return Array.from(map.entries())
+      .sort(([, a], [, b]) => a.localeCompare(b))
+      .map(([id, name]) => ({ id, name }));
+  }, [rows]);
+
+  // Client-side company filter — backend doesn't support it yet.
+  const filteredRows = useMemo(() => {
+    if (!companyFilter) return rows;
+    const id = Number(companyFilter);
+    if (!Number.isFinite(id)) return rows;
+    return rows.filter((r) => r.companies?.some((c) => c.id === id));
+  }, [rows, companyFilter]);
 
   async function deactivate(id: number) {
     if (!token) return;
@@ -119,9 +211,6 @@ export default function PlatformUsersPage() {
     }
   }
 
-  // Phase 7.1 — "Ջնջել" (default platform-admin action)
-  // Confirms by requiring the admin to type the user's exact name, then
-  // anonymises PII and soft-deletes.
   async function anonymize(row: PlatformAdminUserRow) {
     if (!token) return;
     const typed = await prompt({
@@ -155,8 +244,6 @@ export default function PlatformUsersPage() {
     }
   }
 
-  // Phase 7.1 — "Ամբողջությամբ ջնջել" (super-admin only)
-  // Two-step confirmation: type name AND mandatory reason.
   async function hardDelete(row: PlatformAdminUserRow) {
     if (!token || !isSuperAdmin) return;
     const typed = await prompt({
@@ -181,7 +268,6 @@ export default function PlatformUsersPage() {
       variant: "danger",
     });
     if (reason === null) return;
-    // Phase Զ.15 / Item 15 — PIN gate for hard-delete (most destructive).
     setPinGate({
       title: "Verify PIN to hard-delete",
       description: (
@@ -205,6 +291,68 @@ export default function PlatformUsersPage() {
     });
   }
 
+  const activeChips = useMemo(() => {
+    const chips: Array<{ key: string; label: string; clear: () => void }> = [];
+    if (statusFilter) {
+      chips.push({
+        key: "status",
+        label: `Status: ${statusLabelFor(statusFilter)}`,
+        clear: () => {
+          setPage(1);
+          setStatusFilter("");
+        },
+      });
+    }
+    if (typeFilter) {
+      const typeLabels: Record<PlatformUserTypeFilter, string> = {
+        "": "",
+        customers: "Customers",
+        staff: "Staff",
+        unverified: "Unverified",
+      };
+      chips.push({
+        key: "type",
+        label: `Type: ${typeLabels[typeFilter] ?? typeFilter}`,
+        clear: () => {
+          setPage(1);
+          setTypeFilter("");
+        },
+      });
+    }
+    if (companyFilter) {
+      const name = companyOptions.find((c) => String(c.id) === companyFilter)?.name ?? companyFilter;
+      chips.push({
+        key: "company",
+        label: `Company: ${name}`,
+        clear: () => {
+          setPage(1);
+          setCompanyFilter("");
+        },
+      });
+    }
+    if (search.trim()) {
+      chips.push({
+        key: "search",
+        label: `“${search.trim()}”`,
+        clear: () => {
+          setPage(1);
+          setSearch("");
+          setSearchInput("");
+        },
+      });
+    }
+    return chips;
+  }, [statusFilter, typeFilter, companyFilter, search, companyOptions]);
+
+  function clearAllFilters() {
+    setPage(1);
+    setStatusFilter("");
+    setTypeFilter("");
+    setCompanyFilter("");
+    setSearch("");
+    setSearchInput("");
+  }
+
   const k = (key: string, fb: string) => {
     const v = t(key);
     return v === key ? fb : v;
@@ -223,7 +371,6 @@ export default function PlatformUsersPage() {
 
   return (
     <div>
-      {/* v2 admin-redesign — Marketplace ops Users page chrome. */}
       <V2PageHeader
         breadcrumb={[
           { label: "Home", href: "/dashboard" },
@@ -241,6 +388,9 @@ export default function PlatformUsersPage() {
         }
         actions={
           <>
+            <V2Button onClick={() => void load()} icon={<RefreshCw className="h-4 w-4" />} aria-label="Refresh">
+              {""}
+            </V2Button>
             <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
             <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
               Add user
@@ -249,20 +399,30 @@ export default function PlatformUsersPage() {
         }
       />
 
-      <SectionTabs
-        activeHref="/platform/users"
-        items={[
-          { href: "/platform/approvals", label: "Approval queue" },
-          { href: "/platform/companies", label: "Companies access" },
-          { href: "/platform/seller-applications", label: "Seller applications" },
-          { href: "/platform/contracts", label: "Partnership agreements" },
-          { href: "/platform/contract-templates", label: "Contract templates" },
-          { href: "/platform/users", label: "Users", count: meta?.total },
-          { href: "/platform/audit-logs", label: "Audit logs" },
-          { href: "/bucket3/service-logs", label: "Service logs" },
-          { href: "/bucket3/unverified-accounts", label: "Unverified accounts" },
-        ]}
-      />
+      <MarketplaceOpsSectionTabs activeHref="/platform/users" counts={{ users: stats?.total ?? meta?.total }} />
+
+      <StatGrid cols={4} className="mb-5">
+        <StatCard
+          icon={<Users style={{ color: "var(--admin-primary)" }} className="h-[22px] w-[22px]" />}
+          value={stats ? stats.total.toLocaleString() : "—"}
+          label="Total users"
+        />
+        <StatCard
+          icon={<CircleCheck style={{ color: "var(--admin-success)" }} className="h-[22px] w-[22px]" />}
+          value={stats ? stats.active_today.toLocaleString() : "—"}
+          label="Active today"
+        />
+        <StatCard
+          icon={<UserPlus style={{ color: "var(--admin-info)" }} className="h-[22px] w-[22px]" />}
+          value={stats ? stats.new_7d.toLocaleString() : "—"}
+          label="New (last 7d)"
+        />
+        <StatCard
+          icon={<Clock style={{ color: "var(--admin-warning)" }} className="h-[22px] w-[22px]" />}
+          value={stats ? stats.pending_verification.toLocaleString() : "—"}
+          label="Pending verification"
+        />
+      </StatGrid>
 
       <form
         onSubmit={(e) => {
@@ -272,11 +432,63 @@ export default function PlatformUsersPage() {
         }}
       >
         <FilterCard>
-          <FilterField label={t("admin.users.search_placeholder")}>
+          <FilterField label="Status">
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setPage(1);
+                setStatusFilter(e.target.value);
+              }}
+              className="h-[34px] rounded-md border bg-white px-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+              style={{ borderColor: "var(--admin-border)" }}
+            >
+              {STATUS_FILTERS.map((s) => (
+                <option key={s} value={s}>
+                  {s ? statusLabelFor(s) : t("common.all")}
+                </option>
+              ))}
+            </select>
+          </FilterField>
+          <FilterField label="Type">
+            <select
+              value={typeFilter}
+              onChange={(e) => {
+                setPage(1);
+                setTypeFilter(e.target.value as PlatformUserTypeFilter);
+              }}
+              className="h-[34px] rounded-md border bg-white px-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+              style={{ borderColor: "var(--admin-border)" }}
+            >
+              <option value="">{t("admin.users.type_all")}</option>
+              <option value="customers">{t("admin.users.type_customers")}</option>
+              <option value="staff">{t("admin.users.type_staff")}</option>
+              <option value="unverified">{t("admin.users.type_unverified")}</option>
+            </select>
+          </FilterField>
+          <FilterField label="Company">
+            <select
+              value={companyFilter}
+              onChange={(e) => {
+                setPage(1);
+                setCompanyFilter(e.target.value);
+              }}
+              className="h-[34px] rounded-md border bg-white px-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+              style={{ borderColor: "var(--admin-border)" }}
+            >
+              <option value="">{t("common.all")}</option>
+              {companyOptions.map((c) => (
+                <option key={c.id} value={String(c.id)}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </FilterField>
+          <FilterField label="Search" minWidth={240}>
             <div className="relative">
               <Search
                 aria-hidden
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-t6"
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2"
+                style={{ color: "var(--admin-text-tertiary)" }}
               />
               <input
                 placeholder={t("admin.users.search_placeholder")}
@@ -287,259 +499,242 @@ export default function PlatformUsersPage() {
               />
             </div>
           </FilterField>
-          <FilterField label={t("admin.users.type_all")}>
-            <select
-              value={typeFilter}
-              onChange={(e) => {
-                setPage(1);
-                setTypeFilter(e.target.value as PlatformUserTypeFilter);
-              }}
-              className="h-[34px] rounded-md border bg-white px-2 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
-              style={{ borderColor: "var(--admin-border)" }}
-            >
-              <option value="">{t("admin.users.type_all")}</option>
-              <option value="customers">{t("admin.users.type_customers")}</option>
-              <option value="staff">{t("admin.users.type_staff")}</option>
-              <option value="unverified">{t("admin.users.type_unverified")}</option>
-            </select>
-          </FilterField>
-          <V2Button type="submit" size="sm" variant="primary">
+          <V2Button type="submit" variant="primary" size="md">
             {t("common.search")}
           </V2Button>
+          {activeChips.length > 0 ? (
+            <V2Button type="button" size="md" onClick={clearAllFilters}>
+              Clear
+            </V2Button>
+          ) : null}
         </FilterCard>
       </form>
 
+      {activeChips.length > 0 ? (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <span className="text-[11px] font-medium" style={{ color: "var(--admin-text-secondary)" }}>
+            Active filters:
+          </span>
+          {activeChips.map((chip) => (
+            <button
+              key={chip.key}
+              type="button"
+              onClick={chip.clear}
+              className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[12px] font-medium transition hover:opacity-80"
+              style={{
+                backgroundColor: "var(--admin-primary-soft)",
+                borderColor: "var(--admin-primary-light)",
+                color: "var(--admin-primary)",
+              }}
+            >
+              {chip.label}
+              <XIcon className="h-3 w-3 opacity-70" />
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={clearAllFilters}
+            className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium opacity-80 hover:opacity-100"
+            style={{ color: "var(--admin-text-secondary)" }}
+          >
+            <XCircle className="h-3 w-3" />
+            Clear all
+          </button>
+        </div>
+      ) : null}
+
       {err ? (
-        <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
+        <div
+          className="mb-4 rounded-md border px-4 py-2 text-sm"
+          style={{
+            borderColor: "var(--admin-danger-light)",
+            backgroundColor: "var(--admin-danger-light)",
+            color: "var(--admin-danger-dark)",
+          }}
+        >
+          {err}
+        </div>
       ) : null}
 
-      {/* Desktop table */}
-      <div className="hidden md:block">
-        <V2Card>
-        <Table>
-          <THead>
-            <TR>
-              <TH>{t("admin.users.col_id")}</TH>
-              <TH>{t("admin.users.col_name")}</TH>
-              <TH>{t("admin.users.col_email")}</TH>
-              <TH>{t("admin.users.col_status")}</TH>
-              <TH>{t("admin.users.col_companies")}</TH>
-              <TH align="right">{t("admin.users.col_actions")}</TH>
-            </TR>
-          </THead>
-          <TBody>
-            {rows.length === 0 ? (
-              <TEmpty colSpan={6}>{t("admin.users.empty")}</TEmpty>
-            ) : null}
-            {rows.map((r) => {
-              const initials = (r.name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
-              const tone = pickAvatarTone(r.id);
-              const primaryRole = r.companies && r.companies.length > 0 ? r.companies[0]!.role : null;
-              const statusColor =
-                r.status === "active"
-                  ? "var(--admin-success)"
-                  : r.status === "pending"
-                    ? "var(--admin-warning)"
-                    : r.status === "suspended" || r.status === "banned"
-                      ? "var(--admin-danger)"
-                      : "var(--admin-text-tertiary)";
-              return (
-              <TR key={r.id} href={`/platform/users/${r.id}`}>
-                <TD className="tabular-nums font-mono text-xs text-fg-t7">#{r.id}</TD>
-                <TD>
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
-                      style={avatarStyle(tone)}
-                      aria-hidden
-                    >
-                      {initials}
-                    </span>
-                    <div className="min-w-0">
-                      <div className="font-medium text-fg-t8 truncate">{r.name}</div>
-                      {primaryRole ? (
-                        <div className="text-[11px] text-fg-t6 truncate">{primaryRole}</div>
-                      ) : null}
-                    </div>
-                  </div>
-                </TD>
-                <TD className="text-xs">{r.email}</TD>
-                <TD>
-                  <span className="inline-flex items-center gap-1.5 text-[12px]">
-                    <span
-                      aria-hidden
-                      className="inline-block h-1.5 w-1.5 rounded-full"
-                      style={{ backgroundColor: statusColor }}
-                    />
-                    <span className="capitalize">{r.status}</span>
-                  </span>
-                </TD>
-                <TD>
-                  {r.companies && r.companies.length > 0 ? (
-                    <div className="flex flex-wrap gap-1">
-                      {r.companies.slice(0, 3).map((c, i) => (
-                        <span
-                          key={i}
-                          className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
-                          style={{
-                            backgroundColor: "var(--admin-bg-tertiary)",
-                            color: "var(--admin-text-secondary)",
-                          }}
-                        >
-                          {c.name}
-                        </span>
-                      ))}
-                      {r.companies.length > 3 ? (
-                        <span
-                          className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
-                          style={{
-                            backgroundColor: "var(--admin-bg-tertiary)",
-                            color: "var(--admin-text-tertiary)",
-                          }}
-                        >
-                          +{r.companies.length - 3}
-                        </span>
-                      ) : null}
-                    </div>
-                  ) : (
-                    <span className="text-fg-t6">—</span>
-                  )}
-                </TD>
-                <TD align="right" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex items-center justify-end gap-1">
-                    <IconButton as="link" href={`/platform/users/${r.id}`} aria-label={k("admin.users.btn_edit", "Edit")}>
-                      <Edit3 className="h-4 w-4" />
-                    </IconButton>
-                    <button
-                      type="button"
-                      disabled={busyId === r.id || r.status === "inactive"}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deactivate(r.id);
-                      }}
-                      className="inline-flex h-7 items-center rounded-md border px-2.5 text-[11px] font-medium transition disabled:opacity-40"
-                      style={{
-                        color: "var(--admin-warning)",
-                        borderColor: "var(--admin-warning-light)",
-                        backgroundColor: "transparent",
-                      }}
-                    >
-                      {t("admin.users.btn_deactivate")}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={busyId === r.id}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        anonymize(r);
-                      }}
-                      title={t("admin.users.btn_anonymize_tooltip")}
-                      className="inline-flex h-7 items-center rounded-md border px-2.5 text-[11px] font-medium transition disabled:opacity-40"
-                      style={{
-                        color: "var(--admin-danger)",
-                        borderColor: "var(--admin-danger-light)",
-                        backgroundColor: "transparent",
-                      }}
-                    >
-                      {t("admin.users.btn_anonymize")}
-                    </button>
-                    {isSuperAdmin ? (
-                      <button
-                        type="button"
-                        disabled={busyId === r.id}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          hardDelete(r);
-                        }}
-                        title={t("admin.users.btn_hard_delete_tooltip")}
-                        className="inline-flex h-7 items-center rounded-md border border-error-500 bg-error-600 px-2.5 text-[11px] font-semibold text-white transition hover:bg-error-700 disabled:opacity-40"
-                      >
-                        {t("admin.users.btn_hard_delete")}
-                      </button>
-                    ) : (
-                      <IconButton aria-label="More">
-                        <MoreVertical className="h-4 w-4" />
-                      </IconButton>
-                    )}
-                  </div>
-                </TD>
-              </TR>
-              );
-            })}
-          </TBody>
-        </Table>
-        </V2Card>
-      </div>
-
-      {/* Mobile card list */}
-      <div className="space-y-3 md:hidden">
-        {rows.length === 0 && (
-          <div className="admin-card p-6 text-center text-sm text-fg-t6">{t("admin.users.empty")}</div>
-        )}
-        {rows.map((r) => (
-          <div key={r.id} className="admin-card p-4 space-y-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="font-mono text-xs text-fg-t6">#{r.id}</div>
-                <div className="truncate font-medium text-fg-t8">{r.name}</div>
-                <div className="truncate text-xs text-fg-t6">{r.email}</div>
-              </div>
-              <StatusPill status={r.status} />
-            </div>
-            {r.companies && r.companies.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {r.companies.map((c, i) => (
-                  <span
-                    key={i}
-                    className="rounded-full border border-default bg-figma-bg-1 px-2 py-0.5 text-xs text-fg-t7"
+      <V2Card>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-[13px]">
+            <thead
+              className="text-[11px] font-semibold uppercase tracking-[0.5px]"
+              style={{ backgroundColor: "var(--admin-bg-secondary)", color: "var(--admin-text-secondary)" }}
+            >
+              <tr>
+                <th className="px-4 py-2.5 text-left">User</th>
+                <th className="px-4 py-2.5 text-left">Email</th>
+                <th className="px-4 py-2.5 text-left">Type</th>
+                <th className="px-4 py-2.5 text-left">Companies</th>
+                <th className="px-4 py-2.5 text-left">Status</th>
+                <th className="px-4 py-2.5 text-left">Last seen</th>
+                <th className="px-4 py-2.5 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredRows.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-4 py-10 text-center text-sm"
+                    style={{ color: "var(--admin-text-secondary)" }}
                   >
-                    {c.name}
-                    <span className="ml-1 text-fg-t6">({c.role})</span>
-                  </span>
-                ))}
-              </div>
-            )}
-            <div className="flex flex-wrap gap-2 border-t border-default pt-3">
-              <Link
-                href={`/platform/users/${r.id}`}
-                className="inline-flex h-10 flex-1 items-center justify-center rounded-zulu border border-default bg-white px-3 text-sm font-medium text-primary transition hover:bg-figma-bg-1"
-              >
-                {k("admin.users.btn_edit", "Edit")}
-              </Link>
-              <button
-                type="button"
-                disabled={busyId === r.id || r.status === "inactive"}
-                onClick={() => deactivate(r.id)}
-                className="inline-flex h-10 flex-1 items-center justify-center rounded-zulu border border-warning-200 bg-white px-3 text-sm font-medium text-warning-700 transition hover:bg-warning-50 disabled:opacity-40"
-              >
-                {t("admin.users.btn_deactivate")}
-              </button>
-              <button
-                type="button"
-                disabled={busyId === r.id}
-                onClick={() => anonymize(r)}
-                className="inline-flex h-10 flex-1 items-center justify-center rounded-zulu border border-error-200 bg-white px-3 text-sm font-medium text-error-700 transition hover:bg-error-50 disabled:opacity-40"
-              >
-                {t("admin.users.btn_anonymize")}
-              </button>
-              {isSuperAdmin ? (
-                <button
-                  type="button"
-                  disabled={busyId === r.id}
-                  onClick={() => hardDelete(r)}
-                  className="inline-flex h-10 w-full items-center justify-center rounded-zulu border border-error-500 bg-error-600 px-3 text-sm font-semibold text-white transition hover:bg-error-700 disabled:opacity-40"
-                >
-                  {t("admin.users.btn_hard_delete")}
-                </button>
-              ) : null}
-            </div>
+                    {loading ? "Loading…" : t("admin.users.empty")}
+                  </td>
+                </tr>
+              ) : (
+                filteredRows.map((r) => {
+                  const tone = pickAvatarTone(r.id);
+                  const primaryRole = r.companies && r.companies.length > 0 ? r.companies[0]!.role : null;
+                  const statusTone = statusToneFor(r.status);
+                  const typeTone = typeToneFor(primaryRole);
+                  return (
+                    <tr
+                      key={r.id}
+                      className="border-t transition hover:bg-[color:var(--admin-bg-secondary)]"
+                      style={{ borderColor: "var(--admin-border)" }}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <span
+                            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+                            style={avatarStyle(tone)}
+                            aria-hidden
+                          >
+                            {avatarInitials(r.name)}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="truncate font-medium text-fg-t8">{r.name}</div>
+                            <div className="truncate text-[11px] font-mono text-fg-t6">#{r.id}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-[12px] text-fg-t8">{r.email}</td>
+                      <td className="px-4 py-3">
+                        <span className={STATUS_BADGE_CLASS} style={statusBadgeStyle(typeTone)}>
+                          {typeLabelFor(primaryRole)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {r.companies && r.companies.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            <span
+                              className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                              style={{
+                                backgroundColor: "var(--admin-bg-tertiary)",
+                                color: "var(--admin-text-secondary)",
+                              }}
+                              title={r.companies[0]!.name}
+                            >
+                              {r.companies[0]!.name}
+                            </span>
+                            {r.companies.length > 1 ? (
+                              <span
+                                className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
+                                style={{
+                                  backgroundColor: "var(--admin-bg-tertiary)",
+                                  color: "var(--admin-text-tertiary)",
+                                }}
+                                title={r.companies
+                                  .slice(1)
+                                  .map((c) => c.name)
+                                  .join(", ")}
+                              >
+                                +{r.companies.length - 1}
+                              </span>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <span className="text-[12px]" style={{ color: "var(--admin-text-tertiary)" }}>
+                            —
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={STATUS_BADGE_CLASS} style={statusBadgeStyle(statusTone)}>
+                          {statusLabelFor(r.status)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-[12px]" style={{ color: "var(--admin-text-secondary)" }}>
+                        {formatRelativeTime(r.last_login_at ?? null)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <IconButton as="link" href={`/platform/users/${r.id}`} aria-label={k("admin.users.btn_edit", "View")}>
+                            <Eye />
+                          </IconButton>
+                          <IconButton as="link" href={`/platform/users/${r.id}`} aria-label="Edit">
+                            <Edit3 />
+                          </IconButton>
+                          <button
+                            type="button"
+                            disabled={busyId === r.id || r.status === "inactive"}
+                            onClick={() => deactivate(r.id)}
+                            className="inline-flex h-7 items-center rounded-md border px-2.5 text-[11px] font-medium transition disabled:opacity-40"
+                            style={{
+                              color: "var(--admin-warning)",
+                              borderColor: "var(--admin-warning-light)",
+                              backgroundColor: "transparent",
+                            }}
+                          >
+                            {t("admin.users.btn_deactivate")}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busyId === r.id}
+                            onClick={() => anonymize(r)}
+                            title={t("admin.users.btn_anonymize_tooltip")}
+                            className="inline-flex h-7 items-center rounded-md border px-2.5 text-[11px] font-medium transition disabled:opacity-40"
+                            style={{
+                              color: "var(--admin-danger)",
+                              borderColor: "var(--admin-danger-light)",
+                              backgroundColor: "transparent",
+                            }}
+                          >
+                            {t("admin.users.btn_anonymize")}
+                          </button>
+                          {isSuperAdmin ? (
+                            <button
+                              type="button"
+                              disabled={busyId === r.id}
+                              onClick={() => hardDelete(r)}
+                              title={t("admin.users.btn_hard_delete_tooltip")}
+                              className="inline-flex h-7 items-center rounded-md px-2.5 text-[11px] font-semibold text-white transition disabled:opacity-40"
+                              style={{
+                                backgroundColor: "var(--admin-danger)",
+                              }}
+                            >
+                              {t("admin.users.btn_hard_delete")}
+                            </button>
+                          ) : (
+                            <IconButton aria-label="More">
+                              <MoreVertical />
+                            </IconButton>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+        {meta && meta.last_page > 1 ? (
+          <div
+            className="flex flex-wrap items-center justify-between gap-2 border-t px-5 py-3.5 text-[12px]"
+            style={{ borderColor: "var(--admin-border)", color: "var(--admin-text-secondary)" }}
+          >
+            <span>
+              Showing {(meta.current_page - 1) * meta.per_page + 1}–
+              {Math.min(meta.current_page * meta.per_page, meta.total)} of {meta.total} users
+            </span>
+            <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />
           </div>
-        ))}
-      </div>
-
-      {meta && meta.last_page > 1 ? (
-        <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />
-      ) : null}
+        ) : null}
+      </V2Card>
 
       {/* Phase Զ.15 / Item 15 — PIN gate for destructive actions. */}
       <PinPromptDialog
@@ -553,21 +748,4 @@ export default function PlatformUsersPage() {
       />
     </div>
   );
-}
-
-// v2 admin-redesign helpers — avatar tone deterministic by id.
-function pickAvatarTone(id: number | string): "purple" | "teal" | "amber" | "blue" {
-  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
-  const n = typeof id === "number" ? id : id.length;
-  return tones[n % tones.length]!;
-}
-
-function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
-  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
-    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
-    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
-    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
-    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
-  };
-  return map[tone];
 }
