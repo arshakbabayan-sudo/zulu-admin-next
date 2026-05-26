@@ -37,7 +37,9 @@ import {
   type PlatformCompanyRow,
 } from "@/lib/platform-admin-api";
 import { StatusPill as _StatusPill } from "@/components/ui/StatusPill";
-import { PageHeader as V2PageHeader, V2Card } from "@/components/ui/v2";
+import { PageHeader as V2PageHeader, V2Card, V2Button } from "@/components/ui/v2";
+import { AddEmployeeModal } from "@/components/employees/AddEmployeeModal";
+import { Plus } from "lucide-react";
 
 const GOVERNANCE_STATUSES = ["pending", "active", "suspended", "rejected"] as const;
 type Tab =
@@ -69,6 +71,7 @@ export default function PlatformCompanyDetailPage() {
   // Phase 2 — lazy-loaded data for the new tabs.
   const [linkedUsers, setLinkedUsers] = useState<PlatformAdminUserRow[] | null>(null);
   const [linkedUsersErr, setLinkedUsersErr] = useState<string | null>(null);
+  const [addEmployeeOpen, setAddEmployeeOpen] = useState(false);
   const [appsHistory, setAppsHistory] = useState<CompanyApplicationRow[] | null>(null);
   const [appsHistoryErr, setAppsHistoryErr] = useState<string | null>(null);
 
@@ -294,6 +297,7 @@ export default function PlatformCompanyDetailPage() {
               users={linkedUsers}
               errMsg={linkedUsersErr}
               t={t}
+              onAddClick={() => setAddEmployeeOpen(true)}
             />
           )}
 
@@ -374,6 +378,19 @@ export default function PlatformCompanyDetailPage() {
           { name: "title", label: t("admin.platform_companies.name") },
           { name: "description", label: t("admin.platform_companies.description"), multiline: true },
         ]}
+      />
+      <AddEmployeeModal
+        open={addEmployeeOpen}
+        onClose={() => setAddEmployeeOpen(false)}
+        token={token}
+        companyId={company.id}
+        companyName={company.name}
+        onSuccess={() => {
+          // Force-refresh the Users tab content by resetting it to null,
+          // which triggers the existing useEffect that re-fetches.
+          setLinkedUsers(null);
+          setLinkedUsersErr(null);
+        }}
       />
     </div>
   );
@@ -611,63 +628,89 @@ function UsersTab({
   users,
   errMsg,
   t,
+  onAddClick,
 }: {
   companyId: number;
   users: PlatformAdminUserRow[] | null;
   errMsg: string | null;
   t: (k: string) => string;
+  onAddClick: () => void;
 }) {
+  const header = (
+    <div className="mb-3 flex items-center justify-end">
+      <V2Button variant="primary" size="sm" icon={<Plus className="h-3.5 w-3.5" />} onClick={onAddClick}>
+        Add employee
+      </V2Button>
+    </div>
+  );
+
   if (errMsg) {
     return (
-      <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
-        {errMsg}
+      <div>
+        {header}
+        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
+          {errMsg}
+        </div>
       </div>
     );
   }
   if (users === null) {
-    return <PlaceholderTab text={t("admin.platform_companies.loading")} />;
+    return (
+      <div>
+        {header}
+        <PlaceholderTab text={t("admin.platform_companies.loading")} />
+      </div>
+    );
   }
   if (users.length === 0) {
-    return <PlaceholderTab text={t("admin.platform_companies.users_empty")} />;
+    return (
+      <div>
+        {header}
+        <PlaceholderTab text={t("admin.platform_companies.users_empty")} />
+      </div>
+    );
   }
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[640px] text-left text-sm">
-        <thead className="border-b border-default bg-figma-bg-1 text-xs font-medium uppercase tracking-wide text-fg-t6">
-          <tr>
-            <th scope="col" className="px-4 py-2">{t("admin.crud.common.id")}</th>
-            <th scope="col" className="px-4 py-2">{t("admin.users.col_name")}</th>
-            <th scope="col" className="px-4 py-2">{t("admin.users.col_email")}</th>
-            <th scope="col" className="px-4 py-2">{t("admin.users.col_role")}</th>
-            <th scope="col" className="px-4 py-2">{t("admin.users.col_status")}</th>
-            <th scope="col" className="px-4 py-2 text-right"> </th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.map((u) => {
-            const role = u.companies.find((c) => c.id === _companyId)?.role ?? "—";
-            return (
-              <tr key={u.id} className="border-b border-default last:border-0">
-                <td className="px-4 py-2 tabular-nums text-fg-t7">{u.id}</td>
-                <td className="px-4 py-2 font-medium text-fg-t8">{u.name}</td>
-                <td className="px-4 py-2 text-fg-t7">{u.email}</td>
-                <td className="px-4 py-2 text-fg-t7 capitalize">{role.replace(/_/g, " ")}</td>
-                <td className="px-4 py-2">
-                  <_StatusPill status={u.status} />
-                </td>
-                <td className="px-4 py-2 text-right">
-                  <Link
-                    href={`/platform/users/${u.id}`}
-                    className="text-xs text-primary underline-offset-2 hover:underline"
-                  >
-                    {t("admin.users.btn_edit")}
-                  </Link>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div>
+      {header}
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[640px] text-left text-sm">
+          <thead className="border-b border-default bg-figma-bg-1 text-xs font-medium uppercase tracking-wide text-fg-t6">
+            <tr>
+              <th scope="col" className="px-4 py-2">{t("admin.crud.common.id")}</th>
+              <th scope="col" className="px-4 py-2">{t("admin.users.col_name")}</th>
+              <th scope="col" className="px-4 py-2">{t("admin.users.col_email")}</th>
+              <th scope="col" className="px-4 py-2">{t("admin.users.col_role")}</th>
+              <th scope="col" className="px-4 py-2">{t("admin.users.col_status")}</th>
+              <th scope="col" className="px-4 py-2 text-right"> </th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((u) => {
+              const role = u.companies.find((c) => c.id === _companyId)?.role ?? "—";
+              return (
+                <tr key={u.id} className="border-b border-default last:border-0">
+                  <td className="px-4 py-2 tabular-nums text-fg-t7">{u.id}</td>
+                  <td className="px-4 py-2 font-medium text-fg-t8">{u.name}</td>
+                  <td className="px-4 py-2 text-fg-t7">{u.email}</td>
+                  <td className="px-4 py-2 text-fg-t7 capitalize">{role.replace(/_/g, " ")}</td>
+                  <td className="px-4 py-2">
+                    <_StatusPill status={u.status} />
+                  </td>
+                  <td className="px-4 py-2 text-right">
+                    <Link
+                      href={`/platform/users/${u.id}`}
+                      className="text-xs text-primary underline-offset-2 hover:underline"
+                    >
+                      {t("admin.users.btn_edit")}
+                    </Link>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
