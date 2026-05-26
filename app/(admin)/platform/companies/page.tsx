@@ -16,7 +16,7 @@ import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { PaginationBar } from "@/components/PaginationBar";
 import { PartnerSettingsModal } from "@/components/PartnerSettingsModal";
 import { TranslationsModal } from "@/components/TranslationsModal";
-import { StatusPill, autoStatusTone } from "@/components/ui/StatusPill";
+import { StatusPill } from "@/components/ui/StatusPill";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { usePrompt } from "@/contexts/PromptDialogContext";
@@ -46,7 +46,7 @@ import {
 import { apiCompaniesStats, type CompaniesStats } from "@/lib/marketplace-stats-api";
 import { STATUS_BADGE_CLASS, statusBadgeStyle } from "@/lib/admin-v2-helpers";
 import { MarketplaceOpsSectionTabs } from "@/components/marketplace/MarketplaceOpsSectionTabs";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   PageHeader as V2PageHeader,
   FilterCard,
@@ -55,16 +55,25 @@ import {
   V2Button,
   StatCard,
   StatGrid,
+  IconButton,
 } from "@/components/ui/v2";
 import {
   Archive,
+  ArchiveRestore,
   Briefcase,
   Building,
+  Check,
   CircleCheck,
   Download,
+  ExternalLink,
+  Languages,
+  MoreVertical,
+  Pencil,
   Plus,
   RefreshCw,
   Search,
+  Shield,
+  Store,
   X as XIcon,
   XCircle,
 } from "lucide-react";
@@ -76,6 +85,96 @@ const GOVERNANCE_STATUSES = ["pending", "active", "suspended", "rejected"] as co
 
 function labelServiceType(t: string): string {
   return t ? t.charAt(0).toUpperCase() + t.slice(1) : t;
+}
+
+function governanceTone(status: string | null | undefined): "success" | "warning" | "danger" | "gray" {
+  switch (status) {
+    case "approved":
+    case "active":
+      return "success";
+    case "pending":
+      return "warning";
+    case "rejected":
+    case "suspended":
+      return "danger";
+    default:
+      return "gray";
+  }
+}
+
+function titleCase(s: string | null | undefined): string {
+  if (!s) return "—";
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+type RowMenuItem = {
+  key: string;
+  label: string;
+  icon: ReactNode;
+  onSelect: () => void;
+  destructive?: boolean;
+  disabled?: boolean;
+};
+
+// Inline action-row dropdown. Lightweight click-outside menu — used in the
+// table to consolidate the previously-inline cluster of seller/partner/archive
+// buttons into a single 3-dot affordance per spec 3.B.
+function RowActionsMenu({ items, disabled, label = "More" }: { items: RowMenuItem[]; disabled?: boolean; label?: string }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    function onDoc(e: MouseEvent) {
+      if (!ref.current) return;
+      if (!ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+  return (
+    <div ref={ref} className="relative inline-block">
+      <IconButton
+        aria-label={label}
+        onClick={() => setOpen((v) => !v)}
+        disabled={disabled}
+      >
+        <MoreVertical />
+      </IconButton>
+      {open && items.length > 0 ? (
+        <div
+          role="menu"
+          className="absolute right-0 z-40 mt-1 min-w-[180px] rounded-md border bg-white py-1 text-[12px] shadow-lg"
+          style={{ borderColor: "var(--admin-border)" }}
+        >
+          {items.map((it) => (
+            <button
+              key={it.key}
+              type="button"
+              role="menuitem"
+              disabled={it.disabled}
+              onClick={() => {
+                setOpen(false);
+                it.onSelect();
+              }}
+              className={`flex w-full items-center gap-2 px-3 py-1.5 text-left transition hover:bg-[color:var(--admin-bg-secondary)] disabled:opacity-40 ${it.destructive ? "text-error-700" : "text-fg-t7"}`}
+            >
+              <span className="inline-flex h-4 w-4 items-center justify-center [&>svg]:h-4 [&>svg]:w-4" aria-hidden>
+                {it.icon}
+              </span>
+              <span className="font-medium">{it.label}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export default function PlatformCompaniesPage() {
@@ -97,7 +196,6 @@ export default function PlatformCompaniesPage() {
   const [sellerFilter, setSellerFilter] = useState<string>("");
   const [sortBy, setSortBy] = useState<SortField>("id");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [draftGovernance, setDraftGovernance] = useState<Record<number, string>>({});
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -150,13 +248,6 @@ export default function PlatformCompaniesPage() {
       setRows(companiesRes.data);
       setMeta(companiesRes.meta);
       setPendingApps(appsRes.data ?? []);
-      setDraftGovernance((prev) => {
-        const next = { ...prev };
-        for (const r of companiesRes.data) {
-          next[r.id] = r.governance_status;
-        }
-        return next;
-      });
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
       else setErr(e instanceof ApiRequestError ? e.message : t("admin.platform_companies.err_load"));
@@ -498,20 +589,24 @@ export default function PlatformCompaniesPage() {
     }
   }
 
-  async function saveGovernance(companyId: number) {
+  // Edit governance via More menu — window.prompt is intentional placeholder;
+  // a richer modal can replace this in a later pass without touching the menu.
+  async function editGovernance(row: PlatformCompanyRow) {
     if (!token) return;
-    const governance_status = draftGovernance[companyId];
-    if (!governance_status) return;
-    const row = rows.find((r) => r.id === companyId);
-    if (row && governance_status === row.governance_status) {
-      alert(t("admin.platform_companies.no_change_to_save"));
+    const allowed = GOVERNANCE_STATUSES.join(" / ");
+    const next = window.prompt(`${t("admin.platform_companies.governance")} (${allowed})`, row.governance_status);
+    if (!next) return;
+    const trimmed = next.trim().toLowerCase();
+    if (!(GOVERNANCE_STATUSES as readonly string[]).includes(trimmed)) {
+      alert(`Unknown status. Allowed: ${allowed}`);
       return;
     }
+    if (trimmed === row.governance_status) return;
     const reason = window.prompt(t("admin.platform_companies.optional_reason")) ?? "";
-    setBusyId(companyId);
+    setBusyId(row.id);
     try {
-      await apiPatchCompanyGovernance(token, companyId, {
-        governance_status,
+      await apiPatchCompanyGovernance(token, row.id, {
+        governance_status: trimmed,
         reason: reason.trim() || undefined,
       });
       await load();
@@ -860,29 +955,34 @@ export default function PlatformCompaniesPage() {
                     <span className="ml-2 text-xs text-fg-t6">{a.business_email}</span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <div className="flex flex-wrap justify-end gap-1.5">
+                    <div className="flex justify-end gap-1.5">
                       <button
                         type="button"
                         disabled={busyId === -a.id}
                         onClick={() => void approveApplication(a)}
-                        className="inline-flex h-8 items-center rounded-zulu border border-success-300 bg-success-50 px-2.5 text-xs font-semibold text-success-800 transition hover:bg-success-100 disabled:opacity-40"
+                        aria-label={t("admin.platform_companies.btn_approve")}
+                        title={t("admin.platform_companies.btn_approve")}
+                        className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-md border border-success-300 bg-success-50 text-success-800 transition hover:bg-success-100 disabled:opacity-40 [&>svg]:h-[18px] [&>svg]:w-[18px]"
                       >
-                        {t("admin.platform_companies.btn_approve")}
+                        <Check />
                       </button>
                       <button
                         type="button"
                         disabled={busyId === -a.id}
                         onClick={() => void rejectApplication(a)}
-                        className="inline-flex h-8 items-center rounded-zulu border border-error-300 bg-error-50 px-2.5 text-xs font-semibold text-error-800 transition hover:bg-error-100 disabled:opacity-40"
+                        aria-label={t("admin.platform_companies.btn_reject")}
+                        title={t("admin.platform_companies.btn_reject")}
+                        className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-md border border-error-300 bg-error-50 text-error-800 transition hover:bg-error-100 disabled:opacity-40 [&>svg]:h-[18px] [&>svg]:w-[18px]"
                       >
-                        {t("admin.platform_companies.btn_reject")}
+                        <XIcon />
                       </button>
-                      <Link
+                      <IconButton
+                        as="link"
                         href={`/platform/company-applications/${a.id}`}
-                        className="inline-flex h-8 items-center rounded-zulu border border-default bg-white px-2.5 text-xs font-medium text-fg-t7 transition hover:bg-figma-bg-1"
+                        aria-label={t("admin.company_applications.btn_open")}
                       >
-                        {t("admin.company_applications.btn_open")}
-                      </Link>
+                        <ExternalLink />
+                      </IconButton>
                     </div>
                   </td>
                 </tr>
@@ -951,22 +1051,12 @@ export default function PlatformCompaniesPage() {
                     ) : <span className="text-fg-t6">—</span>}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <select
-                        value={draftGovernance[r.id] ?? r.governance_status}
-                        onChange={(e) =>
-                          setDraftGovernance((prev) => ({ ...prev, [r.id]: e.target.value }))
-                        }
-                        className="h-8 rounded-zulu border border-default bg-white px-2 text-xs focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
-                      >
-                        {GOVERNANCE_STATUSES.map((s) => (
-                          <option key={s} value={s}>
-                            {s.charAt(0).toUpperCase() + s.slice(1)}
-                          </option>
-                        ))}
-                      </select>
-                      <StatusPill status={r.governance_status} tone={autoStatusTone(r.governance_status)} />
-                    </div>
+                    <span
+                      className={STATUS_BADGE_CLASS}
+                      style={statusBadgeStyle(governanceTone(r.governance_status))}
+                    >
+                      {titleCase(r.governance_status)}
+                    </span>
                   </td>
                   <td className="px-4 py-3">
                     {r.is_seller ? (
@@ -981,96 +1071,100 @@ export default function PlatformCompaniesPage() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <div className="flex flex-wrap justify-end gap-1.5">
-                      {/* Phase 6.1 — inline approve/reject for pending rows */}
+                    <div className="flex justify-end gap-1.5">
+                      {/* Pending rows surface inline Approve/Reject icon buttons
+                          per spec 3.B. All other actions move into the More
+                          dropdown (no more 7-button cluster of v1). */}
                       {r.governance_status === "pending" ? (
                         <>
                           <button
                             type="button"
                             disabled={busyId === r.id}
                             onClick={() => void inlineApprove(r)}
-                            className="inline-flex h-8 items-center rounded-zulu border border-success-300 bg-success-50 px-2.5 text-xs font-semibold text-success-800 transition hover:bg-success-100 disabled:opacity-40"
+                            aria-label={t("admin.platform_companies.btn_approve")}
+                            title={t("admin.platform_companies.btn_approve")}
+                            className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-md border border-success-300 bg-success-50 text-success-800 transition hover:bg-success-100 disabled:opacity-40 [&>svg]:h-[18px] [&>svg]:w-[18px]"
                           >
-                            {t("admin.platform_companies.btn_approve")}
+                            <Check />
                           </button>
                           <button
                             type="button"
                             disabled={busyId === r.id}
                             onClick={() => void inlineReject(r)}
-                            className="inline-flex h-8 items-center rounded-zulu border border-error-300 bg-error-50 px-2.5 text-xs font-semibold text-error-800 transition hover:bg-error-100 disabled:opacity-40"
+                            aria-label={t("admin.platform_companies.btn_reject")}
+                            title={t("admin.platform_companies.btn_reject")}
+                            className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-md border border-error-300 bg-error-50 text-error-800 transition hover:bg-error-100 disabled:opacity-40 [&>svg]:h-[18px] [&>svg]:w-[18px]"
                           >
-                            {t("admin.platform_companies.btn_reject")}
+                            <XIcon />
                           </button>
                         </>
-                      ) : null}
-                      <button
-                        type="button"
+                      ) : (
+                        <>
+                          <IconButton
+                            aria-label={t("admin.platform_companies.permissions")}
+                            title={t("admin.platform_companies.permissions")}
+                            disabled={busyId === r.id}
+                            onClick={() => void openPermissionsModal(r)}
+                          >
+                            <Shield />
+                          </IconButton>
+                          <IconButton
+                            aria-label={t("admin.platform_companies.translations")}
+                            title={t("admin.platform_companies.translations_tooltip")}
+                            onClick={() => setTranslateRow(r)}
+                          >
+                            <Languages />
+                          </IconButton>
+                        </>
+                      )}
+                      <RowActionsMenu
                         disabled={busyId === r.id}
-                        onClick={() => saveGovernance(r.id)}
-                        className="inline-flex h-8 items-center rounded-zulu border border-default bg-white px-2.5 text-xs font-medium text-fg-t7 transition hover:bg-figma-bg-1 disabled:opacity-40"
-                      >
-                        {t("admin.platform_companies.save_gov")}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busyId === r.id}
-                        onClick={() => void openPermissionsModal(r)}
-                        className="inline-flex h-8 items-center rounded-zulu border border-default bg-white px-2.5 text-xs font-medium text-fg-t7 transition hover:bg-figma-bg-1 disabled:opacity-40"
-                      >
-                        {t("admin.platform_companies.permissions")}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busyId === r.id}
-                        onClick={() => void toggleSeller(r)}
-                        className="inline-flex h-8 items-center rounded-zulu border border-primary-100 bg-primary-50 px-2.5 text-xs font-medium text-primary transition hover:bg-primary-100 disabled:opacity-40"
-                      >
-                        {r.is_seller ? t("admin.platform_companies.disable_seller") : t("admin.platform_companies.enable_seller")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setPartnerRow(r)}
-                        className={`inline-flex h-8 items-center rounded-zulu border px-2.5 text-xs font-medium transition ${
-                          r.is_partner_visible
-                            ? "border-success-200 bg-success-50 text-success-800 hover:bg-success-100"
-                            : "border-default bg-white text-fg-t7 hover:bg-figma-bg-1"
-                        }`}
-                      >
-                        {r.is_partner_visible
-                          ? t("admin.platform_companies.partner_on")
-                          : t("admin.platform_companies.partner_off")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setTranslateRow(r)}
-                        title={t("admin.platform_companies.translations_tooltip")}
-                        className="inline-flex h-8 items-center rounded-zulu border border-default bg-white px-2.5 text-xs font-medium text-fg-t7 transition hover:bg-figma-bg-1"
-                      >
-                        {t("admin.platform_companies.translations")}
-                      </button>
-                      {/* Phase 7.2 — archive / restore (super-admin only) */}
-                      {isSuperAdmin && !r.archived_at ? (
-                        <button
-                          type="button"
-                          disabled={busyId === r.id}
-                          onClick={() => void archive(r)}
-                          title={t("admin.platform_companies.btn_archive_tooltip")}
-                          className="inline-flex h-8 items-center rounded-zulu border border-error-200 bg-white px-2.5 text-xs font-medium text-error-700 transition hover:bg-error-50 disabled:opacity-40"
-                        >
-                          {t("admin.platform_companies.btn_archive")}
-                        </button>
-                      ) : null}
-                      {isSuperAdmin && r.archived_at ? (
-                        <button
-                          type="button"
-                          disabled={busyId === r.id}
-                          onClick={() => void restore(r)}
-                          title={r.archived_reason ?? undefined}
-                          className="inline-flex h-8 items-center rounded-zulu border border-warning-200 bg-warning-50 px-2.5 text-xs font-medium text-warning-700 transition hover:bg-warning-100 disabled:opacity-40"
-                        >
-                          {t("admin.platform_companies.btn_restore")}
-                        </button>
-                      ) : null}
+                        items={[
+                          {
+                            key: "edit-governance",
+                            label: t("admin.platform_companies.governance"),
+                            icon: <Pencil />,
+                            onSelect: () => void editGovernance(r),
+                          },
+                          {
+                            key: "toggle-seller",
+                            label: r.is_seller
+                              ? t("admin.platform_companies.disable_seller")
+                              : t("admin.platform_companies.enable_seller"),
+                            icon: <Store />,
+                            onSelect: () => void toggleSeller(r),
+                          },
+                          {
+                            key: "partner",
+                            label: r.is_partner_visible
+                              ? t("admin.platform_companies.partner_on")
+                              : t("admin.platform_companies.partner_off"),
+                            icon: <Briefcase />,
+                            onSelect: () => setPartnerRow(r),
+                          },
+                          ...(isSuperAdmin && !r.archived_at
+                            ? [
+                                {
+                                  key: "archive",
+                                  label: t("admin.platform_companies.btn_archive"),
+                                  icon: <Archive />,
+                                  onSelect: () => void archive(r),
+                                  destructive: true,
+                                },
+                              ]
+                            : []),
+                          ...(isSuperAdmin && r.archived_at
+                            ? [
+                                {
+                                  key: "restore",
+                                  label: t("admin.platform_companies.btn_restore"),
+                                  icon: <ArchiveRestore />,
+                                  onSelect: () => void restore(r),
+                                },
+                              ]
+                            : []),
+                        ]}
+                      />
                     </div>
                   </td>
                 </tr>
