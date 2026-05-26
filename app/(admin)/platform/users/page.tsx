@@ -46,13 +46,14 @@ import {
   CircleCheck,
   Clock,
   Download,
-  Edit3,
   Eye,
-  MoreVertical,
   Plus,
   RefreshCw,
   Search,
+  Trash2,
+  UserMinus,
   UserPlus,
+  UserX,
   Users,
   XCircle,
   X as XIcon,
@@ -69,6 +70,7 @@ import {
   IconButton,
 } from "@/components/ui/v2";
 import { MarketplaceOpsSectionTabs } from "@/components/marketplace/MarketplaceOpsSectionTabs";
+import { RowActionsMenu } from "@/components/admin/RowActionsMenu";
 
 const STATUS_FILTERS = ["", "active", "inactive", "pending"] as const;
 
@@ -665,54 +667,36 @@ export default function PlatformUsersPage() {
                           <IconButton as="link" href={`/platform/users/${r.id}`} aria-label={k("admin.users.btn_edit", "View")}>
                             <Eye />
                           </IconButton>
-                          <IconButton as="link" href={`/platform/users/${r.id}`} aria-label="Edit">
-                            <Edit3 />
-                          </IconButton>
-                          <button
-                            type="button"
-                            disabled={busyId === r.id || r.status === "inactive"}
-                            onClick={() => deactivate(r.id)}
-                            className="inline-flex h-7 items-center rounded-md border px-2.5 text-[11px] font-medium transition disabled:opacity-40"
-                            style={{
-                              color: "var(--admin-warning)",
-                              borderColor: "var(--admin-warning-light)",
-                              backgroundColor: "transparent",
-                            }}
-                          >
-                            {t("admin.users.btn_deactivate")}
-                          </button>
-                          <button
-                            type="button"
+                          <RowActionsMenu
                             disabled={busyId === r.id}
-                            onClick={() => anonymize(r)}
-                            title={t("admin.users.btn_anonymize_tooltip")}
-                            className="inline-flex h-7 items-center rounded-md border px-2.5 text-[11px] font-medium transition disabled:opacity-40"
-                            style={{
-                              color: "var(--admin-danger)",
-                              borderColor: "var(--admin-danger-light)",
-                              backgroundColor: "transparent",
-                            }}
-                          >
-                            {t("admin.users.btn_anonymize")}
-                          </button>
-                          {isSuperAdmin ? (
-                            <button
-                              type="button"
-                              disabled={busyId === r.id}
-                              onClick={() => hardDelete(r)}
-                              title={t("admin.users.btn_hard_delete_tooltip")}
-                              className="inline-flex h-7 items-center rounded-md px-2.5 text-[11px] font-semibold text-white transition disabled:opacity-40"
-                              style={{
-                                backgroundColor: "var(--admin-danger)",
-                              }}
-                            >
-                              {t("admin.users.btn_hard_delete")}
-                            </button>
-                          ) : (
-                            <IconButton aria-label="More">
-                              <MoreVertical />
-                            </IconButton>
-                          )}
+                            items={[
+                              {
+                                key: "deactivate",
+                                label: t("admin.users.btn_deactivate"),
+                                icon: <UserX />,
+                                onSelect: () => { void deactivate(r.id); },
+                                disabled: r.status === "inactive",
+                              },
+                              {
+                                key: "anonymize",
+                                label: t("admin.users.btn_anonymize"),
+                                icon: <UserMinus />,
+                                onSelect: () => { void anonymize(r); },
+                                destructive: true,
+                              },
+                              ...(isSuperAdmin
+                                ? [
+                                    {
+                                      key: "hard-delete",
+                                      label: t("admin.users.btn_hard_delete"),
+                                      icon: <Trash2 />,
+                                      onSelect: () => { void hardDelete(r); },
+                                      destructive: true,
+                                    },
+                                  ]
+                                : []),
+                            ]}
+                          />
                         </div>
                       </td>
                     </tr>

@@ -555,41 +555,59 @@ export default function GenericApprovalsPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1.5">
-                          {canActOnApproval(r.status) && cat !== "review" ? (
+                          {cat === "review" ? (
+                            <button
+                              type="button"
+                              disabled={busyId === r.id}
+                              className="inline-flex h-7 items-center gap-1 rounded-md border px-2.5 text-[11px] font-medium transition disabled:opacity-40 hover:bg-[color:var(--admin-warning-light)]"
+                              style={{
+                                color: "var(--admin-warning)",
+                                borderColor: "var(--admin-warning-light)",
+                                backgroundColor: "transparent",
+                              }}
+                            >
+                              <EyeIcon className="h-3 w-3" />
+                              Review
+                            </button>
+                          ) : (
                             <>
-                              <button
-                                type="button"
-                                disabled={busyId === r.id}
-                                onClick={() => approve(r.id)}
-                                className="inline-flex h-7 items-center gap-1 rounded-md border px-2.5 text-[11px] font-medium transition disabled:opacity-40 hover:bg-[color:var(--admin-success-light)]"
-                                style={{
-                                  color: "var(--admin-success)",
-                                  borderColor: "var(--admin-success-light)",
-                                  backgroundColor: "transparent",
-                                }}
-                              >
-                                <CheckIcon className="h-3 w-3" />
-                                Approve
-                              </button>
-                              <button
-                                type="button"
-                                disabled={busyId === r.id}
-                                onClick={() => reject(r.id)}
-                                className="inline-flex h-7 items-center gap-1 rounded-md border px-2.5 text-[11px] font-medium transition disabled:opacity-40 hover:bg-[color:var(--admin-danger-light)]"
-                                style={{
-                                  color: "var(--admin-danger)",
-                                  borderColor: "var(--admin-danger-light)",
-                                  backgroundColor: "transparent",
-                                }}
-                              >
-                                <XIcon className="h-3 w-3" />
-                                Reject
-                              </button>
+                              {canActOnApproval(r.status) ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    disabled={busyId === r.id}
+                                    onClick={() => approve(r.id)}
+                                    className="inline-flex h-7 items-center gap-1 rounded-md border px-2.5 text-[11px] font-medium transition disabled:opacity-40 hover:bg-[color:var(--admin-success-light)]"
+                                    style={{
+                                      color: "var(--admin-success)",
+                                      borderColor: "var(--admin-success-light)",
+                                      backgroundColor: "transparent",
+                                    }}
+                                  >
+                                    <CheckIcon className="h-3 w-3" />
+                                    Approve
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={busyId === r.id}
+                                    onClick={() => reject(r.id)}
+                                    className="inline-flex h-7 items-center gap-1 rounded-md border px-2.5 text-[11px] font-medium transition disabled:opacity-40 hover:bg-[color:var(--admin-danger-light)]"
+                                    style={{
+                                      color: "var(--admin-danger)",
+                                      borderColor: "var(--admin-danger-light)",
+                                      backgroundColor: "transparent",
+                                    }}
+                                  >
+                                    <XIcon className="h-3 w-3" />
+                                    Reject
+                                  </button>
+                                </>
+                              ) : null}
+                              <IconButton aria-label="View">
+                                <EyeIcon />
+                              </IconButton>
                             </>
-                          ) : null}
-                          <IconButton aria-label="View">
-                            <EyeIcon />
-                          </IconButton>
+                          )}
                         </div>
                       </td>
                     </tr>
