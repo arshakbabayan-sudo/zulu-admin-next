@@ -115,6 +115,67 @@ const PAYMENT_STATUS_META: Record<string, StatusMeta> = {
   voided: { tone: "gray", label: "Voided", icon: <XSimple className="h-3 w-3" /> },
 };
 
+/**
+ * Client-side CSV export for the currently-loaded package orders rows.
+ * Phase 1 — exports current page only. Future server-side endpoint can stream
+ * the full dataset; this keeps the «Export» button functional today.
+ */
+function exportPackageOrdersCsv(rows: PlatformPackageOrderRow[]): void {
+  if (rows.length === 0) return;
+  const headers = [
+    "id",
+    "order_number",
+    "status",
+    "payment_status",
+    "currency",
+    "final_total",
+    "package_title",
+    "package_type",
+    "destination",
+    "buyer_name",
+    "buyer_email",
+    "company",
+    "created_at",
+  ];
+  const escape = (v: unknown): string => {
+    const s = v == null ? "" : String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const lines = [headers.join(",")];
+  for (const r of rows) {
+    lines.push(
+      [
+        r.id,
+        r.order_number,
+        r.status,
+        r.payment_status,
+        r.currency,
+        r.final_total_snapshot,
+        r.package?.package_title ?? "",
+        r.package?.package_type ?? "",
+        [r.package?.destination_city, r.package?.destination_country].filter(Boolean).join(", "),
+        r.user?.name ?? "",
+        r.user?.email ?? "",
+        r.company?.name ?? "",
+        r.created_at ?? "",
+      ]
+        .map(escape)
+        .join(","),
+    );
+  }
+  const csv = lines.join("\n");
+  const blob = new Blob([`﻿${csv}`], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+  link.href = url;
+  link.download = `package-orders-${stamp}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 function labelStatus(meta: Record<string, StatusMeta>, s: string): string {
   return meta[s]?.label ?? s.replace(/_/g, " ");
 }
@@ -280,7 +341,13 @@ export default function PlatformPackageOrdersPage() {
             <V2Button onClick={() => void load()} icon={<RefreshCw className="h-4 w-4" />} aria-label="Refresh">
               {""}
             </V2Button>
-            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button
+              icon={<Download className="h-4 w-4" />}
+              onClick={() => exportPackageOrdersCsv(rows)}
+              disabled={rows.length === 0}
+            >
+              Export
+            </V2Button>
           </>
         }
       />
