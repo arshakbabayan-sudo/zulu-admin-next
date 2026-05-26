@@ -1,6 +1,20 @@
 "use client";
 
-/** Phase-2 migration to shared @/components/ui primitives. */
+/**
+ * v2 admin-redesign — Package orders page (Bookings group).
+ *
+ * Source spec: docs/admin_designe/Bookings/bookings_mocks.html (PAGE 2)
+ * Migration prompt: docs/admin_designe/Bookings/bookings_implementation_prompt.md §3.B
+ *
+ * Chrome:
+ *   - V2PageHeader with breadcrumb + Export action
+ *   - BookingsSectionTabs (shared with /platform/bookings)
+ *   - 4 stat cards from /platform-admin/package-orders/stats (30d)
+ *   - FilterCard (Order status / Payment status / Company / Search)
+ *   - Active filter chips with per-chip dismissal
+ *   - V2Card wrapping table with DUAL status columns (Order + Payment)
+ *   - Retry IconButton on failed-payment rows
+ */
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
@@ -9,32 +23,105 @@ import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { apiPlatformPackageOrders, type PlatformPackageOrderRow } from "@/lib/platform-admin-api";
-import { useCallback, useEffect, useState } from "react";
+import { apiPackageOrdersStats, type PackageOrdersStats } from "@/lib/bookings-stats-api";
+import { formatMoney } from "@/lib/format";
 import {
-  Input,
-  Pagination,
-  Table,
-  TBody,
-  TD,
-  TEmpty,
-  TH,
-  THead,
-  TR,
-} from "@/components/ui";
+  STATUS_BADGE_CLASS,
+  avatarInitials,
+  avatarStyle,
+  formatRelativeTime,
+  pickAvatarTone,
+  statusBadgeStyle,
+  type StatusTone,
+} from "@/lib/admin-v2-helpers";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Check,
+  CheckCheck,
+  CircleCheck,
+  Clock,
+  DollarSign,
+  Download,
+  Eye,
+  MoreVertical,
+  Package,
+  Loader2 as LoaderIcon,
+  RefreshCw,
+  RotateCcw as RotateIcon,
+  XIcon,
+  XCircle,
+  X as XSimple,
+} from "lucide-react";
+import { Pagination } from "@/components/ui";
 import {
   PageHeader as V2PageHeader,
-  SectionTabs,
   FilterCard,
   FilterField,
   V2Card,
   V2Button,
+  StatCard,
+  StatGrid,
   IconButton,
 } from "@/components/ui/v2";
-import { Download, Eye } from "lucide-react";
+import { BookingsSectionTabs } from "@/components/bookings/BookingsSectionTabs";
+
+const ORDER_STATUSES = [
+  "",
+  "pending",
+  "pending_payment",
+  "confirmed",
+  "partially_confirmed",
+  "in_progress",
+  "completed",
+  "fulfilled",
+  "cancelled",
+  "failed",
+] as const;
+
+const PAYMENT_STATUSES = [
+  "",
+  "paid",
+  "captured",
+  "pending",
+  "authorized",
+  "partial",
+  "failed",
+  "refunded",
+  "voided",
+] as const;
+
+type StatusMeta = { tone: StatusTone; label: string; icon: React.ReactNode };
+
+const ORDER_STATUS_META: Record<string, StatusMeta> = {
+  pending: { tone: "warning", label: "Pending", icon: <Clock className="h-3 w-3" /> },
+  pending_payment: { tone: "warning", label: "Pending payment", icon: <Clock className="h-3 w-3" /> },
+  confirmed: { tone: "success", label: "Confirmed", icon: <Check className="h-3 w-3" /> },
+  partially_confirmed: { tone: "warning", label: "Partial", icon: <Clock className="h-3 w-3" /> },
+  in_progress: { tone: "info", label: "In progress", icon: <LoaderIcon className="h-3 w-3" /> },
+  completed: { tone: "info", label: "Completed", icon: <CheckCheck className="h-3 w-3" /> },
+  fulfilled: { tone: "success", label: "Fulfilled", icon: <CheckCheck className="h-3 w-3" /> },
+  cancelled: { tone: "danger", label: "Cancelled", icon: <XSimple className="h-3 w-3" /> },
+  failed: { tone: "danger", label: "Failed", icon: <XSimple className="h-3 w-3" /> },
+};
+
+const PAYMENT_STATUS_META: Record<string, StatusMeta> = {
+  paid: { tone: "success", label: "Paid", icon: <Check className="h-3 w-3" /> },
+  captured: { tone: "success", label: "Captured", icon: <Check className="h-3 w-3" /> },
+  pending: { tone: "warning", label: "Pending", icon: <Clock className="h-3 w-3" /> },
+  authorized: { tone: "warning", label: "Authorized", icon: <Clock className="h-3 w-3" /> },
+  partial: { tone: "info", label: "Partial", icon: <LoaderIcon className="h-3 w-3" /> },
+  failed: { tone: "danger", label: "Failed", icon: <XSimple className="h-3 w-3" /> },
+  refunded: { tone: "gray", label: "Refunded", icon: <RotateIcon className="h-3 w-3" /> },
+  voided: { tone: "gray", label: "Voided", icon: <XSimple className="h-3 w-3" /> },
+};
+
+function labelStatus(meta: Record<string, StatusMeta>, s: string): string {
+  return meta[s]?.label ?? s.replace(/_/g, " ");
+}
 
 export default function PlatformPackageOrdersPage() {
   const { token, user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [rows, setRows] = useState<PlatformPackageOrderRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -43,13 +130,17 @@ export default function PlatformPackageOrdersPage() {
   const [paymentStatusFilter, setPaymentStatusFilter] = useState("");
   const [companyIdDraft, setCompanyIdDraft] = useState("");
   const [companyId, setCompanyId] = useState<number | undefined>(undefined);
+  const [search, setSearch] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState<PackageOrdersStats | null>(null);
 
   const load = useCallback(async () => {
     if (!token || !allowed) return;
     setErr(null);
     setForbidden(false);
+    setLoading(true);
     try {
       const res = await apiPlatformPackageOrders(token, {
         page,
@@ -63,12 +154,21 @@ export default function PlatformPackageOrdersPage() {
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 403) setForbidden(true);
       else setErr(e instanceof ApiRequestError ? e.message : t("admin.package_orders.err_load"));
+    } finally {
+      setLoading(false);
     }
   }, [token, allowed, page, statusFilter, paymentStatusFilter, companyId, t]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!token || !allowed) return;
+    void apiPackageOrdersStats(token, "30d")
+      .then((res) => setStats(res.data))
+      .catch(() => setStats(null));
+  }, [token, allowed]);
 
   function applyCompanyFilter() {
     const raw = companyIdDraft.trim();
@@ -87,6 +187,74 @@ export default function PlatformPackageOrdersPage() {
     setPage(1);
   }
 
+  const activeChips = useMemo(() => {
+    const chips: Array<{ key: string; label: string; clear: () => void }> = [];
+    if (statusFilter) {
+      chips.push({
+        key: "status",
+        label: `Order: ${labelStatus(ORDER_STATUS_META, statusFilter)}`,
+        clear: () => {
+          setPage(1);
+          setStatusFilter("");
+        },
+      });
+    }
+    if (paymentStatusFilter) {
+      chips.push({
+        key: "payment",
+        label: `Payment: ${labelStatus(PAYMENT_STATUS_META, paymentStatusFilter)}`,
+        clear: () => {
+          setPage(1);
+          setPaymentStatusFilter("");
+        },
+      });
+    }
+    if (companyId != null) {
+      chips.push({
+        key: "company",
+        label: `Company #${companyId}`,
+        clear: () => {
+          setPage(1);
+          setCompanyId(undefined);
+          setCompanyIdDraft("");
+        },
+      });
+    }
+    if (search.trim()) {
+      chips.push({
+        key: "search",
+        label: `“${search.trim()}”`,
+        clear: () => {
+          setPage(1);
+          setSearch("");
+        },
+      });
+    }
+    return chips;
+  }, [statusFilter, paymentStatusFilter, companyId, search]);
+
+  function clearAllFilters() {
+    setPage(1);
+    setStatusFilter("");
+    setPaymentStatusFilter("");
+    setCompanyId(undefined);
+    setCompanyIdDraft("");
+    setSearch("");
+  }
+
+  // Client-side search across order_number / package title / buyer name.
+  const filteredRows = search.trim()
+    ? rows.filter((r) => {
+        const q = search.trim().toLowerCase();
+        return (
+          r.order_number.toLowerCase().includes(q) ||
+          (r.package?.package_title ?? "").toLowerCase().includes(q) ||
+          (r.user?.name ?? "").toLowerCase().includes(q) ||
+          (r.company?.name ?? "").toLowerCase().includes(q)
+        );
+      })
+    : rows;
+
   if (!allowed || forbidden) {
     return (
       <div className="space-y-4">
@@ -100,7 +268,6 @@ export default function PlatformPackageOrdersPage() {
 
   return (
     <div>
-      {/* v2 admin-redesign — Bookings Package orders page chrome. */}
       <V2PageHeader
         breadcrumb={[
           { label: "Home", href: "/dashboard" },
@@ -109,235 +276,294 @@ export default function PlatformPackageOrdersPage() {
         ]}
         title={t("admin.package_orders.title")}
         actions={
-          <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+          <>
+            <V2Button onClick={() => void load()} icon={<RefreshCw className="h-4 w-4" />} aria-label="Refresh">
+              {""}
+            </V2Button>
+            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+          </>
         }
       />
 
-      <SectionTabs
+      <BookingsSectionTabs
         activeHref="/platform/package-orders"
-        items={[
-          { href: "/platform/bookings", label: "All bookings" },
-          { href: "/platform/package-orders", label: "Package orders", count: meta?.total },
-        ]}
+        counts={{ packageOrders: stats?.total_count ?? meta?.total }}
       />
 
+      <StatGrid cols={4} className="mb-5">
+        <StatCard
+          icon={<Package style={{ color: "var(--admin-primary)" }} className="h-[22px] w-[22px]" />}
+          value={stats ? stats.total_count.toLocaleString() : "—"}
+          label="Total orders (30d)"
+        />
+        <StatCard
+          icon={<CircleCheck style={{ color: "var(--admin-success)" }} className="h-[22px] w-[22px]" />}
+          value={stats ? stats.paid_count.toLocaleString() : "—"}
+          label="Paid"
+        />
+        <StatCard
+          icon={<Clock style={{ color: "var(--admin-warning)" }} className="h-[22px] w-[22px]" />}
+          value={stats ? stats.pending_count.toLocaleString() : "—"}
+          label="Pending payment"
+        />
+        <StatCard
+          icon={<DollarSign style={{ color: "var(--admin-info)" }} className="h-[22px] w-[22px]" />}
+          value={stats ? formatMoney(stats.total_value, lang) : "—"}
+          label="Total value (30d)"
+        />
+      </StatGrid>
+
       <FilterCard>
-        <FilterField label={t("admin.approvals.filter_status")}>
-          <Input
-            id="po-status"
+        <FilterField label="Order status">
+          <select
             value={statusFilter}
             onChange={(e) => {
               setPage(1);
               setStatusFilter(e.target.value);
             }}
-            placeholder={t("admin.package_orders.placeholder_status")}
-            className="!h-[34px]"
-          />
+            className="h-[34px] rounded-md border bg-white px-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+            style={{ borderColor: "var(--admin-border)" }}
+          >
+            {ORDER_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s ? labelStatus(ORDER_STATUS_META, s) : t("common.all")}
+              </option>
+            ))}
+          </select>
         </FilterField>
         <FilterField label={t("admin.package_orders.filter_payment_status")}>
-          <Input
-            id="po-pay"
+          <select
             value={paymentStatusFilter}
             onChange={(e) => {
               setPage(1);
               setPaymentStatusFilter(e.target.value);
             }}
-            placeholder={t("admin.package_orders.placeholder_payment_status")}
-            className="!h-[34px]"
-          />
+            className="h-[34px] rounded-md border bg-white px-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+            style={{ borderColor: "var(--admin-border)" }}
+          >
+            {PAYMENT_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s ? labelStatus(PAYMENT_STATUS_META, s) : t("common.all")}
+              </option>
+            ))}
+          </select>
         </FilterField>
-        <FilterField label={t("admin.inventory_hotels.filter_company_id")}>
-          <Input
-            id="po-co"
+        <FilterField label="Company ID">
+          <input
+            type="number"
             value={companyIdDraft}
             onChange={(e) => setCompanyIdDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") applyCompanyFilter();
+            }}
             placeholder={t("admin.package_orders.placeholder_optional")}
-            className="!h-[34px] tabular-nums"
+            className="h-[34px] tabular-nums rounded-md border bg-white px-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+            style={{ borderColor: "var(--admin-border)" }}
           />
         </FilterField>
-        <V2Button size="sm" onClick={applyCompanyFilter}>
-          {t("admin.package_orders.btn_apply_company")}
+        <FilterField label="Search" minWidth={240}>
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Order #, package, buyer..."
+            className="h-[34px] rounded-md border bg-white px-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+            style={{ borderColor: "var(--admin-border)" }}
+          />
+        </FilterField>
+        <V2Button variant="primary" size="md" onClick={applyCompanyFilter}>
+          Apply
         </V2Button>
+        {activeChips.length > 0 ? (
+          <V2Button size="md" onClick={clearAllFilters}>
+            Clear
+          </V2Button>
+        ) : null}
       </FilterCard>
 
+      {activeChips.length > 0 ? (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <span className="text-[11px] font-medium" style={{ color: "var(--admin-text-secondary)" }}>
+            Active filters:
+          </span>
+          {activeChips.map((chip) => (
+            <button
+              key={chip.key}
+              type="button"
+              onClick={chip.clear}
+              className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[12px] font-medium transition hover:opacity-80"
+              style={{
+                backgroundColor: "var(--admin-primary-soft)",
+                borderColor: "var(--admin-primary-light)",
+                color: "var(--admin-primary)",
+              }}
+            >
+              {chip.label}
+              <XIcon className="h-3 w-3 opacity-70" />
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={clearAllFilters}
+            className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium opacity-80 hover:opacity-100"
+            style={{ color: "var(--admin-text-secondary)" }}
+          >
+            <XCircle className="h-3 w-3" />
+            Clear all
+          </button>
+        </div>
+      ) : null}
+
       {err ? (
-        <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>
+        <div
+          className="mb-4 rounded-md border px-4 py-2 text-sm"
+          style={{
+            borderColor: "var(--admin-danger-light)",
+            backgroundColor: "var(--admin-danger-light)",
+            color: "var(--admin-danger-dark)",
+          }}
+        >
+          {err}
+        </div>
       ) : null}
 
       <V2Card>
-      <Table>
-        <THead>
-          <TR>
-            <TH>{t("admin.invoices.col_id")}</TH>
-            <TH>{t("admin.package_orders.col_order_number")}</TH>
-            <TH>{t("admin.invoices.col_status")}</TH>
-            <TH>{t("admin.package_orders.col_payment")}</TH>
-            <TH>{t("admin.package_orders.col_total")}</TH>
-            <TH>{t("admin.package_orders.col_package")}</TH>
-            <TH>{t("admin.invoices.col_company")}</TH>
-            <TH>{t("admin.package_orders.col_buyer")}</TH>
-            <TH>{t("admin.approvals.col_created")}</TH>
-            <TH align="right">Actions</TH>
-          </TR>
-        </THead>
-        <TBody>
-          {rows.length === 0 ? (
-            <TEmpty colSpan={10}>{t("admin.package_orders.empty") || "No package orders."}</TEmpty>
-          ) : null}
-          {rows.map((r) => {
-            const companyName = r.company?.name ?? `#${r.company_id}`;
-            const buyerName = r.user?.name ?? `#${r.user_id}`;
-            const companyInitials = getInitials(companyName);
-            const buyerInitials = getInitials(buyerName);
-            const companyTone = pickAvatarTone(r.company_id);
-            const buyerTone = pickAvatarTone(r.user_id);
-            return (
-              <TR key={r.id}>
-                <TD className="tabular-nums text-fg-t7 font-mono text-xs">#{r.id}</TD>
-                <TD className="font-mono text-xs text-fg-t8">{r.order_number}</TD>
-                <TD>
-                  <span
-                    className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
-                    style={orderStatusStyle(r.status)}
-                  >
-                    {r.status}
-                  </span>
-                </TD>
-                <TD>
-                  <span
-                    className="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.3px]"
-                    style={paymentStatusStyle(r.payment_status)}
-                  >
-                    {r.payment_status}
-                  </span>
-                </TD>
-                <TD className="tabular-nums font-medium text-fg-t8">
-                  {r.final_total_snapshot} {r.currency}
-                </TD>
-                <TD className="text-xs text-fg-t7">
-                  {r.package ? `${r.package.package_title} (#${r.package.id})` : `#${r.package_id}`}
-                </TD>
-                <TD>
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
-                      style={avatarStyle(companyTone)}
-                      aria-hidden
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-[13px]">
+            <thead
+              className="text-[11px] font-semibold uppercase tracking-[0.5px]"
+              style={{ backgroundColor: "var(--admin-bg-secondary)", color: "var(--admin-text-secondary)" }}
+            >
+              <tr>
+                <th className="px-4 py-2.5 text-left">{t("admin.invoices.col_id")}</th>
+                <th className="px-4 py-2.5 text-left">{t("admin.package_orders.col_order_number")}</th>
+                <th className="px-4 py-2.5 text-left">{t("admin.invoices.col_status")}</th>
+                <th className="px-4 py-2.5 text-left">{t("admin.package_orders.col_payment")}</th>
+                <th className="px-4 py-2.5 text-left">{t("admin.package_orders.col_total")}</th>
+                <th className="px-4 py-2.5 text-left">{t("admin.package_orders.col_package")}</th>
+                <th className="px-4 py-2.5 text-left">{t("admin.invoices.col_company")}</th>
+                <th className="px-4 py-2.5 text-left">{t("admin.package_orders.col_buyer")}</th>
+                <th className="px-4 py-2.5 text-left">{t("admin.approvals.col_created")}</th>
+                <th className="px-4 py-2.5 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredRows.length === 0 ? (
+                <tr>
+                  <td colSpan={10} className="px-4 py-10 text-center text-sm" style={{ color: "var(--admin-text-secondary)" }}>
+                    {loading ? "Loading…" : t("admin.package_orders.empty") || "No package orders."}
+                  </td>
+                </tr>
+              ) : (
+                filteredRows.map((r) => {
+                  const orderMeta = ORDER_STATUS_META[r.status] ?? ORDER_STATUS_META.pending!;
+                  const payMeta = PAYMENT_STATUS_META[r.payment_status] ?? PAYMENT_STATUS_META.pending!;
+                  const companyName = r.company?.name ?? `#${r.company_id}`;
+                  const buyerName = r.user?.name ?? `#${r.user_id}`;
+                  const companyTone = pickAvatarTone(r.company_id);
+                  const buyerTone = pickAvatarTone(r.user_id);
+                  return (
+                    <tr
+                      key={r.id}
+                      className="border-t transition hover:bg-[color:var(--admin-bg-secondary)]"
+                      style={{ borderColor: "var(--admin-border)" }}
                     >
-                      {companyInitials}
-                    </span>
-                    <div className="min-w-0">
-                      <div className="font-medium text-fg-t8 truncate">{companyName}</div>
-                    </div>
-                  </div>
-                </TD>
-                <TD>
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
-                      style={avatarStyle(buyerTone)}
-                      aria-hidden
-                    >
-                      {buyerInitials}
-                    </span>
-                    <div className="min-w-0">
-                      <div className="font-medium text-fg-t8 truncate">{buyerName}</div>
-                    </div>
-                  </div>
-                </TD>
-                <TD className="text-xs text-fg-t6" title={r.created_at ?? undefined}>
-                  {formatRelativeTime(r.created_at)}
-                </TD>
-                <TD align="right">
-                  <div className="flex justify-end gap-1">
-                    <IconButton as="link" href={`/platform/package-orders/${r.id}`} aria-label="View">
-                      <Eye className="h-4 w-4" />
-                    </IconButton>
-                  </div>
-                </TD>
-              </TR>
-            );
-          })}
-        </TBody>
-      </Table>
+                      <td className="px-4 py-3 font-mono text-[12px] text-fg-t7">PO-{String(r.id).padStart(4, "0")}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col">
+                          <span className="font-mono text-[12px] font-semibold text-fg-t8">{r.order_number}</span>
+                          <span className="text-[11px]" style={{ color: "var(--admin-text-secondary)" }}>
+                            {r.adults_count}A · {r.children_count}C · {r.infants_count}I
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={STATUS_BADGE_CLASS} style={statusBadgeStyle(orderMeta.tone)}>
+                          {orderMeta.icon}
+                          {orderMeta.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={STATUS_BADGE_CLASS} style={statusBadgeStyle(payMeta.tone)}>
+                          {payMeta.icon}
+                          {payMeta.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-fg-t8 tabular-nums">
+                        {formatMoney(r.final_total_snapshot, lang, r.currency)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col">
+                          <span className="text-fg-t8 truncate max-w-[200px]">
+                            {r.package?.package_title ?? `#${r.package_id}`}
+                          </span>
+                          {r.package?.duration_days ? (
+                            <span className="text-[11px]" style={{ color: "var(--admin-text-secondary)" }}>
+                              {r.package.duration_days} days · {r.package.destination_city ?? r.package.destination_country ?? "—"}
+                            </span>
+                          ) : null}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold"
+                            style={avatarStyle(companyTone)}
+                          >
+                            {avatarInitials(companyName)}
+                          </span>
+                          <span className="text-fg-t8 truncate max-w-[150px]">{companyName}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold"
+                            style={avatarStyle(buyerTone)}
+                          >
+                            {avatarInitials(buyerName)}
+                          </span>
+                          <span className="text-fg-t8 truncate max-w-[150px]">{buyerName}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-[12px]" style={{ color: "var(--admin-text-secondary)" }}>
+                        {formatRelativeTime(r.created_at)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <IconButton as="link" href={`/platform/package-orders/${r.id}`} aria-label="View">
+                            <Eye />
+                          </IconButton>
+                          {r.payment_status === "failed" ? (
+                            <IconButton aria-label="Retry payment">
+                              <RefreshCw />
+                            </IconButton>
+                          ) : null}
+                          <IconButton aria-label="More">
+                            <MoreVertical />
+                          </IconButton>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+        {meta && meta.last_page > 1 ? (
+          <div
+            className="flex flex-wrap items-center justify-between gap-2 border-t px-5 py-3.5 text-[12px]"
+            style={{ borderColor: "var(--admin-border)", color: "var(--admin-text-secondary)" }}
+          >
+            <span>
+              Showing {(meta.current_page - 1) * meta.per_page + 1}–
+              {Math.min(meta.current_page * meta.per_page, meta.total)} of {meta.total} orders
+            </span>
+            <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />
+          </div>
+        ) : null}
       </V2Card>
-
-      {meta && meta.last_page > 1 ? (
-        <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />
-      ) : null}
     </div>
   );
-}
-
-// v2 admin-redesign helpers.
-function getInitials(name: string): string {
-  return (name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
-}
-
-function pickAvatarTone(id: number | string): "purple" | "teal" | "amber" | "blue" {
-  const tones: Array<"purple" | "teal" | "amber" | "blue"> = ["purple", "teal", "amber", "blue"];
-  const n = typeof id === "number" ? id : id.length;
-  return tones[n % tones.length]!;
-}
-
-function avatarStyle(tone: "purple" | "teal" | "amber" | "blue"): React.CSSProperties {
-  const map: Record<"purple" | "teal" | "amber" | "blue", React.CSSProperties> = {
-    purple: { backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" },
-    teal: { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" },
-    amber: { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" },
-    blue: { backgroundColor: "var(--admin-info-light)", color: "var(--admin-info-dark)" },
-  };
-  return map[tone];
-}
-
-function formatRelativeTime(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  const t = new Date(iso).getTime();
-  if (Number.isNaN(t)) return "—";
-  const diff = Date.now() - t;
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins} min ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
-  const days = Math.floor(hours / 24);
-  if (days === 1) return "Yesterday";
-  if (days < 7) return `${days} days ago`;
-  return new Date(iso).toLocaleDateString();
-}
-
-function orderStatusStyle(status: string): React.CSSProperties {
-  switch (status) {
-    case "confirmed":
-    case "completed":
-    case "fulfilled":
-      return { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" };
-    case "pending":
-    case "partially_confirmed":
-    case "in_progress":
-      return { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" };
-    case "cancelled":
-    case "failed":
-    case "partially_failed":
-      return { backgroundColor: "var(--admin-danger-light)", color: "var(--admin-danger-dark)" };
-    default:
-      return { backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" };
-  }
-}
-
-function paymentStatusStyle(status: string): React.CSSProperties {
-  switch (status) {
-    case "paid":
-    case "captured":
-      return { backgroundColor: "var(--admin-success-light)", color: "var(--admin-success-dark)" };
-    case "pending":
-    case "authorized":
-      return { backgroundColor: "var(--admin-warning-light)", color: "var(--admin-warning-dark)" };
-    case "failed":
-    case "refunded":
-    case "voided":
-      return { backgroundColor: "var(--admin-danger-light)", color: "var(--admin-danger-dark)" };
-    default:
-      return { backgroundColor: "var(--admin-bg-tertiary)", color: "var(--admin-text-secondary)" };
-  }
 }
