@@ -41,6 +41,7 @@ import {
 } from "@/lib/admin-v2-helpers";
 import { Pagination } from "@/components/ui";
 import { MarketplaceOpsSectionTabs } from "@/components/marketplace/MarketplaceOpsSectionTabs";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import {
   PageHeader as V2PageHeader,
   FilterCard,
@@ -230,7 +231,23 @@ export default function PlatformContractsPage() {
             <V2Button onClick={() => void load()} icon={<RefreshCw className="h-4 w-4" />} aria-label="Refresh">
               {""}
             </V2Button>
-            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button
+              icon={<Download className="h-4 w-4" />}
+              disabled={rows.length === 0}
+              onClick={() =>
+                exportRowsAsCsv("contracts", rows, [
+                  ["id", (r) => r.id],
+                  ["contract_number", (r) => r.contract_number],
+                  ["type", (r) => r.type],
+                  ["status", (r) => r.status],
+                  ["party_a_company_id", (r) => r.party_a_company_id ?? ""],
+                  ["party_b_company_id", (r) => r.party_b_company_id],
+                  ["language", (r) => r.language],
+                ])
+              }
+            >
+              Export
+            </V2Button>
             <Link
               href="/platform/contracts/new"
               className="inline-flex h-10 items-center gap-2 rounded-md bg-primary-500 px-4 text-ds-button-s font-ds-button-s font-semibold text-white transition hover:bg-purple-dark"

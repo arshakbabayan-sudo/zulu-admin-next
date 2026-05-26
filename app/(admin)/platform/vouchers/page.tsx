@@ -75,6 +75,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { FinanceSectionTabs } from "@/components/finance/FinanceSectionTabs";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import { FinanceQuickActionDrawer, type QuickActionMode } from "@/components/finance/FinanceQuickActionDrawer";
 
 const STATUSES = ["issued", "used", "void", "reissued", "expired"] as const;
@@ -316,7 +317,24 @@ export default function PlatformVouchersPage() {
         }
         actions={
           <>
-            <V2Button icon={<Download className="h-4 w-4" />}>Export CSV</V2Button>
+            <V2Button
+              icon={<Download className="h-4 w-4" />}
+              disabled={rows.length === 0}
+              onClick={() =>
+                exportRowsAsCsv("vouchers", rows, [
+                  ["id", (r) => r.id],
+                  ["voucher_number", (r) => r.voucher_number],
+                  ["order_id", (r) => r.order_id ?? ""],
+                  ["service_type", (r) => r.service_type],
+                  ["status", (r) => r.status],
+                  ["holder_name", (r) => r.holder_name],
+                  ["language", (r) => r.language],
+                  ["valid_from", (r) => r.valid_from ?? ""],
+                ])
+              }
+            >
+              Export CSV
+            </V2Button>
             <V2Button variant="primary" icon={<Plus className="h-4 w-4" />} onClick={() => setQuickMode("issue-voucher")}>
               Issue voucher
             </V2Button>

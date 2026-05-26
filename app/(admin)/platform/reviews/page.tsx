@@ -10,6 +10,7 @@ import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { apiModerateReview, apiPlatformReviews, type PlatformReviewRow } from "@/lib/platform-admin-api";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import { useCallback, useEffect, useState } from "react";
 import {
   Pagination,
@@ -112,7 +113,22 @@ export default function PlatformReviewsPage() {
         ]}
         title={t("admin.reviews.title")}
         actions={
-          <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+          <V2Button
+            icon={<Download className="h-4 w-4" />}
+            disabled={rows.length === 0}
+            onClick={() =>
+              exportRowsAsCsv("reviews", rows, [
+                ["id", (r) => r.id],
+                ["rating", (r) => r.rating],
+                ["status", (r) => r.status],
+                ["target_entity", (r) => `${r.target_entity_type}:${r.target_entity_id}`],
+                ["review_text", (r) => r.review_text ?? ""],
+                ["created_at", (r) => r.created_at ?? ""],
+              ])
+            }
+          >
+            Export
+          </V2Button>
         }
       />
 

@@ -35,6 +35,7 @@ import {
   IconButton,
 } from "@/components/ui/v2";
 import { MarketplaceOpsSectionTabs } from "@/components/marketplace/MarketplaceOpsSectionTabs";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import {
   CircleX,
   Download,
@@ -242,7 +243,23 @@ export default function Bucket3ServiceLogsPage() {
             <V2Button onClick={() => void load()} icon={<RefreshCw className="h-4 w-4" />} aria-label="Refresh">
               {""}
             </V2Button>
-            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button
+              icon={<Download className="h-4 w-4" />}
+              disabled={rows.length === 0}
+              onClick={() =>
+                exportRowsAsCsv("service-logs", rows, [
+                  ["id", (r) => r.id],
+                  ["category", (r) => r.category],
+                  ["action", (r) => r.action],
+                  ["actor_type", (r) => r.actor_type ?? ""],
+                  ["actor_id", (r) => r.actor_id ?? ""],
+                  ["subject_type", (r) => r.subject_type ?? ""],
+                  ["created_at", (r) => (r as { created_at?: string | null }).created_at ?? ""],
+                ])
+              }
+            >
+              Export
+            </V2Button>
             <Link
               href="/platform/audit-logs"
               className="inline-flex h-10 items-center rounded-md border px-4 text-[12px] font-semibold transition hover:opacity-80"

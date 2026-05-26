@@ -37,6 +37,7 @@ import {
   IconButton,
 } from "@/components/ui/v2";
 import { MarketplaceOpsSectionTabs } from "@/components/marketplace/MarketplaceOpsSectionTabs";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import {
   STATUS_BADGE_CLASS,
   avatarInitials,
@@ -255,7 +256,23 @@ export default function SellerApplicationsPage() {
             <V2Button onClick={() => void load()} icon={<RefreshCw className="h-4 w-4" />} aria-label="Refresh">
               {""}
             </V2Button>
-            <V2Button icon={<Download className="h-4 w-4" />}>Export CSV</V2Button>
+            <V2Button
+              icon={<Download className="h-4 w-4" />}
+              disabled={rows.length === 0}
+              onClick={() =>
+                exportRowsAsCsv("seller-applications", rows, [
+                  ["id", (r) => r.id],
+                  ["company_id", (r) => r.company_id],
+                  ["company_name", (r) => r.company_name ?? ""],
+                  ["service_type", (r) => r.service_type],
+                  ["status", (r) => r.status],
+                  ["applied_at", (r) => r.applied_at ?? ""],
+                  ["reviewed_at", (r) => r.reviewed_at ?? ""],
+                ])
+              }
+            >
+              Export CSV
+            </V2Button>
           </>
         }
       />
