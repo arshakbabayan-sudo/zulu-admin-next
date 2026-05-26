@@ -47,6 +47,7 @@ import { apiCompaniesStats, type CompaniesStats } from "@/lib/marketplace-stats-
 import { STATUS_BADGE_CLASS, statusBadgeStyle } from "@/lib/admin-v2-helpers";
 import { MarketplaceOpsSectionTabs } from "@/components/marketplace/MarketplaceOpsSectionTabs";
 import { RowActionsMenu } from "@/components/admin/RowActionsMenu";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   PageHeader as V2PageHeader,
@@ -582,7 +583,24 @@ export default function PlatformCompaniesPage() {
             <V2Button onClick={() => void load()} icon={<RefreshCw className="h-4 w-4" />} aria-label="Refresh">
               {""}
             </V2Button>
-            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button
+              icon={<Download className="h-4 w-4" />}
+              disabled={rows.length === 0}
+              onClick={() =>
+                exportRowsAsCsv("companies", rows, [
+                  ["id", (r) => r.id],
+                  ["name", (r) => r.name],
+                  ["type", (r) => r.type ?? ""],
+                  ["status", (r) => r.status ?? ""],
+                  ["governance", (r) => r.governance_status],
+                  ["is_seller", (r) => (r.is_seller ? "yes" : "no")],
+                  ["partner_visible", (r) => (r.is_partner_visible ? "yes" : "no")],
+                  ["archived_at", (r) => r.archived_at ?? ""],
+                ])
+              }
+            >
+              Export
+            </V2Button>
             <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
               Add company
             </V2Button>

@@ -71,6 +71,7 @@ import {
 } from "@/components/ui/v2";
 import { MarketplaceOpsSectionTabs } from "@/components/marketplace/MarketplaceOpsSectionTabs";
 import { RowActionsMenu } from "@/components/admin/RowActionsMenu";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 
 const STATUS_FILTERS = ["", "active", "inactive", "pending"] as const;
 
@@ -393,7 +394,22 @@ export default function PlatformUsersPage() {
             <V2Button onClick={() => void load()} icon={<RefreshCw className="h-4 w-4" />} aria-label="Refresh">
               {""}
             </V2Button>
-            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button
+              icon={<Download className="h-4 w-4" />}
+              disabled={rows.length === 0}
+              onClick={() =>
+                exportRowsAsCsv("users", rows, [
+                  ["id", (r) => r.id],
+                  ["name", (r) => r.name],
+                  ["email", (r) => r.email],
+                  ["status", (r) => r.status],
+                  ["companies", (r) => (r.companies ?? []).map((c) => `${c.name} (${c.role})`).join("; ")],
+                  ["last_login_at", (r) => r.last_login_at ?? ""],
+                ])
+              }
+            >
+              Export
+            </V2Button>
             <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
               Add user
             </V2Button>
