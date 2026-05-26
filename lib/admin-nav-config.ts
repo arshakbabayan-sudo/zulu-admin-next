@@ -203,6 +203,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/bucket3/payroll", labelKey: "admin.nav.tab.bucket3.payroll" },
       { href: "/bucket3/non-service-hours", labelKey: "admin.nav.tab.bucket3.non_service_hours" },
       { href: "/bucket3/cases", labelKey: "admin.nav.tab.bucket3.cases" },
+      { href: "/bucket3/requests", labelKey: "admin.nav.tab.bucket3.requests" },
       { href: "/bucket3/bulk-notifications", labelKey: "admin.nav.tab.bucket3.bulk_notifications" },
       { href: "/bucket3/pin-settings", labelKey: "admin.nav.tab.bucket3.pin_settings" },
       { href: "/bucket3/customers", labelKey: "admin.nav.tab.bucket3.customers" },
@@ -246,7 +247,10 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     labelKey: "admin.nav.section.users_v2",
     labelFallback: "Users",
     icon: "/icons/menu/users.svg",
-    defaultHref: "/admin-redesign/users",
+    // Bucket B refactor (2026-05-27) — point Users sidebar entry at the real
+    // /platform/users page. /admin-redesign/users was a placeholder duplicate
+    // that's now removed.
+    defaultHref: "/platform/users",
     tabs: [],
     visibility: "always",
     badgeSource: "users_pending",
