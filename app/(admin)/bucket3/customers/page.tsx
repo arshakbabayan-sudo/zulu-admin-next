@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/v2";
 import { Download, Edit3, Eye, Plus, RefreshCw, Search } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 
 export default function Bucket3CustomersPage() {
   const { token, user } = useAdminAuth();
@@ -115,7 +116,25 @@ export default function Bucket3CustomersPage() {
         }
         actions={
           <>
-            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button
+              icon={<Download className="h-4 w-4" />}
+              disabled={rows.length === 0}
+              onClick={() =>
+                exportRowsAsCsv("customers", rows, [
+                  ["id", (r) => r.id],
+                  ["name", (r) => r.name],
+                  ["email", (r) => r.email],
+                  ["phone", (r) => r.phone ?? ""],
+                  ["status", (r) => r.status],
+                  ["preferred_language", (r) => r.preferred_language ?? ""],
+                  ["nationality", (r) => r.nationality ?? ""],
+                  ["bookings_count", (r) => r.bookings_count],
+                  ["created_at", (r) => r.created_at ?? ""],
+                ])
+              }
+            >
+              Export
+            </V2Button>
             <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
               Add customer
             </V2Button>

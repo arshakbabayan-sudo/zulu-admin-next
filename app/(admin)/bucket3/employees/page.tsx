@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/v2";
 import { Search, Eye, Edit3, Download, Plus } from "lucide-react";
 import Link from "next/link";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import { useCallback, useEffect, useState } from "react";
 
 type EmployeeRow = {
@@ -129,7 +130,22 @@ export default function Bucket3EmployeesPage() {
         }
         actions={
           <>
-            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button
+              icon={<Download className="h-4 w-4" />}
+              disabled={rows.length === 0}
+              onClick={() =>
+                exportRowsAsCsv("employees", rows, [
+                  ["id", (r) => r.id],
+                  ["name", (r) => r.name],
+                  ["email", (r) => r.email],
+                  ["status", (r) => r.status],
+                  ["companies", (r) => r.companies.map((c) => `${c.name} (${c.role})`).join("; ")],
+                  ["created_at", (r) => r.created_at ?? ""],
+                ])
+              }
+            >
+              Export
+            </V2Button>
             <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
               Add employee
             </V2Button>
