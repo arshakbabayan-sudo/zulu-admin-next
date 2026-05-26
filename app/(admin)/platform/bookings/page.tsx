@@ -111,6 +111,65 @@ function labelStatus(s: string): string {
   return STATUS_META[s]?.label ?? s.replace(/_/g, " ");
 }
 
+/**
+ * Client-side CSV export of the currently-loaded bookings rows.
+ *
+ * Phase 1: exports just the current page (per_page=20). A future
+ * /platform-admin/bookings/export-csv endpoint can stream the full dataset
+ * server-side — until then, paginated CSVs are the pragmatic baseline so
+ * the «Export CSV» action isn't decorative.
+ */
+function exportBookingsCsv(rows: BookingRow[]): void {
+  if (rows.length === 0) return;
+  const headers = [
+    "id",
+    "order_number",
+    "status",
+    "service_type",
+    "total",
+    "currency",
+    "company",
+    "buyer_name",
+    "buyer_email",
+    "created_at",
+  ];
+  const escape = (v: unknown): string => {
+    const s = v == null ? "" : String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const lines = [headers.join(",")];
+  for (const r of rows) {
+    const offer = deriveOffer(r);
+    lines.push(
+      [
+        r.id,
+        r.order_number ?? "",
+        r.status,
+        offer?.type ?? "",
+        r.total ?? "",
+        r.currency ?? "",
+        r.company?.name ?? r.agent_company?.name ?? "",
+        r.user?.name ?? "",
+        r.user?.email ?? "",
+        r.created_at ?? "",
+      ]
+        .map(escape)
+        .join(","),
+    );
+  }
+  const csv = lines.join("\n");
+  const blob = new Blob([`﻿${csv}`], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+  link.href = url;
+  link.download = `bookings-${stamp}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 function labelServiceType(s: string): string {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }
@@ -303,7 +362,11 @@ export default function PlatformBookingsPage() {
             <V2Button onClick={() => void load()} icon={<RefreshCw className="h-4 w-4" />} aria-label="Refresh">
               {""}
             </V2Button>
-            <V2Button icon={<Download className="h-4 w-4" />}>
+            <V2Button
+              icon={<Download className="h-4 w-4" />}
+              onClick={() => exportBookingsCsv(rows)}
+              disabled={rows.length === 0}
+            >
               {t("admin.platform_bookings.export_csv") !== "admin.platform_bookings.export_csv"
                 ? t("admin.platform_bookings.export_csv")
                 : "Export CSV"}
