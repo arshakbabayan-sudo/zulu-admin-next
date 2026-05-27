@@ -96,27 +96,69 @@ type ToastState = { tone: "ok" | "err"; text: string } | null;
 
 // ─── Module / matrix helpers ───────────────────────────────────────────
 
-const MATRIX_COLUMNS = ["VIEW", "CREATE", "EDIT", "DELETE", "EXPORT"] as const;
+// Phase Գ.5 (2026-05-28) — expanded matrix columns from 5 → 10 per GAP-001
+// from the Phase 0 multi-tenant audit. The original 5-column layout left
+// ~30 of the 84 seeded permissions unmappable (CONFIRM / CANCEL / PUBLISH /
+// ISSUE / REFUND verbs etc.), so the matrix rendered "—" with no way for
+// super-admin to toggle them. The five new columns cover the most user-
+// facing workflow verbs (booking confirm/cancel, invoice issue, offer
+// publish, payment refund). Lower-traffic verbs (CAPTURE / FAIL / MODERATE
+// / ARCHIVE / GOVERNANCE / MANAGE_COMPONENTS / MANAGE_SELLER_PERMISSIONS)
+// alias into the closest existing column.
+const MATRIX_COLUMNS = [
+  "VIEW",
+  "CREATE",
+  "EDIT",
+  "DELETE",
+  "EXPORT",
+  "CONFIRM",
+  "CANCEL",
+  "PUBLISH",
+  "ISSUE",
+  "REFUND",
+] as const;
 type MatrixCol = (typeof MATRIX_COLUMNS)[number];
 
-// Aliases: backend often uses UPDATE/MANAGE; the v2 mockup labels them
-// Edit / Export. The mapping is documented in the rewrite spec.
+// Aliases: backend uses many verbs (UPDATE / MANAGE / MODERATE / CAPTURE /
+// etc.) that semantically belong under one of the 10 matrix columns. The
+// closest-fit mapping below keeps all 84 seeded permissions toggleable.
 const ACTION_ALIASES: Record<string, MatrixCol> = {
+  // VIEW — read-only access
   VIEW: "VIEW",
   LIST: "VIEW",
   READ: "VIEW",
+  // CREATE — write-create
   CREATE: "CREATE",
   STORE: "CREATE",
   ADD: "CREATE",
+  // EDIT — write-modify (state changes that aren't a dedicated column)
   EDIT: "EDIT",
   UPDATE: "EDIT",
   PATCH: "EDIT",
+  MODERATE: "EDIT",
+  EDIT_PROFILE: "EDIT",
+  UPDATE_PROFILE: "EDIT",
+  CAPTURE: "EDIT",
+  PAY: "EDIT",
+  // DELETE — remove or terminal-state actions
   DELETE: "DELETE",
   DESTROY: "DELETE",
   REMOVE: "DELETE",
+  ARCHIVE: "DELETE",
+  FAIL: "DELETE",
+  // EXPORT — admin / elevated / data-out
   EXPORT: "EXPORT",
   MANAGE: "EXPORT",
   DOWNLOAD: "EXPORT",
+  GOVERNANCE: "EXPORT",
+  MANAGE_COMPONENTS: "EXPORT",
+  MANAGE_SELLER_PERMISSIONS: "EXPORT",
+  // Dedicated columns for high-traffic workflow verbs
+  CONFIRM: "CONFIRM",
+  CANCEL: "CANCEL",
+  PUBLISH: "PUBLISH",
+  ISSUE: "ISSUE",
+  REFUND: "REFUND",
 };
 
 type MatrixCell = {
@@ -157,13 +199,13 @@ function buildMatrix(permissions: Permission[]): MatrixGroup[] {
     label,
     perm_ids: [],
     perm_names: [],
-    cells: {
-      VIEW: { perm_id: null },
-      CREATE: { perm_id: null },
-      EDIT: { perm_id: null },
-      DELETE: { perm_id: null },
-      EXPORT: { perm_id: null },
-    },
+    cells: MATRIX_COLUMNS.reduce(
+      (acc, col) => {
+        acc[col] = { perm_id: null };
+        return acc;
+      },
+      {} as Record<MatrixCol, MatrixCell>,
+    ),
   });
 
   for (const p of permissions) {
