@@ -114,7 +114,13 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     labelFallback: "Dashboard",
     icon: "/icons/menu/dashboard.svg",
     defaultHref: "/dashboard",
-    tabs: [],
+    // Phase Ա.9 (2026-05-28) — add Detailed stats tab (super-admin only).
+    // Operator/agent stats are future work; entry surfaces existing
+    // /statistics page that was previously not in the sidebar.
+    tabs: [
+      { href: "/dashboard", labelKey: "admin.nav.tab.dashboard_overview" },
+      { href: "/statistics", labelKey: "admin.nav.tab.detailed_stats", superAdminOnly: true },
+    ],
     visibility: "section_dashboard",
   },
 
