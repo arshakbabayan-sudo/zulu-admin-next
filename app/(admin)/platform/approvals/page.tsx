@@ -22,6 +22,7 @@ import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import {
   apiApproveGenericApproval,
@@ -317,7 +318,29 @@ export default function GenericApprovalsPage() {
             <V2Button onClick={() => void load()} icon={<RefreshCw className="h-4 w-4" />} aria-label="Refresh">
               {""}
             </V2Button>
-            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button
+              icon={<Download className="h-4 w-4" />}
+              disabled={rows.length === 0}
+              onClick={() =>
+                exportRowsAsCsv("approvals", rows, [
+                  ["id", (r) => r.id],
+                  ["entity_type", (r) => r.entity_type],
+                  ["entity_id", (r) => r.entity_id],
+                  ["status", (r) => r.status],
+                  ["priority", (r) => r.priority ?? ""],
+                  ["requested_by_id", (r) => r.requested_by?.id ?? ""],
+                  ["requested_by_name", (r) => r.requested_by?.name ?? ""],
+                  ["requested_by_email", (r) => r.requested_by?.email ?? ""],
+                  ["created_at", (r) => r.created_at ?? ""],
+                  ["reviewed_at", (r) => r.reviewed_at ?? ""],
+                  ["reviewed_by_name", (r) => r.reviewed_by_user?.name ?? ""],
+                  ["notes", (r) => r.notes ?? ""],
+                  ["decision_notes", (r) => r.decision_notes ?? ""],
+                ])
+              }
+            >
+              Export
+            </V2Button>
           </>
         }
       />

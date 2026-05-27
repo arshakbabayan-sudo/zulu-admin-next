@@ -12,6 +12,7 @@ import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import {
   apiAdminContractTemplates,
   CONTRACT_TYPES,
@@ -200,7 +201,24 @@ export default function PlatformContractTemplatesPage() {
             <V2Button onClick={() => void load()} icon={<RefreshCw className="h-4 w-4" />} aria-label="Refresh">
               {""}
             </V2Button>
-            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button
+              icon={<Download className="h-4 w-4" />}
+              disabled={rows.length === 0}
+              onClick={() =>
+                exportRowsAsCsv("contract-templates", rows, [
+                  ["id", (r) => r.id],
+                  ["name", (r) => r.name],
+                  ["type", (r) => r.type],
+                  ["language", (r) => r.language],
+                  ["version", (r) => r.version ?? ""],
+                  ["is_published", (r) => (r.is_published ? "1" : "0")],
+                  ["created_at", (r) => r.created_at ?? ""],
+                  ["updated_at", (r) => r.updated_at ?? ""],
+                ])
+              }
+            >
+              Export
+            </V2Button>
             <V2Button as="link" href="/platform/contract-templates/new" variant="primary" icon={<Plus className="h-4 w-4" />}>
               {t("admin.contract_templates.btn_new")}
             </V2Button>
