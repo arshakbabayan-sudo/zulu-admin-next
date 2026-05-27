@@ -138,8 +138,11 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/operator/visas", labelKey: "admin.nav.tab.visas", serviceType: "visa", moduleKey: "inventory.visas" },
       { href: "/operator/packages", labelKey: "admin.nav.tab.packages", serviceType: "package", moduleKey: "inventory.packages" },
       { href: "/operator/offers", labelKey: "admin.nav.tab.offers", moduleKey: "inventory.offers" },
-      // super-admin only oversight tabs (visible alongside when scope=all)
-      { href: "/platform/packages", labelKey: "admin.nav.tab.packages_oversight", superAdminOnly: true },
+      // Phase Ա.1 (2026-05-28) — the former `/platform/packages` extra tab
+      // was removed because the Inventory scope toggle (AdminGroupTabs) now
+      // routes super-admin Packages oversight via `/inventory/packages` (matches
+      // the Hotels/Flights/etc. pattern). Old `/platform/packages` URL still
+      // works as a redirect.
     ],
     visibility: "section_inventory",
   },

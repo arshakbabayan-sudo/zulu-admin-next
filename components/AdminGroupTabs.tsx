@@ -52,8 +52,10 @@ export function AdminGroupTabs() {
     // Rewrite /operator/foo → /inventory/foo for the matching tabs.
     if (href.startsWith("/operator/")) {
       const slug = href.slice("/operator/".length);
-      // Only the five oversight-mirrored resources exist under /inventory.
-      const oversightSlugs = ["flights", "hotels", "transfers", "cars", "excursions"];
+      // Resources with an /inventory/<slug> oversight mirror page.
+      // Phase Ա.1 (2026-05-28) — `packages` added (former /platform/packages
+      // moved to /inventory/packages to unify the scope-toggle pattern).
+      const oversightSlugs = ["flights", "hotels", "transfers", "cars", "excursions", "packages"];
       if (oversightSlugs.includes(slug)) {
         return `/inventory/${slug}`;
       }
