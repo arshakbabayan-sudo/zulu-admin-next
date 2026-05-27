@@ -18,6 +18,7 @@ import {
   apiUpdatePlatformBanner,
   type PlatformBannerRow,
 } from "@/lib/platform-admin-api";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import { useCallback, useEffect, useState } from "react";
 import {
   Button,
@@ -271,7 +272,25 @@ export default function PlatformBannersPage() {
             </V2Button>
           ) : (
             <>
-              <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+              <V2Button
+                icon={<Download className="h-4 w-4" />}
+                disabled={rows.length === 0}
+                onClick={() =>
+                  exportRowsAsCsv("banners", rows, [
+                    ["id", (r) => r.id],
+                    ["sort_order", (r) => r.sort_order],
+                    ["is_active", (r) => (r.is_active ? "1" : "0")],
+                    ["title_en", (r) => r.title_en ?? ""],
+                    ["title_ru", (r) => r.title_ru ?? ""],
+                    ["title_hy", (r) => r.title_hy ?? ""],
+                    ["link_url", (r) => r.link_url ?? ""],
+                    ["created_at", (r) => r.created_at ?? ""],
+                    ["updated_at", (r) => r.updated_at ?? ""],
+                  ])
+                }
+              >
+                Export
+              </V2Button>
               <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
                 New banner
               </V2Button>

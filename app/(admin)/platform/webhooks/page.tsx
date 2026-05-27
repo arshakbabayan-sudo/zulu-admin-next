@@ -9,6 +9,7 @@ import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import { formatNumber } from "@/lib/format";
 import {
   Select,
@@ -137,7 +138,23 @@ export default function PlatformWebhooksPage() {
         subtitle={t("admin.platform_webhooks.subtitle")}
         actions={
           <>
-            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button
+              icon={<Download className="h-4 w-4" />}
+              disabled={subscriptions.length === 0}
+              onClick={() =>
+                exportRowsAsCsv("webhook-subscriptions", subscriptions, [
+                  ["id", (r) => r.id],
+                  ["company_id", (r) => r.company_id],
+                  ["company_name", (r) => r.company?.name ?? ""],
+                  ["url", (r) => r.url],
+                  ["events", (r) => r.events.join(";")],
+                  ["status", (r) => r.status],
+                  ["created_at", (r) => r.created_at],
+                ])
+              }
+            >
+              Export
+            </V2Button>
             <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
               New webhook
             </V2Button>

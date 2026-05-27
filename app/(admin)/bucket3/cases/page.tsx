@@ -15,6 +15,7 @@ import { useDocumentTitle } from "@/lib/use-document-title";
 import { canAccessOperatorToolsNav, canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import { formatDateTime } from "@/lib/format";
 import {
   ActiveFiltersChips,
@@ -322,7 +323,27 @@ export default function Bucket3CasesPage() {
         }
         actions={
           <>
-            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button
+              icon={<Download className="h-4 w-4" />}
+              disabled={rows.length === 0}
+              onClick={() =>
+                exportRowsAsCsv("cases", rows, [
+                  ["id", (r) => r.id],
+                  ["case_number", (r) => r.case_number],
+                  ["title", (r) => r.title],
+                  ["status", (r) => r.status],
+                  ["priority", (r) => r.priority],
+                  ["company_name", (r) => r.company_name ?? ""],
+                  ["assigned_to", (r) => r.assigned_to?.name ?? ""],
+                  ["opened_by", (r) => r.opened_by?.name ?? ""],
+                  ["opened_at", (r) => r.opened_at ?? ""],
+                  ["closed_at", (r) => r.closed_at ?? ""],
+                  ["sla_due_at", (r) => r.sla_due_at ?? ""],
+                ])
+              }
+            >
+              Export
+            </V2Button>
             <V2Button variant="primary" icon={<Plus className="h-4 w-4" />} onClick={() => setComposeOpen(true)}>
               {t("admin.bucket3.cases.new_case")}
             </V2Button>

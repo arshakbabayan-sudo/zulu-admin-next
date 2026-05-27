@@ -9,6 +9,7 @@ import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import { formatDateTime, formatNumber } from "@/lib/format";
 import {
   Button,
@@ -245,7 +246,23 @@ export default function PlatformLoyaltyPage() {
         title={t("admin.platform_loyalty.title")}
         subtitle={t("admin.platform_loyalty.subtitle")}
         actions={
-          <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+          <V2Button
+            icon={<Download className="h-4 w-4" />}
+            disabled={accounts.length === 0}
+            onClick={() =>
+              exportRowsAsCsv("loyalty-accounts", accounts, [
+                ["id", (r) => r.id],
+                ["user_id", (r) => r.user_id],
+                ["user_name", (r) => r.user?.name ?? ""],
+                ["user_email", (r) => r.user?.email ?? ""],
+                ["tier", (r) => r.tier],
+                ["points_balance", (r) => r.points_balance],
+                ["lifetime_points", (r) => r.lifetime_points],
+              ])
+            }
+          >
+            Export
+          </V2Button>
         }
       />
 
