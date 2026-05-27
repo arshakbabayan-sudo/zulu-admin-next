@@ -262,7 +262,12 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     // permissions deleted.
     defaultHref: "/platform/rbac",
     tabs: [],
-    visibility: "always",
+    // Phase Զ.7 (2026-05-28) — fix GAP-009. The /platform/rbac backend
+    // returns 403 for non-super (denyUnlessPlatformAdmin), so showing the
+    // sidebar entry to operator/agent was a 403 trap. Tighten visibility.
+    // Tenant-scoped RBAC (operator-admin managing own company roles) is a
+    // separate page that lands in Phase Ը (Bucket D.4 re-scope).
+    visibility: "super_admin",
   },
   {
     key: "file_manager",
