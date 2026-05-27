@@ -209,7 +209,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/bucket3/cases", labelKey: "admin.nav.tab.bucket3.cases" },
       { href: "/bucket3/requests", labelKey: "admin.nav.tab.bucket3.requests" },
       // Phase Ա.3 (2026-05-28) — bulk-notifications moved to Notifications group below
-      { href: "/bucket3/pin-settings", labelKey: "admin.nav.tab.bucket3.pin_settings" },
+      // Phase Ա.4 (2026-05-28) — pin-settings merged under My profile > Security
       { href: "/bucket3/customers", labelKey: "admin.nav.tab.bucket3.customers" },
       { href: "/bucket3/subscriptions", labelKey: "admin.nav.tab.bucket3.subscriptions" },
       { href: "/bucket3/per-x-invoicing", labelKey: "admin.nav.tab.bucket3.per_x_invoicing" },
