@@ -15,6 +15,7 @@ import {
   apiRejectOffer,
   type PendingReviewOfferRow,
 } from "@/lib/platform-admin-api";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import { formatDateTime } from "@/lib/format";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -205,7 +206,26 @@ export default function PendingReviewPage() {
             </button>
           ) : (
             <>
-              <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+              <V2Button
+                icon={<Download className="h-4 w-4" />}
+                disabled={rows.length === 0}
+                onClick={() =>
+                  exportRowsAsCsv("pending-review-offers", rows, [
+                    ["id", (r) => r.id],
+                    ["type", (r) => r.type],
+                    ["title", (r) => r.title],
+                    ["status", (r) => r.status],
+                    ["company_id", (r) => r.company_id ?? ""],
+                    ["company_name", (r) => r.company?.name ?? ""],
+                    ["company_country", (r) => r.company?.country ?? ""],
+                    ["submitted_for_review_at", (r) => r.submitted_for_review_at ?? ""],
+                    ["reviewed_at", (r) => r.reviewed_at ?? ""],
+                    ["rejection_reason", (r) => r.rejection_reason ?? ""],
+                  ])
+                }
+              >
+                Export
+              </V2Button>
               <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
                 Review
               </V2Button>

@@ -35,6 +35,7 @@ import {
   type RequestMessage,
   type RequestStatus,
 } from "@/lib/requests-inbox-api";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import {
   Button,
   FormField,
@@ -231,7 +232,25 @@ export default function Bucket3RequestsPage() {
         }
         actions={
           <>
-            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button
+              icon={<Download className="h-4 w-4" />}
+              disabled={rows.length === 0}
+              onClick={() =>
+                exportRowsAsCsv("requests-inbox", rows, [
+                  ["id", (r) => r.id],
+                  ["subject", (r) => r.subject],
+                  ["status", (r) => r.status],
+                  ["requester_company", (r) => r.requester_company?.name ?? ""],
+                  ["target_company", (r) => r.target_company?.name ?? ""],
+                  ["resolved_by", (r) => r.resolved_by?.name ?? ""],
+                  ["resolved_at", (r) => r.resolved_at ?? ""],
+                  ["created_at", (r) => r.created_at ?? ""],
+                  ["updated_at", (r) => r.updated_at ?? ""],
+                ])
+              }
+            >
+              Export
+            </V2Button>
             <V2Button
               variant="primary"
               icon={<Plus className="h-4 w-4" />}

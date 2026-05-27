@@ -8,6 +8,7 @@ import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { apiCompanyApplications, type CompanyApplicationRow } from "@/lib/platform-admin-api";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import { useCallback, useEffect, useState } from "react";
 import {
   Table,
@@ -84,7 +85,27 @@ export default function CompanyApplicationsPage() {
         title={t("admin.company_applications.title")}
         actions={
           <>
-            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button
+              icon={<Download className="h-4 w-4" />}
+              disabled={rows.length === 0}
+              onClick={() =>
+                exportRowsAsCsv("company-applications", rows, [
+                  ["id", (r) => r.id],
+                  ["company_name", (r) => r.company_name],
+                  ["company_type", (r) => r.company_type ?? ""],
+                  ["business_email", (r) => r.business_email],
+                  ["country", (r) => r.country ?? ""],
+                  ["city", (r) => r.city ?? ""],
+                  ["phone", (r) => r.phone ?? ""],
+                  ["tax_id", (r) => r.tax_id ?? ""],
+                  ["contact_person", (r) => r.contact_person ?? ""],
+                  ["applicant_email", (r) => r.user?.email ?? ""],
+                  ["intended_role", (r) => r.user?.intended_role ?? ""],
+                ])
+              }
+            >
+              Export
+            </V2Button>
             <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
               New application
             </V2Button>

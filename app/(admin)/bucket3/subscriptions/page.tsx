@@ -14,6 +14,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessSuperAdminOnlyPlatformNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import { formatDate } from "@/lib/format";
 import {
   Button,
@@ -262,7 +263,27 @@ export default function Bucket3SubscriptionsPage() {
         subtitle={t("admin.bucket3.subscriptions.subtitle")}
         actions={
           <>
-            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button
+              icon={<Download className="h-4 w-4" />}
+              disabled={subs.length === 0}
+              onClick={() =>
+                exportRowsAsCsv("company-subscriptions", subs, [
+                  ["id", (r) => r.id],
+                  ["company_id", (r) => r.company?.id ?? ""],
+                  ["company_name", (r) => r.company?.name ?? ""],
+                  ["plan_code", (r) => r.plan?.code ?? ""],
+                  ["plan_name", (r) => r.plan?.name ?? ""],
+                  ["monthly_price", (r) => r.plan?.monthly_price ?? ""],
+                  ["currency", (r) => r.plan?.currency ?? ""],
+                  ["status", (r) => r.status],
+                  ["billing_period", (r) => r.billing_period],
+                  ["period_starts_at", (r) => r.period_starts_at ?? ""],
+                  ["period_ends_at", (r) => r.period_ends_at ?? ""],
+                ])
+              }
+            >
+              Export
+            </V2Button>
             <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
               Add plan
             </V2Button>
