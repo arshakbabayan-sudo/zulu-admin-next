@@ -19,6 +19,7 @@ import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import {
   apiDeactivatePlatformPackage,
@@ -142,7 +143,24 @@ export default function InventoryPackagesOversightPage() {
         ]}
         title={t("admin.packages.title_long")}
         actions={
-          <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+          <V2Button
+            icon={<Download className="h-4 w-4" />}
+            disabled={rows.length === 0}
+            onClick={() =>
+              exportRowsAsCsv("inventory-packages-oversight", rows, [
+                ["id", (r) => r.id],
+                ["package_title", (r) => r.package_title],
+                ["package_type", (r) => r.package_type],
+                ["status", (r) => r.status],
+                ["company_id", (r) => r.company_id],
+                ["company_name", (r) => r.company?.name ?? ""],
+                ["is_public", (r) => (r.is_public ? "1" : "0")],
+                ["is_bookable", (r) => (r.is_bookable ? "1" : "0")],
+              ])
+            }
+          >
+            Export
+          </V2Button>
         }
       />
 

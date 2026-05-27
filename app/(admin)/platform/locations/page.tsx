@@ -8,6 +8,7 @@ import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import {
   apiLocationCities,
   apiLocationCityCreate,
@@ -359,7 +360,24 @@ export default function PlatformLocationsPage() {
         title={t("admin.locations.title_long")}
         subtitle={t("admin.locations.subtitle")}
         actions={
-          <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+          <V2Button
+            icon={<Download className="h-4 w-4" />}
+            disabled={countries.length === 0}
+            onClick={() =>
+              exportRowsAsCsv("locations-countries", countries, [
+                ["id", (r) => r.id],
+                ["code", (r) => r.code],
+                ["name", (r) => r.name],
+                ["flag_emoji", (r) => r.flag_emoji ?? ""],
+                ["is_active", (r) => (r.is_active ? "1" : "0")],
+                ["sort_order", (r) => r.sort_order ?? 0],
+                ["regions_count", (r) => r.regions_count ?? 0],
+                ["cities_count", (r) => r.cities_count ?? 0],
+              ])
+            }
+          >
+            Export
+          </V2Button>
         }
       />
 

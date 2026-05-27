@@ -8,6 +8,7 @@ import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import {
   apiAdminPages,
@@ -237,7 +238,27 @@ export default function AdminPagesListPage() {
         title={t("admin.pages.title")}
         actions={
           <>
-            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button
+              icon={<Download className="h-4 w-4" />}
+              disabled={rows.length === 0}
+              onClick={() =>
+                exportRowsAsCsv("cms-pages", rows, [
+                  ["id", (r) => r.id],
+                  ["page_name", (r) => r.page_name],
+                  ["page_slug", (r) => r.page_slug],
+                  ["meta_title", (r) => r.meta_title ?? ""],
+                  ["meta_description", (r) => r.meta_description ?? ""],
+                  ["meta_keywords", (r) => (r.meta_keywords ?? []).join(";")],
+                  ["status", (r) => r.status],
+                  ["enable_seo", (r) => (r.enable_seo ? "1" : "0")],
+                  ["is_bread_crumb", (r) => (r.is_bread_crumb ? "1" : "0")],
+                  ["created_at", (r) => r.created_at ?? ""],
+                  ["updated_at", (r) => r.updated_at ?? ""],
+                ])
+              }
+            >
+              Export
+            </V2Button>
             <V2Button variant="primary" icon={<Plus className="h-4 w-4" />} onClick={() => setShowAddModal(true)}>
               {t("admin.pages.add_new")}
             </V2Button>

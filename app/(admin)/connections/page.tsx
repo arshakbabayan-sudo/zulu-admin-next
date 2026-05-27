@@ -7,6 +7,7 @@ import { PaginationBar } from "@/components/PaginationBar";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessConnectionsNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import {
   apiConnectionAccept,
@@ -272,7 +273,24 @@ export default function ConnectionsPage() {
         title={t("admin.connections.title")}
         actions={
           <>
-            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button
+              icon={<Download className="h-4 w-4" />}
+              disabled={rows.length === 0}
+              onClick={() =>
+                exportRowsAsCsv("connections", rows, [
+                  ["id", (r) => r.id],
+                  ["source_type", (r) => r.source_type],
+                  ["source_id", (r) => r.source_id],
+                  ["target_type", (r) => r.target_type],
+                  ["target_id", (r) => r.target_id],
+                  ["connection_type", (r) => r.connection_type],
+                  ["status", (r) => r.status],
+                  ["client_targeting", (r) => r.client_targeting ?? ""],
+                ])
+              }
+            >
+              Export
+            </V2Button>
             {canCreate ? (
               <V2Button
                 variant="primary"

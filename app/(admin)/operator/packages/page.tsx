@@ -13,6 +13,7 @@ import { TranslationTabs } from "@/components/TranslationTabs";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { ApiRequestError } from "@/lib/api-client";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import { apiSubmitOfferForReview } from "@/lib/platform-admin-api";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import {
@@ -243,7 +244,29 @@ export default function OperatorPackagesPage() {
         }
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <V2Button variant="default" size="sm" icon={<Download className="h-4 w-4" />}>
+            <V2Button
+              variant="default"
+              size="sm"
+              icon={<Download className="h-4 w-4" />}
+              disabled={rows.length === 0}
+              onClick={() =>
+                exportRowsAsCsv("my-packages", rows, [
+                  ["id", (r) => r.id],
+                  ["package_title", (r) => r.package_title ?? ""],
+                  ["package_type", (r) => r.package_type ?? ""],
+                  ["destination_country", (r) => r.destination_country ?? ""],
+                  ["destination_city", (r) => r.destination_city ?? ""],
+                  ["duration_days", (r) => r.duration_days ?? ""],
+                  ["base_price", (r) => r.base_price ?? ""],
+                  ["currency", (r) => r.currency ?? ""],
+                  ["status", (r) => r.status],
+                  ["is_public", (r) => (r.is_public ? "1" : "0")],
+                  ["is_featured", (r) => (r.is_featured ? "1" : "0")],
+                  ["company_name", (r) => r.company?.name ?? ""],
+                  ["created_at", (r) => r.created_at ?? ""],
+                ])
+              }
+            >
               Export
             </V2Button>
             <V2Button variant="primary" size="sm" icon={<Plus className="h-4 w-4" />} onClick={openCreate}>

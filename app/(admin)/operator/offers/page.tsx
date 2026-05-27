@@ -9,6 +9,7 @@ import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { canAccessOperatorToolsNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { apiOffers, apiPublishOffer, apiArchiveOffer, type OfferRow } from "@/lib/inventory-crud-api";
 import { useCallback, useEffect, useState } from "react";
@@ -114,7 +115,26 @@ export default function OperatorOffersPage() {
           </span>
         }
         actions={
-          <V2Button variant="default" size="sm" icon={<Download className="h-4 w-4" />}>
+          <V2Button
+            variant="default"
+            size="sm"
+            icon={<Download className="h-4 w-4" />}
+            disabled={rows.length === 0}
+            onClick={() =>
+              exportRowsAsCsv("offers", rows, [
+                ["id", (r) => r.id],
+                ["title", (r) => r.title],
+                ["type", (r) => r.type],
+                ["price", (r) => r.price ?? ""],
+                ["currency", (r) => r.currency ?? ""],
+                ["status", (r) => r.status],
+                ["company_id", (r) => r.company_id ?? ""],
+                ["company_name", (r) => r.company?.name ?? ""],
+                ["created_at", (r) => r.created_at ?? ""],
+                ["updated_at", (r) => r.updated_at ?? ""],
+              ])
+            }
+          >
             Export
           </V2Button>
         }
