@@ -31,6 +31,7 @@ import {
   V2Button,
 } from "@/components/ui/v2";
 import { Download } from "lucide-react";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import { formatDateTime, formatNumber } from "@/lib/format";
 
 type TwoFactorRow = {
@@ -196,7 +197,25 @@ export default function PlatformSecurityPage() {
         title={t("admin.security.title")}
         subtitle={t("admin.security.subtitle")}
         actions={
-          <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+          <V2Button
+            icon={<Download className="h-4 w-4" />}
+            disabled={rows.length === 0}
+            onClick={() =>
+              exportRowsAsCsv("security-2fa", rows, [
+                ["id", (r) => r.id],
+                ["user_id", (r) => r.user_id],
+                ["user_name", (r) => r.user?.name ?? ""],
+                ["user_email", (r) => r.user?.email ?? ""],
+                ["role", (r) => r.user?.role ?? ""],
+                ["is_super_admin", (r) => (r.user?.is_super_admin ? "1" : "0")],
+                ["enabled_at", (r) => r.enabled_at ?? ""],
+                ["confirmed_at", (r) => r.confirmed_at ?? ""],
+                ["last_verified_at", (r) => r.last_verified_at ?? ""],
+              ])
+            }
+          >
+            Export
+          </V2Button>
         }
       />
 

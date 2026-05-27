@@ -8,6 +8,7 @@ import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import { formatDateTime, formatNumber } from "@/lib/format";
 import {
   Button,
@@ -187,7 +188,26 @@ export default function PlatformNotificationsPage() {
         title={t("admin.platform_notifications.title")}
         subtitle={t("admin.platform_notifications.subtitle")}
         actions={
-          <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+          <V2Button
+            icon={<Download className="h-4 w-4" />}
+            disabled={rows.length === 0}
+            onClick={() =>
+              exportRowsAsCsv("system-notifications", rows, [
+                ["id", (r) => r.id],
+                ["user_id", (r) => r.user_id],
+                ["user_name", (r) => r.user?.name ?? ""],
+                ["user_email", (r) => r.user?.email ?? ""],
+                ["type", (r) => r.type],
+                ["event_type", (r) => r.event_type ?? ""],
+                ["title", (r) => r.title],
+                ["status", (r) => r.status],
+                ["priority", (r) => r.priority],
+                ["created_at", (r) => r.created_at],
+              ])
+            }
+          >
+            Export
+          </V2Button>
         }
       />
 

@@ -7,6 +7,7 @@ import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { canAccessSupportNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import { apiSupportTickets, type SupportTicketListRow } from "@/lib/support-api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useCallback, useEffect, useState } from "react";
@@ -103,7 +104,28 @@ export default function SupportTicketsPage() {
           { label: t("admin.support.tickets_title") },
         ]}
         title={t("admin.support.tickets_title")}
-        actions={<V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>}
+        actions={
+          <V2Button
+            icon={<Download className="h-4 w-4" />}
+            disabled={rows.length === 0}
+            onClick={() =>
+              exportRowsAsCsv("support-tickets", rows, [
+                ["id", (r) => r.id],
+                ["subject", (r) => r.subject],
+                ["status", (r) => r.status],
+                ["priority", (r) => r.priority],
+                ["company_id", (r) => r.company_id ?? ""],
+                ["user_name", (r) => r.user?.name ?? ""],
+                ["user_email", (r) => r.user?.email ?? ""],
+                ["messages_count", (r) => r.messages_count ?? 0],
+                ["created_at", (r) => r.created_at ?? ""],
+                ["updated_at", (r) => r.updated_at ?? ""],
+              ])
+            }
+          >
+            Export
+          </V2Button>
+        }
       />
 
       <SectionTabs
