@@ -40,7 +40,7 @@ import {
   V2Button,
   IconButton,
 } from "@/components/ui/v2";
-import { Search, Eye, Edit3, Download, Plus } from "lucide-react";
+import { Search, Eye, Edit3, Download } from "lucide-react";
 import Link from "next/link";
 import { exportRowsAsCsv } from "@/lib/export-csv";
 import { useCallback, useEffect, useState } from "react";
@@ -129,28 +129,30 @@ export default function Bucket3EmployeesPage() {
             : t("admin.bucket3.employees.subtitle")
         }
         actions={
-          <>
-            <V2Button
-              icon={<Download className="h-4 w-4" />}
-              disabled={rows.length === 0}
-              onClick={() =>
-                exportRowsAsCsv("employees", rows, [
-                  ["id", (r) => r.id],
-                  ["name", (r) => r.name],
-                  ["email", (r) => r.email],
-                  ["status", (r) => r.status],
-                  ["companies", (r) => r.companies.map((c) => `${c.name} (${c.role})`).join("; ")],
-                  ["created_at", (r) => r.created_at ?? ""],
-                ])
-              }
-            >
-              Export
-            </V2Button>
-            <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
-              Add employee
-            </V2Button>
-          </>
+          <V2Button
+            icon={<Download className="h-4 w-4" />}
+            disabled={rows.length === 0}
+            onClick={() =>
+              exportRowsAsCsv("employees", rows, [
+                ["id", (r) => r.id],
+                ["name", (r) => r.name],
+                ["email", (r) => r.email],
+                ["status", (r) => r.status],
+                ["companies", (r) => r.companies.map((c) => `${c.name} (${c.role})`).join("; ")],
+                ["created_at", (r) => r.created_at ?? ""],
+              ])
+            }
+          >
+            Export
+          </V2Button>
         }
+        // Phase Բ.4 — Option A (2026-05-28). The «+ Add employee» button used
+        // to live here but had no onClick; this page is a super-admin
+        // cross-company roll-up (uses /platform-admin/users + canAccessPlatformAdminNav).
+        // Super-admin already adds employees per-company at /platform/companies/[id] >
+        // Users (AddEmployeeModal wired there). Operator-tenant employee page is
+        // separate work (Bucket D.4 / Phase Ը). Button removed to stop the dead
+        // surface from confusing reviewers.
       />
 
       <SectionTabs
