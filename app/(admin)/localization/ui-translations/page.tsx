@@ -15,6 +15,7 @@ import {
   type LocalizationLanguageRow,
   type UiTranslationRow,
 } from "@/lib/localization-api";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -176,7 +177,18 @@ export default function UiTranslationsPage() {
             <Button size="sm" onClick={handleSearch}>
               <Search className="h-4 w-4" aria-hidden />
             </Button>
-            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button
+              icon={<Download className="h-4 w-4" />}
+              disabled={rows.length === 0}
+              onClick={() =>
+                exportRowsAsCsv(`ui-translations-${selectedLang || "all"}`, rows, [
+                  ["key", (r) => r.key],
+                  ["value", (r) => r.value],
+                ])
+              }
+            >
+              Export
+            </V2Button>
             <Button variant="outline" size="sm" onClick={() => router.push("/localization/languages")}>
               <ArrowLeft className="h-4 w-4" aria-hidden />
               {t("admin.localization.go_back")}

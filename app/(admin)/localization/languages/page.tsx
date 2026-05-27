@@ -23,6 +23,9 @@ import {
   apiSetDefaultLanguage,
   apiEditLanguage,
   type LocalizationLanguageRow,
+} from "@/lib/localization-api";
+import { exportRowsAsCsv } from "@/lib/export-csv";
+import {
   type ScanScope,
   type ScanStatusResponse,
 } from "@/lib/localization-api";
@@ -484,7 +487,24 @@ export default function LocalizationLanguagesPage() {
         title={t("admin.languages.title")}
         actions={
           <>
-            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button
+              icon={<Download className="h-4 w-4" />}
+              disabled={rows.length === 0}
+              onClick={() =>
+                exportRowsAsCsv("languages", rows, [
+                  ["id", (r) => r.id],
+                  ["code", (r) => r.code],
+                  ["name", (r) => r.name],
+                  ["name_en", (r) => r.name_en ?? ""],
+                  ["is_default", (r) => (r.is_default ? "1" : "0")],
+                  ["is_enabled", (r) => (r.is_enabled ? "1" : "0")],
+                  ["rtl", (r) => (r.rtl ? "1" : "0")],
+                  ["sort_order", (r) => r.sort_order],
+                ])
+              }
+            >
+              Export
+            </V2Button>
             <V2Button
               variant="primary"
               icon={<Plus className="h-4 w-4" />}
