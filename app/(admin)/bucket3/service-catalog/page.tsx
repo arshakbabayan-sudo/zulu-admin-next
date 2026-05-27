@@ -17,6 +17,7 @@ import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessOperatorToolsNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
 import {
   Button,
@@ -243,7 +244,25 @@ export default function Bucket3ServiceCatalogPage() {
         }
         actions={
           <>
-            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button
+              icon={<Download className="h-4 w-4" />}
+              disabled={rows.length === 0}
+              onClick={() =>
+                exportRowsAsCsv("service-catalog", rows, [
+                  ["id", (r) => r.id],
+                  ["company_name", (r) => r.company_name ?? ""],
+                  ["name", (r) => r.name],
+                  ["category", (r) => r.category ?? ""],
+                  ["base_price", (r) => r.base_price ?? ""],
+                  ["currency", (r) => r.currency ?? ""],
+                  ["unit", (r) => r.unit ?? ""],
+                  ["is_active", (r) => (r.is_active ? "1" : "0")],
+                  ["created_at", (r) => r.created_at ?? ""],
+                ])
+              }
+            >
+              Export
+            </V2Button>
             <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
               Add service
             </V2Button>

@@ -17,6 +17,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessOperatorToolsNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import { formatDate } from "@/lib/format";
 import {
   Button,
@@ -202,7 +203,25 @@ export default function Bucket3BlockDatesPage() {
         }
         actions={
           <>
-            <V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>
+            <V2Button
+              icon={<Download className="h-4 w-4" />}
+              disabled={rows.length === 0}
+              onClick={() =>
+                exportRowsAsCsv("block-dates", rows, [
+                  ["id", (r) => r.id],
+                  ["company_name", (r) => r.company_name ?? ""],
+                  ["item_type", (r) => r.item_type],
+                  ["item_id", (r) => r.item_id ?? ""],
+                  ["blocked_from", (r) => r.blocked_from],
+                  ["blocked_to", (r) => r.blocked_to],
+                  ["reason", (r) => r.reason ?? ""],
+                  ["created_by", (r) => r.created_by?.name ?? ""],
+                  ["created_at", (r) => r.created_at ?? ""],
+                ])
+              }
+            >
+              Export
+            </V2Button>
             <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
               Add block
             </V2Button>
