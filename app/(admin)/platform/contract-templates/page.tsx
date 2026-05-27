@@ -420,7 +420,11 @@ export default function PlatformContractTemplatesPage() {
                           >
                             <EditIcon />
                           </IconButton>
-                          <IconButton aria-label="Copy">
+                          <IconButton
+                            as="link"
+                            href={`/platform/contract-templates/new?clone=${tpl.id}`}
+                            aria-label="Copy"
+                          >
                             <CopyIcon />
                           </IconButton>
                           <IconButton aria-label="More">

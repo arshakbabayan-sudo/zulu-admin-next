@@ -15,6 +15,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import {
+  apiAdminContractTemplate,
   apiAdminCreateContractTemplate,
   CONTRACT_LANGUAGES,
   CONTRACT_TYPES,
@@ -24,8 +25,8 @@ import {
 } from "@/lib/contracts-api";
 import { FormField, Input, Select } from "@/components/ui";
 import { PageHeader as V2PageHeader, V2Card, V2Button } from "@/components/ui/v2";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 type FormState = {
   name: string;
@@ -47,12 +48,49 @@ const EMPTY: FormState = {
 
 export default function AdminContractTemplateNewPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const cloneId = searchParams?.get("clone") ?? null;
   const { token, user } = useAdminAuth();
   const { t } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [cloning, setCloning] = useState<boolean>(cloneId !== null);
+
+  // Phase Բ.2 (2026-05-28) — when ?clone=<id> is present in the URL, fetch
+  // the source template and prefill the form so the user can edit/rename
+  // and save as a new template. Backend isn't involved beyond the standard
+  // GET /contract-templates/{id} + POST /contract-templates flow.
+  useEffect(() => {
+    if (!cloneId || !token || !allowed) return;
+    let cancelled = false;
+    (async () => {
+      setCloning(true);
+      try {
+        const res = await apiAdminContractTemplate(token, cloneId);
+        if (cancelled) return;
+        const src = res.data;
+        setForm({
+          name: `${src.name} (copy)`,
+          type: src.type,
+          language: src.language,
+          version: "1.0",
+          body_template: src.body_template ?? "",
+          default_variables_json: JSON.stringify(src.default_variables ?? {}, null, 2),
+        });
+      } catch (e) {
+        if (!cancelled) {
+          setErr(e instanceof ApiRequestError ? e.message : t("admin.contract_new.err_clone_load"));
+        }
+      } finally {
+        if (!cancelled) setCloning(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [cloneId, token, allowed, t]);
 
   async function handleSubmit() {
     if (!token) return;
