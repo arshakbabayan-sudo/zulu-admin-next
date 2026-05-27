@@ -47,6 +47,7 @@ import {
   type StatusTone,
 } from "@/lib/admin-v2-helpers";
 import { formatMoney } from "@/lib/format";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import { useCallback, useEffect, useState } from "react";
 import {
   PageHeader as V2PageHeader,
@@ -163,7 +164,25 @@ export default function PlatformFinanceSummaryPage() {
             <V2Button onClick={() => void load()} icon={<RefreshCw className="h-4 w-4" />} aria-label="Refresh">
               {""}
             </V2Button>
-            <V2Button variant="primary" icon={<Download className="h-4 w-4" />}>
+            {/* Phase Բ.6 (2026-05-28) — Export the recent-transactions snapshot
+                visible on this dashboard. Same exportRowsAsCsv helper used in
+                the Bucket E export wiring. */}
+            <V2Button
+              variant="primary"
+              icon={<Download className="h-4 w-4" />}
+              disabled={recentTx.length === 0}
+              onClick={() =>
+                exportRowsAsCsv("finance-summary-transactions", recentTx, [
+                  ["id", (r) => r.id],
+                  ["type", (r) => r.type],
+                  ["amount", (r) => r.amount],
+                  ["currency", (r) => r.currency],
+                  ["company", (r) => r.company?.name ?? ""],
+                  ["status", (r) => r.status],
+                  ["when", (r) => r.when],
+                ])
+              }
+            >
               Export
             </V2Button>
           </>
