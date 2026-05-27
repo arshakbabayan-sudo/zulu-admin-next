@@ -236,7 +236,8 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/platform/contract-templates", labelKey: "admin.nav.tab.contract_templates", moduleKey: "ops.contracts" },
       { href: "/platform/audit-logs", labelKey: "admin.nav.tab.audit_logs" },
       { href: "/bucket3/service-logs", labelKey: "admin.nav.tab.bucket3.service_logs" },
-      { href: "/bucket3/unverified-accounts", labelKey: "admin.nav.tab.bucket3.unverified_accounts" },
+      // Phase Ա.6 (2026-05-28) — unverified-accounts merged as filter view under
+      // /platform/users (?type=unverified). Same data, fewer sidebar duplicates.
     ],
     visibility: "section_marketplace_ops",
   },
