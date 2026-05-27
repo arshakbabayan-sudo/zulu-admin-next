@@ -31,7 +31,7 @@ import {
 } from "@/lib/platform-admin-api";
 import { apiApprovalsStats, type ApprovalsStats } from "@/lib/marketplace-stats-api";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pagination } from "@/components/ui";
+import { Modal, Pagination } from "@/components/ui";
 import {
   PageHeader as V2PageHeader,
   FilterCard,
@@ -140,6 +140,11 @@ export default function GenericApprovalsPage() {
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
+  // Phase Բ.1 (2026-05-28) — Review-category moderation modal. The row's
+  // "Review" button opens this with the row payload; Approve/Reject buttons
+  // inside reuse the same `approve(id)` / `reject(id)` handlers above so the
+  // backend flow is unchanged.
+  const [reviewTarget, setReviewTarget] = useState<GenericApprovalRow | null>(null);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<ApprovalsStats | null>(null);
 
@@ -559,6 +564,7 @@ export default function GenericApprovalsPage() {
                             <button
                               type="button"
                               disabled={busyId === r.id}
+                              onClick={() => setReviewTarget(r)}
                               className="inline-flex h-7 items-center gap-1 rounded-md border px-2.5 text-[11px] font-medium transition disabled:opacity-40 hover:bg-[color:var(--admin-warning-light)]"
                               style={{
                                 color: "var(--admin-warning)",
@@ -630,6 +636,105 @@ export default function GenericApprovalsPage() {
           </div>
         ) : null}
       </V2Card>
+
+      {/* Phase Բ.1 — Review-category moderation modal. Matches the modal pattern
+          in docs/admin_designe/marketplace_ops/marketplace_ops_mocks.html
+          (header / body / footer, centered card, backdrop). */}
+      <Modal
+        isOpen={reviewTarget !== null}
+        onClose={() => setReviewTarget(null)}
+        title="Review moderation"
+        description={reviewTarget ? `${reviewTarget.entity_type} #${reviewTarget.entity_id}` : undefined}
+        size="md"
+        footer={
+          reviewTarget ? (
+            <div className="flex w-full items-center justify-end gap-2">
+              <V2Button onClick={() => setReviewTarget(null)} disabled={busyId === reviewTarget.id}>
+                Cancel
+              </V2Button>
+              <V2Button
+                variant="primary"
+                icon={<CheckIcon className="h-4 w-4" />}
+                disabled={busyId === reviewTarget.id || !canActOnApproval(reviewTarget.status)}
+                onClick={async () => {
+                  const id = reviewTarget.id;
+                  setReviewTarget(null);
+                  await approve(id);
+                }}
+              >
+                Approve
+              </V2Button>
+              <V2Button
+                icon={<XIcon className="h-4 w-4" />}
+                disabled={busyId === reviewTarget.id || !canActOnApproval(reviewTarget.status)}
+                onClick={async () => {
+                  const id = reviewTarget.id;
+                  setReviewTarget(null);
+                  await reject(id);
+                }}
+                style={{ color: "var(--admin-danger)", borderColor: "var(--admin-danger-light)" }}
+              >
+                Reject
+              </V2Button>
+            </div>
+          ) : null
+        }
+      >
+        {reviewTarget ? (
+          <div className="space-y-3 text-sm">
+            <div>
+              <div className="text-[11px] uppercase tracking-[0.3px]" style={{ color: "var(--admin-text-secondary)" }}>
+                Submitted by
+              </div>
+              <div className="font-medium text-fg-t8">
+                {reviewTarget.requested_by?.name ?? "—"}
+              </div>
+              {reviewTarget.requested_by?.email ? (
+                <div className="text-[12px]" style={{ color: "var(--admin-text-tertiary)" }}>
+                  {reviewTarget.requested_by.email}
+                </div>
+              ) : null}
+            </div>
+            <div className="flex gap-6">
+              <div>
+                <div className="text-[11px] uppercase tracking-[0.3px]" style={{ color: "var(--admin-text-secondary)" }}>
+                  Priority
+                </div>
+                <span className={STATUS_BADGE_CLASS} style={statusBadgeStyle(priorityTone(reviewTarget.priority))}>
+                  {reviewTarget.priority ?? "—"}
+                </span>
+              </div>
+              <div>
+                <div className="text-[11px] uppercase tracking-[0.3px]" style={{ color: "var(--admin-text-secondary)" }}>
+                  Status
+                </div>
+                <span className={STATUS_BADGE_CLASS} style={statusBadgeStyle(statusTone(reviewTarget.status))}>
+                  {reviewTarget.status}
+                </span>
+              </div>
+              <div>
+                <div className="text-[11px] uppercase tracking-[0.3px]" style={{ color: "var(--admin-text-secondary)" }}>
+                  Submitted
+                </div>
+                <div className="text-[13px]">{formatRelativeTime(reviewTarget.created_at)}</div>
+              </div>
+            </div>
+            {reviewTarget.notes ? (
+              <div>
+                <div className="text-[11px] uppercase tracking-[0.3px] mb-1" style={{ color: "var(--admin-text-secondary)" }}>
+                  Notes
+                </div>
+                <div
+                  className="rounded-md border p-3 text-[13px]"
+                  style={{ borderColor: "var(--admin-border)", backgroundColor: "var(--admin-bg-secondary)" }}
+                >
+                  {reviewTarget.notes}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </Modal>
     </div>
   );
 }
