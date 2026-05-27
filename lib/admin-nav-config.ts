@@ -202,7 +202,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/bucket3/non-service-hours", labelKey: "admin.nav.tab.bucket3.non_service_hours" },
       { href: "/bucket3/cases", labelKey: "admin.nav.tab.bucket3.cases" },
       { href: "/bucket3/requests", labelKey: "admin.nav.tab.bucket3.requests" },
-      { href: "/bucket3/bulk-notifications", labelKey: "admin.nav.tab.bucket3.bulk_notifications" },
+      // Phase Ա.3 (2026-05-28) — bulk-notifications moved to Notifications group below
       { href: "/bucket3/pin-settings", labelKey: "admin.nav.tab.bucket3.pin_settings" },
       { href: "/bucket3/customers", labelKey: "admin.nav.tab.bucket3.customers" },
       { href: "/bucket3/subscriptions", labelKey: "admin.nav.tab.bucket3.subscriptions" },
@@ -240,20 +240,11 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   // to match the v2 spec sidebar. Settings (#13) is the final group — moved from
   // its earlier position #8. Pages live under /admin-redesign/<slug> (or existing
   // routes once the v2 layout is built on top of them).
-  {
-    key: "users_v2",
-    labelKey: "admin.nav.section.users_v2",
-    labelFallback: "Users",
-    icon: "/icons/menu/users.svg",
-    // Bucket B refactor (2026-05-27) — point Users sidebar entry at the real
-    // /platform/users page. /admin-redesign/users was a placeholder duplicate
-    // that's now removed.
-    defaultHref: "/platform/users",
-    tabs: [],
-    visibility: "always",
-    badgeSource: "users_pending",
-    badgeKind: "primary",
-  },
+  //
+  // Phase Ա.10 (2026-05-28) — `users_v2` group removed. The same /platform/users
+  // page is already reachable via Marketplace ops > Users for super-admins;
+  // operator/agent didn't have backend access to /platform/users (403 on click),
+  // so the extra top-level sidebar entry was a 403 trap (GAP-010 per Phase 0 audit).
   {
     key: "roles_permissions",
     labelKey: "admin.nav.section.roles_permissions",
@@ -290,7 +281,12 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     labelFallback: "Notifications",
     icon: "/icons/menu/bell.svg",
     defaultHref: "/admin-redesign/notifications",
-    tabs: [],
+    // Phase Ա.3 (2026-05-28) — bulk-notifications added as a sibling tab under
+    // the Notifications group (formerly under My company > Bulk notifications).
+    tabs: [
+      { href: "/admin-redesign/notifications", labelKey: "admin.nav.tab.notifications_inbox" },
+      { href: "/bucket3/bulk-notifications", labelKey: "admin.nav.tab.bucket3.bulk_notifications", superAdminOnly: true },
+    ],
     visibility: "always",
     badgeSource: "notifications_unread",
     badgeKind: "warn",
