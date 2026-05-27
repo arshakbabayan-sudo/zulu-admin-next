@@ -161,18 +161,13 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     visibility: "section_bookings",
   },
 
-  // 4 ── Sales workspace (rename of Agent tools) ──────────────────────
-  {
-    key: "sales_workspace",
-    labelKey: "admin.nav.section.sales_workspace",
-    labelFallback: "Sales workspace",
-    icon: "/icons/menu/checklist.svg",
-    defaultHref: "/agent/contracts",
-    tabs: [
-      { href: "/agent/contracts", labelKey: "admin.nav.tab.my_contracts" },
-    ],
-    visibility: "section_sales_workspace",
-  },
+  // 4 ── Sales workspace — REMOVED 2026-05-28 (Phase Ա.2)
+  // Per xlsx audit Row 15, the agent's My contracts page is the same data
+  // as Marketplace ops > Partnership agreements (just the other party's view).
+  // The Sales workspace sidebar group is hidden; agents see their pending-sign
+  // contracts through the unified /platform/contracts page with a "pending mine"
+  // filter (Phase Բ.5 will open /platform/contracts to agent role and add the
+  // redirect from /agent/contracts).
 
   // 5 ── Finance (reporting only — Commission settings moved to Settings) ─
   {
