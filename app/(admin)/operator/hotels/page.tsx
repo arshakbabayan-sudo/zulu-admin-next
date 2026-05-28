@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/v2";
 import { Edit3, Trash2 } from "lucide-react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { userHasPermission } from "@/lib/access";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { ApiRequestError } from "@/lib/api-client";
 import { apiSubmitOfferForReview } from "@/lib/platform-admin-api";
@@ -137,7 +138,7 @@ const EMPTY: HotelFormPayload = {
 };
 
 export default function OperatorHotelsPage() {
-  const { token } = useAdminAuth();
+  const { token, user } = useAdminAuth();
   const { t, contentLang } = useLanguage();
   useDocumentTitle(t("admin.operator.hotels.title"));
   const confirm = useConfirm();
@@ -326,9 +327,11 @@ export default function OperatorHotelsPage() {
               }}
               onImport={() => setImportOpen(true)}
             />
-            <V2Button variant="primary" size="sm" onClick={openCreate}>
-              + {t("admin.crud.hotels.new_btn")}
-            </V2Button>
+            {userHasPermission(user, "hotels.create") && (
+              <V2Button variant="primary" size="sm" onClick={openCreate}>
+                + {t("admin.crud.hotels.new_btn")}
+              </V2Button>
+            )}
           </div>
         }
       />
@@ -1254,12 +1257,16 @@ export default function OperatorHotelsPage() {
                       {t("admin.crud.common.submit_for_review")}
                     </Button>
                   )}
-                  <IconButton onClick={() => void openEdit(r)} aria-label={t("admin.crud.common.edit")}>
-                    <Edit3 className="h-4 w-4" />
-                  </IconButton>
-                  <IconButton onClick={() => void handleDelete(r.id)} aria-label={t("admin.crud.common.delete")}>
-                    <Trash2 className="h-4 w-4" />
-                  </IconButton>
+                  {userHasPermission(user, "hotels.update") && (
+                    <IconButton onClick={() => void openEdit(r)} aria-label={t("admin.crud.common.edit")}>
+                      <Edit3 className="h-4 w-4" />
+                    </IconButton>
+                  )}
+                  {userHasPermission(user, "hotels.delete") && (
+                    <IconButton onClick={() => void handleDelete(r.id)} aria-label={t("admin.crud.common.delete")}>
+                      <Trash2 className="h-4 w-4" />
+                    </IconButton>
+                  )}
                 </div>
               </TD>
             </TR>

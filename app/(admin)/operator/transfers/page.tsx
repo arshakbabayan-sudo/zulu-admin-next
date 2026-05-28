@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/v2";
 import { Edit3, Trash2, Send } from "lucide-react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { userHasPermission } from "@/lib/access";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ApiRequestError } from "@/lib/api-client";
@@ -239,7 +240,7 @@ const TRANSFER_STEP_LABEL_KEYS: Record<string, string> = {
 };
 
 export default function OperatorTransfersPage() {
-  const { token } = useAdminAuth();
+  const { token, user } = useAdminAuth();
   const { t, contentLang } = useLanguage();
   const confirm = useConfirm();
   const [rows, setRows] = useState<TransferRow[]>([]);
@@ -600,9 +601,11 @@ export default function OperatorTransfersPage() {
               }}
               onImport={() => setImportOpen(true)}
             />
-            <V2Button variant="primary" size="sm" disabled={busy} onClick={openCreate}>
-              + {t("admin.crud.transfers.new_btn")}
-            </V2Button>
+            {userHasPermission(user, "transfers.create") && (
+              <V2Button variant="primary" size="sm" disabled={busy} onClick={openCreate}>
+                + {t("admin.crud.transfers.new_btn")}
+              </V2Button>
+            )}
           </div>
         }
       />
@@ -908,12 +911,16 @@ export default function OperatorTransfersPage() {
                       <Send />
                     </IconButton>
                   )}
-                  <IconButton onClick={() => void openEdit(r)} aria-label={t("admin.crud.common.edit")}>
-                    <Edit3 />
-                  </IconButton>
-                  <IconButton onClick={() => void handleDelete(r.id)} aria-label={t("admin.crud.common.delete")}>
-                    <Trash2 />
-                  </IconButton>
+                  {userHasPermission(user, "transfers.update") && (
+                    <IconButton onClick={() => void openEdit(r)} aria-label={t("admin.crud.common.edit")}>
+                      <Edit3 />
+                    </IconButton>
+                  )}
+                  {userHasPermission(user, "transfers.delete") && (
+                    <IconButton onClick={() => void handleDelete(r.id)} aria-label={t("admin.crud.common.delete")}>
+                      <Trash2 />
+                    </IconButton>
+                  )}
                 </div>
               </TD>
             </TR>

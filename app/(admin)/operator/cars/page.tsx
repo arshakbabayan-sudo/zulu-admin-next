@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/v2";
 import { Edit3, Trash2, Send } from "lucide-react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { userHasPermission } from "@/lib/access";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ApiRequestError } from "@/lib/api-client";
@@ -520,7 +521,7 @@ function renderApiFieldErrors(errors: FieldErrors | undefined): { title: string;
 }
 
 export default function OperatorCarsPage() {
-  const { token } = useAdminAuth();
+  const { token, user } = useAdminAuth();
   const { t, contentLang } = useLanguage();
   const confirm = useConfirm();
   const [rows, setRows] = useState<CarRow[]>([]);
@@ -796,9 +797,11 @@ export default function OperatorCarsPage() {
               }}
               onImport={() => setImportOpen(true)}
             />
-            <V2Button variant="primary" size="sm" disabled={busy} onClick={() => void openCreate()}>
-              + {busy ? "Loading…" : t("admin.crud.cars.new_btn")}
-            </V2Button>
+            {userHasPermission(user, "cars.create") && (
+              <V2Button variant="primary" size="sm" disabled={busy} onClick={() => void openCreate()}>
+                + {busy ? "Loading…" : t("admin.crud.cars.new_btn")}
+              </V2Button>
+            )}
           </div>
         }
       />
@@ -1924,12 +1927,16 @@ export default function OperatorCarsPage() {
                       <Send />
                     </IconButton>
                   )}
-                  <IconButton onClick={() => openEdit(r)} aria-label={t("admin.crud.common.edit")}>
-                    <Edit3 />
-                  </IconButton>
-                  <IconButton onClick={() => void handleDelete(r.id)} aria-label={t("admin.crud.common.delete")}>
-                    <Trash2 />
-                  </IconButton>
+                  {userHasPermission(user, "cars.update") && (
+                    <IconButton onClick={() => openEdit(r)} aria-label={t("admin.crud.common.edit")}>
+                      <Edit3 />
+                    </IconButton>
+                  )}
+                  {userHasPermission(user, "cars.delete") && (
+                    <IconButton onClick={() => void handleDelete(r.id)} aria-label={t("admin.crud.common.delete")}>
+                      <Trash2 />
+                    </IconButton>
+                  )}
                 </div>
               </TD>
             </TR>

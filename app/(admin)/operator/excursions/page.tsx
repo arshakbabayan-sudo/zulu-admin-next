@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/v2";
 import { Edit3, Trash2, Send } from "lucide-react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { userHasPermission } from "@/lib/access";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useExcursionWizardStepper } from "@/hooks/useExcursionWizardStepper";
 import { ApiRequestError } from "@/lib/api-client";
@@ -150,7 +151,7 @@ const EXCURSION_STEP_LABEL_KEYS: Record<number, string> = {
 };
 
 export default function OperatorExcursionsPage() {
-  const { token } = useAdminAuth();
+  const { token, user } = useAdminAuth();
   const { t, contentLang } = useLanguage();
   const confirm = useConfirm();
   const [rows, setRows] = useState<ExcursionRow[]>([]);
@@ -456,9 +457,11 @@ export default function OperatorExcursionsPage() {
               }}
               onImport={() => setImportOpen(true)}
             />
-            <V2Button variant="primary" size="sm" disabled={busy} onClick={() => void openCreate()}>
-              + {busy ? "Loading…" : t("admin.crud.excursions.new_btn")}
-            </V2Button>
+            {userHasPermission(user, "excursions.create") && (
+              <V2Button variant="primary" size="sm" disabled={busy} onClick={() => void openCreate()}>
+                + {busy ? "Loading…" : t("admin.crud.excursions.new_btn")}
+              </V2Button>
+            )}
           </div>
         }
       />
@@ -1182,12 +1185,16 @@ export default function OperatorExcursionsPage() {
                       <Send />
                     </IconButton>
                   )}
-                  <IconButton onClick={() => openEdit(r)} aria-label={t("admin.crud.common.edit")}>
-                    <Edit3 />
-                  </IconButton>
-                  <IconButton onClick={() => void handleDelete(r.id)} aria-label={t("admin.crud.common.delete")}>
-                    <Trash2 />
-                  </IconButton>
+                  {userHasPermission(user, "excursions.update") && (
+                    <IconButton onClick={() => openEdit(r)} aria-label={t("admin.crud.common.edit")}>
+                      <Edit3 />
+                    </IconButton>
+                  )}
+                  {userHasPermission(user, "excursions.delete") && (
+                    <IconButton onClick={() => void handleDelete(r.id)} aria-label={t("admin.crud.common.delete")}>
+                      <Trash2 />
+                    </IconButton>
+                  )}
                 </div>
               </TD>
             </TR>

@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/v2";
 import { Edit3, Trash2 } from "lucide-react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { userHasPermission } from "@/lib/access";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { formatDateTime } from "@/lib/format";
@@ -225,7 +226,7 @@ function Field({
 const inputCls = "rounded border border-default px-2 py-1.5 text-sm";
 
 export default function OperatorFlightsPage() {
-  const { token } = useAdminAuth();
+  const { token, user } = useAdminAuth();
   const { t, contentLang, lang } = useLanguage();
   const confirm = useConfirm();
   const [rows, setRows] = useState<FlightRow[]>([]);
@@ -505,9 +506,11 @@ export default function OperatorFlightsPage() {
               }}
               onImport={() => setImportOpen(true)}
             />
-            <V2Button variant="primary" size="sm" onClick={openCreate}>
-              + {t("admin.crud.flights.new_btn")}
-            </V2Button>
+            {userHasPermission(user, "flights.create") && (
+              <V2Button variant="primary" size="sm" onClick={openCreate}>
+                + {t("admin.crud.flights.new_btn")}
+              </V2Button>
+            )}
           </div>
         }
       />
@@ -1302,16 +1305,20 @@ export default function OperatorFlightsPage() {
                       {t("admin.crud.common.submit_for_review")}
                     </V2Button>
                   )}
-                  <IconButton onClick={() => void openEdit(r)} aria-label={t("admin.crud.common.edit")}>
-                    <Edit3 className="h-4 w-4" />
-                  </IconButton>
-                  <IconButton
-                    onClick={() => void handleDelete(r.id)}
-                    disabled={busy}
-                    aria-label={t("admin.crud.common.delete")}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </IconButton>
+                  {userHasPermission(user, "flights.update") && (
+                    <IconButton onClick={() => void openEdit(r)} aria-label={t("admin.crud.common.edit")}>
+                      <Edit3 className="h-4 w-4" />
+                    </IconButton>
+                  )}
+                  {userHasPermission(user, "flights.delete") && (
+                    <IconButton
+                      onClick={() => void handleDelete(r.id)}
+                      disabled={busy}
+                      aria-label={t("admin.crud.common.delete")}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </IconButton>
+                  )}
                 </div>
               </TD>
             </TR>

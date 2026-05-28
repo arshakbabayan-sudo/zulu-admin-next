@@ -33,7 +33,7 @@ import {
 import { Edit3, Trash2, Send } from "lucide-react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
-import { canAccessOperatorToolsNav, userHasSellerServiceType } from "@/lib/access";
+import { canAccessOperatorToolsNav, userHasPermission, userHasSellerServiceType } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import { apiSubmitOfferForReview } from "@/lib/platform-admin-api";
 import {
@@ -566,9 +566,11 @@ export default function OperatorVisasPage() {
               }}
               onImport={() => setImportOpen(true)}
             />
-            <V2Button variant="primary" size="sm" disabled={busy} onClick={openCreate}>
-              + {t("admin.crud.visas.new_btn")}
-            </V2Button>
+            {userHasPermission(user, "visas.create") && (
+              <V2Button variant="primary" size="sm" disabled={busy} onClick={openCreate}>
+                + {t("admin.crud.visas.new_btn")}
+              </V2Button>
+            )}
           </div>
         }
       />
@@ -911,20 +913,24 @@ export default function OperatorVisasPage() {
                       <Send />
                     </IconButton>
                   )}
-                  <IconButton
-                    onClick={() => void openEdit(r)}
-                    disabled={busy}
-                    aria-label={t("admin.crud.common.edit")}
-                  >
-                    <Edit3 />
-                  </IconButton>
-                  <IconButton
-                    onClick={() => void handleDelete(r.id)}
-                    disabled={busy}
-                    aria-label={t("admin.crud.common.delete")}
-                  >
-                    <Trash2 />
-                  </IconButton>
+                  {userHasPermission(user, "visas.update") && (
+                    <IconButton
+                      onClick={() => void openEdit(r)}
+                      disabled={busy}
+                      aria-label={t("admin.crud.common.edit")}
+                    >
+                      <Edit3 />
+                    </IconButton>
+                  )}
+                  {userHasPermission(user, "visas.delete") && (
+                    <IconButton
+                      onClick={() => void handleDelete(r.id)}
+                      disabled={busy}
+                      aria-label={t("admin.crud.common.delete")}
+                    >
+                      <Trash2 />
+                    </IconButton>
+                  )}
                 </div>
               </TD>
             </TR>

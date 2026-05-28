@@ -11,6 +11,7 @@ import { OfferStatusBadge, isSubmittableStatus } from "@/components/OfferStatusB
 import { PaginationBar } from "@/components/PaginationBar";
 import { TranslationTabs } from "@/components/TranslationTabs";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { userHasPermission } from "@/lib/access";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { ApiRequestError } from "@/lib/api-client";
 import { exportRowsAsCsv } from "@/lib/export-csv";
@@ -277,9 +278,11 @@ export default function OperatorPackagesPage() {
             >
               Export
             </V2Button>
-            <V2Button variant="primary" size="sm" icon={<Plus className="h-4 w-4" />} onClick={openCreate}>
-              {t("admin.crud.packages.new_btn")}
-            </V2Button>
+            {userHasPermission(user, "packages.create") && (
+              <V2Button variant="primary" size="sm" icon={<Plus className="h-4 w-4" />} onClick={openCreate}>
+                {t("admin.crud.packages.new_btn")}
+              </V2Button>
+            )}
           </div>
         }
       />
@@ -651,16 +654,20 @@ export default function OperatorPackagesPage() {
                   >
                     <Power />
                   </IconButton>
-                  <IconButton onClick={() => openEdit(r)} aria-label={t("admin.crud.common.edit")}>
-                    <Edit3 />
-                  </IconButton>
-                  <IconButton
-                    onClick={() => void handleDelete(r.id)}
-                    disabled={busyId === r.id}
-                    aria-label={t("admin.crud.common.delete")}
-                  >
-                    <Trash2 />
-                  </IconButton>
+                  {userHasPermission(user, "packages.edit") && (
+                    <IconButton onClick={() => openEdit(r)} aria-label={t("admin.crud.common.edit")}>
+                      <Edit3 />
+                    </IconButton>
+                  )}
+                  {userHasPermission(user, "packages.delete") && (
+                    <IconButton
+                      onClick={() => void handleDelete(r.id)}
+                      disabled={busyId === r.id}
+                      aria-label={t("admin.crud.common.delete")}
+                    >
+                      <Trash2 />
+                    </IconButton>
+                  )}
                 </div>
               </TD>
             </TR>
