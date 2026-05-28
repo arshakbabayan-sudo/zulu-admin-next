@@ -24,6 +24,8 @@ import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import {
   apiAnonymizePlatformUser,
+  apiBulkDeleteUsers,
+  apiBulkRemindUsers,
   apiDeactivatePlatformUser,
   apiHardDeletePlatformUser,
   apiPlatformUsers,
@@ -134,6 +136,10 @@ export default function PlatformUsersPage() {
   const [forbidden, setForbidden] = useState(false);
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
+  // Phase Բ.3 — bulk-select for the unverified-accounts cleanup workflow.
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const showBulk = typeFilter === "unverified";
   // Phase Զ.15 / Item 15 — PIN gate state.
   const [pinGate, setPinGate] = useState<{
     title: string;
@@ -168,12 +174,66 @@ export default function PlatformUsersPage() {
     void load();
   }, [load]);
 
+  // Phase Բ.3 — reset selection when the filter/page context changes so we
+  // never act on ids no longer visible.
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [typeFilter, statusFilter, search, page]);
+
   useEffect(() => {
     if (!token || !allowed) return;
     void apiPlatformUsersStats(token)
       .then((res) => setStats(res.data))
       .catch(() => setStats(null));
   }, [token, allowed]);
+
+  // Phase Բ.3 — bulk handlers (unverified cleanup).
+  function toggleSelected(id: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function bulkRemind() {
+    if (!token || selectedIds.size === 0) return;
+    const ids = Array.from(selectedIds);
+    setBulkBusy(true);
+    try {
+      const res = await apiBulkRemindUsers(token, ids);
+      setSelectedIds(new Set());
+      alert(res.message ?? `Reminded ${res.data.reminded}, skipped ${res.data.skipped}.`);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : t("admin.users.err_load"));
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
+  async function bulkDelete() {
+    if (!token || selectedIds.size === 0) return;
+    const ok = await confirm({
+      title: "Delete selected accounts?",
+      message: `${selectedIds.size} account(s) will be anonymized (reversible-safe — PII removed, rows preserved).`,
+      variant: "danger",
+    });
+    if (!ok) return;
+    const ids = Array.from(selectedIds);
+    setBulkBusy(true);
+    try {
+      const res = await apiBulkDeleteUsers(token, ids);
+      setSelectedIds(new Set());
+      alert(res.message ?? `Anonymized ${res.data.processed}, skipped ${res.data.skipped}.`);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : t("admin.users.err_load"));
+    } finally {
+      setBulkBusy(false);
+    }
+  }
 
   // Build dropdown list of companies from the current page rows.
   const companyOptions = useMemo(() => {
@@ -576,12 +636,53 @@ export default function PlatformUsersPage() {
 
       <V2Card>
         <div className="overflow-x-auto">
+          {showBulk && selectedIds.size > 0 ? (
+            <div
+              className="flex flex-wrap items-center gap-3 border-b px-4 py-2.5 text-[13px]"
+              style={{ borderColor: "var(--admin-border)", backgroundColor: "var(--admin-primary-soft)" }}
+            >
+              <span className="font-medium text-fg-t8">{selectedIds.size} selected</span>
+              <V2Button size="sm" disabled={bulkBusy} onClick={() => void bulkRemind()}>
+                Send reminder
+              </V2Button>
+              <V2Button
+                size="sm"
+                disabled={bulkBusy}
+                onClick={() => void bulkDelete()}
+                style={{ color: "var(--admin-danger)", borderColor: "var(--admin-danger-light)" }}
+              >
+                Delete
+              </V2Button>
+              <button
+                type="button"
+                className="text-[12px] underline"
+                style={{ color: "var(--admin-text-secondary)" }}
+                onClick={() => setSelectedIds(new Set())}
+              >
+                Clear
+              </button>
+            </div>
+          ) : null}
           <table className="w-full border-collapse text-[13px]">
             <thead
               className="text-[11px] font-semibold uppercase tracking-[0.5px]"
               style={{ backgroundColor: "var(--admin-bg-secondary)", color: "var(--admin-text-secondary)" }}
             >
               <tr>
+                {showBulk ? (
+                  <th className="px-4 py-2.5 text-left" style={{ width: 36 }}>
+                    <input
+                      type="checkbox"
+                      aria-label="Select all"
+                      checked={filteredRows.length > 0 && filteredRows.every((r) => selectedIds.has(r.id))}
+                      onChange={(e) =>
+                        setSelectedIds(
+                          e.target.checked ? new Set(filteredRows.map((r) => r.id)) : new Set()
+                        )
+                      }
+                    />
+                  </th>
+                ) : null}
                 <th className="px-4 py-2.5 text-left">User</th>
                 <th className="px-4 py-2.5 text-left">Email</th>
                 <th className="px-4 py-2.5 text-left">Type</th>
@@ -595,7 +696,7 @@ export default function PlatformUsersPage() {
               {filteredRows.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={showBulk ? 8 : 7}
                     className="px-4 py-10 text-center text-sm"
                     style={{ color: "var(--admin-text-secondary)" }}
                   >
@@ -614,6 +715,16 @@ export default function PlatformUsersPage() {
                       className="border-t transition hover:bg-[color:var(--admin-bg-secondary)]"
                       style={{ borderColor: "var(--admin-border)" }}
                     >
+                      {showBulk ? (
+                        <td className="px-4 py-3">
+                          <input
+                            type="checkbox"
+                            aria-label={`Select ${r.name}`}
+                            checked={selectedIds.has(r.id)}
+                            onChange={() => toggleSelected(r.id)}
+                          />
+                        </td>
+                      ) : null}
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <span

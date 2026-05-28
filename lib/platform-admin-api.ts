@@ -564,6 +564,23 @@ export async function apiDeactivatePlatformUser(
   return apiFetchJson(`${PA}/users/${id}/deactivate`, { method: "PATCH", token, body: {} });
 }
 
+/** Phase Բ.3 — bulk resend email-verification reminders to unverified users. */
+export async function apiBulkRemindUsers(
+  token: string,
+  ids: number[]
+): Promise<ApiSuccessEnvelope<{ reminded: number; skipped: number }> & { message?: string }> {
+  return apiFetchJson(`${PA}/users/bulk-remind`, { method: "POST", token, body: { ids } });
+}
+
+/** Phase Բ.3 — bulk anonymize (reversible-safe) users. */
+export async function apiBulkDeleteUsers(
+  token: string,
+  ids: number[],
+  reason?: string
+): Promise<ApiSuccessEnvelope<{ processed: number; skipped: number }> & { message?: string }> {
+  return apiFetchJson(`${PA}/users/bulk-delete`, { method: "POST", token, body: { ids, reason } });
+}
+
 /** Phase 7.1 — "Ջնջել" default action: anonymise PII + soft-delete. */
 export async function apiAnonymizePlatformUser(
   token: string,
