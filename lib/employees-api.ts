@@ -70,3 +70,52 @@ export async function apiDeactivateEmployee(
     token,
   });
 }
+
+// ─── Phase Գ.6 / Bucket D.4 — per-employee permission overrides ──────────
+
+export type EmployeePermissionRow = {
+  permission_id: number;
+  name: string;
+  module: string;
+  action: string;
+  /** Effective state today: role baseline adjusted by any override. */
+  granted: boolean;
+  /** Whether the employee's role grants this permission by default. */
+  from_role: boolean;
+  /** A standing override on top of the role, if any. */
+  override: "allow" | "deny" | null;
+};
+
+export type EmployeePermissionsResponse = {
+  success: boolean;
+  data: {
+    user: { id: number; name: string; email: string; role_name: string | null };
+    company_id: number;
+    can_edit: boolean;
+    permissions: EmployeePermissionRow[];
+  };
+};
+
+export async function apiGetEmployeePermissions(
+  token: string,
+  companyId: number,
+  userId: number
+): Promise<EmployeePermissionsResponse> {
+  return apiFetchJson(`/companies/${companyId}/users/${userId}/permissions`, {
+    method: "GET",
+    token,
+  });
+}
+
+export async function apiSyncEmployeePermissions(
+  token: string,
+  companyId: number,
+  userId: number,
+  permissions: { permission_id: number; granted: boolean }[]
+): Promise<EmployeePermissionsResponse> {
+  return apiFetchJson(`/companies/${companyId}/users/${userId}/permissions`, {
+    method: "PUT",
+    token,
+    body: { permissions },
+  });
+}

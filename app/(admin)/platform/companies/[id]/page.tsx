@@ -39,6 +39,7 @@ import {
 import { StatusPill as _StatusPill } from "@/components/ui/StatusPill";
 import { PageHeader as V2PageHeader, V2Card, V2Button } from "@/components/ui/v2";
 import { AddEmployeeModal } from "@/components/employees/AddEmployeeModal";
+import { EmployeePermissionsDrawer } from "@/components/employees/EmployeePermissionsDrawer";
 import { Plus } from "lucide-react";
 
 const GOVERNANCE_STATUSES = ["pending", "active", "suspended", "rejected"] as const;
@@ -72,6 +73,7 @@ export default function PlatformCompanyDetailPage() {
   const [linkedUsers, setLinkedUsers] = useState<PlatformAdminUserRow[] | null>(null);
   const [linkedUsersErr, setLinkedUsersErr] = useState<string | null>(null);
   const [addEmployeeOpen, setAddEmployeeOpen] = useState(false);
+  const [permEmployee, setPermEmployee] = useState<{ id: number; name: string } | null>(null);
   const [appsHistory, setAppsHistory] = useState<CompanyApplicationRow[] | null>(null);
   const [appsHistoryErr, setAppsHistoryErr] = useState<string | null>(null);
 
@@ -298,6 +300,7 @@ export default function PlatformCompanyDetailPage() {
               errMsg={linkedUsersErr}
               t={t}
               onAddClick={() => setAddEmployeeOpen(true)}
+              onPermissionsClick={(id, name) => setPermEmployee({ id, name })}
             />
           )}
 
@@ -392,6 +395,16 @@ export default function PlatformCompanyDetailPage() {
           setLinkedUsersErr(null);
         }}
       />
+      {token && (
+        <EmployeePermissionsDrawer
+          open={permEmployee !== null}
+          onClose={() => setPermEmployee(null)}
+          token={token}
+          companyId={company.id}
+          userId={permEmployee?.id ?? null}
+          userName={permEmployee?.name}
+        />
+      )}
     </div>
   );
 }
@@ -629,12 +642,14 @@ function UsersTab({
   errMsg,
   t,
   onAddClick,
+  onPermissionsClick,
 }: {
   companyId: number;
   users: PlatformAdminUserRow[] | null;
   errMsg: string | null;
   t: (k: string) => string;
   onAddClick: () => void;
+  onPermissionsClick: (userId: number, userName: string) => void;
 }) {
   const header = (
     <div className="mb-3 flex items-center justify-end">
@@ -698,12 +713,21 @@ function UsersTab({
                     <_StatusPill status={u.status} />
                   </td>
                   <td className="px-4 py-2 text-right">
-                    <Link
-                      href={`/platform/users/${u.id}`}
-                      className="text-xs text-primary underline-offset-2 hover:underline"
-                    >
-                      {t("admin.users.btn_edit")}
-                    </Link>
+                    <div className="flex items-center justify-end gap-3">
+                      <button
+                        type="button"
+                        onClick={() => onPermissionsClick(u.id, u.name)}
+                        className="text-xs text-primary underline-offset-2 hover:underline"
+                      >
+                        Permissions
+                      </button>
+                      <Link
+                        href={`/platform/users/${u.id}`}
+                        className="text-xs text-primary underline-offset-2 hover:underline"
+                      >
+                        {t("admin.users.btn_edit")}
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               );
