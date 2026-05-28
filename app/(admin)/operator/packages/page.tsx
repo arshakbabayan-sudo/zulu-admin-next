@@ -57,7 +57,7 @@ const PACKAGE_TYPES = ["flight", "hotel", "transfer", "multi_service", "custom"]
 const STATUSES = ["", "draft", "active", "inactive", "archived"];
 
 export default function OperatorPackagesPage() {
-  const { token } = useAdminAuth();
+  const { token, user } = useAdminAuth();
   const { t, contentLang } = useLanguage();
   const confirm = useConfirm();
   const [rows, setRows] = useState<PackageRow[]>([]);
@@ -244,6 +244,14 @@ export default function OperatorPackagesPage() {
         }
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            {/* Phase Ա.1 — scope switch (the global inventory Mine/All toggle
+                was removed platform-wide 2026-05-24). Super-admin reaches the
+                all-companies oversight view here. */}
+            {user?.is_super_admin ? (
+              <V2Button as="link" href="/inventory/packages" variant="default" size="sm">
+                All companies
+              </V2Button>
+            ) : null}
             <V2Button
               variant="default"
               size="sm"

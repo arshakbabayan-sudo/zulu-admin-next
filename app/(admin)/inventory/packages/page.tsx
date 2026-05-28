@@ -143,6 +143,11 @@ export default function InventoryPackagesOversightPage() {
         ]}
         title={t("admin.packages.title_long")}
         actions={
+          <div className="flex flex-wrap items-center gap-2">
+          {/* Phase Ա.1 — scope switch back to the operator's own packages. */}
+          <V2Button as="link" href="/operator/packages" variant="default">
+            My packages
+          </V2Button>
           <V2Button
             icon={<Download className="h-4 w-4" />}
             disabled={rows.length === 0}
@@ -161,6 +166,7 @@ export default function InventoryPackagesOversightPage() {
           >
             Export
           </V2Button>
+          </div>
         }
       />
 
