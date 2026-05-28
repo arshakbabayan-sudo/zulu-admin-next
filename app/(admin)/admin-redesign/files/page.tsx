@@ -28,6 +28,7 @@ import {
   apiFilesObjectUrl,
   apiFilesCreateFolder,
   apiFilesDelete,
+  apiFilesDeleteFolder,
   apiFilesStorageStats,
   formatBytes,
   isPreviewableImage,
@@ -241,6 +242,28 @@ export default function AdminRedesignFilesPage() {
     setPreviewLoading(false);
   };
 
+  // Phase Ժ.2 — delete an empty folder (backend blocks non-empty with 409).
+  const handleDeleteFolder = async (sub: FolderSummary) => {
+    if (!token) return;
+    const ok = window.confirm(
+      `${tx(t, "admin.files.delete_folder_confirm", "Delete this folder?")}\n\n${sub.name}`
+    );
+    if (!ok) return;
+    try {
+      await apiFilesDeleteFolder(token, sub.folder);
+      setActionMsg(tx(t, "admin.files.folder_deleted", "Folder deleted"));
+      window.setTimeout(() => setActionMsg(null), 3000);
+      await loadFolder(folder);
+      await loadStats();
+    } catch (e) {
+      setErr(
+        e instanceof ApiRequestError
+          ? e.message
+          : tx(t, "admin.files.err_delete_folder", "Could not delete folder")
+      );
+    }
+  };
+
   const handleDelete = async (asset: FileAssetRow) => {
     if (!token) return;
     const ok = window.confirm(
@@ -445,24 +468,33 @@ export default function AdminRedesignFilesPage() {
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {subfolders.map((f) => (
-                  <button
-                    key={f.folder}
-                    type="button"
-                    onClick={() => setFolder(f.folder)}
-                    className="text-left"
-                  >
-                    <V2Card className="cursor-pointer p-4 transition hover:shadow-md">
-                      <FolderLargeIcon />
-                      <div className="mt-3 font-medium">{f.name}</div>
-                      <div
-                        className="text-[11px]"
-                        style={{ color: "var(--admin-text-secondary)" }}
+                  <div key={f.folder} className="group/folder relative">
+                    <button
+                      type="button"
+                      onClick={() => setFolder(f.folder)}
+                      className="block w-full text-left"
+                    >
+                      <V2Card className="cursor-pointer p-4 transition hover:shadow-md">
+                        <FolderLargeIcon />
+                        <div className="mt-3 font-medium">{f.name}</div>
+                        <div
+                          className="text-[11px]"
+                          style={{ color: "var(--admin-text-secondary)" }}
+                        >
+                          {f.file_count} {tx(t, "admin.files.files", "files")} ·{" "}
+                          {formatBytes(f.total_bytes)}
+                        </div>
+                      </V2Card>
+                    </button>
+                    <div className="absolute right-2 top-2 opacity-0 transition group-hover/folder:opacity-100">
+                      <IconButton
+                        aria-label={tx(t, "admin.files.delete_folder", "Delete folder")}
+                        onClick={() => void handleDeleteFolder(f)}
                       >
-                        {f.file_count} {tx(t, "admin.files.files", "files")} ·{" "}
-                        {formatBytes(f.total_bytes)}
-                      </div>
-                    </V2Card>
-                  </button>
+                        <TrashSmall />
+                      </IconButton>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>

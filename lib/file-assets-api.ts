@@ -103,6 +103,22 @@ export async function apiFilesDelete(
   return apiFetchJson(`/files/${id}`, { method: "DELETE", token });
 }
 
+/**
+ * DELETE /files/folder — Phase Ժ.2. Only succeeds when the folder is empty
+ * (backend returns 409 otherwise). Caller surfaces that message to the user.
+ */
+export async function apiFilesDeleteFolder(
+  token: string,
+  folder: string,
+  opts: { company_id?: number | null } = {}
+): Promise<ApiSuccessEnvelope<{ folder: string }>> {
+  return apiFetchJson(`/files/folder`, {
+    method: "DELETE",
+    token,
+    body: { folder, company_id: opts.company_id ?? undefined },
+  });
+}
+
 /** GET /files/storage-stats */
 export async function apiFilesStorageStats(
   token: string
