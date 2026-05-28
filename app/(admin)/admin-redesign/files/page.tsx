@@ -25,10 +25,12 @@ import {
   apiFilesList,
   apiFilesUpload,
   apiFilesDownload,
+  apiFilesObjectUrl,
   apiFilesCreateFolder,
   apiFilesDelete,
   apiFilesStorageStats,
   formatBytes,
+  isPreviewableImage,
   mimeBucket,
   mimeLabel,
   type FileAssetRow,
@@ -37,6 +39,7 @@ import {
   type FileVisibility,
 } from "@/lib/file-assets-api";
 import { PageHeader, V2Card, V2Button, IconButton } from "@/components/ui/v2";
+import { Modal } from "@/components/ui";
 
 function tx(t: (k: string) => string, key: string, fallback: string): string {
   const r = t(key);
@@ -72,6 +75,10 @@ export default function AdminRedesignFilesPage() {
   const [stats, setStats] = useState<StorageStats | null>(null);
   const [uploading, setUploading] = useState<boolean>(false);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
+  // Phase Ժ.2 — image preview lightbox.
+  const [previewFile, setPreviewFile] = useState<FileAssetRow | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState<boolean>(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -199,6 +206,39 @@ export default function AdminRedesignFilesPage() {
           : tx(t, "admin.files.err_download", "Download failed")
       );
     }
+  };
+
+  // Phase Ժ.2 — clicking an image opens a preview lightbox instead of
+  // downloading; non-image files still download on click.
+  const handleFileClick = async (asset: FileAssetRow) => {
+    if (!isPreviewableImage(asset.mime_type)) {
+      await handleDownload(asset);
+      return;
+    }
+    if (!token) return;
+    setPreviewFile(asset);
+    setPreviewLoading(true);
+    setPreviewUrl(null);
+    try {
+      const objectUrl = await apiFilesObjectUrl(token, asset);
+      setPreviewUrl(objectUrl);
+    } catch (e) {
+      setErr(
+        e instanceof ApiRequestError
+          ? e.message
+          : tx(t, "admin.files.err_preview", "Could not open preview")
+      );
+      setPreviewFile(null);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const closePreview = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+    setPreviewFile(null);
+    setPreviewLoading(false);
   };
 
   const handleDelete = async (asset: FileAssetRow) => {
@@ -526,8 +566,13 @@ export default function AdminRedesignFilesPage() {
                       <td className="px-4 py-3 align-middle">
                         <button
                           type="button"
-                          onClick={() => void handleDownload(file)}
+                          onClick={() => void handleFileClick(file)}
                           className="flex items-center gap-3 text-left"
+                          title={
+                            isPreviewableImage(file.mime_type)
+                              ? tx(t, "admin.files.click_preview", "Click to preview")
+                              : tx(t, "admin.files.click_download", "Click to download")
+                          }
                         >
                           <FileTypeIcon mime={file.mime_type} />
                           <div>
@@ -593,6 +638,41 @@ export default function AdminRedesignFilesPage() {
           </V2Card>
         </div>
       </div>
+
+      {/* Phase Ժ.2 — image preview lightbox. */}
+      <Modal
+        isOpen={previewFile !== null}
+        onClose={closePreview}
+        title={previewFile?.filename ?? ""}
+        size="lg"
+        footer={
+          previewFile ? (
+            <div className="flex w-full items-center justify-between gap-2">
+              <span className="text-[12px]" style={{ color: "var(--admin-text-secondary)" }}>
+                {mimeLabel(previewFile.mime_type)} · {formatBytes(previewFile.size_bytes)}
+              </span>
+              <V2Button onClick={() => void handleDownload(previewFile)}>
+                {tx(t, "admin.files.download", "Download")}
+              </V2Button>
+            </div>
+          ) : null
+        }
+      >
+        <div className="flex items-center justify-center" style={{ minHeight: 240 }}>
+          {previewLoading ? (
+            <span className="text-sm" style={{ color: "var(--admin-text-secondary)" }}>
+              {tx(t, "admin.files.loading_preview", "Loading preview…")}
+            </span>
+          ) : previewUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={previewUrl}
+              alt={previewFile?.filename ?? ""}
+              className="max-h-[70vh] max-w-full rounded-md object-contain"
+            />
+          ) : null}
+        </div>
+      </Modal>
     </div>
   );
 }

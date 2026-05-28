@@ -139,6 +139,31 @@ export async function apiFilesDownload(token: string, asset: FileAssetRow): Prom
   }
 }
 
+/**
+ * Phase Ժ.2 — fetch a file's bytes with auth and return a blob object URL
+ * for in-page preview (e.g. an image lightbox). The caller MUST revoke the
+ * URL (URL.revokeObjectURL) when the preview closes to avoid a memory leak.
+ */
+export async function apiFilesObjectUrl(token: string, asset: FileAssetRow): Promise<string> {
+  const base = getApiBaseUrl().replace(/\/$/, "");
+  const url = `${base}/files/${asset.id}/download`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new ApiRequestError(text || `HTTP ${res.status}`, res.status);
+  }
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+}
+
+/** True when the mime type is a previewable image. */
+export function isPreviewableImage(mime: string): boolean {
+  return /^image\/(png|jpe?g|gif|webp|svg\+xml|bmp|avif)$/i.test(mime);
+}
+
 /** Format bytes as a human-friendly string. */
 export function formatBytes(bytes: number): string {
   if (!bytes || bytes < 0) return "0 B";
