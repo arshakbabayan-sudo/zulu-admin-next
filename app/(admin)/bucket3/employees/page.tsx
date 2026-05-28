@@ -40,9 +40,11 @@ import {
   V2Button,
   IconButton,
 } from "@/components/ui/v2";
-import { Search, Eye, Edit3, Download } from "lucide-react";
+import { Search, Eye, Edit3, Download, Plus } from "lucide-react";
 import Link from "next/link";
 import { exportRowsAsCsv } from "@/lib/export-csv";
+import { AddEmployeeModal } from "@/components/employees/AddEmployeeModal";
+import { EmployeePermissionsDrawer } from "@/components/employees/EmployeePermissionsDrawer";
 import { useCallback, useEffect, useState } from "react";
 
 type EmployeeRow = {
@@ -70,7 +72,21 @@ async function fetchEmployees(
   return apiFetchJson(`/platform-admin/users?${q.toString()}`, { method: "GET", token });
 }
 
+/**
+ * Phase R.4 — "My company → Employees" is shared by two audiences:
+ *  - super/platform admin → cross-company roll-up (PlatformEmployeesView)
+ *  - operator/company_admin → their OWN company's employees, with the
+ *    permission drawer + Add-employee (OperatorEmployeesView). Previously
+ *    operators hit a 403 here because the page was platform-admin only.
+ */
 export default function Bucket3EmployeesPage() {
+  const { user } = useAdminAuth();
+  if (!user) return null;
+  if (canAccessPlatformAdminNav(user)) return <PlatformEmployeesView />;
+  return <OperatorEmployeesView />;
+}
+
+function PlatformEmployeesView() {
   const { token, user } = useAdminAuth();
   const { t, lang } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
@@ -326,6 +342,145 @@ export default function Bucket3EmployeesPage() {
           page={meta.current_page}
           lastPage={meta.last_page}
           onPage={(p) => setPage(p)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Phase R.4 — operator-scoped employees (their own company) ────────────
+
+type CompanyUserRow = {
+  id: number;
+  name: string;
+  email: string;
+  status: string;
+  role: string;
+  joined_at: string | null;
+};
+
+function OperatorEmployeesView() {
+  const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
+  const companyId = user?.context?.active_company_id ?? user?.companies?.[0]?.id ?? null;
+  const companyName = user?.companies?.find((c) => c.id === companyId)?.name ?? "My company";
+
+  const [rows, setRows] = useState<CompanyUserRow[] | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [permEmployee, setPermEmployee] = useState<{ id: number; name: string } | null>(null);
+
+  const load = useCallback(async () => {
+    if (!token || companyId == null) return;
+    setErr(null);
+    try {
+      const res = await apiFetchJson<{ data: CompanyUserRow[] }>(
+        `/companies/${companyId}/users`,
+        { method: "GET", token }
+      );
+      setRows(res.data);
+    } catch (e) {
+      setErr(e instanceof ApiRequestError ? e.message : "Failed to load employees");
+    }
+  }, [token, companyId]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  if (companyId == null) {
+    return (
+      <div className="space-y-4">
+        <h1 className="admin-page-title">{t("admin.bucket3.employees.title")}</h1>
+        <div className="admin-card p-4">
+          <ForbiddenNotice />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <V2PageHeader
+        breadcrumb={[
+          { label: "Home", href: "/dashboard" },
+          { label: "My company", href: "/bucket3/employees" },
+          { label: t("admin.bucket3.employees.title") },
+        ]}
+        title={t("admin.bucket3.employees.title")}
+        subtitle={companyName}
+        actions={
+          <V2Button icon={<Plus className="h-4 w-4" />} onClick={() => setAddOpen(true)}>
+            Add employee
+          </V2Button>
+        }
+      />
+
+      {err && (
+        <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
+          {err}
+        </div>
+      )}
+
+      <V2Card>
+        <Table>
+          <THead>
+            <TR>
+              <TH>#</TH>
+              <TH>{t("admin.bucket3.employees.col.name")}</TH>
+              <TH>{t("admin.bucket3.employees.col.email")}</TH>
+              <TH>Role</TH>
+              <TH>{t("admin.bucket3.employees.col.status")}</TH>
+              <TH align="right">Actions</TH>
+            </TR>
+          </THead>
+          <TBody>
+            {rows && rows.length === 0 ? (
+              <TEmpty colSpan={6}>{t("admin.bucket3.employees.empty")}</TEmpty>
+            ) : null}
+            {(rows ?? []).map((e) => (
+              <TR key={e.id}>
+                <TD className="tabular-nums text-fg-t7 font-mono text-xs">EMP-{String(e.id).padStart(3, "0")}</TD>
+                <TD className="font-medium text-fg-t8">{e.name}</TD>
+                <TD className="text-xs">{e.email}</TD>
+                <TD className="text-xs capitalize text-fg-t7">{(e.role || "—").replace(/_/g, " ")}</TD>
+                <TD className="text-xs capitalize">{e.status}</TD>
+                <TD align="right">
+                  <button
+                    type="button"
+                    onClick={() => setPermEmployee({ id: e.id, name: e.name })}
+                    className="text-xs text-primary underline-offset-2 hover:underline"
+                  >
+                    Permissions
+                  </button>
+                </TD>
+              </TR>
+            ))}
+          </TBody>
+        </Table>
+      </V2Card>
+
+      {token && (
+        <AddEmployeeModal
+          open={addOpen}
+          onClose={() => setAddOpen(false)}
+          token={token}
+          companyId={companyId}
+          companyName={companyName}
+          onSuccess={() => {
+            setRows(null);
+            void load();
+          }}
+        />
+      )}
+      {token && (
+        <EmployeePermissionsDrawer
+          open={permEmployee !== null}
+          onClose={() => setPermEmployee(null)}
+          token={token}
+          companyId={companyId}
+          userId={permEmployee?.id ?? null}
+          userName={permEmployee?.name}
         />
       )}
     </div>
