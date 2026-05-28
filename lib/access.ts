@@ -200,9 +200,12 @@ export function canAccessInventorySection(user: AdminUser | null): boolean {
   return canAccessOperatorToolsNav(user) || canAccessInventoryOversightNav(user);
 }
 
-/** Bookings: all three roles. */
+/** Bookings: anyone who can view bookings (Phase R.2 — permission-gated so a
+ * revoked `bookings.view` actually hides the section). Super admin always. */
 export function canAccessBookingsSection(user: AdminUser | null): boolean {
-  return user != null;
+  if (!user) return false;
+  if (user.is_super_admin) return true;
+  return userHasPermission(user, "bookings.view");
 }
 
 /** Sales workspace: agents only (super admin can preview via direct URL but not in sidebar). */
@@ -212,9 +215,17 @@ export function canAccessSalesWorkspaceSection(user: AdminUser | null): boolean 
   return user.roles?.includes("agent") ?? false;
 }
 
-/** Finance: all three roles. Backend permission filters columns/rows. */
+/** Finance: anyone with a finance/commission view permission (Phase R.2 —
+ * permission-gated). Super admin always. */
 export function canAccessFinanceSection(user: AdminUser | null): boolean {
-  return user != null;
+  if (!user) return false;
+  if (user.is_super_admin) return true;
+  return (
+    userHasPermission(user, "commissions.view") ||
+    userHasPermission(user, "finance.entitlements.view") ||
+    userHasPermission(user, "finance.settlements.view") ||
+    userHasPermission(user, "platform.finance.view")
+  );
 }
 
 /** My company: all three roles (each sees only their own company). Super admin sees Zulu's. */
