@@ -80,6 +80,9 @@ export default function AdminRedesignFilesPage() {
   const [previewFile, setPreviewFile] = useState<FileAssetRow | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState<boolean>(false);
+  // Phase Ժ.2 — bulk file multi-select.
+  const [selectedFileIds, setSelectedFileIds] = useState<Set<number>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState<boolean>(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -120,6 +123,11 @@ export default function AdminRedesignFilesPage() {
   useEffect(() => {
     void loadFolder(folder);
   }, [folder, loadFolder]);
+
+  // Phase Ժ.2 — drop file selection when navigating folders / switching quick view.
+  useEffect(() => {
+    setSelectedFileIds(new Set());
+  }, [folder, quick, search]);
 
   useEffect(() => {
     void loadStats();
@@ -240,6 +248,44 @@ export default function AdminRedesignFilesPage() {
     setPreviewUrl(null);
     setPreviewFile(null);
     setPreviewLoading(false);
+  };
+
+  // Phase Ժ.2 — bulk delete selected files (loops the single-file endpoint;
+  // safe for the handful a user multi-selects in the UI).
+  const toggleFileSelected = (id: number) => {
+    setSelectedFileIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkDeleteFiles = async () => {
+    if (!token || selectedFileIds.size === 0) return;
+    const ok = window.confirm(
+      `${tx(t, "admin.files.bulk_delete_confirm", "Delete selected files?")}\n\n${selectedFileIds.size}`
+    );
+    if (!ok) return;
+    setBulkDeleting(true);
+    let failed = 0;
+    for (const id of Array.from(selectedFileIds)) {
+      try {
+        await apiFilesDelete(token, id);
+      } catch {
+        failed++;
+      }
+    }
+    setBulkDeleting(false);
+    setSelectedFileIds(new Set());
+    setActionMsg(
+      failed === 0
+        ? tx(t, "admin.files.bulk_deleted", "Files deleted")
+        : `${tx(t, "admin.files.bulk_deleted_partial", "Some files could not be deleted")} (${failed})`
+    );
+    window.setTimeout(() => setActionMsg(null), 3000);
+    await loadFolder(folder);
+    await loadStats();
   };
 
   // Phase Ժ.2 — delete an empty folder (backend blocks non-empty with 409).
@@ -502,6 +548,30 @@ export default function AdminRedesignFilesPage() {
 
           {/* Files */}
           <V2Card>
+            {selectedFileIds.size > 0 ? (
+              <div
+                className="flex flex-wrap items-center gap-3 border-b px-4 py-2.5 text-[13px]"
+                style={{ borderColor: "var(--admin-border)", backgroundColor: "var(--admin-primary-soft)" }}
+              >
+                <span className="font-medium">{selectedFileIds.size} {tx(t, "admin.files.selected", "selected")}</span>
+                <V2Button
+                  size="sm"
+                  disabled={bulkDeleting}
+                  onClick={() => void handleBulkDeleteFiles()}
+                  style={{ color: "var(--admin-danger)", borderColor: "var(--admin-danger-light)" }}
+                >
+                  {bulkDeleting ? "…" : tx(t, "admin.files.delete_selected", "Delete selected")}
+                </V2Button>
+                <button
+                  type="button"
+                  className="text-[12px] underline"
+                  style={{ color: "var(--admin-text-secondary)" }}
+                  onClick={() => setSelectedFileIds(new Set())}
+                >
+                  {tx(t, "admin.files.clear", "Clear")}
+                </button>
+              </div>
+            ) : null}
             <div
               className="border-b px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.5px]"
               style={{
@@ -561,6 +631,18 @@ export default function AdminRedesignFilesPage() {
               <table className="w-full border-collapse text-[13px]">
                 <thead style={{ backgroundColor: "var(--admin-bg-secondary)" }}>
                   <tr>
+                    <th className="px-4 py-2.5 text-left" style={{ width: 36 }}>
+                      <input
+                        type="checkbox"
+                        aria-label="Select all files"
+                        checked={visibleFiles.length > 0 && visibleFiles.every((f) => selectedFileIds.has(f.id))}
+                        onChange={(e) =>
+                          setSelectedFileIds(
+                            e.target.checked ? new Set(visibleFiles.map((f) => f.id)) : new Set()
+                          )
+                        }
+                      />
+                    </th>
                     <th
                       className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.5px]"
                       style={{ color: "var(--admin-text-secondary)" }}
@@ -595,6 +677,14 @@ export default function AdminRedesignFilesPage() {
                       className="group border-t transition hover:bg-[color:var(--admin-bg-secondary)]"
                       style={{ borderColor: "var(--admin-border)" }}
                     >
+                      <td className="px-4 py-3 align-middle">
+                        <input
+                          type="checkbox"
+                          aria-label={`Select ${file.filename}`}
+                          checked={selectedFileIds.has(file.id)}
+                          onChange={() => toggleFileSelected(file.id)}
+                        />
+                      </td>
                       <td className="px-4 py-3 align-middle">
                         <button
                           type="button"
