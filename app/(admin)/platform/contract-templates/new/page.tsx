@@ -164,6 +164,14 @@ export default function AdminContractTemplateNewPage() {
       />
       <div className="space-y-6">
 
+      {cloning && (
+        <div className="rounded-md border border-info-100 bg-info-50 px-4 py-2 text-sm text-info-700">
+          {t("admin.contract_new.cloning") !== "admin.contract_new.cloning"
+            ? t("admin.contract_new.cloning")
+            : "Loading source template…"}
+        </div>
+      )}
+
       {err && (
         <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
           {err}
