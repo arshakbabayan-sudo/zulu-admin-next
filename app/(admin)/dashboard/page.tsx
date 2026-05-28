@@ -927,6 +927,13 @@ export default function DashboardPage() {
         subtitle={t("admin.dashboard.platform_overview")}
         actions={
           <>
+            {/* Phase Ա.9 — Detailed stats surfaced here (admin uses per-page
+                nav, not group-config tabs). Super-admin → /statistics. */}
+            {user?.is_super_admin ? (
+              <V2Button as="link" href="/statistics">
+                {tx(t, "admin.nav.tab.detailed_stats", "Detailed stats")}
+              </V2Button>
+            ) : null}
             <select
               defaultValue="30"
               className="h-9 rounded-md border bg-white px-3 text-[13px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
