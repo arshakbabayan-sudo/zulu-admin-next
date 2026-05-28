@@ -293,12 +293,12 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     labelFallback: "Notifications",
     icon: "/icons/menu/bell.svg",
     defaultHref: "/admin-redesign/notifications",
-    // Phase Ա.3 (2026-05-28) — bulk-notifications added as a sibling tab under
-    // the Notifications group (formerly under My company > Bulk notifications).
-    tabs: [
-      { href: "/admin-redesign/notifications", labelKey: "admin.nav.tab.notifications_inbox" },
-      { href: "/bucket3/bulk-notifications", labelKey: "admin.nav.tab.bucket3.bulk_notifications", superAdminOnly: true },
-    ],
+    // Phase Ա.3 (2026-05-28) — bulk-notifications belongs under Notifications,
+    // but the admin no longer renders group-config tabs (per-page tab bars
+    // since 2026-05-24), so listing them here only broke the page title with an
+    // untranslated key. The actual link lives as a header button on the
+    // Notifications page instead. Keep tabs empty.
+    tabs: [],
     visibility: "always",
     badgeSource: "notifications_unread",
     badgeKind: "warn",

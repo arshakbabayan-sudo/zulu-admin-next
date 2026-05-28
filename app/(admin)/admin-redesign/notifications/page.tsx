@@ -117,7 +117,7 @@ function formatRelativeTime(createdAt: string | null): string {
 
 export default function AdminRedesignNotificationsPage() {
   const { t } = useLanguage();
-  const { token } = useAdminAuth();
+  const { token, user } = useAdminAuth();
   const router = useRouter();
   useDocumentTitle("Notifications — ZULU Admin");
 
@@ -254,6 +254,17 @@ export default function AdminRedesignNotificationsPage() {
         subtitle={tx(t, "admin.notifications.subtitle", "Your inbox")}
         actions={
           <>
+            {/* Phase Ա.3 — Bulk notifications relocated under Notifications.
+                Admin uses per-page nav (no group-config tabs), so the link
+                lives here as a super-admin header action. */}
+            {user?.is_super_admin ? (
+              <V2Button
+                icon={<BellIcon />}
+                onClick={() => router.push("/bucket3/bulk-notifications")}
+              >
+                {tx(t, "admin.nav.tab.bucket3.bulk_notifications", "Bulk notifications")}
+              </V2Button>
+            ) : null}
             <V2Button icon={<ChecksIcon />} onClick={() => void markAllRead()}>
               {tx(t, "admin.notifications.mark_all_read", "Mark all as read")}
             </V2Button>
