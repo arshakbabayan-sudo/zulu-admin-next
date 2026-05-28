@@ -245,7 +245,6 @@ export default function PendingReviewPage() {
           { href: "/platform/users", label: "Users" },
           { href: "/platform/audit-logs", label: "Audit logs" },
           { href: "/bucket3/service-logs", label: "Service logs" },
-          { href: "/bucket3/unverified-accounts", label: "Unverified accounts" },
         ]}
       />
 

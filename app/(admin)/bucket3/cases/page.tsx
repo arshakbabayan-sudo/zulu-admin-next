@@ -358,8 +358,6 @@ export default function Bucket3CasesPage() {
           { href: "/bucket3/payroll", label: "Payroll" },
           { href: "/bucket3/non-service-hours", label: "Non-service hours" },
           { href: "/bucket3/cases", label: "Cases", count: meta?.total },
-          { href: "/bucket3/bulk-notifications", label: "Bulk notifications" },
-          { href: "/bucket3/pin-settings", label: "PIN settings" },
           { href: "/bucket3/customers", label: "Customers" },
           { href: "/bucket3/subscriptions", label: "Subscriptions" },
           { href: "/bucket3/per-x-invoicing", label: "Per-X invoicing" },

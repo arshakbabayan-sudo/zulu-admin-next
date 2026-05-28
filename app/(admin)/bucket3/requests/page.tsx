@@ -272,7 +272,6 @@ export default function Bucket3RequestsPage() {
           { href: "/platform/contract-templates", label: "Contract templates" },
           { href: "/platform/audit-logs", label: "Audit logs" },
           { href: "/bucket3/service-logs", label: "Service logs" },
-          { href: "/bucket3/unverified-accounts", label: "Unverified accounts" },
         ]}
       />
 

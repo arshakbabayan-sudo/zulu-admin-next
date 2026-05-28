@@ -49,11 +49,8 @@ export function MarketplaceOpsSectionTabs({ activeHref, counts }: Props) {
         },
         { href: "/platform/audit-logs", label: "Audit logs" },
         { href: "/bucket3/service-logs", label: "Service logs" },
-        {
-          href: "/bucket3/unverified-accounts",
-          label: "Unverified accounts",
-          count: counts?.unverifiedAccounts,
-        },
+        // Phase Ա.6 — Unverified accounts moved into /platform/users?type=unverified;
+        // tab removed here to match the sidebar.
       ]}
     />
   );
