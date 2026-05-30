@@ -142,6 +142,18 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     await promise;
   }, [setCachedUser]);
 
+  const clearSessionLocally = useCallback(() => {
+    try {
+      window.localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
+      window.localStorage.removeItem(ADMIN_USER_STORAGE_KEY);
+      window.localStorage.removeItem(ADMIN_USER_FETCHED_AT_KEY);
+    } catch {
+      /* ignore */
+    }
+    setToken(null);
+    setUser(null);
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -177,11 +189,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
       } catch (e) {
         if (!cancelled) {
           if (e instanceof ApiRequestError && (e.status === 401 || e.status === 403)) {
-            window.localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
-            window.localStorage.removeItem(ADMIN_USER_STORAGE_KEY);
-            window.localStorage.removeItem(ADMIN_USER_FETCHED_AT_KEY);
-            setToken(null);
-            setUser(null);
+            clearSessionLocally();
           }
         }
       }
@@ -189,7 +197,61 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [refreshMeIfStale]);
+  }, [refreshMeIfStale, clearSessionLocally]);
+
+  /**
+   * Server-driven session sync — picks up logouts that happened in another
+   * tab or on the customer subdomain (zulu.am ↔ admin.zulu.am share the same
+   * Sanctum bearer via the /sso handoff, so revoking it on one side has to
+   * propagate visually on the other).
+   *
+   *  - storage event: instant for SAME-origin admin tabs (one admin tab logs
+   *    out → another admin tab sees ADMIN_TOKEN_STORAGE_KEY removed).
+   *  - visibilitychange: instant when the user flips back to this tab after
+   *    logging out elsewhere — no stale "still logged in" chrome.
+   *  - 30 s interval: backstop for tabs that stay visible-but-idle.
+   */
+  useEffect(() => {
+    if (!token) return;
+    let alive = true;
+
+    async function check() {
+      if (!alive) return;
+      const t = window.localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY);
+      if (!t) {
+        clearSessionLocally();
+        return;
+      }
+      try {
+        await apiMe(t);
+      } catch (e) {
+        if (!alive) return;
+        if (e instanceof ApiRequestError && (e.status === 401 || e.status === 403)) {
+          clearSessionLocally();
+        }
+        /* other errors (network, 5xx) — leave state alone, next tick retries */
+      }
+    }
+
+    const id = window.setInterval(check, 30_000);
+    const onVis = () => {
+      if (document.visibilityState === "visible") void check();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === ADMIN_TOKEN_STORAGE_KEY && e.newValue === null) {
+        clearSessionLocally();
+      }
+    };
+    window.addEventListener("storage", onStorage);
+
+    return () => {
+      alive = false;
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, [token, clearSessionLocally]);
 
   const login = useCallback(async (email: string, password: string, rememberMe: boolean = false): Promise<AdminLoginOutcome> => {
     setError(null);
