@@ -286,6 +286,15 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
         clearSessionLocally();
         return;
       }
+      // Cheap synchronous signal: shared cookie was wiped by a sibling tab's
+      // logout (Domain=.zulu.am). We still have localStorage from before
+      // → clear immediately, no /me round-trip. Caught within one tick
+      // regardless of subdomain.
+      const cookieToken = readSharedSessionCookie();
+      if (!cookieToken) {
+        clearSessionLocally();
+        return;
+      }
       try {
         await apiMe(t);
       } catch (e) {
@@ -297,11 +306,18 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    const id = window.setInterval(check, 30_000);
+    // 5 s tick — covers the side-by-side-windows case where visibilitychange
+    // doesn't fire because both tabs stay visible.
+    const id = window.setInterval(check, 5_000);
     const onVis = () => {
       if (document.visibilityState === "visible") void check();
     };
     document.addEventListener("visibilitychange", onVis);
+    // `focus` fires on cross-window focus changes — visibilitychange misses
+    // these (only fires when a tab becomes hidden/visible, not when focus
+    // moves between two visible windows).
+    const onFocus = () => void check();
+    window.addEventListener("focus", onFocus);
     const onStorage = (e: StorageEvent) => {
       if (e.key === ADMIN_TOKEN_STORAGE_KEY && e.newValue === null) {
         clearSessionLocally();
@@ -313,6 +329,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
       alive = false;
       window.clearInterval(id);
       document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("focus", onFocus);
       window.removeEventListener("storage", onStorage);
     };
   }, [token, clearSessionLocally]);
