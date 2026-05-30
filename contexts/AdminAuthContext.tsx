@@ -22,13 +22,27 @@ const ADMIN_USER_FETCHED_AT_KEY = "admin_user_fetched_at";
 /** Re-fetch /account/me at most once every 5 minutes (300 000 ms). */
 const ME_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
+/**
+ * `login()` resolves two ways: a normal authenticated session, or a 2FA gate
+ * where the backend withheld the session and handed back a short-lived
+ * challenge token to be exchanged on the /2fa page.
+ */
+export type AdminLoginOutcome =
+  | { kind: "authenticated"; user: AdminUser }
+  | { kind: "two_factor"; challengeToken: string };
+
 type AdminAuthState = {
   token: string | null;
   user: AdminUser | null;
   loading: boolean;
   bootstrapped: boolean;
   error: string | null;
-  login: (email: string, password: string, rememberMe?: boolean) => Promise<AdminUser>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<AdminLoginOutcome>;
+  /**
+   * Adopt a session whose token was issued out-of-band (2FA verify, SSO
+   * handoff). Stores the token + fetches /account/me to populate the user.
+   */
+  loginWithToken: (token: string) => Promise<AdminUser>;
   logout: () => Promise<void>;
   refreshMe: () => Promise<void>;
 };
@@ -177,18 +191,56 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     };
   }, [refreshMeIfStale]);
 
-  const login = useCallback(async (email: string, password: string, rememberMe: boolean = false) => {
+  const login = useCallback(async (email: string, password: string, rememberMe: boolean = false): Promise<AdminLoginOutcome> => {
     setError(null);
     setLoading(true);
     try {
       const res = await apiLogin(email, password, rememberMe);
+      // 2FA gate — backend withheld the session and returned a challenge token.
+      // Hand it back so the caller can route to /2fa to collect the code.
+      if ("requires_2fa" in res.data && res.data.requires_2fa) {
+        return { kind: "two_factor", challengeToken: res.data.challenge_token };
+      }
+      if (!("token" in res.data) || !res.data.token || !res.data.user) {
+        throw new ApiRequestError("Invalid login response", 500);
+      }
       window.localStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, res.data.token);
       setToken(res.data.token);
       setUser(res.data.user);
       setCachedUser(res.data.user);
-      return res.data.user;
+      return { kind: "authenticated", user: res.data.user };
     } catch (e) {
       const msg = e instanceof ApiRequestError ? e.message : "Login failed";
+      setError(msg);
+      throw e;
+    } finally {
+      setLoading(false);
+    }
+  }, [setCachedUser]);
+
+  /**
+   * Adopt a session whose token was minted out-of-band — used by the /2fa page
+   * after a successful challenge exchange, and by the /sso handoff page.
+   * Stores the token, fetches /account/me, hydrates the user state.
+   */
+  const loginWithToken = useCallback(async (newToken: string): Promise<AdminUser> => {
+    if (typeof newToken !== "string" || newToken === "") {
+      throw new ApiRequestError("Empty token", 400);
+    }
+    setError(null);
+    setLoading(true);
+    try {
+      window.localStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, newToken);
+      setToken(newToken);
+      const res = await apiMe(newToken);
+      setUser(res.data);
+      setCachedUser(res.data);
+      return res.data;
+    } catch (e) {
+      // Clean up the half-applied session so the user can retry.
+      window.localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
+      setToken(null);
+      const msg = e instanceof ApiRequestError ? e.message : "Token adoption failed";
       setError(msg);
       throw e;
     } finally {
@@ -220,10 +272,11 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
       bootstrapped,
       error,
       login,
+      loginWithToken,
       logout,
       refreshMe,
     }),
-    [token, user, loading, bootstrapped, error, login, logout, refreshMe]
+    [token, user, loading, bootstrapped, error, login, loginWithToken, logout, refreshMe]
   );
 
   return <AdminAuthContext.Provider value={value}>{children}</AdminAuthContext.Provider>;

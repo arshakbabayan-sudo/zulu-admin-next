@@ -43,8 +43,16 @@ export default function LoginPage() {
     e.preventDefault();
     setLocalError(null);
     try {
-      const loggedInUser = await login(email, password, rememberMe);
-      router.replace(defaultLandingPath(loggedInUser));
+      const outcome = await login(email, password, rememberMe);
+      // 2FA gate — stash the challenge token where /2fa reads it, then route
+      // there to collect the 6-digit code instead of completing login.
+      if (outcome.kind === "two_factor") {
+        sessionStorage.setItem("zulu_admin_2fa_challenge", outcome.challengeToken);
+        const qs = new URLSearchParams({ email: email.trim() });
+        router.push(`/2fa?${qs.toString()}`);
+        return;
+      }
+      router.replace(defaultLandingPath(outcome.user));
     } catch (err) {
       setLocalError(err instanceof ApiRequestError ? err.message : t("admin.login.failed"));
     }
