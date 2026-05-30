@@ -8,8 +8,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { apiVerify2fa, apiResend2faCode } from "@/lib/auth-api";
 import { ApiRequestError } from "@/lib/api-client";
 import { defaultLandingPath } from "@/lib/access";
-import { Button } from "@/components/ui/Button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { AUTH_PAGE_STYLES } from "@/components/auth/authPageStyles";
+import { AuthVisualPane } from "@/components/auth/AuthVisualPane";
 
 const CHALLENGE_KEY = "zulu_admin_2fa_challenge";
 
@@ -143,34 +143,32 @@ export function TwoFactorForm() {
   const maskedEmail = emailParam || "name@example.com";
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-figma-bg-1 px-4 py-10">
-      <div className="mb-6 flex flex-col items-center text-center">
-        <img src="/branding/logo-zulu.svg" alt="ZULU" className="h-16 w-auto" />
-        <p className="mt-3 max-w-xs text-ds-body-2 text-fg-t6">
-          {t("admin.login.tagline")}
-        </p>
-      </div>
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-fg-t11">
-            {tt("admin.tfa.title", "Two-factor verification")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="mb-4 text-ds-body-3 text-fg-t6">
-            {tt("admin.tfa.subtitle_prefix", "Enter the 6-digit code from your authenticator app for ")}
-            <strong className="text-fg-t7">{maskedEmail}</strong>
-            {tt("admin.tfa.subtitle_suffix", ".")}
-          </p>
+    <div className={AUTH_PAGE_STYLES.pageShell}>
+      <div className={AUTH_PAGE_STYLES.formPane}>
+        <div className={AUTH_PAGE_STYLES.contentWidth}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <div className="mb-6 flex justify-center">
+            <img src="/branding/logo-zulu.svg" alt="ZULU" className="h-12 w-auto" />
+          </div>
+          <div className={AUTH_PAGE_STYLES.headingBlock}>
+            <h2 className={AUTH_PAGE_STYLES.headingTitleSecondary}>
+              {tt("admin.tfa.title", "Two-factor verification")}
+            </h2>
+            <p className={AUTH_PAGE_STYLES.headingSubtitle}>
+              {tt("admin.tfa.subtitle_prefix", "Enter the 6-digit code from your authenticator app for ")}
+              <strong className="text-fg-t7">{maskedEmail}</strong>
+              {tt("admin.tfa.subtitle_suffix", ".")}
+            </p>
+          </div>
 
           {error && (
-            <p className="mb-4 rounded-zulu border border-error-200 bg-error-50 px-3 py-2 text-ds-body-3 text-error-700">
-              {error}
-            </p>
+            <div role="alert" className={AUTH_PAGE_STYLES.alertBox}>
+              <span className={AUTH_PAGE_STYLES.alertText}>{error}</span>
+            </div>
           )}
 
-          <form onSubmit={onSubmit} className="flex flex-col gap-4">
-            <div className="flex justify-center gap-2">
+          <form onSubmit={onSubmit} className={AUTH_PAGE_STYLES.formStack}>
+            <div className="flex justify-center gap-2 sm:gap-3">
               {digits.map((digit, index) => (
                 <input
                   key={index}
@@ -185,19 +183,19 @@ export function TwoFactorForm() {
                   onChange={(e) => handleChange(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
                   onPaste={handlePaste}
-                  className="h-12 w-10 rounded-zulu border border-default bg-white text-center text-lg font-semibold text-fg-t11 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-colors"
+                  className="h-14 w-12 rounded-2xl border border-default bg-white text-center text-xl font-semibold text-fg-t11 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-colors"
                   aria-label={`${tt("admin.tfa.digit_aria", "Digit")} ${index + 1}`}
                 />
               ))}
             </div>
 
-            <p className="text-center text-ds-body-3 text-fg-t6">
+            <p className="text-center text-sm text-fg-t6">
               {tt("admin.tfa.didnt_get", "Didn't get a code?")}{" "}
               <button
                 type="button"
                 onClick={onResend}
                 disabled={resending}
-                className="font-medium text-primary-500 hover:text-primary-700 disabled:opacity-60"
+                className={AUTH_PAGE_STYLES.linkPrimary + " underline disabled:opacity-60"}
               >
                 {resending
                   ? tt("admin.tfa.resending", "Sending…")
@@ -205,31 +203,33 @@ export function TwoFactorForm() {
               </button>
             </p>
             {resendNote && (
-              <p className="text-center text-ds-body-3 text-fg-t6">{resendNote}</p>
+              <p className="text-center text-xs text-fg-t6">{resendNote}</p>
             )}
 
-            <Button
+            <button
               type="submit"
-              loading={submitting}
               disabled={submitting || digits.join("").length !== 6}
-              className="mt-2"
+              className={`${AUTH_PAGE_STYLES.primaryButton} mt-2`}
             >
-              {submitting
-                ? tt("admin.tfa.verifying", "Verifying…")
-                : tt("admin.tfa.verify", "Verify and sign in")}
-            </Button>
+              {submitting ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  {tt("admin.tfa.verifying", "Verifying…")}
+                </span>
+              ) : (
+                tt("admin.tfa.verify", "Verify and sign in")
+              )}
+            </button>
           </form>
 
           <p className="mt-4 text-center">
-            <Link
-              href="/login"
-              className="text-ds-body-3 font-medium text-primary-500 hover:text-primary-700"
-            >
+            <Link href="/login" className={AUTH_PAGE_STYLES.linkPrimary + " text-sm underline"}>
               {tt("admin.tfa.back_login", "Back to sign in")}
             </Link>
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+      <AuthVisualPane />
     </div>
   );
 }

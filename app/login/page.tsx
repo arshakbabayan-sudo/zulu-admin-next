@@ -5,24 +5,25 @@ import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { ApiRequestError } from "@/lib/api-client";
 import { defaultLandingPath } from "@/lib/access";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { AUTH_PAGE_STYLES } from "@/components/auth/authPageStyles";
+import { AuthVisualPane } from "@/components/auth/AuthVisualPane";
 
 /**
- * Figma layout reference: Quest CRM Copy template
- *   - Login (desktop):  4299:7448
- *   - Sign in (mobile): 10171:23225
- * Brand tokens: ZULU purple primary (--admin-primary).
- * Logo + tagline above card, centered card form.
+ * Operations console sign-in.
  *
- * Remember me + Forgot password? row added to match Quest CRM spec.
- * - Remember me: UI-only state today; backend doesn't yet expose a long-lived
- *   session option. Wire-up tracked for a later sprint.
- * - Forgot password?: route /forgot-password not implemented yet — link is a
- *   non-functional placeholder that preserves the layout.
+ * Layout (Figma Zulu_2 — lCwRIXoOYmjiTPSlAckEhW, "Log in" 1:4759): two-pane
+ * gradient — left form area, right ZULU-purple emblem watermark. Same chrome
+ * as the customer site so a user opening admin.zulu.am after signing in on
+ * zulu.am doesn't see a visually different login form. Arshak directive
+ * 2026-05-31 ("admin.zulu.am մտնելուց էլ այս էջերը լինեն").
+ *
+ * Submit handles two outcomes:
+ *  - `{kind: "authenticated"}` — route to role-specific landing.
+ *  - `{kind: "two_factor"}`    — stash challenge in sessionStorage and push
+ *                                to /2fa to collect the 6-digit code.
  */
 export default function LoginPage() {
   const { t } = useLanguage();
@@ -30,6 +31,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
@@ -44,8 +46,6 @@ export default function LoginPage() {
     setLocalError(null);
     try {
       const outcome = await login(email, password, rememberMe);
-      // 2FA gate — stash the challenge token where /2fa reads it, then route
-      // there to collect the 6-digit code instead of completing login.
       if (outcome.kind === "two_factor") {
         sessionStorage.setItem("zulu_admin_2fa_challenge", outcome.challengeToken);
         const qs = new URLSearchParams({ email: email.trim() });
@@ -58,78 +58,101 @@ export default function LoginPage() {
     }
   }
 
+  const errorMessage = localError || error;
+
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-figma-bg-1 px-4 py-10">
-      <div className="mb-6 flex flex-col items-center text-center">
-        {/* Real ZULU wordmark from Figma Zulu_1 (node 1:19165). The earlier
-            bullseye placeholder + standalone "ZULU" text was wrong — bullseye
-            is just the decorative dot of the "i" in "spin" of the wordmark. */}
-        <img src="/branding/logo-zulu.svg" alt="ZULU" className="h-16 w-auto" />
-        <p className="mt-3 max-w-xs text-ds-body-2 text-fg-t6">
-          {t("admin.login.tagline")}
-        </p>
-      </div>
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-fg-t11">{t("admin.login.title")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={onSubmit} className="flex flex-col gap-4">
-            <div className="space-y-1.5">
-              <label htmlFor="admin-login-email" className="block text-ds-input-label font-ds-input-label text-fg-t7">
+    <div className={AUTH_PAGE_STYLES.pageShell}>
+      <div className={AUTH_PAGE_STYLES.formPane}>
+        <div className={AUTH_PAGE_STYLES.contentWidth}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <div className="mb-6 flex justify-center">
+            <img src="/branding/logo-zulu.svg" alt="ZULU" className="h-12 w-auto" />
+          </div>
+          <div className={AUTH_PAGE_STYLES.headingBlock}>
+            <h2 className={AUTH_PAGE_STYLES.headingTitle}>{t("admin.login.title")}</h2>
+            <p className={AUTH_PAGE_STYLES.headingSubtitle}>{t("admin.login.tagline")}</p>
+          </div>
+
+          {errorMessage && (
+            <div role="alert" className={AUTH_PAGE_STYLES.alertBox}>
+              <span className={AUTH_PAGE_STYLES.alertText}>{errorMessage}</span>
+            </div>
+          )}
+
+          <form onSubmit={onSubmit} className={AUTH_PAGE_STYLES.formStack}>
+            <div className={AUTH_PAGE_STYLES.fieldStack}>
+              <label htmlFor="admin-login-email" className={AUTH_PAGE_STYLES.fieldLabel}>
                 {t("admin.login.email")}
               </label>
-              <Input
+              <input
                 id="admin-login-email"
                 type="email"
                 autoComplete="username"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                className={AUTH_PAGE_STYLES.inputBase}
               />
             </div>
-            <div className="space-y-1.5">
-              <label htmlFor="admin-login-password" className="block text-ds-input-label font-ds-input-label text-fg-t7">
+
+            <div className={AUTH_PAGE_STYLES.fieldStack}>
+              <label htmlFor="admin-login-password" className={AUTH_PAGE_STYLES.fieldLabel}>
                 {t("admin.login.password")}
               </label>
-              <Input
-                id="admin-login-password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <div className="relative">
+                <input
+                  id="admin-login-password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={AUTH_PAGE_STYLES.inputWithIcon}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((s) => !s)}
+                  className={AUTH_PAGE_STYLES.iconToggle}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
             </div>
+
             <div className="flex items-center justify-between">
-              <label htmlFor="admin-login-remember" className="flex items-center gap-2 text-ds-body-3 text-fg-t7 cursor-pointer select-none">
+              <label
+                htmlFor="admin-login-remember"
+                className="flex cursor-pointer items-center gap-2 text-sm text-fg-t7 select-none"
+              >
                 <input
                   id="admin-login-remember"
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 rounded border-border text-primary-500 focus:ring-2 focus:ring-primary-500 focus:ring-offset-1"
+                  className="h-4 w-4 rounded border-default text-primary-500 focus:ring-2 focus:ring-primary-500 focus:ring-offset-1"
                 />
                 {t("admin.login.remember_me")}
               </label>
-              <Link
-                href="/forgot-password"
-                className="text-ds-body-3 font-medium text-primary-500 hover:text-primary-700"
-              >
+              <Link href="/forgot-password" className={AUTH_PAGE_STYLES.linkPrimary + " text-sm"}>
                 {t("admin.login.forgot_password_link")}
               </Link>
             </div>
-            {(localError || error) && (
-              <p className="rounded-zulu border border-error-200 bg-error-50 px-3 py-2 text-ds-body-3 text-error-700">
-                {localError || error}
-              </p>
-            )}
-            <Button type="submit" loading={loading} className="mt-2">
-              {loading ? t("admin.login.signing_in") : t("admin.login.sign_in")}
-            </Button>
+
+            <button type="submit" disabled={loading} className={`${AUTH_PAGE_STYLES.primaryButton} mt-2`}>
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  {t("admin.login.signing_in")}
+                </span>
+              ) : (
+                t("admin.login.sign_in")
+              )}
+            </button>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+      <AuthVisualPane />
     </div>
   );
 }

@@ -3,15 +3,17 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { AUTH_PAGE_STYLES } from "@/components/auth/authPageStyles";
+import { AuthVisualPane } from "@/components/auth/AuthVisualPane";
 
 /**
- * Admin reset-password page. Receives token + email from query (per AppServiceProvider
- * `ResetPassword::createUrlUsing`) and posts to POST /api/reset-password.
+ * Admin reset-password page. Receives token + email from query (per
+ * AppServiceProvider `ResetPassword::createUrlUsing`) and posts to
+ * POST /api/reset-password.
+ *
+ * Layout matches the rest of admin's auth chrome (Figma Zulu_2 1:4874).
  */
 function ResetPasswordInner() {
   const { t } = useLanguage();
@@ -64,49 +66,50 @@ function ResetPasswordInner() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-figma-bg-1 px-4 py-10">
-      <div className="mb-6 flex flex-col items-center text-center">
-        <img src="/branding/logo-zulu.svg" alt="ZULU" className="h-16 w-auto" />
-        <p className="mt-3 max-w-xs text-ds-body-2 text-fg-t6">
-          {t("admin.login.tagline")}
-        </p>
-      </div>
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-fg-t11">
-            {done ? t("admin.reset.done_title") : t("admin.reset.title")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+    <div className={AUTH_PAGE_STYLES.pageShell}>
+      <div className={AUTH_PAGE_STYLES.formPane}>
+        <div className={AUTH_PAGE_STYLES.contentWidth}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <div className="mb-6 flex justify-center">
+            <img src="/branding/logo-zulu.svg" alt="ZULU" className="h-12 w-auto" />
+          </div>
+          <div className={AUTH_PAGE_STYLES.headingBlock}>
+            <h2 className={AUTH_PAGE_STYLES.headingTitleSecondary}>
+              {done ? t("admin.reset.done_title") : t("admin.reset.title")}
+            </h2>
+            <p className={AUTH_PAGE_STYLES.headingSubtitle}>{t("admin.login.tagline")}</p>
+          </div>
+
           {done ? (
             <div className="space-y-4">
-              <p className="text-ds-body-3 text-fg-t7">{t("admin.reset.done_body")}</p>
-              <p>
-                <Link href="/login" className="text-ds-body-3 font-medium text-primary-500 hover:text-primary-700">
+              <p className="text-sm text-fg-t7">{t("admin.reset.done_body")}</p>
+              <p className="text-center">
+                <Link href="/login" className={AUTH_PAGE_STYLES.linkPrimary + " text-sm underline"}>
                   {t("admin.reset.go_login")}
                 </Link>
               </p>
             </div>
           ) : (
-            <form onSubmit={onSubmit} className="flex flex-col gap-4">
-              <div className="space-y-1.5">
-                <label htmlFor="reset-email" className="block text-ds-input-label font-ds-input-label text-fg-t7">
+            <form onSubmit={onSubmit} className={AUTH_PAGE_STYLES.formStack}>
+              <div className={AUTH_PAGE_STYLES.fieldStack}>
+                <label htmlFor="reset-email" className={AUTH_PAGE_STYLES.fieldLabel}>
                   {t("admin.login.email")}
                 </label>
-                <Input
+                <input
                   id="reset-email"
                   type="email"
                   autoComplete="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  className={AUTH_PAGE_STYLES.inputBase}
                 />
               </div>
-              <div className="space-y-1.5">
-                <label htmlFor="reset-password" className="block text-ds-input-label font-ds-input-label text-fg-t7">
+              <div className={AUTH_PAGE_STYLES.fieldStack}>
+                <label htmlFor="reset-password" className={AUTH_PAGE_STYLES.fieldLabel}>
                   {t("admin.reset.new_password")}
                 </label>
-                <Input
+                <input
                   id="reset-password"
                   type="password"
                   autoComplete="new-password"
@@ -114,13 +117,14 @@ function ResetPasswordInner() {
                   minLength={8}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  className={AUTH_PAGE_STYLES.inputBase}
                 />
               </div>
-              <div className="space-y-1.5">
-                <label htmlFor="reset-confirm" className="block text-ds-input-label font-ds-input-label text-fg-t7">
+              <div className={AUTH_PAGE_STYLES.fieldStack}>
+                <label htmlFor="reset-confirm" className={AUTH_PAGE_STYLES.fieldLabel}>
                   {t("admin.reset.confirm_password")}
                 </label>
-                <Input
+                <input
                   id="reset-confirm"
                   type="password"
                   autoComplete="new-password"
@@ -128,25 +132,38 @@ function ResetPasswordInner() {
                   minLength={8}
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}
+                  className={AUTH_PAGE_STYLES.inputBase}
                 />
               </div>
               {error && (
-                <p className="rounded-zulu border border-error-200 bg-error-50 px-3 py-2 text-ds-body-3 text-error-700">
-                  {error}
-                </p>
+                <div role="alert" className={AUTH_PAGE_STYLES.alertBox}>
+                  <span className={AUTH_PAGE_STYLES.alertText}>{error}</span>
+                </div>
               )}
-              <Button type="submit" loading={submitting} className="mt-2">
-                {submitting ? t("admin.reset.submitting") : t("admin.reset.submit")}
-              </Button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className={`${AUTH_PAGE_STYLES.primaryButton} mt-2`}
+              >
+                {submitting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                    {t("admin.reset.submitting")}
+                  </span>
+                ) : (
+                  t("admin.reset.submit")
+                )}
+              </button>
               <p className="text-center">
-                <Link href="/login" className="text-ds-body-3 font-medium text-primary-500 hover:text-primary-700">
+                <Link href="/login" className={AUTH_PAGE_STYLES.linkPrimary + " text-sm underline"}>
                   {t("admin.reset.back_login")}
                 </Link>
               </p>
             </form>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+      <AuthVisualPane />
     </div>
   );
 }
