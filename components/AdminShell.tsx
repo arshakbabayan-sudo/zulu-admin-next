@@ -427,9 +427,15 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               </div>
             ) : null}
           </div>
-          {/* Open frontend website in new browser tab */}
+          {/* Open frontend website in new browser tab — carries the admin's
+              Sanctum token through web's /sso handoff so the user lands
+              already logged in instead of having to sign in again. */}
           <a
-            href={FRONTEND_PUBLIC_URL}
+            href={
+              token
+                ? `${FRONTEND_PUBLIC_URL}/sso?${new URLSearchParams({ token, next: "/" }).toString()}`
+                : FRONTEND_PUBLIC_URL
+            }
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Open ZULU website"
