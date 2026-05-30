@@ -23,6 +23,54 @@ const ADMIN_USER_FETCHED_AT_KEY = "admin_user_fetched_at";
 const ME_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
 /**
+ * Shared session cookie — readable from both zulu.am and admin.zulu.am
+ * (Domain=.zulu.am). The web/admin SPAs each keep their own localStorage
+ * copy of the bearer; this cookie is the bridge so that opening a fresh
+ * tab on a sibling subdomain inherits the active session without re-login.
+ *
+ * Set at every login / token-adoption point, cleared at logout. The server
+ * is the source of truth for token validity, so the existing /me probe
+ * still kicks expired sessions out.
+ */
+const SHARED_SESSION_COOKIE = "zulu_session_token";
+const SHARED_SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
+
+function sharedCookieDomainAttr(): string {
+  if (typeof location === "undefined") return "";
+  const h = location.hostname;
+  if (h === "zulu.am" || h.endsWith(".zulu.am")) return "; Domain=.zulu.am";
+  return "";
+}
+
+function readSharedSessionCookie(): string | null {
+  if (typeof document === "undefined") return null;
+  const m = document.cookie.match(/(?:^|;\s*)zulu_session_token=([^;]+)/);
+  return m ? decodeURIComponent(m[1]!) : null;
+}
+
+function writeSharedSessionCookie(token: string): void {
+  if (typeof document === "undefined") return;
+  const secure = location.protocol === "https:" ? "; Secure" : "";
+  document.cookie =
+    `${SHARED_SESSION_COOKIE}=${encodeURIComponent(token)}` +
+    `; Path=/${sharedCookieDomainAttr()}; Max-Age=${SHARED_SESSION_MAX_AGE_SECONDS}; SameSite=Lax${secure}`;
+}
+
+function clearSharedSessionCookie(): void {
+  if (typeof document === "undefined") return;
+  document.cookie =
+    `${SHARED_SESSION_COOKIE}=` +
+    `; Path=/${sharedCookieDomainAttr()}; Max-Age=0; SameSite=Lax`;
+}
+
+/**
+ * Idle-logout threshold. After 1 hour with no mouse / keyboard / scroll /
+ * touch activity, end the session everywhere (revokes server-side, sibling
+ * tabs catch the 401 via the existing /me poll).
+ */
+const IDLE_LOGOUT_MS = 60 * 60 * 1000;
+
+/**
  * `login()` resolves two ways: a normal authenticated session, or a 2FA gate
  * where the backend withheld the session and handed back a short-lived
  * challenge token to be exchanged on the /2fa page.
@@ -150,6 +198,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     } catch {
       /* ignore */
     }
+    clearSharedSessionCookie();
     setToken(null);
     setUser(null);
   }, []);
@@ -161,7 +210,22 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
       // Always finish with setBootstrapped in `finally` so we never stay stuck on
       // bootstrapped=false if `cancelled` flipped before the inner `if (!cancelled)` ran.
       try {
-        const t = window.localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY);
+        let t = window.localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY);
+        // Cross-subdomain fallback: opening admin.zulu.am in a fresh tab while
+        // already signed in on zulu.am — the shared cookie carries the bearer
+        // across origins. Adopt it so admin UI hydrates as logged-in without
+        // a second login.
+        if (!t) {
+          const cookieTok = readSharedSessionCookie();
+          if (cookieTok) {
+            t = cookieTok;
+            try {
+              window.localStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, t);
+            } catch {
+              /* ignore */
+            }
+          }
+        }
         if (!cancelled) {
           setToken(t);
           if (t) {
@@ -253,6 +317,55 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     };
   }, [token, clearSessionLocally]);
 
+  /**
+   * Idle-logout — after IDLE_LOGOUT_MS of no user activity, revoke the
+   * server-side token and clear local state. Sibling tabs (any subdomain)
+   * pick up the 401 via the session-sync effect and sign out within ~30 s.
+   */
+  useEffect(() => {
+    if (!token) return;
+    let alive = true;
+    let lastActivity = Date.now();
+    const bump = () => {
+      lastActivity = Date.now();
+    };
+
+    const events: Array<keyof DocumentEventMap> = [
+      "mousedown",
+      "mousemove",
+      "keydown",
+      "scroll",
+      "touchstart",
+      "click",
+    ];
+    for (const ev of events) {
+      document.addEventListener(ev, bump, { passive: true });
+    }
+
+    const check = async () => {
+      if (!alive) return;
+      if (Date.now() - lastActivity < IDLE_LOGOUT_MS) return;
+      const t = window.localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY);
+      if (t) {
+        try {
+          await apiLogout(t);
+        } catch {
+          /* even if revocation fails, still clear locally */
+        }
+      }
+      if (alive) clearSessionLocally();
+    };
+
+    const id = window.setInterval(check, 60_000);
+    return () => {
+      alive = false;
+      window.clearInterval(id);
+      for (const ev of events) {
+        document.removeEventListener(ev, bump);
+      }
+    };
+  }, [token, clearSessionLocally]);
+
   const login = useCallback(async (email: string, password: string, rememberMe: boolean = false): Promise<AdminLoginOutcome> => {
     setError(null);
     setLoading(true);
@@ -267,6 +380,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
         throw new ApiRequestError("Invalid login response", 500);
       }
       window.localStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, res.data.token);
+      writeSharedSessionCookie(res.data.token);
       setToken(res.data.token);
       setUser(res.data.user);
       setCachedUser(res.data.user);
@@ -293,6 +407,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       window.localStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, newToken);
+      writeSharedSessionCookie(newToken);
       setToken(newToken);
       const res = await apiMe(newToken);
       setUser(res.data);
@@ -301,6 +416,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       // Clean up the half-applied session so the user can retry.
       window.localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
+      clearSharedSessionCookie();
       setToken(null);
       const msg = e instanceof ApiRequestError ? e.message : "Token adoption failed";
       setError(msg);
@@ -315,6 +431,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     window.localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
     window.localStorage.removeItem(ADMIN_USER_STORAGE_KEY);
     window.localStorage.removeItem(ADMIN_USER_FETCHED_AT_KEY);
+    clearSharedSessionCookie();
     setToken(null);
     setUser(null);
     if (t) {

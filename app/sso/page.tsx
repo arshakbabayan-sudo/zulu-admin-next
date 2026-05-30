@@ -30,6 +30,18 @@ import {
 import { apiMe } from "@/lib/auth-api";
 import { defaultLandingPath } from "@/lib/access";
 
+const SHARED_SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
+
+function writeSharedSessionCookie(token: string): void {
+  if (typeof document === "undefined") return;
+  const h = location.hostname;
+  const domain = h === "zulu.am" || h.endsWith(".zulu.am") ? "; Domain=.zulu.am" : "";
+  const secure = location.protocol === "https:" ? "; Secure" : "";
+  document.cookie =
+    `zulu_session_token=${encodeURIComponent(token)}` +
+    `; Path=/${domain}; Max-Age=${SHARED_SESSION_MAX_AGE_SECONDS}; SameSite=Lax${secure}`;
+}
+
 function SsoInner() {
   const router = useRouter();
   const params = useSearchParams();
@@ -56,6 +68,9 @@ function SsoInner() {
         } catch {
           /* localStorage may be unavailable (private browsing) */
         }
+        // Also drop the bearer into the .zulu.am-shared cookie so a future
+        // fresh tab on either subdomain inherits the session without re-login.
+        writeSharedSessionCookie(token);
         // Choose target: explicit `next` if it looks safe, otherwise compute.
         const safeNext = /^\/[^/]/.test(next) && !next.startsWith("//") ? next : defaultLandingPath(user);
         router.replace(safeNext);
