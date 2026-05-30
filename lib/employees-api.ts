@@ -89,7 +89,16 @@ export type EmployeePermissionRow = {
 export type EmployeePermissionsResponse = {
   success: boolean;
   data: {
-    user: { id: number; name: string; email: string; role_name: string | null };
+    user: {
+      id: number;
+      name: string;
+      email: string;
+      role_name: string | null;
+      /** Manager-controlled enforcement flag (2FA hierarchy 2026-05-31). */
+      two_factor_required: boolean;
+      /** User's chosen channel (totp | email); null = default. */
+      two_factor_method: "totp" | "email" | null;
+    };
     company_id: number;
     can_edit: boolean;
     permissions: EmployeePermissionRow[];
@@ -117,5 +126,22 @@ export async function apiSyncEmployeePermissions(
     method: "PUT",
     token,
     body: { permissions },
+  });
+}
+
+/**
+ * Toggle the manager-controlled 2FA enforcement flag on an employee
+ * (2FA hierarchy Phase B — Arshak 2026-05-31). Returns the new state.
+ */
+export async function apiSetEmployeeTwoFactorPolicy(
+  token: string,
+  companyId: number,
+  userId: number,
+  required: boolean
+): Promise<{ success: boolean; data: { user_id: number; two_factor_required: boolean } }> {
+  return apiFetchJson(`/companies/${companyId}/users/${userId}/2fa-policy`, {
+    method: "PUT",
+    token,
+    body: { required },
   });
 }

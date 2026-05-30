@@ -16,6 +16,7 @@ import { Drawer, DrawerSection } from "@/components/ui/Drawer";
 import { V2Button } from "@/components/ui/v2/Button";
 import {
   apiGetEmployeePermissions,
+  apiSetEmployeeTwoFactorPolicy,
   apiSyncEmployeePermissions,
   type EmployeePermissionRow,
 } from "@/lib/employees-api";
@@ -45,6 +46,12 @@ export function EmployeePermissionsDrawer({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // 2FA hierarchy (Phase B) — manager-controlled enforcement flag, saved
+  // inline (no Save button) the moment the toggle flips.
+  const [twoFactorRequired, setTwoFactorRequired] = useState<boolean | null>(null);
+  const [twoFactorMethod, setTwoFactorMethod] = useState<"totp" | "email" | null>(null);
+  const [twoFactorSaving, setTwoFactorSaving] = useState(false);
+  const [twoFactorError, setTwoFactorError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || userId == null) return;
@@ -52,12 +59,17 @@ export function EmployeePermissionsDrawer({
     setLoading(true);
     setError(null);
     setRows(null);
+    setTwoFactorRequired(null);
+    setTwoFactorMethod(null);
+    setTwoFactorError(null);
     apiGetEmployeePermissions(token, companyId, userId)
       .then((res) => {
         if (cancelled) return;
         const perms = res.data.permissions;
         setRows(perms);
         setRoleName(res.data.user.role_name);
+        setTwoFactorRequired(res.data.user.two_factor_required);
+        setTwoFactorMethod(res.data.user.two_factor_method);
         setDraft(Object.fromEntries(perms.map((p) => [p.permission_id, p.granted])));
       })
       .catch((e: unknown) => {
@@ -70,6 +82,26 @@ export function EmployeePermissionsDrawer({
       cancelled = true;
     };
   }, [open, userId, companyId, token]);
+
+  const toggleTwoFactor = useCallback(
+    async (next: boolean) => {
+      if (userId == null) return;
+      const prev = twoFactorRequired;
+      // Optimistic — the toggle moves immediately, rolls back on failure.
+      setTwoFactorRequired(next);
+      setTwoFactorSaving(true);
+      setTwoFactorError(null);
+      try {
+        await apiSetEmployeeTwoFactorPolicy(token, companyId, userId, next);
+      } catch (e: unknown) {
+        setTwoFactorRequired(prev);
+        setTwoFactorError(e instanceof Error ? e.message : "Could not update 2FA policy.");
+      } finally {
+        setTwoFactorSaving(false);
+      }
+    },
+    [userId, twoFactorRequired, token, companyId]
+  );
 
   const grouped = useMemo(() => {
     const map = new Map<string, EmployeePermissionRow[]>();
@@ -150,6 +182,46 @@ export function EmployeePermissionsDrawer({
         <div className="mb-3 rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
           {error}
         </div>
+      )}
+      {!loading && twoFactorRequired !== null && (
+        <DrawerSection title="Two-factor authentication">
+          <label className="flex cursor-pointer items-start justify-between gap-3 rounded-zulu border border-default bg-white px-4 py-3 text-sm">
+            <span className="flex-1">
+              <span className="block font-medium text-fg-t11">Require 2FA at every login</span>
+              <span className="mt-0.5 block text-xs text-fg-t6">
+                When on, this employee must enter a 6-digit code (from their authenticator app or
+                email) after their password on every sign-in. They pick the channel themselves in
+                their account security page.
+                {twoFactorMethod && (
+                  <>
+                    {" "}Current channel:{" "}
+                    <span className="font-medium text-fg-t8">
+                      {twoFactorMethod === "totp" ? "Authenticator app" : "Email"}
+                    </span>
+                    .
+                  </>
+                )}
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              checked={twoFactorRequired === true}
+              disabled={twoFactorSaving}
+              onChange={(e) => void toggleTwoFactor(e.target.checked)}
+              className="mt-1 h-5 w-9 shrink-0 cursor-pointer appearance-none rounded-full border border-default bg-figma-bg-1 transition-colors checked:bg-[color:var(--admin-primary)] disabled:opacity-60"
+              aria-label="Require 2FA at every login"
+              style={{
+                backgroundImage:
+                  twoFactorRequired === true
+                    ? "radial-gradient(circle at 75% 50%, #fff 0 5px, transparent 5px)"
+                    : "radial-gradient(circle at 25% 50%, #fff 0 5px, transparent 5px)",
+              }}
+            />
+          </label>
+          {twoFactorError && (
+            <p className="mt-2 text-xs text-error-700">{twoFactorError}</p>
+          )}
+        </DrawerSection>
       )}
       {!loading && rows && rows.length === 0 && (
         <div className="text-sm text-fg-t6">No assignable permissions for this employee.</div>
