@@ -21,13 +21,13 @@ import {
 } from "@/components/ui";
 import {
   PageHeader as V2PageHeader,
-  SectionTabs,
   FilterCard,
   FilterField,
   V2Card,
   V2Button,
   IconButton,
 } from "@/components/ui/v2";
+import { MarketplaceOpsSectionTabs } from "@/components/marketplace/MarketplaceOpsSectionTabs";
 import { Download, Eye, Plus } from "lucide-react";
 
 export default function CompanyApplicationsPage() {
@@ -113,19 +113,8 @@ export default function CompanyApplicationsPage() {
         }
       />
 
-      <SectionTabs
-        activeHref="/platform/companies"
-        items={[
-          { href: "/platform/approvals", label: "Approval queue" },
-          { href: "/platform/companies", label: "Companies access", count: meta?.total },
-          { href: "/platform/seller-applications", label: "Seller applications" },
-          { href: "/platform/contracts", label: "Partnership agreements" },
-          { href: "/platform/contract-templates", label: "Contract templates" },
-          { href: "/platform/users", label: "Users" },
-          { href: "/platform/audit-logs", label: "Audit logs" },
-          { href: "/bucket3/service-logs", label: "Service logs" },
-        ]}
-      />
+      {/* Phase 2C step 4 (2026-05-31) — use the shared MarketplaceOpsSectionTabs. */}
+      <MarketplaceOpsSectionTabs activeHref="/platform/companies" counts={{ companies: meta?.total }} />
 
       <FilterCard>
         <FilterField label={t("admin.approvals.filter_status")}>

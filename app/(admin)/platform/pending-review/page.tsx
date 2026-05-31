@@ -36,13 +36,13 @@ import {
 } from "@/components/ui";
 import {
   PageHeader as V2PageHeader,
-  SectionTabs,
   FilterCard,
   FilterField,
   V2Card,
   V2Button,
   IconButton,
 } from "@/components/ui/v2";
+import { MarketplaceOpsSectionTabs } from "@/components/marketplace/MarketplaceOpsSectionTabs";
 import { Download, Eye, Plus } from "lucide-react";
 
 const TYPE_FILTERS = ["", "hotel", "car", "transfer", "excursion", "flight", "package", "visa"] as const;
@@ -234,19 +234,10 @@ export default function PendingReviewPage() {
         }
       />
 
-      <SectionTabs
-        activeHref="/platform/approvals"
-        items={[
-          { href: "/platform/approvals", label: "Approval queue", count: meta?.total },
-          { href: "/platform/companies", label: "Companies access" },
-          { href: "/platform/seller-applications", label: "Seller applications" },
-          { href: "/platform/contracts", label: "Partnership agreements" },
-          { href: "/platform/contract-templates", label: "Contract templates" },
-          { href: "/platform/users", label: "Users" },
-          { href: "/platform/audit-logs", label: "Audit logs" },
-          { href: "/bucket3/service-logs", label: "Service logs" },
-        ]}
-      />
+      {/* Phase 2C step 4 (2026-05-31) — use the shared MarketplaceOpsSectionTabs
+          so this strip stays in sync with the Management group going forward
+          (no more drift between hardcoded strips and the canonical list). */}
+      <MarketplaceOpsSectionTabs activeHref="/platform/companies" />
 
       <FilterCard>
         <FilterField label={t("admin.pending_review.filter_type")}>
