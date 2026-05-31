@@ -271,7 +271,8 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     tabs: [
       { href: "/platform/companies", labelKey: "admin.nav.tab.companies_access" },
       { href: "/platform/seller-applications", labelKey: "admin.nav.tab.seller_applications" },
-      { href: "/platform/users", labelKey: "admin.nav.tab.users" },
+      // Phase 2C (2026-05-31) — /platform/users tab removed from Management;
+      // the Directory sidebar group is its canonical home now.
       { href: "/platform/contracts", labelKey: "admin.nav.tab.partnership_agreements", moduleKey: "ops.contracts" },
       { href: "/platform/contract-templates", labelKey: "admin.nav.tab.contract_templates", moduleKey: "ops.contracts" },
       { href: "/platform/audit-logs", labelKey: "admin.nav.tab.audit_logs" },

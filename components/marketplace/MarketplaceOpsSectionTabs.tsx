@@ -21,7 +21,6 @@ import { SectionTabs } from "@/components/ui/v2";
 export type MarketplaceOpsCounts = Partial<{
   companies: number;
   sellerApplications: number;
-  users: number;
   contracts: number;
   contractTemplates: number;
   unverifiedAccounts: number;
@@ -46,7 +45,8 @@ export function MarketplaceOpsSectionTabs({ activeHref, counts }: Props) {
           label: "Seller applications",
           count: counts?.sellerApplications,
         },
-        { href: "/platform/users", label: "Users", count: counts?.users },
+        // Phase 2C / 4A (2026-05-31) — Users tab removed from Management.
+        // /platform/users now lives under the Directory sidebar group.
         { href: "/platform/contracts", label: "Contracts", count: counts?.contracts },
         {
           href: "/platform/contract-templates",
