@@ -50,7 +50,6 @@ import {
   Clock,
   Download,
   Eye,
-  Plus,
   RefreshCw,
   Search,
   Trash2,
@@ -499,9 +498,12 @@ export default function PlatformUsersPage() {
             >
               Export
             </V2Button>
-            <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
-              Add user
-            </V2Button>
+            {/* Phase 2C step 6 (2026-05-31) — "Add user" placeholder dropped.
+                The button had no onClick handler (deceptive UI per the new
+                menu architecture's anti-pattern list). Staff are invited via
+                /platform/companies/{id} → Users → Add employee; B2C
+                customers self-register on zulu.am. There is no admin-side
+                ad-hoc create flow, so the button just confused. */}
           </>
         }
       />
