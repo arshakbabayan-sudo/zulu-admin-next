@@ -204,6 +204,11 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   },
 
   // 6 ── My company (per-company internal CRM, from Bucket3) ───────────
+  //
+  // Phase 4E (2026-05-31) — Payroll and Non-service hours moved to the new
+  // top-level HR group below. Employees + Customers (redirect) + Subscriptions
+  // + Per-X invoicing stay here for now (Phase 4 follow-ups will consolidate
+  // them further into Directory + Finance).
   {
     key: "my_company",
     labelKey: "admin.nav.section.my_company",
@@ -212,8 +217,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     defaultHref: "/bucket3/employees",
     tabs: [
       { href: "/bucket3/employees", labelKey: "admin.nav.tab.bucket3.employees" },
-      { href: "/bucket3/payroll", labelKey: "admin.nav.tab.bucket3.payroll" },
-      { href: "/bucket3/non-service-hours", labelKey: "admin.nav.tab.bucket3.non_service_hours" },
       // Phase 4F (2026-05-31) — Requests + Cases moved to the new Inbox group.
       // Phase Ա.3 (2026-05-28) — bulk-notifications moved to Notifications group below
       // Phase Ա.4 (2026-05-28) — pin-settings merged under My profile > Security
@@ -223,6 +226,29 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/bucket3/customers", labelKey: "admin.nav.tab.bucket3.customers" },
       { href: "/bucket3/subscriptions", labelKey: "admin.nav.tab.bucket3.subscriptions" },
       { href: "/bucket3/per-x-invoicing", labelKey: "admin.nav.tab.bucket3.per_x_invoicing" },
+    ],
+    visibility: "section_my_company",
+  },
+
+  // 6b ── HR (Phase 4E, 2026-05-31) ─────────────────────────────────────
+  //
+  // Top-level HR group hosting the two time-and-pay pages that used to be
+  // My-company tabs:
+  //   • Non-service hours  /bucket3/non-service-hours  (shifts + time off)
+  //   • Payroll            /bucket3/payroll            (monthly ledger,
+  //                                                     finalize, bank batch)
+  // Operator HR / company-admin / accountant is the audience. The page
+  // bodies are unchanged — only the parent group and the per-page strip
+  // are new (same pattern as the Inbox group in Phase 4F).
+  {
+    key: "hr",
+    labelKey: "admin.nav.section.hr",
+    labelFallback: "HR",
+    icon: "/icons/menu/profile.svg",
+    defaultHref: "/bucket3/non-service-hours",
+    tabs: [
+      { href: "/bucket3/non-service-hours", labelKey: "admin.nav.tab.bucket3.non_service_hours" },
+      { href: "/bucket3/payroll", labelKey: "admin.nav.tab.bucket3.payroll" },
     ],
     visibility: "section_my_company",
   },

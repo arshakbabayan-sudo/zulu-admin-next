@@ -328,16 +328,13 @@ export default function Bucket3NonServiceHoursPage() {
         }
       />
 
+      {/* Phase 4E (2026-05-31) — HR group strip. Replaces the prior
+          My-company strip. */}
       <SectionTabs
         activeHref="/bucket3/non-service-hours"
         items={[
-          { href: "/bucket3/employees", label: "Employees" },
-          { href: "/bucket3/payroll", label: "Payroll" },
           { href: "/bucket3/non-service-hours", label: "Non-service hours" },
-          { href: "/bucket3/cases", label: "Cases" },
-          { href: "/bucket3/customers", label: "Customers" },
-          { href: "/bucket3/subscriptions", label: "Subscriptions" },
-          { href: "/bucket3/per-x-invoicing", label: "Per-X invoicing" },
+          { href: "/bucket3/payroll", label: "Payroll" },
         ]}
       />
 

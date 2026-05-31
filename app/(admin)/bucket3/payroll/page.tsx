@@ -254,16 +254,15 @@ export default function Bucket3PayrollPage() {
         }
       />
 
+      {/* Phase 4E (2026-05-31) — HR group strip. Replaces the prior
+          My-company strip (which mixed unrelated tabs like Customers /
+          Subscriptions). HR is the new sidebar group hosting the two
+          time-and-pay pages. */}
       <SectionTabs
         activeHref="/bucket3/payroll"
         items={[
-          { href: "/bucket3/employees", label: "Employees" },
-          { href: "/bucket3/payroll", label: "Payroll", count: meta?.total },
           { href: "/bucket3/non-service-hours", label: "Non-service hours" },
-          { href: "/bucket3/cases", label: "Cases" },
-          { href: "/bucket3/customers", label: "Customers" },
-          { href: "/bucket3/subscriptions", label: "Subscriptions" },
-          { href: "/bucket3/per-x-invoicing", label: "Per-X invoicing" },
+          { href: "/bucket3/payroll", label: "Payroll", count: meta?.total },
         ]}
       />
 
