@@ -58,6 +58,7 @@ import {
   IconButton,
   EmptyState,
 } from "@/components/ui/v2";
+import { SettingsSubgroupTabs } from "@/components/settings/SettingsSubgroupTabs";
 
 // ─── Types ──────────────────────────────────────────────────────────────
 
@@ -671,6 +672,8 @@ export default function PlatformRbacPage() {
           </>
         }
       />
+
+      <SettingsSubgroupTabs activeHref="/platform/rbac" />
 
       {error && (
         <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">

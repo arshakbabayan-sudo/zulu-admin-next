@@ -30,6 +30,7 @@ import {
   V2Card,
   V2Button,
 } from "@/components/ui/v2";
+import { SettingsSubgroupTabs } from "@/components/settings/SettingsSubgroupTabs";
 import { Download, Star } from "lucide-react";
 
 const MOD_STATUSES = ["published", "hidden", "rejected"] as const;
@@ -131,6 +132,8 @@ export default function PlatformReviewsPage() {
           </V2Button>
         }
       />
+
+      <SettingsSubgroupTabs activeHref="/platform/reviews" />
 
       <FilterCard>
         <FilterField label={t("admin.reviews.filter_status")} minWidth={220}>
