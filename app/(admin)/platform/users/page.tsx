@@ -772,6 +772,12 @@ export default function PlatformUsersPage() {
                 <th className="px-4 py-2.5 text-left">Email</th>
                 <th className="px-4 py-2.5 text-left">Type</th>
                 <th className="px-4 py-2.5 text-left">Companies</th>
+                {/* Phase 4C+ (2026-05-31) — Bookings column for B2C customers
+                    chip. Hidden for other chips since staff/agent rows don't
+                    own customer-side orders. */}
+                {typeFilter === "customers" ? (
+                  <th className="px-4 py-2.5 text-right">Bookings</th>
+                ) : null}
                 <th className="px-4 py-2.5 text-left">Status</th>
                 <th className="px-4 py-2.5 text-left">Last seen</th>
                 <th className="px-4 py-2.5 text-right">Actions</th>
@@ -866,6 +872,14 @@ export default function PlatformUsersPage() {
                           </span>
                         )}
                       </td>
+                      {/* Phase 4C+ (2026-05-31) — Bookings column for the
+                          B2C customers chip. Cell only rendered when the
+                          chip is active to keep the row narrow on other views. */}
+                      {typeFilter === "customers" ? (
+                        <td className="px-4 py-3 text-right text-[12px]" style={{ color: "var(--admin-text-primary)" }}>
+                          {r.bookings_count ?? 0}
+                        </td>
+                      ) : null}
                       <td className="px-4 py-3">
                         <span className={STATUS_BADGE_CLASS} style={statusBadgeStyle(statusTone)}>
                           {statusLabelFor(r.status)}

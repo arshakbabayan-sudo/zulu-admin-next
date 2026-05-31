@@ -531,6 +531,13 @@ export type PlatformAdminUserRow = {
    * never logged in (newly-created accounts, invitations-only, etc.).
    */
   last_login_at?: string | null;
+  /**
+   * Phase 4C+ (2026-05-31) — bookings count surfaced for the Directory
+   * People B2C-customers column. Backend uses withCount('orders'); zero
+   * for staff/agent rows (they don't own customer orders). Optional for
+   * back-compat with consumers that haven't refreshed types yet.
+   */
+  bookings_count?: number;
   companies: { id: number; name: string; role: string }[];
 };
 
