@@ -430,6 +430,91 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   },
 ];
 
+// ─── Settings sub-group structure (Phase 2D — 2026-05-31) ────────────────
+//
+// The Settings group's flat tab list is logically grouped per the Bucket B
+// audit; the comments inside the tabs[] array above call these out as
+// "── Pricing & money ──" etc. The same grouping is exported here as a
+// structured shape so a SettingsSubgroupTabs component can render visible
+// labels between tab clusters — turns a flat 20-tab strip into nine
+// titled clusters that an operator can scan at a glance.
+
+export type SettingsSubgroup = {
+  /** Plain-English label rendered as the sub-group divider. */
+  label: string;
+  /**
+   * URLs in this sub-group, in the order they should render. Each must
+   * match a real tab.href in ADMIN_NAV_GROUPS["settings"].tabs above.
+   */
+  hrefs: string[];
+};
+
+export const SETTINGS_SUBGROUPS: SettingsSubgroup[] = [
+  {
+    label: "Money",
+    hrefs: ["/settings/pricing-rules", "/settings/money-flow", "/settings/exchange-rates"],
+  },
+  {
+    label: "Permissions",
+    hrefs: ["/platform/rbac"],
+  },
+  {
+    label: "Localization",
+    hrefs: [
+      "/localization/languages",
+      "/localization/ui-translations",
+      "/localization/translations",
+      "/localization/templates",
+    ],
+  },
+  {
+    label: "Content & CMS",
+    hrefs: [
+      "/pages",
+      "/platform/banners",
+      "/platform/notifications",
+      "/platform/newsletter",
+    ],
+  },
+  {
+    label: "Layout",
+    hrefs: [
+      "/platform/settings/header-menu",
+      "/platform/settings/footer",
+      "/platform/settings/brand",
+    ],
+  },
+  {
+    label: "Marketing",
+    hrefs: ["/platform/loyalty"],
+  },
+  {
+    label: "System",
+    hrefs: [
+      "/platform/security",
+      "/platform/webhooks",
+      "/platform/locations",
+      "/platform/api-docs",
+      "/connections",
+    ],
+  },
+  {
+    label: "Support",
+    hrefs: ["/support/tickets", "/platform/reviews"],
+  },
+];
+
+/**
+ * Map a settings tab href to its sub-group label. Returns null when the
+ * href is not in any sub-group (e.g. legacy / removed tabs).
+ */
+export function settingsSubgroupFor(href: string): string | null {
+  for (const sg of SETTINGS_SUBGROUPS) {
+    if (sg.hrefs.includes(href)) return sg.label;
+  }
+  return null;
+}
+
 // ─── Legacy flat exports (kept for back-compat with importers that still
 // reference the old arrays — resolveAdminPageTitle, page guards, etc.) ─────
 

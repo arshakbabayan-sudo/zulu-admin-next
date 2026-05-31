@@ -37,13 +37,13 @@ import {
 } from "@/components/ui";
 import {
   PageHeader as V2PageHeader,
-  SectionTabs,
   FilterCard,
   FilterField,
   V2Card,
   V2Button,
   IconButton,
 } from "@/components/ui/v2";
+import { SettingsSubgroupTabs } from "@/components/settings/SettingsSubgroupTabs";
 import { Trash2 } from "lucide-react";
 
 /**
@@ -328,28 +328,38 @@ export default function PricingRulesPage() {
         }
       />
 
-      <SectionTabs
+      {/* Phase 2D (2026-05-31) — Settings sub-group tab strip. Replaces the
+          flat ~18-tab horizontal strip every settings page used to render
+          with one that has visible sub-group labels (Money / Permissions /
+          Localization / Content & CMS / Layout / Marketing / System /
+          Support). The cluster definitions live in admin-nav-config.ts. */}
+      <SettingsSubgroupTabs
         activeHref="/settings/pricing-rules"
-        items={[
-          { href: "/settings/pricing-rules", label: "Pricing rules" },
-          { href: "/settings/money-flow", label: "Money flow" },
-          { href: "/localization/languages", label: "Languages" },
-          { href: "/localization/templates", label: "Email templates" },
-          { href: "/platform/banners", label: "Banners" },
-          { href: "/pages", label: "CMS pages" },
-          { href: "/platform/notifications", label: "System notifications" },
-          { href: "/platform/newsletter", label: "Newsletter" },
-          { href: "/platform/loyalty", label: "Loyalty" },
-          { href: "/bucket3/block-dates", label: "Block dates" },
-          { href: "/bucket3/custom-fields", label: "Custom fields" },
-          { href: "/platform/security", label: "Security" },
-          { href: "/platform/webhooks", label: "Webhooks" },
-          { href: "/platform/locations", label: "Locations" },
-          { href: "/platform/settings/brand", label: "Brand" },
-          { href: "/connections", label: "Connections" },
-          { href: "/support/tickets", label: "Support" },
-          { href: "/platform/reviews", label: "Reviews" },
-        ]}
+        labels={{
+          "/settings/pricing-rules": "Pricing rules",
+          "/settings/money-flow": "Money flow",
+          "/settings/exchange-rates": "Exchange rates",
+          "/platform/rbac": "Roles & permissions",
+          "/localization/languages": "Languages",
+          "/localization/ui-translations": "UI strings",
+          "/localization/translations": "Content",
+          "/localization/templates": "Email templates",
+          "/pages": "CMS pages",
+          "/platform/banners": "Banners",
+          "/platform/notifications": "System notifications",
+          "/platform/newsletter": "Newsletter",
+          "/platform/settings/header-menu": "Header",
+          "/platform/settings/footer": "Footer",
+          "/platform/settings/brand": "Brand",
+          "/platform/loyalty": "Loyalty",
+          "/platform/security": "Security",
+          "/platform/webhooks": "Webhooks",
+          "/platform/locations": "Locations",
+          "/platform/api-docs": "API docs",
+          "/connections": "Connections",
+          "/support/tickets": "Tickets",
+          "/platform/reviews": "Reviews",
+        }}
       />
 
       <FilterCard>
