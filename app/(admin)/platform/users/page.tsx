@@ -18,6 +18,7 @@ import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePrompt } from "@/contexts/PromptDialogContext";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
@@ -130,7 +131,35 @@ export default function PlatformUsersPage() {
   const [searchInput, setSearchInput] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   // Phase 6.4 — type filter merges customers / staff / unverified
-  const [typeFilter, setTypeFilter] = useState<PlatformUserTypeFilter>("");
+  // Phase 4B (2026-05-31) — initial value pulled from URL ?type=… so the
+  // /bucket3/customers and /bucket3/employees redirects (also Phase 4B)
+  // land on the right chip with no extra click. The chip click handler
+  // pushes the new value back into the URL via router.replace below.
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const initialType = ((): PlatformUserTypeFilter => {
+    const raw = searchParams?.get("type");
+    if (raw === "customers" || raw === "staff" || raw === "unverified") return raw;
+    return "";
+  })();
+  const [typeFilter, setTypeFilterState] = useState<PlatformUserTypeFilter>(initialType);
+  const setTypeFilter = useCallback(
+    (next: PlatformUserTypeFilter) => {
+      setTypeFilterState(next);
+      // Sync URL — non-empty value as ?type=, empty value clears the param.
+      const sp = new URLSearchParams(Array.from(searchParams?.entries() ?? []));
+      if (next) {
+        sp.set("type", next);
+      } else {
+        sp.delete("type");
+      }
+      const qs = sp.toString();
+      const href = `${pathname}${qs ? `?${qs}` : ""}`;
+      router.replace(href, { scroll: false });
+    },
+    [pathname, router, searchParams]
+  );
   const [companyFilter, setCompanyFilter] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
