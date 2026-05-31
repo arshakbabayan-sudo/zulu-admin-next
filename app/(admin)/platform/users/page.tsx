@@ -479,6 +479,51 @@ export default function PlatformUsersPage() {
 
       <MarketplaceOpsSectionTabs activeHref="/platform/users" counts={{ users: stats?.total ?? meta?.total }} />
 
+      {/* Phase 4A (2026-05-31) — Directory "People" filter chips.
+          Lifts the Type filter (Customers / Staff / Unverified) out of the
+          FilterCard so the user sees the four canonical views at a glance.
+          The Type select inside the filter card stays for completeness, but
+          most clicks happen here. Chip selection feeds the same typeFilter
+          state, so backend wiring is unchanged.
+          Matches the Directory spec in docs/admin_designe/new-menu-
+          architecture-2026-05-31.md §5 (Directory → People). */}
+      <div
+        className="mb-4 flex flex-wrap gap-2"
+        role="tablist"
+        aria-label={t("admin.users.type_chip_label") || "Directory people filter"}
+      >
+        {(
+          [
+            { value: "", label: t("admin.users.type_all") || "All" },
+            { value: "customers", label: t("admin.users.type_customers") || "B2C customers" },
+            { value: "staff", label: t("admin.users.type_staff") || "Staff" },
+            { value: "unverified", label: t("admin.users.type_unverified") || "Unverified" },
+          ] as Array<{ value: PlatformUserTypeFilter; label: string }>
+        ).map((chip) => {
+          const active = typeFilter === chip.value;
+          return (
+            <button
+              key={chip.value || "all"}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => {
+                setPage(1);
+                setTypeFilter(chip.value);
+              }}
+              className="inline-flex items-center rounded-md border px-3 py-1.5 text-[12px] font-medium transition"
+              style={{
+                borderColor: active ? "var(--admin-primary)" : "var(--admin-border)",
+                backgroundColor: active ? "var(--admin-primary-soft)" : "var(--admin-bg-primary)",
+                color: active ? "var(--admin-primary)" : "var(--admin-text-secondary)",
+              }}
+            >
+              {chip.label}
+            </button>
+          );
+        })}
+      </div>
+
       <StatGrid cols={4} className="mb-5">
         <StatCard
           icon={<Users style={{ color: "var(--admin-primary)" }} className="h-[22px] w-[22px]" />}

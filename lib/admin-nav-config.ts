@@ -252,6 +252,30 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     visibility: "section_marketplace_ops",
   },
 
+  // Phase 4A (2026-05-31) — Directory (People + Companies tabs)
+  //
+  // New top-level group that consolidates the people-and-companies lookup
+  // surfaces. Replaces three previously-separate sidebar entries:
+  //   - Customers (/bucket3/customers)
+  //   - Employees subset of My company
+  //   - Users (under Management)
+  //
+  // Currently lands on the existing /platform/users page (which already
+  // supports the type filter for All / Customers / Staff / Unverified).
+  // The page-level chip strip lands as part of the same Phase 4A patch.
+  // Companies tab (/platform/companies) is part of the same Directory in
+  // the spec — kept under Management for the moment because its page is
+  // still wired with the Management section tabs; Phase 4B will move it.
+  {
+    key: "directory",
+    labelKey: "admin.nav.section.directory",
+    labelFallback: "Directory",
+    icon: "/icons/menu/users.svg",
+    defaultHref: "/platform/users",
+    tabs: [],
+    visibility: "platform_admin",
+  },
+
   // ── 8–12 ── v2 redesign new groups (2026-05-24, ordered per zulu-admin-v2.html) ──
   // Users / Roles / Files / Profile come AFTER Marketplace ops and BEFORE Settings
   // to match the v2 spec sidebar. Settings (#13) is the final group — moved from
