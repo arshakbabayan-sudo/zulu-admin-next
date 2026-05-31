@@ -172,3 +172,25 @@ export async function apiSetCrmCompensation(
 ): Promise<ApiSuccessEnvelope<CrmCompensation>> {
   return apiFetchJson(`/platform-admin/crm/team/${userId}/compensation`, { method: "PUT", token, body });
 }
+
+// ─── Options (per-company CRM settings) ───────────────────────────────────
+
+export type CrmSettings = {
+  company_id: number | null;
+  sales_count_statuses: string[];
+  sales_status_options: string[];
+};
+
+export async function apiCrmSettings(
+  token: string,
+  params: { company_id?: number } = {},
+): Promise<ApiSuccessEnvelope<CrmSettings>> {
+  return apiFetchJson(`/platform-admin/crm/settings${qs(params)}`, { method: "GET", token });
+}
+
+export async function apiUpdateCrmSettings(
+  token: string,
+  body: { company_id: number; sales_count_statuses: string[] },
+): Promise<ApiSuccessEnvelope<CrmSettings>> {
+  return apiFetchJson(`/platform-admin/crm/settings`, { method: "PUT", token, body });
+}

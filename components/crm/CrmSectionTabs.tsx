@@ -40,6 +40,7 @@ export function CrmSectionTabs({ activeHref, counts }: Props) {
         { href: "/crm/activities", label: "Activities", count: counts?.activities },
         { href: "/crm/segments", label: "Segments" },
         { href: "/crm/team", label: "Team" },
+        { href: "/crm/options", label: "Options" },
       ]}
     />
   );

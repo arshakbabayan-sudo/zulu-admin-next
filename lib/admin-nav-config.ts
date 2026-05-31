@@ -200,6 +200,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/crm/activities", labelKey: "admin.nav.tab.crm.activities" },
       { href: "/crm/segments", labelKey: "admin.nav.tab.crm.segments" },
       { href: "/crm/team", labelKey: "admin.nav.tab.crm.team" },
+      { href: "/crm/options", labelKey: "admin.nav.tab.crm.options" },
     ],
     visibility: "section_crm",
   },
