@@ -26,6 +26,7 @@ import {
   type PlatformAdminUserDetail,
   type UpdatePlatformUserInput,
 } from "@/lib/platform-admin-api";
+import { apiBookings, type BookingRow } from "@/lib/bookings-api";
 import { PageHeader as V2PageHeader, V2Card } from "@/components/ui/v2";
 
 const LANG_OPTIONS = [
@@ -78,6 +79,13 @@ export default function PlatformUserDetailPage() {
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  /**
+   * Phase 4G (2026-05-31) — Recent bookings card: only fetched when the
+   * user is a B2C customer (zero company memberships). We refetch once
+   * the user record arrives.
+   */
+  const [recentBookings, setRecentBookings] = useState<BookingRow[] | null>(null);
+  const [bookingsError, setBookingsError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!token || !allowed || !userId) return;
@@ -99,6 +107,33 @@ export default function PlatformUserDetailPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Phase 4G — fetch recent bookings once we know the user is a customer.
+  useEffect(() => {
+    if (!token || !user) return;
+    if (user.companies && user.companies.length > 0) {
+      // Staff/agent — no bookings card.
+      setRecentBookings(null);
+      return;
+    }
+    let cancelled = false;
+    setBookingsError(null);
+    (async () => {
+      try {
+        const res = await apiBookings(token, { user_id: user.id, per_page: 5 });
+        if (!cancelled) setRecentBookings(res.data);
+      } catch (e) {
+        if (!cancelled) {
+          setBookingsError(
+            e instanceof ApiRequestError ? e.message : "Failed to load recent bookings"
+          );
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, user]);
 
   useEffect(() => {
     if (!saveSuccess) return;
@@ -325,6 +360,66 @@ export default function PlatformUserDetailPage() {
               </li>
             ))}
           </ul>
+        </V2Card>
+      ) : null}
+
+      {/* Phase 4G (2026-05-31) — Recent bookings card for B2C customers.
+          Renders only when the user has zero company memberships (= a
+          customer rather than staff). Shows up to 5 most recent bookings
+          with a "View all" link to /platform/bookings?user_id=<id>. The
+          unified backend endpoint took the same filter in the matching
+          backend commit. */}
+      {user.companies.length === 0 ? (
+        <V2Card className="p-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold text-fg-t8">Recent bookings</h2>
+            <Link
+              href={`/platform/bookings?user_id=${user.id}`}
+              className="text-sm font-medium hover:underline"
+              style={{ color: "var(--admin-primary)" }}
+            >
+              View all →
+            </Link>
+          </div>
+          {bookingsError ? (
+            <div className="mt-3 rounded-md border border-error-100 bg-error-50 px-3 py-2 text-xs text-error-700">
+              {bookingsError}
+            </div>
+          ) : recentBookings === null ? (
+            <div className="mt-3 text-sm text-fg-t7">Loading…</div>
+          ) : recentBookings.length === 0 ? (
+            <div className="mt-3 text-sm text-fg-t7">
+              No bookings yet.
+            </div>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {recentBookings.map((b) => (
+                <li
+                  key={b.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-zulu border border-default p-3"
+                >
+                  <Link
+                    href={`/platform/bookings/${b.id}`}
+                    className="font-medium hover:underline"
+                    style={{ color: "var(--admin-primary)" }}
+                  >
+                    {b.order_number || b.booking_reference || `#${b.id.slice(0, 8)}`}
+                  </Link>
+                  <span className="text-xs text-fg-t7">
+                    {b.offer?.title || b.items?.[0]?.title || "—"}
+                  </span>
+                  <span className="rounded-full bg-figma-bg-1 px-2 py-0.5 text-xs text-fg-t7">
+                    {b.status}
+                  </span>
+                  <span className="tabular-nums text-xs text-fg-t7">
+                    {b.total !== undefined && b.total !== null
+                      ? `${b.total} ${b.currency || ""}`
+                      : "—"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </V2Card>
       ) : null}
       </div>

@@ -45,6 +45,11 @@ export type BookingsListParams = {
   to?: string;
   search?: string;
   company_id?: number;
+  /**
+   * Phase 4G (2026-05-31) — filter by booking owner. Used by the user
+   * detail page to fetch recent bookings inline (per customer).
+   */
+  user_id?: number;
   service_type?: string;
 };
 
@@ -60,6 +65,7 @@ export async function apiBookings(
   if (params.to) q.set("to", params.to);
   if (params.search) q.set("search", params.search);
   if (params.company_id != null) q.set("company_id", String(params.company_id));
+  if (params.user_id != null) q.set("user_id", String(params.user_id));
   if (params.service_type) q.set("service_type", params.service_type);
   const qs = q.toString();
   return apiFetchJson(`/platform-admin/bookings${qs ? `?${qs}` : ""}`, { method: "GET", token });
