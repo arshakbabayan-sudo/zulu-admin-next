@@ -59,6 +59,32 @@ export type CrmStats = {
   by_stage: Record<string, { stage: string; count: number; value: number }>;
 };
 
+export const CRM_COMP_MODELS = ["fixed", "percent", "fixed_plus_percent"] as const;
+export type CrmCompModel = (typeof CRM_COMP_MODELS)[number];
+
+export type CrmCompensation = {
+  id: number;
+  user_id: number;
+  company_id: number;
+  model: CrmCompModel;
+  base_amount: number;
+  commission_percent: number;
+  currency: string;
+  notes: string | null;
+};
+
+export type CrmTeamRow = {
+  user: { id: number; name: string; email: string };
+  orders_count: number;
+  won_deals: number;
+  revenue_by_currency: { currency: string; orders_count: number; revenue: number }[];
+  compensation: CrmCompensation | null;
+  computed_pay: number | null;
+  pay_currency: string;
+};
+
+export type CrmTeamMeta = { company_id: number | null; month?: string };
+
 function qs(params: Record<string, string | number | undefined>): string {
   const q = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {
@@ -128,4 +154,21 @@ export async function apiUpdateCrmActivity(
 
 export async function apiCrmStats(token: string): Promise<ApiSuccessEnvelope<CrmStats>> {
   return apiFetchJson(`/platform-admin/crm/stats`, { method: "GET", token });
+}
+
+// ─── Team (sales leaderboard + payroll) ───────────────────────────────────
+
+export async function apiCrmTeam(
+  token: string,
+  params: { company_id?: number; month?: string } = {},
+): Promise<ApiSuccessEnvelope<CrmTeamRow[]> & { meta: CrmTeamMeta }> {
+  return apiFetchJson(`/platform-admin/crm/team${qs(params)}`, { method: "GET", token });
+}
+
+export async function apiSetCrmCompensation(
+  token: string,
+  userId: number,
+  body: { company_id: number; model: CrmCompModel; base_amount?: number; commission_percent?: number; currency?: string; notes?: string },
+): Promise<ApiSuccessEnvelope<CrmCompensation>> {
+  return apiFetchJson(`/platform-admin/crm/team/${userId}/compensation`, { method: "PUT", token, body });
 }
