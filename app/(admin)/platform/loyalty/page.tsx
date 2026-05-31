@@ -27,11 +27,12 @@ import {
 } from "@/components/ui";
 import {
   PageHeader as V2PageHeader,
-  SectionTabs,
+
   V2Card,
   V2Button,
   IconButton,
 } from "@/components/ui/v2";
+import { SettingsSubgroupTabs } from "@/components/settings/SettingsSubgroupTabs";
 import { Download, Eye } from "lucide-react";
 
 /**
@@ -266,29 +267,7 @@ export default function PlatformLoyaltyPage() {
         }
       />
 
-      <SectionTabs
-        activeHref="/platform/loyalty"
-        items={[
-          { href: "/settings/pricing-rules", label: "Pricing rules" },
-          { href: "/settings/money-flow", label: "Money flow" },
-          { href: "/localization/languages", label: "Languages" },
-          { href: "/localization/templates", label: "Email templates" },
-          { href: "/platform/banners", label: "Banners" },
-          { href: "/pages", label: "CMS pages" },
-          { href: "/platform/notifications", label: "System notifications" },
-          { href: "/platform/newsletter", label: "Newsletter" },
-          { href: "/platform/loyalty", label: "Loyalty", count: total },
-          { href: "/bucket3/block-dates", label: "Block dates" },
-          { href: "/bucket3/custom-fields", label: "Custom fields" },
-          { href: "/platform/security", label: "Security" },
-          { href: "/platform/webhooks", label: "Webhooks" },
-          { href: "/platform/locations", label: "Locations" },
-          { href: "/platform/settings/brand", label: "Brand" },
-          { href: "/connections", label: "Connections" },
-          { href: "/support/tickets", label: "Support" },
-          { href: "/platform/reviews", label: "Reviews" },
-        ]}
-      />
+      <SettingsSubgroupTabs activeHref="/platform/loyalty" />
 
       <div className="space-y-6">
       {error && (

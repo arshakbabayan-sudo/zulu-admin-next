@@ -48,13 +48,14 @@ import {
 } from "@/components/ui";
 import {
   PageHeader as V2PageHeader,
-  SectionTabs,
+
   FilterCard,
   FilterField,
   V2Card,
   V2Button,
   IconButton,
 } from "@/components/ui/v2";
+import { SettingsSubgroupTabs } from "@/components/settings/SettingsSubgroupTabs";
 import { Plus, Power, Trash2 } from "lucide-react";
 import { PinPromptDialog } from "@/components/PinPromptDialog";
 
@@ -252,14 +253,7 @@ export default function ExchangeRatesPage() {
         }
       />
 
-      <SectionTabs
-        activeHref="/settings/exchange-rates"
-        items={[
-          { href: "/settings/pricing-rules", label: "Pricing rules" },
-          { href: "/settings/money-flow", label: "Money flow" },
-          { href: "/settings/exchange-rates", label: "Exchange rates" },
-        ]}
-      />
+      <SettingsSubgroupTabs activeHref="/settings/exchange-rates" />
 
       <FilterCard>
         <FilterField label="Pair (e.g. USD-AMD)" minWidth={200}>

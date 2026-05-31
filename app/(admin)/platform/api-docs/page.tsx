@@ -7,8 +7,9 @@ import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import {
   PageHeader as V2PageHeader,
-  SectionTabs,
+
 } from "@/components/ui/v2";
+import { SettingsSubgroupTabs } from "@/components/settings/SettingsSubgroupTabs";
 
 /**
  * Platform-admin API documentation viewer (Sprint 74, PART 30).
@@ -96,29 +97,7 @@ export default function PlatformApiDocsPage() {
         subtitle={t("admin.api_docs.subtitle")}
       />
 
-      <SectionTabs
-        activeHref="/platform/api-docs"
-        items={[
-          { href: "/settings/pricing-rules", label: "Pricing rules" },
-          { href: "/settings/money-flow", label: "Money flow" },
-          { href: "/localization/languages", label: "Languages" },
-          { href: "/localization/templates", label: "Email templates" },
-          { href: "/platform/banners", label: "Banners" },
-          { href: "/pages", label: "CMS pages" },
-          { href: "/platform/notifications", label: "System notifications" },
-          { href: "/platform/newsletter", label: "Newsletter" },
-          { href: "/platform/loyalty", label: "Loyalty" },
-          { href: "/bucket3/block-dates", label: "Block dates" },
-          { href: "/bucket3/custom-fields", label: "Custom fields" },
-          { href: "/platform/security", label: "Security" },
-          { href: "/platform/webhooks", label: "Webhooks" },
-          { href: "/platform/locations", label: "Locations" },
-          { href: "/platform/settings/brand", label: "Brand" },
-          { href: "/connections", label: "Connections" },
-          { href: "/support/tickets", label: "Support" },
-          { href: "/platform/reviews", label: "Reviews" },
-        ]}
-      />
+      <SettingsSubgroupTabs activeHref="/platform/api-docs" />
 
       <div className="admin-card p-4 text-sm text-fg-t7">
         <p>

@@ -24,12 +24,13 @@ import {
 } from "@/components/ui";
 import {
   PageHeader as V2PageHeader,
-  SectionTabs,
+
   FilterCard,
   FilterField,
   V2Card,
   V2Button,
 } from "@/components/ui/v2";
+import { SettingsSubgroupTabs } from "@/components/settings/SettingsSubgroupTabs";
 import { Download } from "lucide-react";
 import { exportRowsAsCsv } from "@/lib/export-csv";
 import { formatDateTime, formatNumber } from "@/lib/format";
@@ -219,29 +220,7 @@ export default function PlatformSecurityPage() {
         }
       />
 
-      <SectionTabs
-        activeHref="/platform/security"
-        items={[
-          { href: "/settings/pricing-rules", label: "Pricing rules" },
-          { href: "/settings/money-flow", label: "Money flow" },
-          { href: "/localization/languages", label: "Languages" },
-          { href: "/localization/templates", label: "Email templates" },
-          { href: "/platform/banners", label: "Banners" },
-          { href: "/pages", label: "CMS pages" },
-          { href: "/platform/notifications", label: "System notifications" },
-          { href: "/platform/newsletter", label: "Newsletter" },
-          { href: "/platform/loyalty", label: "Loyalty" },
-          { href: "/bucket3/block-dates", label: "Block dates" },
-          { href: "/bucket3/custom-fields", label: "Custom fields" },
-          { href: "/platform/security", label: "Security" },
-          { href: "/platform/webhooks", label: "Webhooks" },
-          { href: "/platform/locations", label: "Locations" },
-          { href: "/platform/settings/brand", label: "Brand" },
-          { href: "/connections", label: "Connections" },
-          { href: "/support/tickets", label: "Support" },
-          { href: "/platform/reviews", label: "Reviews" },
-        ]}
-      />
+      <SettingsSubgroupTabs activeHref="/platform/security" />
 
       <div className="space-y-6">
       {error && <div className="rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{error}</div>}

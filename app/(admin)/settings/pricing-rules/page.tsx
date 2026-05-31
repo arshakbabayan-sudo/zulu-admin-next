@@ -328,39 +328,12 @@ export default function PricingRulesPage() {
         }
       />
 
-      {/* Phase 2D (2026-05-31) — Settings sub-group tab strip. Replaces the
-          flat ~18-tab horizontal strip every settings page used to render
-          with one that has visible sub-group labels (Money / Permissions /
-          Localization / Content & CMS / Layout / Marketing / System /
-          Support). The cluster definitions live in admin-nav-config.ts. */}
-      <SettingsSubgroupTabs
-        activeHref="/settings/pricing-rules"
-        labels={{
-          "/settings/pricing-rules": "Pricing rules",
-          "/settings/money-flow": "Money flow",
-          "/settings/exchange-rates": "Exchange rates",
-          "/platform/rbac": "Roles & permissions",
-          "/localization/languages": "Languages",
-          "/localization/ui-translations": "UI strings",
-          "/localization/translations": "Content",
-          "/localization/templates": "Email templates",
-          "/pages": "CMS pages",
-          "/platform/banners": "Banners",
-          "/platform/notifications": "System notifications",
-          "/platform/newsletter": "Newsletter",
-          "/platform/settings/header-menu": "Header",
-          "/platform/settings/footer": "Footer",
-          "/platform/settings/brand": "Brand",
-          "/platform/loyalty": "Loyalty",
-          "/platform/security": "Security",
-          "/platform/webhooks": "Webhooks",
-          "/platform/locations": "Locations",
-          "/platform/api-docs": "API docs",
-          "/connections": "Connections",
-          "/support/tickets": "Tickets",
-          "/platform/reviews": "Reviews",
-        }}
-      />
+      {/* Phase 2D (2026-05-31) — Settings sub-group tab strip with visible
+          cluster labels (Money / Permissions / Localization / Content & CMS /
+          Layout / Marketing / System / Support). Cluster definitions live in
+          admin-nav-config.ts; canonical English labels are built into the
+          component (no per-page labels{} needed). */}
+      <SettingsSubgroupTabs activeHref="/settings/pricing-rules" />
 
       <FilterCard>
         <FilterField label="Scope">

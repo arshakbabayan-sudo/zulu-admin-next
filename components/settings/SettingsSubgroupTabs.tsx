@@ -29,6 +29,38 @@
 import Link from "next/link";
 import { SETTINGS_SUBGROUPS, type SettingsSubgroup } from "@/lib/admin-nav-config";
 
+/**
+ * Canonical English labels for every settings tab. Pages don't need to
+ * repeat this map — they just pass `activeHref` and these are used as
+ * fallbacks. `labels` prop on the component still overrides per page
+ * (e.g. when a setting needs a localized inline override).
+ */
+const DEFAULT_TAB_LABELS: Record<string, string> = {
+  "/settings/pricing-rules": "Pricing rules",
+  "/settings/money-flow": "Money flow",
+  "/settings/exchange-rates": "Exchange rates",
+  "/platform/rbac": "Roles & permissions",
+  "/localization/languages": "Languages",
+  "/localization/ui-translations": "UI strings",
+  "/localization/translations": "Content",
+  "/localization/templates": "Email templates",
+  "/pages": "CMS pages",
+  "/platform/banners": "Banners",
+  "/platform/notifications": "System notifications",
+  "/platform/newsletter": "Newsletter",
+  "/platform/settings/header-menu": "Header",
+  "/platform/settings/footer": "Footer",
+  "/platform/settings/brand": "Brand",
+  "/platform/loyalty": "Loyalty",
+  "/platform/security": "Security",
+  "/platform/webhooks": "Webhooks",
+  "/platform/locations": "Locations",
+  "/platform/api-docs": "API docs",
+  "/connections": "Connections",
+  "/support/tickets": "Tickets",
+  "/platform/reviews": "Reviews",
+};
+
 type Props = {
   activeHref: string;
   /** Optional whitelist of sub-group labels to render. Default: all. */
@@ -77,7 +109,7 @@ export function SettingsSubgroupTabs({
           </span>
           {group.hrefs.map((href) => {
             const active = href === activeHref;
-            const label = labels[href] ?? humaniseSlug(href);
+            const label = labels[href] ?? DEFAULT_TAB_LABELS[href] ?? humaniseSlug(href);
             const count = counts[href];
             return (
               <Link
