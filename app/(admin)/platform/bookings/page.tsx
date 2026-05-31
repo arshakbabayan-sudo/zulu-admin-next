@@ -23,6 +23,7 @@ import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useSearchParams } from "next/navigation";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
@@ -195,6 +196,15 @@ export default function PlatformBookingsPage() {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("");
   const [serviceTypeFilter, setServiceTypeFilter] = useState("");
+  // Phase 4G (2026-05-31) — optional user filter read from the URL
+  // (?user_id=N). Set by the "View all" link on /platform/users/[id]'s
+  // Recent bookings card; pages the user through their own orders only.
+  const searchParams = useSearchParams();
+  const userIdFilter = (() => {
+    const raw = searchParams?.get("user_id");
+    const n = raw ? Number(raw) : NaN;
+    return Number.isFinite(n) && n > 0 ? n : null;
+  })();
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [search, setSearch] = useState("");
@@ -219,6 +229,7 @@ export default function PlatformBookingsPage() {
         from: fromDate || undefined,
         to: toDate || undefined,
         search: search || undefined,
+        user_id: userIdFilter ?? undefined,
       });
       setRows(res.data);
       setMeta(res.meta);
@@ -233,7 +244,7 @@ export default function PlatformBookingsPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, allowed, page, statusFilter, serviceTypeFilter, fromDate, toDate, search, t]);
+  }, [token, allowed, page, statusFilter, serviceTypeFilter, fromDate, toDate, search, userIdFilter, t]);
 
   useEffect(() => {
     void load();
