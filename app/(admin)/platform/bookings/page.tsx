@@ -292,6 +292,29 @@ export default function PlatformBookingsPage() {
 
   const activeChips = useMemo(() => {
     const chips: Array<{ key: string; label: string; clear: () => void }> = [];
+    // Phase 4G (2026-05-31) — surface the user_id filter at the top of
+    // the chip strip so admins arriving from /platform/users/[id] see
+    // why the list is restricted, with a one-click escape back to the
+    // unfiltered list.
+    if (userIdFilter) {
+      chips.push({
+        key: "user",
+        label: `Customer #${userIdFilter}`,
+        clear: () => {
+          // Remove ?user_id from the URL — easiest is to push the page
+          // with the param dropped. Without router.push state stays
+          // unsynced, but a simple location update is fine here since
+          // load() depends on userIdFilter via searchParams.
+          if (typeof window !== "undefined") {
+            const url = new URL(window.location.href);
+            url.searchParams.delete("user_id");
+            window.history.replaceState(null, "", url.toString());
+            // Force a reload so the userIdFilter useMemo re-reads.
+            window.location.reload();
+          }
+        },
+      });
+    }
     if (statusFilter) {
       chips.push({
         key: "status",
@@ -336,7 +359,7 @@ export default function PlatformBookingsPage() {
       });
     }
     return chips;
-  }, [statusFilter, serviceTypeFilter, fromDate, toDate, search]);
+  }, [statusFilter, serviceTypeFilter, fromDate, toDate, search, userIdFilter]);
 
   function clearAllFilters() {
     setPage(1);
