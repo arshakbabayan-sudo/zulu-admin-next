@@ -270,16 +270,16 @@ export default function Bucket3ServiceCatalogPage() {
         }
       />
 
+      {/* Phase 2 (2026-05-31) — Inventory Configuration sub-group:
+          moved from Settings/My-company orbit to Inventory. The tab strip
+          now shows ONLY the three Configuration siblings (block dates /
+          custom fields / service catalog). */}
       <SectionTabs
         activeHref="/bucket3/service-catalog"
         items={[
-          { href: "/bucket3/employees", label: "Employees" },
-          { href: "/bucket3/payroll", label: "Payroll" },
-          { href: "/bucket3/non-service-hours", label: "Non-service hours" },
-          { href: "/bucket3/cases", label: "Cases" },
-          { href: "/bucket3/customers", label: "Customers" },
-          { href: "/bucket3/subscriptions", label: "Subscriptions" },
-          { href: "/bucket3/per-x-invoicing", label: "Per-X invoicing" },
+          { href: "/bucket3/block-dates", label: "Block dates" },
+          { href: "/bucket3/custom-fields", label: "Custom fields" },
+          { href: "/bucket3/service-catalog", label: "Service catalog" },
         ]}
       />
 

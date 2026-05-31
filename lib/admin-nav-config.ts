@@ -147,6 +147,16 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       // routes super-admin Packages oversight via `/inventory/packages` (matches
       // the Hotels/Flights/etc. pattern). Old `/platform/packages` URL still
       // works as a redirect.
+
+      // Phase 2 (2026-05-31) — Configuration sub-group moved from Settings.
+      // Block dates / Custom fields / Service catalog are inventory-adjacent
+      // workflows; operator users find them faster next to listings than
+      // buried in Settings. Page-level SectionTabs on each of the 3 pages
+      // is updated to show only this Configuration trio (was the full ~18-tab
+      // Settings strip — confusing context).
+      { href: "/bucket3/block-dates", labelKey: "admin.nav.tab.bucket3.block_dates" },
+      { href: "/bucket3/custom-fields", labelKey: "admin.nav.tab.bucket3.custom_fields" },
+      { href: "/bucket3/service-catalog", labelKey: "admin.nav.tab.bucket3.service_catalog" },
     ],
     visibility: "section_inventory",
   },
@@ -332,10 +342,9 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       // ── Promotions ────────────────────────────────────────────────────
       { href: "/platform/loyalty", labelKey: "admin.nav.tab.loyalty_programs", moduleKey: "ops.loyalty" },
 
-      // ── Inventory configuration ───────────────────────────────────────
-      { href: "/bucket3/block-dates", labelKey: "admin.nav.tab.bucket3.block_dates" },
-      { href: "/bucket3/custom-fields", labelKey: "admin.nav.tab.bucket3.custom_fields" },
-      { href: "/bucket3/service-catalog", labelKey: "admin.nav.tab.bucket3.service_catalog" },
+      // Phase 2 (2026-05-31) — Inventory configuration tabs MOVED OUT of
+      // Settings into the Inventory section. Block dates / Custom fields /
+      // Service catalog are now listed under the Inventory group above.
 
       // ── System (integrations, security, geography) ────────────────────
       { href: "/platform/security", labelKey: "admin.nav.tab.security", superAdminOnly: true },

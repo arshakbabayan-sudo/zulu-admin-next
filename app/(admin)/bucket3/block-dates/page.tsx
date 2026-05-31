@@ -229,27 +229,19 @@ export default function Bucket3BlockDatesPage() {
         }
       />
 
+      {/* Phase 2 (2026-05-31) — Inventory Configuration sub-group:
+          moved from Settings into the Inventory section. The tab strip now
+          shows ONLY the three Configuration siblings (block dates / custom
+          fields / service catalog) instead of the entire ~18-tab Settings
+          mega-strip the page previously rendered (which made Settings the
+          implicit visual context — confusing now that this page lives under
+          Inventory in the sidebar). */}
       <SectionTabs
         activeHref="/bucket3/block-dates"
         items={[
-          { href: "/settings/pricing-rules", label: "Pricing rules" },
-          { href: "/settings/money-flow", label: "Money flow" },
-          { href: "/localization/languages", label: "Languages" },
-          { href: "/localization/templates", label: "Email templates" },
-          { href: "/platform/banners", label: "Banners" },
-          { href: "/pages", label: "CMS pages" },
-          { href: "/platform/notifications", label: "System notifications" },
-          { href: "/platform/newsletter", label: "Newsletter" },
-          { href: "/platform/loyalty", label: "Loyalty" },
           { href: "/bucket3/block-dates", label: "Block dates" },
           { href: "/bucket3/custom-fields", label: "Custom fields" },
-          { href: "/platform/security", label: "Security" },
-          { href: "/platform/webhooks", label: "Webhooks" },
-          { href: "/platform/locations", label: "Locations" },
-          { href: "/platform/settings/brand", label: "Brand" },
-          { href: "/connections", label: "Connections" },
-          { href: "/support/tickets", label: "Support" },
-          { href: "/platform/reviews", label: "Reviews" },
+          { href: "/bucket3/service-catalog", label: "Service catalog" },
         ]}
       />
 
