@@ -413,7 +413,7 @@ export default function PlatformAuditLogsPage() {
       <V2PageHeader
         breadcrumb={[
           { label: "Home", href: "/dashboard" },
-          { label: "Marketplace ops", href: "/platform/approvals" },
+          { label: "Management", href: "/platform/companies" },
           { label: t("admin.platform_audit_logs.title") },
         ]}
         title={t("admin.platform_audit_logs.title")}

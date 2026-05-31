@@ -567,7 +567,7 @@ export default function PlatformCompaniesPage() {
       <V2PageHeader
         breadcrumb={[
           { label: "Home", href: "/dashboard" },
-          { label: "Marketplace ops", href: "/platform/approvals" },
+          { label: "Management", href: "/platform/companies" },
           { label: t("admin.platform_companies.title") },
         ]}
         title={t("admin.platform_companies.title")}

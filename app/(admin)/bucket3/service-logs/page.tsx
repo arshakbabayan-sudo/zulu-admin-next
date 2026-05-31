@@ -226,7 +226,7 @@ export default function Bucket3ServiceLogsPage() {
       <V2PageHeader
         breadcrumb={[
           { label: "Home", href: "/dashboard" },
-          { label: "Marketplace ops", href: "/platform/approvals" },
+          { label: "Management", href: "/platform/companies" },
           { label: t("admin.bucket3.service_logs.title") },
         ]}
         title={t("admin.bucket3.service_logs.title")}

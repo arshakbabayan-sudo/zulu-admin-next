@@ -142,7 +142,7 @@ export default function CompanyModulePermissionsPage() {
       <V2PageHeader
         breadcrumb={[
           { label: "Home", href: "/dashboard" },
-          { label: "Marketplace ops", href: "/platform/companies" },
+          { label: "Management", href: "/platform/companies" },
           { label: "Companies", href: "/platform/companies" },
           { label: `#${companyId}`, href: `/platform/companies/${companyId}` },
           { label: "Module permissions" },

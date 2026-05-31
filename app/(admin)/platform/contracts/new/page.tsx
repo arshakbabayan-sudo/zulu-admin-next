@@ -182,7 +182,7 @@ export default function AdminContractCreatePage() {
       <V2PageHeader
         breadcrumb={[
           { label: "Home", href: "/dashboard" },
-          { label: "Marketplace ops", href: "/platform/contracts" },
+          { label: "Management", href: "/platform/contracts" },
           { label: t("admin.platform_contracts.title") || "Partnership agreements", href: "/platform/contracts" },
           { label: t("admin.contract_new.title") || "New contract" },
         ]}

@@ -187,7 +187,7 @@ export default function PendingReviewPage() {
       <V2PageHeader
         breadcrumb={[
           { label: "Home", href: "/dashboard" },
-          { label: "Marketplace ops", href: "/platform/approvals" },
+          { label: "Management", href: "/platform/companies" },
           { label: t("admin.pending_review.title") },
         ]}
         title={t("admin.pending_review.title")}

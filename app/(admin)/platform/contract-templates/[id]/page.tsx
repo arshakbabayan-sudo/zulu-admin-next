@@ -144,7 +144,7 @@ export default function AdminContractTemplateDetailPage() {
       <V2PageHeader
         breadcrumb={[
           { label: "Home", href: "/dashboard" },
-          { label: "Marketplace ops", href: "/platform/contract-templates" },
+          { label: "Management", href: "/platform/contract-templates" },
           { label: t("admin.contract_templates.title") || "Contract templates", href: "/platform/contract-templates" },
           { label: tpl.name },
         ]}

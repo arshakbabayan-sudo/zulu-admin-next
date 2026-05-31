@@ -246,7 +246,7 @@ export default function SellerApplicationsPage() {
       <V2PageHeader
         breadcrumb={[
           { label: "Home", href: "/dashboard" },
-          { label: "Marketplace ops", href: "/platform/approvals" },
+          { label: "Management", href: "/platform/companies" },
           { label: t("admin.seller_applications.title") },
         ]}
         title={t("admin.seller_applications.title")}

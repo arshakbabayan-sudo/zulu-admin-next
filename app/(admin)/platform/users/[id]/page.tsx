@@ -171,7 +171,7 @@ export default function PlatformUserDetailPage() {
       <V2PageHeader
         breadcrumb={[
           { label: "Home", href: "/dashboard" },
-          { label: "Marketplace ops", href: "/platform/users" },
+          { label: "Management", href: "/platform/users" },
           { label: t("admin.users.title"), href: "/platform/users" },
           { label: user.name || user.email },
         ]}
