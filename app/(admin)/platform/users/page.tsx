@@ -71,8 +71,8 @@ import {
   StatCard,
   StatGrid,
   IconButton,
+  SectionTabs,
 } from "@/components/ui/v2";
-import { MarketplaceOpsSectionTabs } from "@/components/marketplace/MarketplaceOpsSectionTabs";
 import { RowActionsMenu } from "@/components/admin/RowActionsMenu";
 import { exportRowsAsCsv } from "@/lib/export-csv";
 
@@ -506,7 +506,18 @@ export default function PlatformUsersPage() {
         }
       />
 
-      <MarketplaceOpsSectionTabs activeHref="/platform/users" counts={{ users: stats?.total ?? meta?.total }} />
+      {/* Phase 4D (2026-05-31) — Directory group strip ([People | Companies]).
+          Replaces the prior Management section tabs on this page; /platform/users
+          is owned by Directory now (People view). Management still hosts a
+          Users tab for governance entry points — Phase 2C cleanup will remove
+          that duplicate. */}
+      <SectionTabs
+        activeHref="/platform/users"
+        items={[
+          { href: "/platform/users", label: "People", count: stats?.total ?? meta?.total },
+          { href: "/platform/companies", label: "Companies" },
+        ]}
+      />
 
       {/* Phase 4A (2026-05-31) — Directory "People" filter chips.
           Lifts the Type filter (Customers / Staff / Unverified) out of the

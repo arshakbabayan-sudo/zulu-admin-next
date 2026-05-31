@@ -58,6 +58,7 @@ import {
   StatCard,
   StatGrid,
   IconButton,
+  SectionTabs,
 } from "@/components/ui/v2";
 import {
   Archive,
@@ -606,6 +607,20 @@ export default function PlatformCompaniesPage() {
             </V2Button>
           </>
         }
+      />
+
+      {/* Phase 4D (2026-05-31) — Directory group strip ([People | Companies]).
+          The Companies page sits in both Directory (lookup) and Management
+          (governance). The Directory strip is the primary entry now; the
+          Management strip below is kept until Phase 2C cleanup so that
+          governance entry points (Approvals, Subscriptions, Contracts, Logs)
+          stay one click away. */}
+      <SectionTabs
+        activeHref="/platform/companies"
+        items={[
+          { href: "/platform/users", label: "People" },
+          { href: "/platform/companies", label: "Companies", count: stats?.total },
+        ]}
       />
 
       <MarketplaceOpsSectionTabs activeHref="/platform/companies" counts={{ companies: stats?.total }} />

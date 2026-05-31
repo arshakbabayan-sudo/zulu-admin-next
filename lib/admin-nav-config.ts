@@ -300,7 +300,15 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     labelFallback: "Directory",
     icon: "/icons/menu/users.svg",
     defaultHref: "/platform/users",
-    tabs: [],
+    tabs: [
+      // Phase 4D (2026-05-31) — Directory exposes two tabs: People (users
+      // table with type chips) and Companies (organizations registry).
+      // Different entities, different columns, but the same "find any party
+      // on the platform" mental model. /platform/companies is shared with
+      // the Management group (still listed there for governance discovery).
+      { href: "/platform/users", labelKey: "admin.nav.tab.directory.people" },
+      { href: "/platform/companies", labelKey: "admin.nav.tab.directory.companies" },
+    ],
     visibility: "platform_admin",
   },
 
