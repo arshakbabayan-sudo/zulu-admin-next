@@ -24,6 +24,7 @@ import {
   type PlatformAdminUserDetail,
 } from "@/lib/platform-admin-api";
 import { apiBookings, type BookingRow } from "@/lib/bookings-api";
+import { apiCrmActivities, type CrmActivity } from "@/lib/crm-api";
 import {
   STATUS_BADGE_CLASS,
   avatarInitials,
@@ -80,6 +81,7 @@ export default function CrmCustomerDetailPage() {
 
   const [data, setData] = useState<PlatformAdminUserDetail | null>(null);
   const [bookings, setBookings] = useState<BookingRow[] | null>(null);
+  const [activities, setActivities] = useState<CrmActivity[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
@@ -114,9 +116,23 @@ export default function CrmCustomerDetailPage() {
     if (allowed) void load();
   }, [allowed, load]);
 
+  const loadActivities = useCallback(async () => {
+    if (!token || !Number.isFinite(customerId)) return;
+    try {
+      const res = await apiCrmActivities(token, { subject_type: "customer", subject_id: customerId, per_page: 50 });
+      setActivities(res.data);
+    } catch {
+      setActivities([]);
+    }
+  }, [token, customerId]);
+
   useEffect(() => {
     if (allowed && tab === "bookings" && bookings === null) void loadBookings();
   }, [allowed, tab, bookings, loadBookings]);
+
+  useEffect(() => {
+    if (allowed && tab === "communication" && activities === null) void loadActivities();
+  }, [allowed, tab, activities, loadActivities]);
 
   if (!allowed || forbidden) return <ForbiddenNotice />;
 
@@ -280,11 +296,46 @@ export default function CrmCustomerDetailPage() {
       ) : null}
 
       {tab === "communication" ? (
-        <EmptyState
-          icon={<MessageSquare className="h-10 w-10" />}
-          title="Communication — in build"
-          subtitle="Email / SMS / chat history with this customer lands with the internal chat + activities work."
-        />
+        <V2Card>
+          <V2CardHeader title="Communication log" subtitle="Calls, emails, meetings and notes with this customer" />
+          {activities && activities.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-[13px]">
+                <thead style={{ backgroundColor: "var(--admin-bg-secondary)" }}>
+                  <tr>
+                    {["Type", "Subject", "Owner", "When"].map((h) => (
+                      <th
+                        key={h}
+                        className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.5px]"
+                        style={{ color: "var(--admin-text-secondary)" }}
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {activities.map((a) => (
+                    <tr key={a.id} className="border-t" style={{ borderColor: "var(--admin-border)" }}>
+                      <td className="px-4 py-2.5" style={{ color: "var(--admin-text-secondary)" }}>{a.type}</td>
+                      <td className="px-4 py-2.5 font-medium">{a.subject}</td>
+                      <td className="px-4 py-2.5" style={{ color: "var(--admin-text-secondary)" }}>{a.owner?.name ?? "—"}</td>
+                      <td className="px-4 py-2.5" style={{ color: "var(--admin-text-secondary)" }}>{formatRelativeTime(a.created_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <V2CardBody>
+              <EmptyState
+                icon={<MessageSquare className="h-10 w-10" />}
+                title={activities === null ? "Loading…" : "No communication yet"}
+                subtitle="Logged calls, emails and meetings with this customer will appear here."
+              />
+            </V2CardBody>
+          )}
+        </V2Card>
       ) : null}
 
       {tab === "notes" ? (
