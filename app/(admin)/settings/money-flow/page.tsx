@@ -35,6 +35,7 @@ import {
   TR,
 } from "@/components/ui";
 import { IconButton } from "@/components/ui/v2";
+import { SettingsSubgroupTabs } from "@/components/settings/SettingsSubgroupTabs";
 import { Trash2 } from "lucide-react";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 
@@ -242,6 +243,8 @@ export default function MoneyFlowTermsPage() {
           </Button>
         }
       />
+
+      <SettingsSubgroupTabs activeHref="/settings/money-flow" />
 
       <div className="flex flex-wrap items-end gap-3">
         <FormField label="Scope" htmlFor="filter-scope">
