@@ -70,7 +70,6 @@ import {
   ExternalLink,
   Languages,
   Pencil,
-  Plus,
   RefreshCw,
   Search,
   Shield,
@@ -601,9 +600,11 @@ export default function PlatformCompaniesPage() {
             >
               Export
             </V2Button>
-            <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
-              Add company
-            </V2Button>
+            {/* Phase 2C step 7 (2026-05-31) — "Add company" placeholder dropped.
+                Companies are created via the application-approval flow (a
+                signup at zulu.am → /platform/companies application → super
+                admin Approve). There is no admin-side ad-hoc create flow,
+                so the button was deceptive (no onClick). */}
           </>
         }
       />
