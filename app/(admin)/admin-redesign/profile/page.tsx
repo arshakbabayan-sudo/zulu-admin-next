@@ -55,6 +55,7 @@ import {
   apiRevokeAccountSession,
   type AccountSession,
 } from "@/lib/account-sessions-api";
+import { AdminTwoFactorCard } from "@/components/account/AdminTwoFactorCard";
 import {
   Bell,
   CheckCircle2,
@@ -1032,6 +1033,15 @@ function SecurityTab({
           </div>
         </V2CardBody>
       </V2Card>
+
+      {/* Phase 3A (2026-05-31) — Two-factor authentication card.
+          Closes the audit-finding gap (handoff doc finding A) where admin
+          users had no way to manage their own 2FA from the admin panel and
+          had to visit zulu.am/account/security. Lives full-width below the
+          PIN + Password row (lg:col-span-2). */}
+      <div className="lg:col-span-2">
+        <AdminTwoFactorCard token={token} tx={trans} />
+      </div>
 
       <Drawer
         open={open}
