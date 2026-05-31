@@ -465,7 +465,10 @@ export default function PlatformUsersPage() {
       <V2PageHeader
         breadcrumb={[
           { label: "Home", href: "/dashboard" },
-          { label: "Management", href: "/platform/companies" },
+          // Phase 4D (2026-05-31) — breadcrumb parent retargeted from
+          // "Management" to "Directory" since /platform/users is owned by
+          // the Directory sidebar group now (People view).
+          { label: "Directory", href: "/platform/users" },
           { label: t("admin.users.title_long") },
         ]}
         title={t("admin.users.title_long")}
