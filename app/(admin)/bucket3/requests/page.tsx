@@ -262,16 +262,17 @@ export default function Bucket3RequestsPage() {
         }
       />
 
+      {/* Phase 4F (2026-05-31) — Inbox group strip.
+          Replaces the prior Marketplace-ops strip this page rendered (which
+          surfaced Approval queue / Companies access / etc. — wrong context
+          for a Requests page). Inbox now sits as one top-level sidebar
+          group and these three pages are siblings in it. */}
       <SectionTabs
         activeHref="/bucket3/requests"
         items={[
-          { href: "/platform/approvals", label: "Approval queue" },
-          { href: "/platform/companies", label: "Companies access" },
-          { href: "/platform/seller-applications", label: "Seller applications" },
-          { href: "/platform/contracts", label: "Partnership agreements" },
-          { href: "/platform/contract-templates", label: "Contract templates" },
-          { href: "/platform/audit-logs", label: "Audit logs" },
-          { href: "/bucket3/service-logs", label: "Service logs" },
+          { href: "/admin-redesign/notifications", label: "My notifications" },
+          { href: "/bucket3/requests", label: "Requests" },
+          { href: "/bucket3/cases", label: "Cases" },
         ]}
       />
 

@@ -26,7 +26,7 @@ import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { getApiBaseUrl } from "@/lib/api-base";
-import { PageHeader, V2Card, V2Button } from "@/components/ui/v2";
+import { PageHeader, V2Card, V2Button, SectionTabs } from "@/components/ui/v2";
 
 type ApiNotification = {
   id: number;
@@ -276,6 +276,21 @@ export default function AdminRedesignNotificationsPage() {
             </V2Button>
           </>
         }
+      />
+
+      {/* Phase 4F (2026-05-31) — Inbox group strip.
+          The notifications page is the landing for the new Inbox sidebar
+          group. The strip below it (All / Unread / Mentions / System) is the
+          inner facet selector for the inbox view itself; this Inbox-group
+          strip sits one level above and switches between the three sibling
+          pages (My notifications, Requests, Cases). */}
+      <SectionTabs
+        activeHref="/admin-redesign/notifications"
+        items={[
+          { href: "/admin-redesign/notifications", label: "My notifications" },
+          { href: "/bucket3/requests", label: "Requests" },
+          { href: "/bucket3/cases", label: "Cases" },
+        ]}
       />
 
       {/* Section tabs */}

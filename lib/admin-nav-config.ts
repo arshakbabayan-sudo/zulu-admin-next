@@ -214,10 +214,12 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/bucket3/employees", labelKey: "admin.nav.tab.bucket3.employees" },
       { href: "/bucket3/payroll", labelKey: "admin.nav.tab.bucket3.payroll" },
       { href: "/bucket3/non-service-hours", labelKey: "admin.nav.tab.bucket3.non_service_hours" },
-      { href: "/bucket3/cases", labelKey: "admin.nav.tab.bucket3.cases" },
-      { href: "/bucket3/requests", labelKey: "admin.nav.tab.bucket3.requests" },
+      // Phase 4F (2026-05-31) — Requests + Cases moved to the new Inbox group.
       // Phase Ա.3 (2026-05-28) — bulk-notifications moved to Notifications group below
       // Phase Ա.4 (2026-05-28) — pin-settings merged under My profile > Security
+      // Phase 4C (2026-05-31) — /bucket3/customers redirects to Directory now,
+      //   but the My company tab is kept here for super-admins who want the
+      //   pre-redirect bookmark to still light up the group.
       { href: "/bucket3/customers", labelKey: "admin.nav.tab.bucket3.customers" },
       { href: "/bucket3/subscriptions", labelKey: "admin.nav.tab.bucket3.subscriptions" },
       { href: "/bucket3/per-x-invoicing", labelKey: "admin.nav.tab.bucket3.per_x_invoicing" },
@@ -309,18 +311,26 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     tabs: [],
     visibility: "always",
   },
+  // Phase 4F (2026-05-31) — Inbox group: renamed from "Notifications" and
+  // expanded to host the three pending-action surfaces that previously lived
+  // in three different spots (Notifications group + My company tabs).
+  //   • My notifications  /admin-redesign/notifications  (was the standalone
+  //                        Notifications sidebar group's defaultHref)
+  //   • Requests          /bucket3/requests             (was a My company tab)
+  //   • Cases             /bucket3/cases                (was a My company tab)
+  // Each page now also renders a per-page Inbox-strip with the three siblings,
+  // so the group switch is one click regardless of which page you land on.
   {
     key: "notifications_v2",
-    labelKey: "admin.nav.section.notifications_v2",
-    labelFallback: "Notifications",
+    labelKey: "admin.nav.section.inbox",
+    labelFallback: "Inbox",
     icon: "/icons/menu/bell.svg",
     defaultHref: "/admin-redesign/notifications",
-    // Phase Ա.3 (2026-05-28) — bulk-notifications belongs under Notifications,
-    // but the admin no longer renders group-config tabs (per-page tab bars
-    // since 2026-05-24), so listing them here only broke the page title with an
-    // untranslated key. The actual link lives as a header button on the
-    // Notifications page instead. Keep tabs empty.
-    tabs: [],
+    tabs: [
+      { href: "/admin-redesign/notifications", labelKey: "admin.nav.tab.my_notifications" },
+      { href: "/bucket3/requests", labelKey: "admin.nav.tab.bucket3.requests" },
+      { href: "/bucket3/cases", labelKey: "admin.nav.tab.bucket3.cases" },
+    ],
     visibility: "always",
     badgeSource: "notifications_unread",
     badgeKind: "warn",

@@ -351,16 +351,16 @@ export default function Bucket3CasesPage() {
         }
       />
 
+      {/* Phase 4F (2026-05-31) — Inbox group strip.
+          Replaces the prior My-company strip this page rendered. Inbox is
+          the new sidebar group hosting Notifications + Requests + Cases —
+          the three "things waiting for me" surfaces. */}
       <SectionTabs
         activeHref="/bucket3/cases"
         items={[
-          { href: "/bucket3/employees", label: "Employees" },
-          { href: "/bucket3/payroll", label: "Payroll" },
-          { href: "/bucket3/non-service-hours", label: "Non-service hours" },
+          { href: "/admin-redesign/notifications", label: "My notifications" },
+          { href: "/bucket3/requests", label: "Requests" },
           { href: "/bucket3/cases", label: "Cases", count: meta?.total },
-          { href: "/bucket3/customers", label: "Customers" },
-          { href: "/bucket3/subscriptions", label: "Subscriptions" },
-          { href: "/bucket3/per-x-invoicing", label: "Per-X invoicing" },
         ]}
       />
 
