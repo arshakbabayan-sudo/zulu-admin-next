@@ -31,7 +31,7 @@ import {
   V2Button,
 } from "@/components/ui/v2";
 import { SettingsSubgroupTabs } from "@/components/settings/SettingsSubgroupTabs";
-import { Download, Plus, RefreshCw } from "lucide-react";
+import { Download, RefreshCw } from "lucide-react";
 
 type WebhookStats = {
   total_subscriptions: number;
@@ -156,9 +156,10 @@ export default function PlatformWebhooksPage() {
             >
               Export
             </V2Button>
-            <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
-              New webhook
-            </V2Button>
+            {/* Phase 2C step 8 (2026-05-31) — "New webhook" placeholder
+                removed. There is no create-webhook UI (no onClick, no
+                modal); webhook subscriptions are provisioned server-side.
+                Showing a dead button implied otherwise. */}
           </>
         }
       />

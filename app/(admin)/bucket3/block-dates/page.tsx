@@ -40,7 +40,7 @@ import {
   V2Button,
   IconButton,
 } from "@/components/ui/v2";
-import { Download, Plus, Trash2 } from "lucide-react";
+import { Download, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 const ITEM_TYPES = ["hotel", "flight", "car", "transfer", "excursion", "visa", "package", "offer"] as const;
@@ -222,9 +222,9 @@ export default function Bucket3BlockDatesPage() {
             >
               Export
             </V2Button>
-            <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
-              Add block
-            </V2Button>
+            {/* Phase 2C step 8 (2026-05-31) — "Add block" placeholder removed.
+                It had no onClick; the real blocked-date creation is the
+                inline form rendered below the table on this same page. */}
           </>
         }
       />

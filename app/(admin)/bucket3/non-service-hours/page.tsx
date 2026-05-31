@@ -40,7 +40,7 @@ import {
   V2Button,
   IconButton,
 } from "@/components/ui/v2";
-import { Download, Plus, Check, X } from "lucide-react";
+import { Download, Check, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 const TYPES = ["vacation", "sick", "personal", "unpaid", "other"] as const;
@@ -321,9 +321,9 @@ export default function Bucket3NonServiceHoursPage() {
             >
               Export
             </V2Button>
-            <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
-              Add request
-            </V2Button>
+            {/* Phase 2C step 8 (2026-05-31) — "Add request" placeholder
+                removed; real time-off request creation is the inline form
+                below. */}
           </>
         }
       />

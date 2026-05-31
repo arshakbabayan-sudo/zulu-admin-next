@@ -37,7 +37,7 @@ import {
   SectionTabs,
   V2Button,
 } from "@/components/ui/v2";
-import { Download, Plus } from "lucide-react";
+import { Download } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 type FeatureValue = boolean | number;
@@ -284,9 +284,8 @@ export default function Bucket3SubscriptionsPage() {
             >
               Export
             </V2Button>
-            <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
-              Add plan
-            </V2Button>
+            {/* Phase 2C step 8 (2026-05-31) — "Add plan" placeholder removed;
+                real plan creation is the inline form below the table. */}
           </>
         }
       />
