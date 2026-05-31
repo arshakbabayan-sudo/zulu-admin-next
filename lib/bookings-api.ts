@@ -65,6 +65,18 @@ export async function apiBookings(
   return apiFetchJson(`/platform-admin/bookings${qs ? `?${qs}` : ""}`, { method: "GET", token });
 }
 
+/**
+ * Phase 3B (2026-05-31) — single-booking detail. Backend endpoint
+ * GET /platform-admin/bookings/{id} returns the same OrderResource shape
+ * the confirm/cancel endpoints return, so we reuse BookingRow here.
+ */
+export async function apiBooking(
+  token: string,
+  id: string,
+): Promise<ApiSuccessEnvelope<BookingRow>> {
+  return apiFetchJson(`/platform-admin/bookings/${id}`, { method: "GET", token });
+}
+
 export async function apiConfirmBooking(
   token: string,
   id: string,
