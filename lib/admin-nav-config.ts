@@ -215,18 +215,22 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     visibility: "section_my_company",
   },
 
-  // 7 ── Marketplace ops (super_admin only) ────────────────────────────
+  // 7 ── Management (super_admin only) — renamed from "Marketplace ops" ──
+  // Phase 1 of new menu architecture (2026-05-31):
+  //   • Renamed group label "Marketplace ops" → "Management" per product decision
+  //   • Approval queue tab REMOVED — the page never actually owned approve/reject
+  //     actions (those happen on Companies, Reviews, Offer pages themselves).
+  //     Was visually present but functionally useless → confusing UI.
+  //   • defaultHref retargeted from /platform/approvals to /platform/companies
+  //   • Subscriptions tab will be added in Phase 4 once moved from My company.
+  //   • Logs merge (audit + service) is Phase 2.
   {
     key: "marketplace_ops",
-    labelKey: "admin.nav.section.marketplace_ops",
-    labelFallback: "Marketplace ops",
+    labelKey: "admin.nav.section.management",
+    labelFallback: "Management",
     icon: "/icons/menu/checklist.svg",
-    defaultHref: "/platform/approvals",
+    defaultHref: "/platform/companies",
     tabs: [
-      // Approval queue — unified inbox; uses /platform/approvals as the
-      // canonical landing. /platform/pending-review is the offer-specific
-      // filter (linked from inside the page, not as a sibling tab).
-      { href: "/platform/approvals", labelKey: "admin.nav.tab.approval_queue" },
       { href: "/platform/companies", labelKey: "admin.nav.tab.companies_access" },
       { href: "/platform/seller-applications", labelKey: "admin.nav.tab.seller_applications" },
       { href: "/platform/users", labelKey: "admin.nav.tab.users" },
@@ -234,8 +238,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/platform/contract-templates", labelKey: "admin.nav.tab.contract_templates", moduleKey: "ops.contracts" },
       { href: "/platform/audit-logs", labelKey: "admin.nav.tab.audit_logs" },
       { href: "/bucket3/service-logs", labelKey: "admin.nav.tab.bucket3.service_logs" },
-      // Phase Ա.6 (2026-05-28) — unverified-accounts merged as filter view under
-      // /platform/users (?type=unverified). Same data, fewer sidebar duplicates.
     ],
     visibility: "section_marketplace_ops",
   },
@@ -250,23 +252,11 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   // page is already reachable via Marketplace ops > Users for super-admins;
   // operator/agent didn't have backend access to /platform/users (403 on click),
   // so the extra top-level sidebar entry was a 403 trap (GAP-010 per Phase 0 audit).
-  {
-    key: "roles_permissions",
-    labelKey: "admin.nav.section.roles_permissions",
-    labelFallback: "Roles & permissions",
-    icon: "/icons/menu/shield.svg",
-    // Phase Զ fix 2026-05-24 — route to real /platform/rbac page (already
-    // v2-migrated in Phase Դ.9). Old placeholder /admin-redesign/roles-
-    // permissions deleted.
-    defaultHref: "/platform/rbac",
-    tabs: [],
-    // Phase Զ.7 (2026-05-28) — fix GAP-009. The /platform/rbac backend
-    // returns 403 for non-super (denyUnlessPlatformAdmin), so showing the
-    // sidebar entry to operator/agent was a 403 trap. Tighten visibility.
-    // Tenant-scoped RBAC (operator-admin managing own company roles) is a
-    // separate page that lands in Phase Ը (Bucket D.4 re-scope).
-    visibility: "super_admin",
-  },
+  // ── Roles & permissions sidebar group REMOVED 2026-05-31 (Phase 1) ──
+  // The /platform/rbac page is reached via Settings → Permissions → RBAC
+  // (already listed in Settings tabs below). Having a separate top-level
+  // sidebar entry was a duplicate. Page itself remains at the same URL.
+
   {
     key: "file_manager",
     labelKey: "admin.nav.section.file_manager",
