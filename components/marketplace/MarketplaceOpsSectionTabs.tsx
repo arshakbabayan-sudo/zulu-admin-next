@@ -1,10 +1,15 @@
 /**
- * Marketplace ops group — shared section tabs (v2 admin-redesign).
+ * Management group (renamed from "Marketplace ops" in Phase 1 2026-05-31)
+ * — shared section tabs at the top of every Management list page.
  *
- * Used by all 9 Marketplace ops list pages per
- * docs/admin_designe/marketplace_ops/marketplace_ops_implementation_prompt.md
- * "Reusable component" section. List ordering matches
- * docs/admin_designe/marketplace_ops/marketplace_ops_mocks.html.
+ * Phase 1 / Phase 2 trim (2026-05-31):
+ *   - Approval queue tab REMOVED. The page never owned its approve/reject
+ *     actions (they happen on Companies / Reviews / Offer pages) — it was a
+ *     decorative inbox. Stripped here so the user doesn't see a tab from
+ *     the page they just landed on.
+ *   - Audit logs + Service logs merged under a single "Logs" entry that
+ *     lands on /platform/audit-logs. The two views live as tabs INSIDE the
+ *     Logs feature (rendered by LogsInnerTabs below).
  *
  * Mirrors components/finance/FinanceSectionTabs.tsx — `counts` prop is
  * optional and per-tab; pages that haven't fetched their list yet may
@@ -14,7 +19,6 @@
 import { SectionTabs } from "@/components/ui/v2";
 
 export type MarketplaceOpsCounts = Partial<{
-  approvals: number;
   companies: number;
   sellerApplications: number;
   users: number;
@@ -29,11 +33,13 @@ type Props = {
 };
 
 export function MarketplaceOpsSectionTabs({ activeHref, counts }: Props) {
+  // Both Logs views (audit + services) highlight the same "Logs" outer tab.
+  const logsActiveHref =
+    activeHref === "/bucket3/service-logs" ? "/platform/audit-logs" : activeHref;
   return (
     <SectionTabs
-      activeHref={activeHref}
+      activeHref={logsActiveHref}
       items={[
-        { href: "/platform/approvals", label: "Approval queue", count: counts?.approvals },
         { href: "/platform/companies", label: "Companies", count: counts?.companies },
         {
           href: "/platform/seller-applications",
@@ -47,10 +53,24 @@ export function MarketplaceOpsSectionTabs({ activeHref, counts }: Props) {
           label: "Contract templates",
           count: counts?.contractTemplates,
         },
-        { href: "/platform/audit-logs", label: "Audit logs" },
-        { href: "/bucket3/service-logs", label: "Service logs" },
-        // Phase Ա.6 — Unverified accounts moved into /platform/users?type=unverified;
-        // tab removed here to match the sidebar.
+        { href: "/platform/audit-logs", label: "Logs" },
+      ]}
+    />
+  );
+}
+
+/**
+ * Inner Logs feature tabs — rendered ABOVE the page body on both
+ * /platform/audit-logs and /bucket3/service-logs. Visually groups the two
+ * data views (Audit / Services) as facets of one Logs feature.
+ */
+export function LogsInnerTabs({ activeHref }: { activeHref: string }) {
+  return (
+    <SectionTabs
+      activeHref={activeHref}
+      items={[
+        { href: "/platform/audit-logs", label: "Audit" },
+        { href: "/bucket3/service-logs", label: "Services" },
       ]}
     />
   );

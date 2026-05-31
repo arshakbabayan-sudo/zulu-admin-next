@@ -34,7 +34,7 @@ import {
   StatGrid,
   IconButton,
 } from "@/components/ui/v2";
-import { MarketplaceOpsSectionTabs } from "@/components/marketplace/MarketplaceOpsSectionTabs";
+import { LogsInnerTabs, MarketplaceOpsSectionTabs } from "@/components/marketplace/MarketplaceOpsSectionTabs";
 import { exportRowsAsCsv } from "@/lib/export-csv";
 import {
   CircleX,
@@ -276,6 +276,11 @@ export default function Bucket3ServiceLogsPage() {
       />
 
       <MarketplaceOpsSectionTabs activeHref="/bucket3/service-logs" />
+
+      {/* Phase 2B (2026-05-31) — Logs inner tabs. The outer "Logs" tab in
+          the Management strip stays highlighted for both Audit and Services
+          views (handled by MarketplaceOpsSectionTabs aliasing). */}
+      <LogsInnerTabs activeHref="/bucket3/service-logs" />
 
       {/* TODO: replace em-dash placeholders with real counts once a
           /platform-admin/service-logs/stats endpoint ships

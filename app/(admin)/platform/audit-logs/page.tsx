@@ -43,7 +43,7 @@ import {
   StatGrid,
   IconButton,
 } from "@/components/ui/v2";
-import { MarketplaceOpsSectionTabs } from "@/components/marketplace/MarketplaceOpsSectionTabs";
+import { LogsInnerTabs, MarketplaceOpsSectionTabs } from "@/components/marketplace/MarketplaceOpsSectionTabs";
 import {
   AlertTriangle,
   CircleX,
@@ -446,6 +446,13 @@ export default function PlatformAuditLogsPage() {
       />
 
       <MarketplaceOpsSectionTabs activeHref="/platform/audit-logs" />
+
+      {/* Phase 2B (2026-05-31) — Logs is one feature, two facets. Audit and
+          Services share the same backend endpoint with a category filter;
+          surfacing them as inner tabs of one Logs feature makes the
+          relationship obvious. The outer "Logs" tab in the Management strip
+          stays highlighted for both views. */}
+      <LogsInnerTabs activeHref="/platform/audit-logs" />
 
       <StatGrid cols={4} className="mb-5">
         <StatCard

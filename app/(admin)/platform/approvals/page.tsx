@@ -345,9 +345,13 @@ export default function GenericApprovalsPage() {
         }
       />
 
+      {/* Phase 1 (2026-05-31) — Approval queue REMOVED from the Management
+          section tab strip. This page still resolves via URL for legacy
+          bookmarks but the active tab no longer maps to a sidebar entry.
+          counts.approvals key removed (no longer in MarketplaceOpsCounts). */}
       <MarketplaceOpsSectionTabs
         activeHref="/platform/approvals"
-        counts={{ approvals: stats?.total_pending }}
+        counts={{}}
       />
 
       <StatGrid cols={4} className="mb-5">
