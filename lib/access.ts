@@ -244,3 +244,18 @@ export function canAccessMarketplaceOpsSection(user: AdminUser | null): boolean 
 export function canAccessSettingsSection(user: AdminUser | null): boolean {
   return user != null;
 }
+
+/**
+ * CRM (2026-05-31) — separate sales / customer-relationship section.
+ * Audience (Arshak's decision): super-admin (top), operator/agent leaders and
+ * their company staff. Anyone with a company membership, an agent role, or
+ * platform-admin oversight sees it; pure-platform-admins included for parity.
+ * Per-role scoping (which customers/deals each sees) is enforced server-side.
+ */
+export function canAccessCrmSection(user: AdminUser | null): boolean {
+  if (!user) return false;
+  if (user.is_super_admin) return true;
+  if (canAccessPlatformAdminNav(user)) return true;
+  if ((user.companies?.length ?? 0) > 0) return true;
+  return user.roles?.includes("agent") ?? false;
+}

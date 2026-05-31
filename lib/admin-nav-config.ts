@@ -86,7 +86,9 @@ export type AdminNavGroup = {
     | "section_finance"
     | "section_my_company"
     | "section_marketplace_ops"
-    | "section_settings";
+    | "section_settings"
+    // 2026-05-31 — CRM as its own top-level section
+    | "section_crm";
 };
 
 // ─── 8-section IA — 2026-05-24 ─────────────────────────────────────────────
@@ -173,6 +175,33 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/platform/package-orders", labelKey: "admin.nav.tab.package_orders", moduleKey: "ops.bookings" },
     ],
     visibility: "section_bookings",
+  },
+
+  // 3b ── CRM (2026-05-31) — separate sales / customer-relationship section ─
+  // Arshak's decision: CRM gets its own top-level sidebar entry (not folded
+  // into Directory, which stays as-is for companies + plain users). Tabs
+  // mirror docs/admin_designe/new-admin-designe/files/crm.html:
+  //   Pipeline · Leads · Deals · Customers · Activities · Segments · Team.
+  // Customers is the only data-backed tab today; the rest land as their own
+  // pages and fill in as their backends ship (deals/leads/activities tables,
+  // employee-sales rollup for Team). The bare /crm path redirects to
+  // /crm/pipeline so the sidebar highlight + breadcrumb resolve cleanly.
+  {
+    key: "crm",
+    labelKey: "admin.nav.section.crm",
+    labelFallback: "CRM",
+    icon: "/icons/menu/crm.svg",
+    defaultHref: "/crm/pipeline",
+    tabs: [
+      { href: "/crm/pipeline", labelKey: "admin.nav.tab.crm.pipeline" },
+      { href: "/crm/leads", labelKey: "admin.nav.tab.crm.leads" },
+      { href: "/crm/deals", labelKey: "admin.nav.tab.crm.deals" },
+      { href: "/crm/customers", labelKey: "admin.nav.tab.crm.customers" },
+      { href: "/crm/activities", labelKey: "admin.nav.tab.crm.activities" },
+      { href: "/crm/segments", labelKey: "admin.nav.tab.crm.segments" },
+      { href: "/crm/team", labelKey: "admin.nav.tab.crm.team" },
+    ],
+    visibility: "section_crm",
   },
 
   // 4 ── Sales workspace — REMOVED 2026-05-28 (Phase Ա.2)
@@ -619,6 +648,9 @@ const SECTION_ALIAS_PREFIXES: Array<{ prefix: string; groupKey: string }> = [
   { prefix: "/inventory/", groupKey: "inventory" },
   { prefix: "/operator/commission-settings", groupKey: "settings" },
   { prefix: "/settings/", groupKey: "settings" },
+  // CRM (2026-05-31) — bare /crm + any /crm/* sub-page maps to the crm group
+  // (defaultHref is /crm/pipeline, so the literal /crm needs an alias too).
+  { prefix: "/crm", groupKey: "crm" },
 ];
 
 // ─── Helper: find the active group for a pathname ──────────────────────────

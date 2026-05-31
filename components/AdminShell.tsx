@@ -22,6 +22,7 @@ import {
 import {
   canAccessAgentToolsNav,
   canAccessBookingsSection,
+  canAccessCrmSection,
   canAccessDashboardSection,
   canAccessFinanceSection,
   canAccessInventoryOversightNav,
@@ -731,6 +732,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   return canAccessInventorySection(user);
                 case "section_bookings":
                   return canAccessBookingsSection(user);
+                case "section_crm":
+                  return canAccessCrmSection(user);
                 case "section_sales_workspace":
                   return canAccessSalesWorkspaceSection(user);
                 case "section_finance":
