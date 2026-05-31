@@ -45,7 +45,6 @@ import {
 } from "@/lib/platform-admin-api";
 import { apiCompaniesStats, type CompaniesStats } from "@/lib/marketplace-stats-api";
 import { STATUS_BADGE_CLASS, statusBadgeStyle } from "@/lib/admin-v2-helpers";
-import { MarketplaceOpsSectionTabs } from "@/components/marketplace/MarketplaceOpsSectionTabs";
 import { RowActionsMenu } from "@/components/admin/RowActionsMenu";
 import { exportRowsAsCsv } from "@/lib/export-csv";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -609,12 +608,11 @@ export default function PlatformCompaniesPage() {
         }
       />
 
-      {/* Phase 4D (2026-05-31) — Directory group strip ([People | Companies]).
-          The Companies page sits in both Directory (lookup) and Management
-          (governance). The Directory strip is the primary entry now; the
-          Management strip below is kept until Phase 2C cleanup so that
-          governance entry points (Approvals, Subscriptions, Contracts, Logs)
-          stay one click away. */}
+      {/* Phase 4D / 2C-5 (2026-05-31) — Companies page is owned by Directory
+          (lookup). The Management strip was redundant — Management entry
+          points (Seller applications, Subscriptions, Contracts, Logs) are
+          one sidebar click away from anywhere. The Directory strip stays as
+          the canonical sibling navigation. */}
       <SectionTabs
         activeHref="/platform/companies"
         items={[
@@ -622,8 +620,6 @@ export default function PlatformCompaniesPage() {
           { href: "/platform/companies", label: "Companies", count: stats?.total },
         ]}
       />
-
-      <MarketplaceOpsSectionTabs activeHref="/platform/companies" counts={{ companies: stats?.total }} />
 
       {/* 4 stat cards — values from /platform-admin/companies/stats. */}
       <StatGrid cols={4} className="mb-5">
