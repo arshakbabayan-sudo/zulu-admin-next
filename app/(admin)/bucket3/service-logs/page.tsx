@@ -32,14 +32,12 @@ import {
   V2Button,
   StatCard,
   StatGrid,
-  IconButton,
 } from "@/components/ui/v2";
 import { LogsInnerTabs, MarketplaceOpsSectionTabs } from "@/components/marketplace/MarketplaceOpsSectionTabs";
 import { exportRowsAsCsv } from "@/lib/export-csv";
 import {
   CircleX,
   Download,
-  Eye,
   Mail,
   MessageCircle,
   RefreshCw,
@@ -440,19 +438,18 @@ export default function Bucket3ServiceLogsPage() {
                 <th className="px-4 py-2.5 text-left">Recipient / Target</th>
                 <th className="px-4 py-2.5 text-left">Status</th>
                 <th className="px-4 py-2.5 text-left">Duration</th>
-                <th className="px-4 py-2.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-sm" style={{ color: "var(--admin-text-secondary)" }}>
+                  <td colSpan={6} className="px-4 py-10 text-center text-sm" style={{ color: "var(--admin-text-secondary)" }}>
                     Loading…
                   </td>
                 </tr>
               ) : visibleRows.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-sm" style={{ color: "var(--admin-text-secondary)" }}>
+                  <td colSpan={6} className="px-4 py-10 text-center text-sm" style={{ color: "var(--admin-text-secondary)" }}>
                     {t("admin.bucket3.service_logs.empty")}
                   </td>
                 </tr>
@@ -494,18 +491,6 @@ export default function Bucket3ServiceLogsPage() {
                       </td>
                       <td className="px-4 py-3 text-[12px]" style={{ color: "var(--admin-text-tertiary)" }}>
                         —
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <IconButton aria-label="View">
-                            <Eye />
-                          </IconButton>
-                          {st.tone === "danger" ? (
-                            <IconButton aria-label="Retry">
-                              <RefreshCw />
-                            </IconButton>
-                          ) : null}
-                        </div>
                       </td>
                     </tr>
                   );
