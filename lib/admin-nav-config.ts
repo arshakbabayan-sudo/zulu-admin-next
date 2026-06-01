@@ -88,7 +88,9 @@ export type AdminNavGroup = {
     | "section_marketplace_ops"
     | "section_settings"
     // 2026-05-31 — CRM as its own top-level section
-    | "section_crm";
+    | "section_crm"
+    // 2026-06-01 — internal chat
+    | "section_chat";
 };
 
 // ─── 8-section IA — 2026-05-24 ─────────────────────────────────────────────
@@ -203,6 +205,19 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/crm/options", labelKey: "admin.nav.tab.crm.options" },
     ],
     visibility: "section_crm",
+  },
+
+  // 3c ── Chat (2026-06-01) — internal company messaging ─────────────────
+  // Separate top-level entry (Arshak's choice). Single page, no inner tabs.
+  // Visible to anyone in a company (colleagues message each other, option Բ).
+  {
+    key: "chat",
+    labelKey: "admin.nav.section.chat",
+    labelFallback: "Chat",
+    icon: "/icons/menu/chat.svg",
+    defaultHref: "/chat",
+    tabs: [],
+    visibility: "section_chat",
   },
 
   // 4 ── Sales workspace — REMOVED 2026-05-28 (Phase Ա.2)
@@ -652,6 +667,8 @@ const SECTION_ALIAS_PREFIXES: Array<{ prefix: string; groupKey: string }> = [
   // CRM (2026-05-31) — bare /crm + any /crm/* sub-page maps to the crm group
   // (defaultHref is /crm/pipeline, so the literal /crm needs an alias too).
   { prefix: "/crm", groupKey: "crm" },
+  // Chat (2026-06-01)
+  { prefix: "/chat", groupKey: "chat" },
 ];
 
 // ─── Helper: find the active group for a pathname ──────────────────────────

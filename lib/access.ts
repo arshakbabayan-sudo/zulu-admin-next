@@ -246,6 +246,18 @@ export function canAccessSettingsSection(user: AdminUser | null): boolean {
 }
 
 /**
+ * Internal chat (2026-06-01) — company-scoped messaging. Visible to anyone
+ * with a company membership (option Բ: colleagues message each other), plus
+ * super/platform admins for oversight/QA.
+ */
+export function canAccessChatSection(user: AdminUser | null): boolean {
+  if (!user) return false;
+  if (user.is_super_admin) return true;
+  if (canAccessPlatformAdminNav(user)) return true;
+  return (user.companies?.length ?? 0) > 0;
+}
+
+/**
  * CRM (2026-05-31) — separate sales / customer-relationship section.
  * Audience (Arshak's decision): super-admin (top), operator/agent leaders and
  * their company staff. Anyone with a company membership, an agent role, or
