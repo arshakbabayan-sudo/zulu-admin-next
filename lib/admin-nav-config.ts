@@ -273,6 +273,8 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/bucket3/per-x-invoicing", labelKey: "admin.nav.tab.bucket3.per_x_invoicing" },
       // P0-1 step 1.1 (2026-06-01) — operator/agent's own Stripe Connect onboarding.
       { href: "/bucket3/payments", labelKey: "admin.nav.tab.bucket3.payments" },
+      // P0-3 (2026-06-02) — operator/agent's own seller status + become-a-seller.
+      { href: "/bucket3/seller-status", labelKey: "admin.nav.tab.bucket3.seller_status" },
     ],
     visibility: "section_my_company",
   },

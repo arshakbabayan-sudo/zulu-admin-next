@@ -44,7 +44,7 @@ export type AdminUser = {
   is_super_admin: boolean;
   operator_statistics_platform_scope: boolean;
   is_statistics_elevated_only: boolean;
-  companies: { id: number; name: string; seller_service_types?: SellerServiceType[] }[];
+  companies: { id: number; name: string; seller_service_types?: SellerServiceType[]; profile_completed?: boolean }[];
   context: AdminUserContext;
 };
 
