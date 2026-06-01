@@ -37,6 +37,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav, isSuperAdminRole } from "@/lib/access";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { PinPromptDialog } from "@/components/PinPromptDialog";
+import { RbacMenuTree } from "@/components/rbac/RbacMenuTree";
 import { formatNumber } from "@/lib/format";
 import {
   ConfirmDialog,
@@ -314,6 +315,8 @@ export default function PlatformRbacPage() {
   const [filter, setFilter] = useState("");
   const [toast, setToast] = useState<ToastState>(null);
   const [pendingPermIds, setPendingPermIds] = useState<Set<number>>(new Set());
+  // 2026-06-01 — permission editor view: classic matrix vs Arshak's menu tree.
+  const [permView, setPermView] = useState<"matrix" | "tree">("tree");
 
   const [drawer, setDrawer] = useState<DrawerMode>({ kind: "closed" });
   const [drawerForm, setDrawerForm] = useState<DrawerForm>({
@@ -872,8 +875,40 @@ export default function PlatformRbacPage() {
         )}
       </V2Card>
 
-      {/* ─── Card 2 — Permission matrix ─────────────────────────── */}
+      {/* ─── Permission editor view toggle (2026-06-01) ──────────── */}
+      <div className="mb-3 inline-flex overflow-hidden rounded-[8px] border" style={{ borderColor: "var(--admin-border)" }}>
+        {(["tree", "matrix"] as const).map((mode) => {
+          const active = permView === mode;
+          return (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setPermView(mode)}
+              className="px-3.5 py-1.5 text-[12px] font-medium transition"
+              style={{
+                backgroundColor: active ? "var(--admin-primary)" : "transparent",
+                color: active ? "#fff" : "var(--admin-text-secondary)",
+              }}
+            >
+              {mode === "tree" ? "Menu tree" : "Matrix"}
+            </button>
+          );
+        })}
+      </div>
 
+      {/* ─── Card 2a — Menu-mirror permission tree (Arshak's model) ── */}
+      {permView === "tree" && token ? (
+        <RbacMenuTree
+          token={token}
+          roleId={selectedRoleId}
+          roleName={selectedRole ? prettifyRoleName(selectedRole.name) : undefined}
+          canEdit={isSuper}
+        />
+      ) : null}
+
+      {/* ─── Card 2b — Permission matrix (classic) ──────────────── */}
+
+      {permView === "matrix" ? (
       <V2Card>
         <V2CardHeader
           title={t("admin.rbac.card_permission_matrix") /* Permission matrix */}
@@ -977,6 +1012,7 @@ export default function PlatformRbacPage() {
           </div>
         )}
       </V2Card>
+      ) : null}
 
       {/* ─── Drawer (create / edit) ─────────────────────────────── */}
 
