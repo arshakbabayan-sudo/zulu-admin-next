@@ -515,16 +515,15 @@ export default function PlatformUsersPage() {
         }
       />
 
-      {/* Phase 4D (2026-05-31) — Directory group strip ([People | Companies]).
-          Replaces the prior Management section tabs on this page; /platform/users
-          is owned by Directory now (People view). Management still hosts a
-          Users tab for governance entry points — Phase 2C cleanup will remove
-          that duplicate. */}
+      {/* Directory strip — People only. 2026-06-02 (Arshak): the Companies tab
+          was dropped here because /platform/companies is owned by the Management
+          group (its own section strip says "Management"), so jumping to it from
+          Directory made the section/breadcrumb flip to Management — confusing.
+          Companies lives only under Management now. */}
       <SectionTabs
         activeHref="/platform/users"
         items={[
           { href: "/platform/users", label: "People", count: stats?.total ?? meta?.total },
-          { href: "/platform/companies", label: "Companies" },
         ]}
       />
 
