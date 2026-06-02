@@ -15,6 +15,7 @@
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { PinPromptDialog } from "@/components/PinPromptDialog";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { AddEmployeeModal } from "@/components/employees/AddEmployeeModal";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePrompt } from "@/contexts/PromptDialogContext";
@@ -168,6 +169,17 @@ export default function PlatformUsersPage() {
   const [forbidden, setForbidden] = useState(false);
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [addEmployeeOpen, setAddEmployeeOpen] = useState(false);
+
+  // Operator/agent: their own company — lets them add an employee (login +
+  // password or email invite) straight from My company → Employees. Super-admin
+  // adds staff from a specific company's detail page (this Directory view spans
+  // all companies, so "which company?" is only unambiguous for a single-company
+  // operator/agent).
+  const ownCompany =
+    user && !user.is_super_admin && user.companies && user.companies.length > 0
+      ? user.companies[0]
+      : null;
   // Phase Բ.3 — bulk-select for the unverified-accounts cleanup workflow.
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -505,6 +517,15 @@ export default function PlatformUsersPage() {
             >
               Export
             </V2Button>
+            {ownCompany ? (
+              <V2Button
+                variant="primary"
+                icon={<UserPlus className="h-4 w-4" />}
+                onClick={() => setAddEmployeeOpen(true)}
+              >
+                Add employee
+              </V2Button>
+            ) : null}
             {/* Phase 2C step 6 (2026-05-31) — "Add user" placeholder dropped.
                 The button had no onClick handler (deceptive UI per the new
                 menu architecture's anti-pattern list). Staff are invited via
@@ -965,6 +986,23 @@ export default function PlatformUsersPage() {
           if (pinGate) await pinGate.onConfirm();
         }}
       />
+
+      {/* Operator/agent: add an employee to their own company (login+password
+          or email invite) — same modal the super-admin uses on a company's
+          detail page. */}
+      {ownCompany && token ? (
+        <AddEmployeeModal
+          open={addEmployeeOpen}
+          onClose={() => setAddEmployeeOpen(false)}
+          token={token}
+          companyId={ownCompany.id}
+          companyName={ownCompany.name}
+          onSuccess={() => {
+            setAddEmployeeOpen(false);
+            void load();
+          }}
+        />
+      ) : null}
     </div>
   );
 }
