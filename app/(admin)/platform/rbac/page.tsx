@@ -29,8 +29,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { Edit3, Trash2, Plus, Download, X, ShieldCheck } from "lucide-react";
+import { Edit3, Trash2, Plus, ShieldCheck } from "lucide-react";
 
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -96,178 +95,6 @@ type DrawerForm = {
 
 type ToastState = { tone: "ok" | "err"; text: string } | null;
 
-// ─── Module / matrix helpers ───────────────────────────────────────────
-
-// Phase Գ.5 (2026-05-28) — expanded matrix columns from 5 → 10 per GAP-001
-// from the Phase 0 multi-tenant audit. The original 5-column layout left
-// ~30 of the 84 seeded permissions unmappable (CONFIRM / CANCEL / PUBLISH /
-// ISSUE / REFUND verbs etc.), so the matrix rendered "—" with no way for
-// super-admin to toggle them. The five new columns cover the most user-
-// facing workflow verbs (booking confirm/cancel, invoice issue, offer
-// publish, payment refund). Lower-traffic verbs (CAPTURE / FAIL / MODERATE
-// / ARCHIVE / GOVERNANCE / MANAGE_COMPONENTS / MANAGE_SELLER_PERMISSIONS)
-// alias into the closest existing column.
-const MATRIX_COLUMNS = [
-  "VIEW",
-  "CREATE",
-  "EDIT",
-  "DELETE",
-  "EXPORT",
-  "CONFIRM",
-  "CANCEL",
-  "PUBLISH",
-  "ISSUE",
-  "REFUND",
-] as const;
-type MatrixCol = (typeof MATRIX_COLUMNS)[number];
-
-// Aliases: backend uses many verbs (UPDATE / MANAGE / MODERATE / CAPTURE /
-// etc.) that semantically belong under one of the 10 matrix columns. The
-// closest-fit mapping below keeps all 84 seeded permissions toggleable.
-const ACTION_ALIASES: Record<string, MatrixCol> = {
-  // VIEW — read-only access
-  VIEW: "VIEW",
-  LIST: "VIEW",
-  READ: "VIEW",
-  // CREATE — write-create
-  CREATE: "CREATE",
-  STORE: "CREATE",
-  ADD: "CREATE",
-  // EDIT — write-modify (state changes that aren't a dedicated column)
-  EDIT: "EDIT",
-  UPDATE: "EDIT",
-  PATCH: "EDIT",
-  MODERATE: "EDIT",
-  EDIT_PROFILE: "EDIT",
-  UPDATE_PROFILE: "EDIT",
-  CAPTURE: "EDIT",
-  PAY: "EDIT",
-  // DELETE — remove or terminal-state actions
-  DELETE: "DELETE",
-  DESTROY: "DELETE",
-  REMOVE: "DELETE",
-  ARCHIVE: "DELETE",
-  FAIL: "DELETE",
-  // EXPORT — admin / elevated / data-out
-  EXPORT: "EXPORT",
-  MANAGE: "EXPORT",
-  DOWNLOAD: "EXPORT",
-  GOVERNANCE: "EXPORT",
-  MANAGE_COMPONENTS: "EXPORT",
-  MANAGE_SELLER_PERMISSIONS: "EXPORT",
-  // Dedicated columns for high-traffic workflow verbs
-  CONFIRM: "CONFIRM",
-  CANCEL: "CANCEL",
-  PUBLISH: "PUBLISH",
-  ISSUE: "ISSUE",
-  REFUND: "REFUND",
-};
-
-type MatrixCell = {
-  /** Permission id if such a permission exists for this row+action. */
-  perm_id: number | null;
-};
-type MatrixRow = {
-  /** Display label inside the module (e.g. "Bookings" for BOOKINGS, or
-   *  "Settlements" for FINANCE.SETTLEMENTS). */
-  label: string;
-  /** All permission ids contributing to this row (used so the filter can
-   *  match by full permission name). */
-  all_perm_ids: number[];
-  /** All raw permission names contributing to this row (used by filter). */
-  all_perm_names: string[];
-  cells: Record<MatrixCol, MatrixCell>;
-};
-type MatrixGroup = {
-  module: string;
-  rows: MatrixRow[];
-};
-
-/**
- * Group permissions by module (first dot-segment), then by sub-path for the
- * row label. Each row has up to 5 action columns (View/Create/Edit/Delete/
- * Export). Cells with no matching permission render "—".
- */
-function buildMatrix(permissions: Permission[]): MatrixGroup[] {
-  type RowDraft = {
-    label: string;
-    perm_ids: number[];
-    perm_names: string[];
-    cells: Record<MatrixCol, MatrixCell>;
-  };
-  const groups = new Map<string, Map<string, RowDraft>>();
-
-  const newRow = (label: string): RowDraft => ({
-    label,
-    perm_ids: [],
-    perm_names: [],
-    cells: MATRIX_COLUMNS.reduce(
-      (acc, col) => {
-        acc[col] = { perm_id: null };
-        return acc;
-      },
-      {} as Record<MatrixCol, MatrixCell>,
-    ),
-  });
-
-  for (const p of permissions) {
-    const segments = p.name.split(".").map((s) => s.trim()).filter(Boolean);
-    if (segments.length === 0) continue;
-    const moduleKey = (segments[0] ?? "OTHER").toUpperCase();
-    const action = (segments[segments.length - 1] ?? "").toUpperCase();
-    const middle = segments.slice(1, -1);
-    // Row label: the middle segments joined, or the module itself if it's a
-    // single-segment permission like "DASHBOARD.VIEW".
-    const rowKey =
-      middle.length > 0
-        ? middle.join(".")
-        : segments.length >= 2
-          ? moduleKey // e.g. BOOKINGS.VIEW → row label "Bookings"
-          : moduleKey;
-
-    if (!groups.has(moduleKey)) groups.set(moduleKey, new Map());
-    const moduleRows = groups.get(moduleKey)!;
-    if (!moduleRows.has(rowKey)) {
-      moduleRows.set(rowKey, newRow(prettifyLabel(rowKey)));
-    }
-    const row = moduleRows.get(rowKey)!;
-    row.perm_ids.push(p.id);
-    row.perm_names.push(p.name);
-
-    const col = ACTION_ALIASES[action];
-    if (col && row.cells[col].perm_id == null) {
-      row.cells[col] = { perm_id: p.id };
-    }
-  }
-
-  const out: MatrixGroup[] = [];
-  for (const [moduleKey, rowMap] of groups) {
-    const rows: MatrixRow[] = [];
-    for (const draft of rowMap.values()) {
-      rows.push({
-        label: draft.label,
-        all_perm_ids: draft.perm_ids,
-        all_perm_names: draft.perm_names,
-        cells: draft.cells,
-      });
-    }
-    rows.sort((a, b) => a.label.localeCompare(b.label));
-    out.push({ module: prettifyLabel(moduleKey), rows });
-  }
-  out.sort((a, b) => a.module.localeCompare(b.module));
-  return out;
-}
-
-function prettifyLabel(raw: string): string {
-  // "FINANCE" → "Finance"; "USER_MANAGEMENT" → "User management"
-  return raw
-    .toLowerCase()
-    .replace(/[_.]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/^./, (c) => c.toUpperCase());
-}
-
 // ─── Role-name badge palette ───────────────────────────────────────────
 
 function roleBadgeTone(name: string): BadgeTone {
@@ -312,11 +139,7 @@ export default function PlatformRbacPage() {
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState("");
   const [toast, setToast] = useState<ToastState>(null);
-  const [pendingPermIds, setPendingPermIds] = useState<Set<number>>(new Set());
-  // 2026-06-01 — permission editor view: classic matrix vs Arshak's menu tree.
-  const [permView, setPermView] = useState<"matrix" | "tree">("tree");
 
   const [drawer, setDrawer] = useState<DrawerMode>({ kind: "closed" });
   const [drawerForm, setDrawerForm] = useState<DrawerForm>({
@@ -400,89 +223,6 @@ export default function PlatformRbacPage() {
   const selectedRole = useMemo(
     () => roles.find((r) => r.id === selectedRoleId) ?? null,
     [roles, selectedRoleId]
-  );
-
-  const matrix = useMemo(() => buildMatrix(permissions), [permissions]);
-
-  const grantedSet = useMemo(() => {
-    if (!selectedRole) return new Set<number>();
-    return new Set(selectedRole.permissions.map((p) => p.id));
-  }, [selectedRole]);
-
-  const filteredMatrix = useMemo(() => {
-    const q = filter.trim().toLowerCase();
-    if (!q) return matrix;
-    return matrix
-      .map((g) => {
-        const rows = g.rows.filter((row) => {
-          if (row.label.toLowerCase().includes(q)) return true;
-          if (g.module.toLowerCase().includes(q)) return true;
-          return row.all_perm_names.some((n) => n.toLowerCase().includes(q));
-        });
-        return { ...g, rows };
-      })
-      .filter((g) => g.rows.length > 0);
-  }, [matrix, filter]);
-
-  // ─── Permission toggle ────────────────────────────────────────────
-
-  const togglePermission = useCallback(
-    async (role: RbacRole, permId: number, nextGranted: boolean) => {
-      if (!token) return;
-      const nextIds = new Set(role.permissions.map((p) => p.id));
-      if (nextGranted) nextIds.add(permId);
-      else nextIds.delete(permId);
-
-      setPendingPermIds((s) => {
-        const next = new Set(s);
-        next.add(permId);
-        return next;
-      });
-      try {
-        const res = await fetch(
-          apiUrl(baseURL, `/platform-admin/rbac/roles/${role.id}/permissions`),
-          {
-            method: "PUT",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              Accept: "application/json",
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ permission_ids: Array.from(nextIds) }),
-          }
-        );
-        const json = (await res.json()) as ApiEnvelope<RbacRole>;
-        if (!res.ok || !json.success || !json.data) {
-          throw new Error(
-            json.message ||
-              t("admin.rbac.err_save") /* Failed to save permissions */
-          );
-        }
-        const updated = json.data;
-        setRoles((rs) => rs.map((r) => (r.id === updated.id ? updated : r)));
-        setToast({
-          tone: "ok",
-          text: nextGranted
-            ? t("admin.rbac.toast_granted") /* Permission granted */
-            : t("admin.rbac.toast_revoked") /* Permission revoked */,
-        });
-      } catch (e) {
-        setToast({
-          tone: "err",
-          text:
-            e instanceof Error
-              ? e.message
-              : t("admin.rbac.err_save") /* Failed to save permissions */,
-        });
-      } finally {
-        setPendingPermIds((s) => {
-          const next = new Set(s);
-          next.delete(permId);
-          return next;
-        });
-      }
-    },
-    [token, baseURL, t]
   );
 
   // ─── Drawer (create + edit) ─────────────────────────────────────
@@ -659,21 +399,13 @@ export default function PlatformRbacPage() {
         title={t("admin.rbac.title")}
         subtitle={t("admin.rbac.subtitle")}
         actions={
-          <>
-            <V2Button
-              icon={<Download className="h-4 w-4" />}
-              onClick={() => exportMatrixCsv(roles, permissions)}
-            >
-              {t("admin.rbac.export_matrix") /* Export matrix */}
-            </V2Button>
-            <V2Button
-              variant="primary"
-              icon={<Plus className="h-4 w-4" />}
-              onClick={openCreate}
-            >
-              {t("admin.rbac.new_role") /* New role */}
-            </V2Button>
-          </>
+          <V2Button
+            variant="primary"
+            icon={<Plus className="h-4 w-4" />}
+            onClick={openCreate}
+          >
+            {t("admin.rbac.new_role") /* New role */}
+          </V2Button>
         }
       />
 
@@ -874,143 +606,14 @@ export default function PlatformRbacPage() {
         )}
       </V2Card>
 
-      {/* ─── Permission editor view toggle (2026-06-01) ──────────── */}
-      <div className="mb-3 inline-flex overflow-hidden rounded-[8px] border" style={{ borderColor: "var(--admin-border)" }}>
-        {(["tree", "matrix"] as const).map((mode) => {
-          const active = permView === mode;
-          return (
-            <button
-              key={mode}
-              type="button"
-              onClick={() => setPermView(mode)}
-              className="px-3.5 py-1.5 text-[12px] font-medium transition"
-              style={{
-                backgroundColor: active ? "var(--admin-primary)" : "transparent",
-                color: active ? "#fff" : "var(--admin-text-secondary)",
-              }}
-            >
-              {mode === "tree" ? "Menu tree" : "Matrix"}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* ─── Card 2a — Menu-mirror permission tree (Arshak's model) ── */}
-      {permView === "tree" && token ? (
+      {/* ─── Card 2 — Menu-mirror permission tree (Arshak's model) ── */}
+      {token ? (
         <RbacMenuTree
           token={token}
           roleId={selectedRoleId}
           roleName={selectedRole ? prettifyRoleName(selectedRole.name) : undefined}
           canEdit={isSuper}
         />
-      ) : null}
-
-      {/* ─── Card 2b — Permission matrix (classic) ──────────────── */}
-
-      {permView === "matrix" ? (
-      <V2Card>
-        <V2CardHeader
-          title={t("admin.rbac.card_permission_matrix") /* Permission matrix */}
-          subtitle={
-            selectedRole ? (
-              <span>
-                {t("admin.rbac.matrix_for") /* Module-level access for currently selected role: */}{" "}
-                <strong style={{ color: "var(--admin-text-primary)" }}>
-                  {prettifyRoleName(selectedRole.name)}
-                </strong>
-              </span>
-            ) : (
-              t("admin.rbac.matrix_pick_role") /* Pick a role above to view its permissions */
-            )
-          }
-          action={
-            <div className="flex items-center gap-2">
-              <Input
-                type="search"
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-                placeholder={t("admin.rbac.filter_placeholder")}
-                className="!h-[30px] !w-[200px]"
-                aria-label={t("admin.rbac.filter_permissions")}
-              />
-              {filter ? (
-                <V2Button size="sm" onClick={() => setFilter("")}>
-                  <X className="h-3.5 w-3.5" />
-                  {t("common.reset")}
-                </V2Button>
-              ) : null}
-            </div>
-          }
-        />
-
-        {!selectedRole ? (
-          <EmptyState
-            icon={<ShieldCheck className="h-7 w-7" />}
-            title={t("admin.rbac.matrix_no_role") /* No role selected */}
-            subtitle={
-              t("admin.rbac.matrix_pick_role") /* Pick a role above to view its permissions */
-            }
-          />
-        ) : filteredMatrix.length === 0 ? (
-          <EmptyState
-            icon={<ShieldCheck className="h-7 w-7" />}
-            title={
-              t("admin.rbac.matrix_no_match") /* No permissions match your filter */
-            }
-            action={
-              filter ? (
-                <V2Button size="sm" onClick={() => setFilter("")}>
-                  {t("common.reset")}
-                </V2Button>
-              ) : undefined
-            }
-          />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead
-                className="text-[11px] uppercase tracking-[0.3px]"
-                style={{
-                  color: "var(--admin-text-secondary)",
-                  backgroundColor: "var(--admin-bg-secondary)",
-                }}
-              >
-                <tr>
-                  <th
-                    scope="col"
-                    className="px-4 py-2.5 font-semibold"
-                    style={{ width: "45%" }}
-                  >
-                    {t("admin.rbac.col_module_page") /* Module / page */}
-                  </th>
-                  {MATRIX_COLUMNS.map((col) => (
-                    <th
-                      key={col}
-                      scope="col"
-                      className="px-3 py-2.5 text-center font-semibold"
-                    >
-                      {col}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filteredMatrix.map((group) => (
-                  <RbacMatrixGroup
-                    key={group.module}
-                    group={group}
-                    role={selectedRole}
-                    grantedSet={grantedSet}
-                    pendingPermIds={pendingPermIds}
-                    canEdit={canEditRole(selectedRole)}
-                    onToggle={togglePermission}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </V2Card>
       ) : null}
       </SettingsShell>
 
@@ -1126,26 +729,6 @@ export default function PlatformRbacPage() {
             </Select>
           </FormField>
         </DrawerSection>
-        <DrawerSection>
-          <p className="text-xs text-fg-t6">
-            {t("admin.rbac.drawer_perms_hint") /* Tip: after saving, use the Permission matrix card to toggle individual permissions. */}
-          </p>
-          {drawer.kind === "edit" ? (
-            <p className="mt-2 text-xs text-fg-t6">
-              <Link
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setSelectedRoleId(drawer.role.id);
-                  closeDrawer();
-                }}
-                className="text-primary-700 hover:underline"
-              >
-                {t("admin.rbac.drawer_jump_matrix") /* Jump to permission matrix → */}
-              </Link>
-            </p>
-          ) : null}
-        </DrawerSection>
       </Drawer>
 
       {/* ─── Delete confirmation ─────────────────────────────────── */}
@@ -1212,101 +795,4 @@ export default function PlatformRbacPage() {
       ) : null}
     </div>
   );
-}
-
-// ─── Sub-component: matrix group with module sub-header ─────────────
-
-function RbacMatrixGroup({
-  group,
-  role,
-  grantedSet,
-  pendingPermIds,
-  canEdit,
-  onToggle,
-}: {
-  group: MatrixGroup;
-  role: RbacRole;
-  grantedSet: Set<number>;
-  pendingPermIds: Set<number>;
-  canEdit: boolean;
-  onToggle: (role: RbacRole, permId: number, nextGranted: boolean) => Promise<void>;
-}) {
-  return (
-    <>
-      <tr>
-        <td
-          colSpan={MATRIX_COLUMNS.length + 1}
-          className="px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.5px]"
-          style={{
-            backgroundColor: "var(--admin-bg-secondary)",
-            color: "var(--admin-text-secondary)",
-          }}
-        >
-          {group.module}
-        </td>
-      </tr>
-      {group.rows.map((row, idx) => (
-        <tr
-          key={`${group.module}-${row.label}-${idx}`}
-          className="border-t"
-          style={{ borderColor: "var(--admin-border)" }}
-        >
-          <td className="px-4 py-2.5 text-[13px]">{row.label}</td>
-          {MATRIX_COLUMNS.map((col) => {
-            const cell = row.cells[col];
-            if (cell.perm_id == null) {
-              return (
-                <td
-                  key={col}
-                  className="px-3 py-2.5 text-center"
-                  style={{ color: "var(--admin-text-tertiary)" }}
-                >
-                  —
-                </td>
-              );
-            }
-            const granted = grantedSet.has(cell.perm_id);
-            const pending = pendingPermIds.has(cell.perm_id);
-            return (
-              <td key={col} className="px-3 py-2.5 text-center">
-                <input
-                  type="checkbox"
-                  checked={granted}
-                  disabled={pending || !canEdit}
-                  onChange={(e) =>
-                    void onToggle(role, cell.perm_id!, e.target.checked)
-                  }
-                  aria-label={`${group.module} · ${row.label} · ${col}`}
-                  className="h-4 w-4 cursor-pointer accent-[color:var(--admin-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-                />
-              </td>
-            );
-          })}
-        </tr>
-      ))}
-    </>
-  );
-}
-
-// Client-side CSV export of the full role × permission matrix.
-function exportMatrixCsv(roles: RbacRole[], permissions: Permission[]): void {
-  if (roles.length === 0 || permissions.length === 0) return;
-  const escape = (s: string) =>
-    /[",\n]/.test(s) ? `"${s.replaceAll('"', '""')}"` : s;
-  const header = ["permission", ...roles.map((r) => r.name)].map(escape).join(",");
-  const rolePermSets = roles.map((r) => new Set(r.permissions.map((p) => p.id)));
-  const lines = permissions.map((p) => {
-    const cols = rolePermSets.map((set) => (set.has(p.id) ? "1" : "0"));
-    return [escape(p.name), ...cols].join(",");
-  });
-  const csv = [header, ...lines].join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `rbac-matrix-${new Date().toISOString().slice(0, 10)}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
 }
