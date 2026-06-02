@@ -57,8 +57,8 @@ import {
   StatCard,
   StatGrid,
   IconButton,
-  SectionTabs,
 } from "@/components/ui/v2";
+import { MarketplaceOpsSectionTabs } from "@/components/marketplace/MarketplaceOpsSectionTabs";
 import {
   Archive,
   ArchiveRestore,
@@ -609,18 +609,13 @@ export default function PlatformCompaniesPage() {
         }
       />
 
-      {/* Phase 4D / 2C-5 (2026-05-31) — Companies page is owned by Directory
-          (lookup). The Management strip was redundant — Management entry
-          points (Seller applications, Subscriptions, Contracts, Logs) are
-          one sidebar click away from anywhere. The Directory strip stays as
-          the canonical sibling navigation. */}
-      <SectionTabs
-        activeHref="/platform/companies"
-        items={[
-          { href: "/platform/users", label: "People" },
-          { href: "/platform/companies", label: "Companies", count: stats?.total },
-        ]}
-      />
+      {/* 2026-06-02 (Arshak) — /platform/companies is owned by the MANAGEMENT
+          group. It used to render the Directory [People | Companies] strip,
+          so a "People" tab sat on a Management page and clicking it jumped to
+          Directory — confusing. Show the real Management sibling strip instead
+          (Companies · Seller applications · Contracts · Logs …). Directory =
+          People only; this page lives under Management. */}
+      <MarketplaceOpsSectionTabs activeHref="/platform/companies" />
 
       {/* 4 stat cards — values from /platform-admin/companies/stats. */}
       <StatGrid cols={4} className="mb-5">
