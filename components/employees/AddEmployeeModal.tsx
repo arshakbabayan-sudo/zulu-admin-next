@@ -57,6 +57,11 @@ export function AddEmployeeModal({
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [roleName, setRoleName] = useState<CompanyEmployeeRole>("company_viewer");
+  // "invite" = email a magic-link; "direct" = manager sets a login password now
+  // and hands it to the employee (Arshak 2026-06-02 self-service flow).
+  const [mode, setMode] = useState<"invite" | "direct">("invite");
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
@@ -70,6 +75,9 @@ export function AddEmployeeModal({
     setEmail("");
     setPhone("");
     setRoleName("company_viewer");
+    setMode("invite");
+    setPassword("");
+    setPasswordConfirm("");
     setErr(null);
     setFieldErrors({});
   }
@@ -85,6 +93,19 @@ export function AddEmployeeModal({
     if (!token) return;
     setErr(null);
     setFieldErrors({});
+
+    // Direct mode: validate the password client-side before hitting the API.
+    if (mode === "direct") {
+      if (password.length < 8) {
+        setErr("Password must be at least 8 characters.");
+        return;
+      }
+      if (password !== passwordConfirm) {
+        setErr("Passwords do not match.");
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
       const payload: AddEmployeePayload = {
@@ -92,7 +113,8 @@ export function AddEmployeeModal({
         email: email.trim(),
         role_name: roleName,
         phone: phone.trim() || null,
-        mode: "invite",
+        mode,
+        ...(mode === "direct" ? { password } : {}),
       };
       const res = await apiAddEmployee(token, companyId, payload);
       onSuccess?.({
@@ -210,6 +232,62 @@ export function AddEmployeeModal({
             </select>
           </Field>
 
+          {/* How the employee gets access: email magic-link, or a password
+              the manager sets now and hands over (Arshak 2026-06-02). */}
+          <Field label="Access method">
+            <div className="grid grid-cols-2 gap-1 rounded-md border p-1" style={{ borderColor: "var(--admin-border)" }}>
+              {([
+                { v: "invite", label: "Email invite" },
+                { v: "direct", label: "Set password" },
+              ] as const).map((opt) => (
+                <button
+                  key={opt.v}
+                  type="button"
+                  onClick={() => setMode(opt.v)}
+                  className="h-[30px] rounded text-[12px] font-medium transition"
+                  style={{
+                    backgroundColor: mode === opt.v ? "var(--admin-primary)" : "transparent",
+                    color: mode === opt.v ? "#fff" : "var(--admin-text-secondary)",
+                  }}
+                  aria-pressed={mode === opt.v}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </Field>
+
+          {mode === "direct" ? (
+            <>
+              <Field label="Password" error={fieldErrors.password?.[0]}>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                  className="h-[36px] w-full rounded-md border bg-white px-3 text-[13px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+                  style={{ borderColor: "var(--admin-border)" }}
+                  placeholder="At least 8 characters"
+                />
+              </Field>
+              <Field label="Confirm password">
+                <input
+                  type="password"
+                  value={passwordConfirm}
+                  onChange={(e) => setPasswordConfirm(e.target.value)}
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                  className="h-[36px] w-full rounded-md border bg-white px-3 text-[13px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+                  style={{ borderColor: "var(--admin-border)" }}
+                  placeholder="Repeat the password"
+                />
+              </Field>
+            </>
+          ) : null}
+
           <p
             className="rounded-md border px-3 py-2 text-[12px]"
             style={{
@@ -218,8 +296,9 @@ export function AddEmployeeModal({
               color: "var(--admin-text-secondary)",
             }}
           >
-            The employee will receive an email with a link to set their password.
-            The invitation is valid for 7 days.
+            {mode === "invite"
+              ? "The employee will receive an email with a link to set their password. The invitation is valid for 7 days."
+              : "The employee is created immediately with this password and can sign in at admin.zulu.am right away. Share the login + password with them securely."}
           </p>
 
           {err ? (
@@ -240,7 +319,9 @@ export function AddEmployeeModal({
               Cancel
             </V2Button>
             <V2Button type="submit" variant="primary" disabled={submitting || !token}>
-              {submitting ? "Sending…" : "Send invite"}
+              {submitting
+                ? mode === "invite" ? "Sending…" : "Creating…"
+                : mode === "invite" ? "Send invite" : "Create employee"}
             </V2Button>
           </div>
         </form>
