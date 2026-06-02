@@ -37,3 +37,27 @@ export async function apiCustomers(
     token,
   });
 }
+
+/**
+ * CRM Customers = the company's OWN buyers (people who placed an order with
+ * this company), scoped server-side to the caller's visible companies. An
+ * operator sees only their buyers; a super-admin sees every buyer. This is the
+ * correct source for the CRM section — NOT apiCustomers (the platform-wide B2C
+ * registry, which is super-admin oversight and 403s for operators).
+ * Backend: CrmController::customers @ /platform-admin/crm/customers.
+ */
+export async function apiCrmCustomers(
+  token: string,
+  params: { page?: number; per_page?: number; search?: string; status?: string }
+): Promise<ApiSuccessEnvelope<CustomerRow[]> & { meta: ApiListMeta }> {
+  const q = new URLSearchParams();
+  if (params.page != null) q.set("page", String(params.page));
+  if (params.per_page != null) q.set("per_page", String(params.per_page));
+  if (params.search) q.set("search", params.search);
+  if (params.status) q.set("status", params.status);
+  const qs = q.toString();
+  return apiFetchJson(`/platform-admin/crm/customers${qs ? `?${qs}` : ""}`, {
+    method: "GET",
+    token,
+  });
+}

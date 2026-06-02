@@ -24,7 +24,7 @@ import { useDocumentTitle } from "@/lib/use-document-title";
 import { canAccessCrmSection } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
-import { apiCustomers, CUSTOMER_STATUSES, type CustomerRow } from "@/lib/customers-api";
+import { apiCrmCustomers, CUSTOMER_STATUSES, type CustomerRow } from "@/lib/customers-api";
 import {
   STATUS_BADGE_CLASS,
   avatarInitials,
@@ -84,7 +84,7 @@ export default function CrmCustomersPage() {
     setLoading(true);
     setErr(null);
     try {
-      const res = await apiCustomers(token, {
+      const res = await apiCrmCustomers(token, {
         page,
         per_page: PER_PAGE,
         search,
