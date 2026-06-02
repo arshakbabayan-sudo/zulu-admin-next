@@ -24,7 +24,7 @@ import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { canAccessPlatformAdminNav } from "@/lib/access";
+import { canAccessFinanceSection } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { apiInvoices, apiIssueInvoice, apiCancelInvoice, apiPayInvoice, apiSendInvoiceReminder, downloadInvoicesCsv, type InvoiceRow } from "@/lib/invoices-api";
@@ -103,7 +103,7 @@ export default function PlatformInvoicesPage() {
   const { token, user } = useAdminAuth();
   const { t, lang } = useLanguage();
   const confirm = useConfirm();
-  const allowed = canAccessPlatformAdminNav(user);
+  const allowed = canAccessFinanceSection(user);
   const [rows, setRows] = useState<InvoiceRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
   const [page, setPage] = useState(1);

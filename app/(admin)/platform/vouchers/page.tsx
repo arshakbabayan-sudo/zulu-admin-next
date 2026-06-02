@@ -24,7 +24,7 @@
 import { useEffect, useState } from "react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
-import { canAccessPlatformAdminNav } from "@/lib/access";
+import { canAccessFinanceSection } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import {
   apiListVouchers,
@@ -122,7 +122,7 @@ export default function PlatformVouchersPage() {
   const { token, user } = useAdminAuth();
   const { t, lang } = useLanguage();
   const confirm = useConfirm();
-  const allowed = canAccessPlatformAdminNav(user);
+  const allowed = canAccessFinanceSection(user);
 
   const [rows, setRows] = useState<VoucherRow[]>([]);
   const [meta, setMeta] = useState<Meta | null>(null);

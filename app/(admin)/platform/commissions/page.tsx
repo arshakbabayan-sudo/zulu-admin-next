@@ -23,7 +23,7 @@
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
-import { canAccessPlatformAdminNav } from "@/lib/access";
+import { canAccessFinanceSection } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -94,7 +94,7 @@ export default function CommissionsPage() {
   const { token, user } = useAdminAuth();
   const { t, lang } = useLanguage();
   const confirm = useConfirm();
-  const allowed = canAccessPlatformAdminNav(user);
+  const allowed = canAccessFinanceSection(user);
   const [tab, setTab] = useState<Tab>("policies");
 
   const [policies, setPolicies] = useState<CommissionPolicyRow[]>([]);

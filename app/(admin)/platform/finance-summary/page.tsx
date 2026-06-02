@@ -24,7 +24,7 @@ import Link from "next/link";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { canAccessPlatformAdminNav } from "@/lib/access";
+import { canAccessFinanceSection } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import { apiPlatformFinanceSummary, type PlatformFinanceSummary } from "@/lib/platform-admin-api";
 import {
@@ -85,7 +85,7 @@ const RANGE_LABELS: Record<RangeKey, string> = {
 export default function PlatformFinanceSummaryPage() {
   const { token, user } = useAdminAuth();
   const { t, lang } = useLanguage();
-  const allowed = canAccessPlatformAdminNav(user);
+  const allowed = canAccessFinanceSection(user);
   const [data, setData] = useState<PlatformFinanceSummary | null>(null);
   const [v2, setV2] = useState<FinanceSummaryV2 | null>(null);
   const [revenueByService, setRevenueByService] = useState<RevenueByServiceRow[]>([]);

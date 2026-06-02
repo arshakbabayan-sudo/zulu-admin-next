@@ -22,7 +22,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
-import { canAccessPlatformAdminNav } from "@/lib/access";
+import { canAccessFinanceSection } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -87,7 +87,7 @@ const SETTLE_STATUS_META: Record<string, { tone: StatusTone; label: string }> = 
 export default function FinancePage() {
   const { token, user } = useAdminAuth();
   const { t, lang } = useLanguage();
-  const allowed = canAccessPlatformAdminNav(user);
+  const allowed = canAccessFinanceSection(user);
   const companyOptions = user?.companies ?? [];
   const initialCompanyId = user?.context?.active_company_id ?? companyOptions[0]?.id ?? null;
   const [tab, setTab] = useState<Tab>("summary");
