@@ -85,6 +85,7 @@ export type AdminNavGroup = {
     | "section_sales_workspace"
     | "section_finance"
     | "section_my_company"
+    | "section_own_company"
     | "section_marketplace_ops"
     | "section_settings"
     // 2026-05-31 — CRM as its own top-level section
@@ -276,7 +277,8 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/bucket3/subscriptions", labelKey: "admin.nav.tab.bucket3.subscriptions" },
       { href: "/bucket3/per-x-invoicing", labelKey: "admin.nav.tab.bucket3.per_x_invoicing" },
     ],
-    visibility: "section_my_company",
+    // operator/agent only — hidden from super (super uses Management/Directory).
+    visibility: "section_own_company",
   },
 
   // 6b ── HR (Phase 4E, 2026-05-31) ─────────────────────────────────────

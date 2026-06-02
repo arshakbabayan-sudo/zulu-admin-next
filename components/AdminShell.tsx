@@ -31,6 +31,7 @@ import {
   canAccessLocalizationSectionNav,
   canAccessMarketplaceOpsSection,
   canAccessMyCompanySection,
+  canSeeOwnCompanyNav,
   canAccessNotificationsNav,
   canAccessOperatorToolsNav,
   canAccessPlatformAdminNav,
@@ -743,6 +744,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   return canAccessFinanceSection(user);
                 case "section_my_company":
                   return canAccessMyCompanySection(user);
+                case "section_own_company":
+                  return canSeeOwnCompanyNav(user);
                 case "section_marketplace_ops":
                   return canAccessMarketplaceOpsSection(user);
                 case "section_settings":

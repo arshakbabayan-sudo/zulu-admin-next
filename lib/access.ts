@@ -228,10 +228,22 @@ export function canAccessFinanceSection(user: AdminUser | null): boolean {
   );
 }
 
-/** My company: all three roles (each sees only their own company). Super admin sees Zulu's. */
+/** My company: page ACCESS — all three roles (each sees only their own
+ * company). Super admin can open the pages too (oversight). */
 export function canAccessMyCompanySection(user: AdminUser | null): boolean {
   if (!user) return false;
   if (user.is_super_admin) return true;
+  return (user.companies?.length ?? 0) > 0;
+}
+
+/** "My company" SIDEBAR visibility — operator/agent only. 2026-06-02 (Arshak):
+ * super-admins manage every company via Management/Directory, so a personal
+ * "My company" entry (which lands on their own seller-status) was just
+ * confusing in the super menu. Page access is unchanged
+ * (canAccessMyCompanySection still lets super open the pages by URL). */
+export function canSeeOwnCompanyNav(user: AdminUser | null): boolean {
+  if (!user) return false;
+  if (user.is_super_admin) return false;
   return (user.companies?.length ?? 0) > 0;
 }
 
