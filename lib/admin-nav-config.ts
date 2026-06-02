@@ -520,6 +520,7 @@ export const SETTINGS_SUBGROUPS: SettingsSubgroup[] = [
     label: "Content & CMS",
     hrefs: [
       "/pages",
+      "/platform/widgets",
       "/platform/banners",
       "/platform/notifications",
       "/platform/newsletter",
