@@ -14,7 +14,7 @@ import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { canAccessOperatorToolsNav } from "@/lib/access";
+import { canAccessMyCompanySection } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
 import { exportRowsAsCsv } from "@/lib/export-csv";
@@ -129,7 +129,10 @@ export default function Bucket3NonServiceHoursPage() {
   const { token, user } = useAdminAuth();
   const confirm = useConfirm();
   const { t, lang } = useLanguage();
-  const allowed = canAccessOperatorToolsNav(user);
+  // HR (time punches / time off) is company-internal — gated on company
+  // membership, not inventory-create perms (operator owners without explicit
+  // create perms still manage their own HR).
+  const allowed = canAccessMyCompanySection(user);
   const [rows, setRows] = useState<TimeOffRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
   const [page, setPage] = useState(1);
