@@ -25,7 +25,8 @@ import {
 import { avatarInitials, avatarStyle, pickAvatarTone } from "@/lib/admin-v2-helpers";
 import { PageHeader, EmptyState, V2Card, V2Button } from "@/components/ui/v2";
 import { CrmSectionTabs } from "@/components/crm/CrmSectionTabs";
-import { Trophy, RefreshCw, X } from "lucide-react";
+import { AddEmployeeModal } from "@/components/employees/AddEmployeeModal";
+import { Trophy, RefreshCw, X, UserPlus } from "lucide-react";
 
 const MODEL_LABEL: Record<CrmCompModel, string> = {
   fixed: "Fixed only",
@@ -58,6 +59,15 @@ export default function CrmTeamPage() {
   const [editRow, setEditRow] = useState<CrmTeamRow | null>(null);
   const [model, setModel] = useState<CrmCompModel>("fixed_plus_percent");
   const [base, setBase] = useState("0");
+  const [addEmployeeOpen, setAddEmployeeOpen] = useState(false);
+
+  // The company whose team this is — for the operator/agent it's their own.
+  // Used to add an employee straight from here (Arshak: employee-add belongs
+  // in CRM → Team, not the Directory).
+  const teamCompany =
+    companyId != null
+      ? user?.companies?.find((c) => c.id === companyId) ?? user?.companies?.[0] ?? null
+      : null;
   const [percent, setPercent] = useState("0");
   const [currency, setCurrency] = useState("USD");
   const [saving, setSaving] = useState(false);
@@ -124,14 +134,21 @@ export default function CrmTeamPage() {
         title="Team"
         subtitle={month ? `Sales performance by employee — ${month}` : "Sales performance by employee"}
         actions={
-          <button
-            type="button"
-            onClick={() => void load()}
-            className="inline-flex h-9 items-center gap-1.5 rounded-md border px-[14px] text-[13px] font-medium"
-            style={{ borderColor: "var(--admin-border)", color: "var(--admin-text-primary)" }}
-          >
-            <RefreshCw className="h-4 w-4" /> Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void load()}
+              className="inline-flex h-9 items-center gap-1.5 rounded-md border px-[14px] text-[13px] font-medium"
+              style={{ borderColor: "var(--admin-border)", color: "var(--admin-text-primary)" }}
+            >
+              <RefreshCw className="h-4 w-4" /> Refresh
+            </button>
+            {teamCompany ? (
+              <V2Button variant="primary" icon={<UserPlus className="h-4 w-4" />} onClick={() => setAddEmployeeOpen(true)}>
+                Add employee
+              </V2Button>
+            ) : null}
+          </div>
         }
       />
       <CrmSectionTabs activeHref="/crm/team" />
@@ -292,6 +309,22 @@ export default function CrmTeamPage() {
             </div>
           </div>
         </>
+      ) : null}
+
+      {/* Add an employee to this company's team (email invite OR manager-set
+          login+password). For operators/agents this is their own company. */}
+      {teamCompany && token ? (
+        <AddEmployeeModal
+          open={addEmployeeOpen}
+          onClose={() => setAddEmployeeOpen(false)}
+          token={token}
+          companyId={teamCompany.id}
+          companyName={teamCompany.name}
+          onSuccess={() => {
+            setAddEmployeeOpen(false);
+            void load();
+          }}
+        />
       ) : null}
     </div>
   );

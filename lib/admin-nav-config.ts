@@ -259,22 +259,22 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     labelKey: "admin.nav.section.my_company",
     labelFallback: "My company",
     icon: "/icons/menu/company.svg",
-    defaultHref: "/bucket3/employees",
+    // 2026-06-02 (Arshak) — "My company" used to default to /bucket3/employees,
+    // which redirects to the Directory people page → clicking My company showed
+    // "Directory", which was confusing/meaningless. Repointed to a real
+    // own-company page (Seller status). Employees moved OUT of here entirely —
+    // staff are now managed in CRM → Team (view + Add employee). The dead
+    // /bucket3/customers redirect tab was also dropped. What stays here is the
+    // operator/agent's OWN-company admin: seller status, Stripe payouts,
+    // subscriptions, per-X invoicing.
+    defaultHref: "/bucket3/seller-status",
     tabs: [
-      { href: "/bucket3/employees", labelKey: "admin.nav.tab.bucket3.employees" },
-      // Phase 4F (2026-05-31) — Requests + Cases moved to the new Inbox group.
-      // Phase Ա.3 (2026-05-28) — bulk-notifications moved to Notifications group below
-      // Phase Ա.4 (2026-05-28) — pin-settings merged under My profile > Security
-      // Phase 4C (2026-05-31) — /bucket3/customers redirects to Directory now,
-      //   but the My company tab is kept here for super-admins who want the
-      //   pre-redirect bookmark to still light up the group.
-      { href: "/bucket3/customers", labelKey: "admin.nav.tab.bucket3.customers" },
-      { href: "/bucket3/subscriptions", labelKey: "admin.nav.tab.bucket3.subscriptions" },
-      { href: "/bucket3/per-x-invoicing", labelKey: "admin.nav.tab.bucket3.per_x_invoicing" },
-      // P0-1 step 1.1 (2026-06-01) — operator/agent's own Stripe Connect onboarding.
-      { href: "/bucket3/payments", labelKey: "admin.nav.tab.bucket3.payments" },
       // P0-3 (2026-06-02) — operator/agent's own seller status + become-a-seller.
       { href: "/bucket3/seller-status", labelKey: "admin.nav.tab.bucket3.seller_status" },
+      // P0-1 step 1.1 (2026-06-01) — operator/agent's own Stripe Connect onboarding.
+      { href: "/bucket3/payments", labelKey: "admin.nav.tab.bucket3.payments" },
+      { href: "/bucket3/subscriptions", labelKey: "admin.nav.tab.bucket3.subscriptions" },
+      { href: "/bucket3/per-x-invoicing", labelKey: "admin.nav.tab.bucket3.per_x_invoicing" },
     ],
     visibility: "section_my_company",
   },
@@ -351,13 +351,13 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     icon: "/icons/menu/users.svg",
     defaultHref: "/platform/users",
     tabs: [
-      // Phase 4D (2026-05-31) — Directory exposes two tabs: People (users
-      // table with type chips) and Companies (organizations registry).
-      // Different entities, different columns, but the same "find any party
-      // on the platform" mental model. /platform/companies is shared with
-      // the Management group (still listed there for governance discovery).
+      // 2026-06-02 (Arshak) — Companies tab REMOVED from Directory. The
+      // /platform/companies page is owned by the Management group (its
+      // page-level section strip says "Management"), so listing it under
+      // Directory made the breadcrumb/section jump to Management on click —
+      // confusing. Companies now lives only under Management; Directory is
+      // purely the People (users) lookup.
       { href: "/platform/users", labelKey: "admin.nav.tab.directory.people" },
-      { href: "/platform/companies", labelKey: "admin.nav.tab.directory.companies" },
     ],
     visibility: "platform_admin",
   },
