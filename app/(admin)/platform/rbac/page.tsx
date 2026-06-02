@@ -59,7 +59,7 @@ import {
   IconButton,
   EmptyState,
 } from "@/components/ui/v2";
-import { SettingsSubgroupTabs } from "@/components/settings/SettingsSubgroupTabs";
+import { SettingsShell } from "@/components/settings/SettingsShell";
 
 // ─── Types ──────────────────────────────────────────────────────────────
 
@@ -648,8 +648,9 @@ export default function PlatformRbacPage() {
 
   return (
     <div>
-      {/* v2 admin-redesign — RBAC page chrome matches
-          docs/zulu-admin-v2.html page-view#roles (lines 799-859). */}
+      {/* Settings left-rail layout (design 11_settings.html). The rail sits
+          left of the page header + cards; modals/toast stay outside it. */}
+      <SettingsShell active="/platform/rbac">
       <V2PageHeader
         breadcrumb={[
           { label: "Home", href: "/dashboard" },
@@ -675,8 +676,6 @@ export default function PlatformRbacPage() {
           </>
         }
       />
-
-      <SettingsSubgroupTabs activeHref="/platform/rbac" />
 
       {error && (
         <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
@@ -1013,6 +1012,7 @@ export default function PlatformRbacPage() {
         )}
       </V2Card>
       ) : null}
+      </SettingsShell>
 
       {/* ─── Drawer (create / edit) ─────────────────────────────── */}
 

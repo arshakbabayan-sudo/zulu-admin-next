@@ -35,7 +35,7 @@ import { SETTINGS_SUBGROUPS, type SettingsSubgroup } from "@/lib/admin-nav-confi
  * fallbacks. `labels` prop on the component still overrides per page
  * (e.g. when a setting needs a localized inline override).
  */
-const DEFAULT_TAB_LABELS: Record<string, string> = {
+export const DEFAULT_TAB_LABELS: Record<string, string> = {
   "/settings/pricing-rules": "Pricing rules",
   "/settings/money-flow": "Money flow",
   "/settings/exchange-rates": "Exchange rates",
