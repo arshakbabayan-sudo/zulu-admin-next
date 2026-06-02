@@ -40,7 +40,7 @@ import {
   V2Button,
   IconButton,
 } from "@/components/ui/v2";
-import { SettingsSubgroupTabs } from "@/components/settings/SettingsSubgroupTabs";
+import { SettingsShell } from "@/components/settings/SettingsShell";
 import { Download, Edit3, Plus, Trash2 } from "lucide-react";
 
 function resolveBannerImageSrc(row: PlatformBannerRow): string | null {
@@ -250,7 +250,7 @@ export default function PlatformBannersPage() {
   }
 
   return (
-    <div>
+    <SettingsShell active="/platform/banners">
       {/* v2 admin-redesign — Banners page chrome (Settings section). */}
       <V2PageHeader
         breadcrumb={[
@@ -300,7 +300,6 @@ export default function PlatformBannersPage() {
         }
       />
 
-      <SettingsSubgroupTabs activeHref="/platform/banners" />
 
       {err && <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
 
@@ -490,6 +489,6 @@ export default function PlatformBannersPage() {
       </Table>
       </V2Card>
       </div>
-    </div>
+    </SettingsShell>
   );
 }

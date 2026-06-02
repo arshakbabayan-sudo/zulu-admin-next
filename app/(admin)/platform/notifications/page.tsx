@@ -31,7 +31,7 @@ import {
   V2Button,
   IconButton,
 } from "@/components/ui/v2";
-import { SettingsSubgroupTabs } from "@/components/settings/SettingsSubgroupTabs";
+import { SettingsShell } from "@/components/settings/SettingsShell";
 import { Download, Eye } from "lucide-react";
 
 const STATUSES = ["unread", "read"] as const;
@@ -178,7 +178,7 @@ export default function PlatformNotificationsPage() {
   }
 
   return (
-    <div>
+    <SettingsShell active="/platform/notifications">
       {/* v2 admin-redesign — Settings System notifications page chrome. */}
       <V2PageHeader
         breadcrumb={[
@@ -212,7 +212,6 @@ export default function PlatformNotificationsPage() {
         }
       />
 
-      <SettingsSubgroupTabs activeHref="/platform/notifications" />
 
       <div className="space-y-6">
       {error && <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{error}</div>}
@@ -415,7 +414,7 @@ export default function PlatformNotificationsPage() {
         </div>
       )}
       </div>
-    </div>
+    </SettingsShell>
   );
 }
 

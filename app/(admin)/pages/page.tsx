@@ -41,7 +41,7 @@ import {
   V2Button,
   IconButton,
 } from "@/components/ui/v2";
-import { SettingsSubgroupTabs } from "@/components/settings/SettingsSubgroupTabs";
+import { SettingsShell } from "@/components/settings/SettingsShell";
 import { Download, Edit3, Eye, Plus, Trash2 } from "lucide-react";
 
 function slugify(input: string): string {
@@ -227,7 +227,7 @@ export default function AdminPagesListPage() {
   }
 
   return (
-    <div>
+    <SettingsShell active="/pages">
       <AddPageModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} onSubmit={handleAdd} />
 
       <V2PageHeader
@@ -266,8 +266,6 @@ export default function AdminPagesListPage() {
           </>
         }
       />
-
-      <SettingsSubgroupTabs activeHref="/pages" />
 
       {err && <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>}
 
@@ -358,7 +356,7 @@ export default function AdminPagesListPage() {
       {meta && meta.last_page > 1 ? (
         <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />
       ) : null}
-    </div>
+    </SettingsShell>
   );
 }
 

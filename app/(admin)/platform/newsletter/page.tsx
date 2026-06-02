@@ -43,7 +43,7 @@ import {
   V2Button,
   IconButton,
 } from "@/components/ui/v2";
-import { SettingsSubgroupTabs } from "@/components/settings/SettingsSubgroupTabs";
+import { SettingsShell } from "@/components/settings/SettingsShell";
 import { Download, Trash2 } from "lucide-react";
 
 const SOURCES = ["", "home", "footer", "newsletter-block", "other"];
@@ -152,7 +152,7 @@ export default function PlatformNewsletterPage() {
   }
 
   return (
-    <div>
+    <SettingsShell active="/platform/newsletter">
       {/* v2 admin-redesign — Settings Newsletter page chrome. */}
       <V2PageHeader
         breadcrumb={[
@@ -168,7 +168,6 @@ export default function PlatformNewsletterPage() {
         }
       />
 
-      <SettingsSubgroupTabs activeHref="/platform/newsletter" />
 
       {stats && (
         <div className="mb-4 grid gap-3 sm:grid-cols-3">
@@ -331,7 +330,7 @@ export default function PlatformNewsletterPage() {
       {meta && meta.last_page > 1 ? (
         <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />
       ) : null}
-    </div>
+    </SettingsShell>
   );
 }
 
