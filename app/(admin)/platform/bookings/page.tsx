@@ -24,7 +24,7 @@ import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSearchParams } from "next/navigation";
-import { canAccessPlatformAdminNav } from "@/lib/access";
+import { canAccessBookingsSection } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import {
@@ -189,7 +189,9 @@ export default function PlatformBookingsPage() {
   const { token, user } = useAdminAuth();
   const { t, lang } = useLanguage();
   const confirmDialog = useConfirm();
-  const allowed = canAccessPlatformAdminNav(user);
+  // Phase 6 frontend gate: bookings list + stats are tenant-scoped; an
+  // operator with bookings.view sees their own bookings, super sees all.
+  const allowed = canAccessBookingsSection(user);
 
   const [rows, setRows] = useState<BookingRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);

@@ -19,7 +19,7 @@
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { canAccessPlatformAdminNav } from "@/lib/access";
+import { canAccessBookingsSection } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { apiPlatformPackageOrders, type PlatformPackageOrderRow } from "@/lib/platform-admin-api";
@@ -183,7 +183,8 @@ function labelStatus(meta: Record<string, StatusMeta>, s: string): string {
 export default function PlatformPackageOrdersPage() {
   const { token, user } = useAdminAuth();
   const { t, lang } = useLanguage();
-  const allowed = canAccessPlatformAdminNav(user);
+  // Phase 6 frontend gate: package-orders list + stats are tenant-scoped.
+  const allowed = canAccessBookingsSection(user);
   const [rows, setRows] = useState<PlatformPackageOrderRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
   const [page, setPage] = useState(1);
