@@ -20,7 +20,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { usePrompt } from "@/contexts/PromptDialogContext";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useDocumentTitle } from "@/lib/use-document-title";
-import { canAccessPlatformAdminNav } from "@/lib/access";
+import { canAccessMyCompanySection } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import {
@@ -120,7 +120,11 @@ export default function PlatformUsersPage() {
   useDocumentTitle(t("admin.users.title"));
   const confirm = useConfirm();
   const prompt = usePrompt();
-  const allowed = canAccessPlatformAdminNav(user);
+  // Phase 6 frontend gate: the users list is tenant-scoped (operator sees only
+  // their own company's staff via /platform-admin/users). Open to company
+  // members; the super-only chips (B2C customers / unverified) still 403 for
+  // operators and simply show empty, but the Staff view (their employees) works.
+  const allowed = canAccessMyCompanySection(user);
   const isSuperAdmin = user?.is_super_admin === true;
   const [rows, setRows] = useState<PlatformAdminUserRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
