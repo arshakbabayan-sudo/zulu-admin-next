@@ -20,7 +20,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
-import { canAccessPlatformAdminNav } from "@/lib/access";
+import { canAccessDashboardSection } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import { apiPlatformStats, type PlatformStats } from "@/lib/platform-admin-api";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -832,7 +832,10 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<PlatformStats | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  const allowed = canAccessPlatformAdminNav(user);
+  // Phase 6 frontend gate: the dashboard stats API is now tenant-scoped
+  // (operator sees their own company KPIs, super sees platform-wide), so the
+  // page is open to any signed-in admin user — not super-only.
+  const allowed = canAccessDashboardSection(user);
 
   useEffect(() => {
     if (!allowed || !token) return;
