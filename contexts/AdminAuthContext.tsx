@@ -104,6 +104,13 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   const [bootstrapped, setBootstrapped] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Always-current snapshot of `user` for use inside long-lived effect
+  // callbacks (the session-sync poll) without re-subscribing the effect.
+  const userRef = useRef<AdminUser | null>(null);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
   /**
    * In-flight deduplication: if a /account/me request is already in progress,
    * subsequent callers await the same Promise instead of firing a second request.
@@ -296,7 +303,18 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       try {
-        await apiMe(t);
+        const res = await apiMe(t);
+        if (!alive) return;
+        // Live permission/role sync: the token-validity poll already fetched
+        // /me, so reuse the response to refresh the cached user when ANYTHING
+        // changed (e.g. a super-admin just edited this role's permissions).
+        // The operator/agent then sees the new access within ~5 s or on tab
+        // focus — no log-out/in needed. Guarded so identical payloads don't
+        // churn re-renders.
+        if (res?.data && JSON.stringify(res.data) !== JSON.stringify(userRef.current)) {
+          setUser(res.data);
+          setCachedUser(res.data);
+        }
       } catch (e) {
         if (!alive) return;
         if (e instanceof ApiRequestError && (e.status === 401 || e.status === 403)) {
