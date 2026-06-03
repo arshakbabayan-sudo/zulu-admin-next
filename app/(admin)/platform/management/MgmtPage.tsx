@@ -242,6 +242,7 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
   const [companiesFilterGov, setCompaniesFilterGov] = useState("");
   const [companiesFilterType, setCompaniesFilterType] = useState("");
   const [companiesFilterSeller, setCompaniesFilterSeller] = useState("");
+  const [companiesFilterArchive, setCompaniesFilterArchive] = useState<"active" | "archived" | "all">("active");
   // List ↔ Detail
   const [detailCompanyId, setDetailCompanyId] = useState<number | null>(null);
   const [detailCompany, setDetailCompany] = useState<PlatformCompanyRow | null>(null);
@@ -312,7 +313,7 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
         governance_status: companiesFilterGov || undefined,
         type: companiesFilterType || undefined,
         is_seller: sellerParam,
-        archive_filter: "active",
+        archive_filter: companiesFilterArchive,
       });
       setCompanies(res.data);
       setCompaniesMeta(res.meta);
@@ -329,6 +330,7 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
     companiesFilterGov,
     companiesFilterType,
     companiesFilterSeller,
+    companiesFilterArchive,
   ]);
   useEffect(() => {
     if (tab === "companies" && detailCompanyId === null) void loadCompanies();
@@ -670,16 +672,26 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
             </div>
 
             <div className="section-tabs">
-              {(Object.keys(TAB_META) as MgmtTab[]).map((k) => (
-                <button
-                  key={k}
-                  className={`section-tab ${tab === k ? "active" : ""}`}
-                  onClick={() => switchTab(k)}
-                >
-                  <i className={`ti ${TAB_META[k].icon}`} />
-                  {TAB_META[k].label}
-                </button>
-              ))}
+              {(Object.keys(TAB_META) as MgmtTab[]).map((k) => {
+                // Live counts from the loaded data per pane (matches the
+                // HTML mock's `<span class="count">128</span>` on the first
+                // 3 tabs; Templates + Logs have no count in the mock).
+                let count: number | null = null;
+                if (k === "companies") count = companiesMeta?.total ?? companies.length;
+                else if (k === "applications") count = apps.length || null;
+                else if (k === "contracts") count = contracts.length || null;
+                return (
+                  <button
+                    key={k}
+                    className={`section-tab ${tab === k ? "active" : ""}`}
+                    onClick={() => switchTab(k)}
+                  >
+                    <i className={`ti ${TAB_META[k].icon}`} />
+                    {TAB_META[k].label}
+                    {count !== null && count > 0 ? <span className="count">{count}</span> : null}
+                  </button>
+                );
+              })}
             </div>
 
             {/* ───────── COMPANIES pane ───────── */}
@@ -699,6 +711,8 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                   onFilterType={setCompaniesFilterType}
                   filterSeller={companiesFilterSeller}
                   onFilterSeller={setCompaniesFilterSeller}
+                  filterArchive={companiesFilterArchive}
+                  onFilterArchive={setCompaniesFilterArchive}
                   onOpen={(id) => setDetailCompanyId(id)}
                   onApply={loadCompanies}
                 />
@@ -1136,6 +1150,8 @@ function CompaniesList(props: {
   onFilterType: (s: string) => void;
   filterSeller: string;
   onFilterSeller: (s: string) => void;
+  filterArchive: "active" | "archived" | "all";
+  onFilterArchive: (s: "active" | "archived" | "all") => void;
   onOpen: (id: number) => void;
   onApply: () => void;
 }) {
@@ -1194,6 +1210,14 @@ function CompaniesList(props: {
             <option value="">All</option>
             <option value="1">Sellers only</option>
             <option value="0">Non-sellers</option>
+          </select>
+        </div>
+        <div className="filter-field">
+          <span className="filter-label">Archive</span>
+          <select value={props.filterArchive} onChange={(e) => props.onFilterArchive(e.target.value as "active" | "archived" | "all")}>
+            <option value="active">Active</option>
+            <option value="archived">Archived</option>
+            <option value="all">All</option>
           </select>
         </div>
         <button className="btn" onClick={props.onApply}>
@@ -1287,6 +1311,16 @@ function CompaniesList(props: {
                           <button className="btn btn-sm" onClick={() => props.onOpen(r.id)}>
                             <i className="ti ti-eye" />
                             View
+                          </button>
+                          <button
+                            className="icon-btn"
+                            title="More"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              alert("Suspend / Archive actions — open the company detail to manage governance status.");
+                            }}
+                          >
+                            <i className="ti ti-dots-vertical" />
                           </button>
                         </div>
                       </td>
@@ -1427,6 +1461,17 @@ function CompaniesDetail(props: {
               </button>
             ))}
           </div>
+          <button
+            className="icon-btn"
+            title="More"
+            onClick={() =>
+              alert(
+                "More actions — Suspend / Archive belong on the Governance card on the Profile tab below."
+              )
+            }
+          >
+            <i className="ti ti-dots-vertical" />
+          </button>
         </div>
       </div>
 
@@ -2465,6 +2510,13 @@ function TemplatesPane(props: {
                       <div className="row-actions">
                         <button className="icon-btn" title="Edit" onClick={() => props.onOpen(r.id)}>
                           <i className="ti ti-edit" />
+                        </button>
+                        <button
+                          className="icon-btn"
+                          title="Clone"
+                          onClick={() => alert("Clone — opens a new template draft pre-filled from this one (TODO: wire to /new?clone=" + r.id + ").")}
+                        >
+                          <i className="ti ti-copy" />
                         </button>
                       </div>
                     </td>
