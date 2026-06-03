@@ -15,7 +15,6 @@ import Link from "next/link";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { PaginationBar } from "@/components/PaginationBar";
 import { PartnerSettingsModal } from "@/components/PartnerSettingsModal";
-import { TranslationsModal } from "@/components/TranslationsModal";
 import { StatusPill } from "@/components/ui/StatusPill";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
@@ -67,9 +66,9 @@ import {
   Building,
   Check,
   CircleCheck,
+  CreditCard,
   Download,
   ExternalLink,
-  Languages,
   Pencil,
   RefreshCw,
   Search,
@@ -80,7 +79,7 @@ import {
 } from "lucide-react";
 
 type SortDir = "asc" | "desc";
-type SortField = "id" | "name" | "type" | "status" | "governance_status" | "is_seller";
+type SortField = "id" | "name" | "type" | "governance_status" | "is_seller";
 
 const GOVERNANCE_STATUSES = ["pending", "active", "suspended", "rejected"] as const;
 
@@ -132,7 +131,6 @@ export default function PlatformCompaniesPage() {
   const [forbidden, setForbidden] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [permModalCompany, setPermModalCompany] = useState<PlatformCompanyRow | null>(null);
-  const [translateRow, setTranslateRow] = useState<PlatformCompanyRow | null>(null);
   const [partnerRow, setPartnerRow] = useState<PlatformCompanyRow | null>(null);
   const [permSelected, setPermSelected] = useState<Record<string, boolean>>({});
   const [permLoadErr, setPermLoadErr] = useState<string | null>(null);
@@ -592,9 +590,10 @@ export default function PlatformCompaniesPage() {
                   ["id", (r) => r.id],
                   ["name", (r) => r.name],
                   ["type", (r) => r.type ?? ""],
-                  ["status", (r) => r.status ?? ""],
                   ["governance", (r) => r.governance_status],
                   ["is_seller", (r) => (r.is_seller ? "yes" : "no")],
+                  ["payments_ready", (r) =>
+                    r.stripe_charges_enabled && r.stripe_payouts_enabled ? "yes" : r.stripe_connect_id ? "pending" : "no"],
                   ["partner_visible", (r) => (r.is_partner_visible ? "yes" : "no")],
                   ["archived_at", (r) => r.archived_at ?? ""],
                 ])
@@ -834,16 +833,6 @@ export default function PlatformCompaniesPage() {
                 <th scope="col" className="px-4 py-3">
                   <button
                     type="button"
-                    onClick={() => toggleSort("status")}
-                    className="inline-flex items-center gap-1 uppercase tracking-wide transition hover:text-primary"
-                  >
-                    {t("admin.platform_companies.status")}
-                    <span className="tabular-nums">{sortIndicator("status")}</span>
-                  </button>
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  <button
-                    type="button"
                     onClick={() => toggleSort("governance_status")}
                     className="inline-flex items-center gap-1 uppercase tracking-wide transition hover:text-primary"
                   >
@@ -860,6 +849,11 @@ export default function PlatformCompaniesPage() {
                     {t("admin.platform_companies.seller")}
                     <span className="tabular-nums">{sortIndicator("is_seller")}</span>
                   </button>
+                </th>
+                <th scope="col" className="px-4 py-3 uppercase tracking-wide">
+                  {t("admin.platform_companies.payments_ready") !== "admin.platform_companies.payments_ready"
+                    ? t("admin.platform_companies.payments_ready")
+                    : "Payments-ready"}
                 </th>
                 <th scope="col" className="px-4 py-3 text-right">{t("admin.platform_companies.actions")}</th>
               </tr>
@@ -949,14 +943,11 @@ export default function PlatformCompaniesPage() {
               {rows.map((r) => {
                 const initials = (r.name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
                 const tone = pickAvatarTone(r.id);
-                const statusColor =
-                  r.status === "active"
-                    ? "var(--admin-success)"
-                    : r.status === "suspended" || r.status === "banned"
-                      ? "var(--admin-danger)"
-                      : r.status === "pending"
-                        ? "var(--admin-warning)"
-                        : "var(--admin-text-tertiary)";
+                const paymentsState: "ready" | "incomplete" | "none" = !r.stripe_connect_id
+                  ? "none"
+                  : r.stripe_charges_enabled && r.stripe_payouts_enabled
+                    ? "ready"
+                    : "incomplete";
                 return (
                 <tr key={r.id} className="border-b border-default last:border-0 transition hover:bg-figma-bg-1">
                   <td className="px-4 py-3 tabular-nums font-mono text-xs text-fg-t7">
@@ -997,18 +988,6 @@ export default function PlatformCompaniesPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    {r.status ? (
-                      <span className="inline-flex items-center gap-1.5 text-[12px]">
-                        <span
-                          aria-hidden
-                          className="inline-block h-1.5 w-1.5 rounded-full"
-                          style={{ backgroundColor: statusColor }}
-                        />
-                        <span className="capitalize">{r.status}</span>
-                      </span>
-                    ) : <span className="text-fg-t6">—</span>}
-                  </td>
-                  <td className="px-4 py-3">
                     <span
                       className={STATUS_BADGE_CLASS}
                       style={statusBadgeStyle(governanceTone(r.governance_status))}
@@ -1021,11 +1000,40 @@ export default function PlatformCompaniesPage() {
                       <StatusPill status="yes" tone="success">
                         {t("admin.platform_companies.yes")}
                         {r.active_seller_permissions_count != null && (
-                          <span className="ml-1 tabular-nums">В· {r.active_seller_permissions_count}</span>
+                          <span className="ml-1 tabular-nums">· {r.active_seller_permissions_count}</span>
                         )}
                       </StatusPill>
                     ) : (
                       <StatusPill status="no" tone="muted">{t("admin.platform_companies.no")}</StatusPill>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {paymentsState === "ready" ? (
+                      <span
+                        className="inline-flex items-center gap-1 rounded-md px-2 py-[3px] text-[11px] font-semibold uppercase tracking-[0.3px]"
+                        style={{
+                          backgroundColor: "var(--admin-success-light)",
+                          color: "var(--admin-success-dark)",
+                        }}
+                        title={`Stripe ${r.stripe_connect_id ?? ""} — charges + payouts enabled`}
+                      >
+                        <CreditCard className="h-3 w-3" />
+                        Ready
+                      </span>
+                    ) : paymentsState === "incomplete" ? (
+                      <span
+                        className="inline-flex items-center gap-1 rounded-md px-2 py-[3px] text-[11px] font-semibold uppercase tracking-[0.3px]"
+                        style={{
+                          backgroundColor: "var(--admin-warning-light)",
+                          color: "var(--admin-warning-dark)",
+                        }}
+                        title={`Stripe ${r.stripe_connect_id ?? ""} — onboarding pending`}
+                      >
+                        <CreditCard className="h-3 w-3" />
+                        Pending
+                      </span>
+                    ) : (
+                      <span className="text-fg-t6 text-[12px]">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -1057,23 +1065,14 @@ export default function PlatformCompaniesPage() {
                           </button>
                         </>
                       ) : (
-                        <>
-                          <IconButton
-                            aria-label={t("admin.platform_companies.permissions")}
-                            title={t("admin.platform_companies.permissions")}
-                            disabled={busyId === r.id}
-                            onClick={() => void openPermissionsModal(r)}
-                          >
-                            <Shield />
-                          </IconButton>
-                          <IconButton
-                            aria-label={t("admin.platform_companies.translations")}
-                            title={t("admin.platform_companies.translations_tooltip")}
-                            onClick={() => setTranslateRow(r)}
-                          >
-                            <Languages />
-                          </IconButton>
-                        </>
+                        <IconButton
+                          aria-label={t("admin.platform_companies.permissions")}
+                          title={t("admin.platform_companies.permissions")}
+                          disabled={busyId === r.id}
+                          onClick={() => void openPermissionsModal(r)}
+                        >
+                          <Shield />
+                        </IconButton>
                       )}
                       <RowActionsMenu
                         disabled={busyId === r.id}
@@ -1295,17 +1294,6 @@ export default function PlatformCompaniesPage() {
           </div>
         </div>
       )}
-      <TranslationsModal
-        open={translateRow !== null}
-        onClose={() => setTranslateRow(null)}
-        entityType="company"
-        entityId={translateRow?.id ?? null}
-        entityLabel={translateRow?.name ?? undefined}
-        fields={[
-          { name: "title", label: "Company name" },
-          { name: "description", label: "Description", multiline: true },
-        ]}
-      />
       <PartnerSettingsModal
         company={partnerRow}
         onClose={() => setPartnerRow(null)}

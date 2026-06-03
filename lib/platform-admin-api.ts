@@ -218,7 +218,9 @@ export type PlatformCompanyRow = {
   id: number;
   name: string;
   type?: string | null;
-  status?: string | null;
+  // `status` (free-text active/pending/suspended) was dropped from
+  // `companies` 2026-06-03 (backend `9cc8e36`). Use `governance_status` —
+  // it's the single source of truth now.
   legal_name?: string | null;
   slug?: string | null;
   tax_id?: string | null;
@@ -241,6 +243,12 @@ export type PlatformCompanyRow = {
   archived_at?: string | null;
   archived_by_user_id?: number | null;
   archived_reason?: string | null;
+  // Stripe Connect status (exposed by CompanyResource since `9cc8e36` —
+  // 2026-06-03). Drives the "Payments-ready" column on the list.
+  stripe_connect_id?: string | null;
+  stripe_charges_enabled?: boolean | null;
+  stripe_payouts_enabled?: boolean | null;
+  stripe_details_submitted?: boolean | null;
 };
 
 export type CompanyArchiveFilter = "active" | "archived" | "all";

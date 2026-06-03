@@ -518,9 +518,8 @@ function ProfileTab({
           <Field label={t("admin.crud.common.id")} value={String(company.id)} />
           <Field label={t("admin.platform_companies.name")} value={company.name} />
           <Field label={t("admin.platform_companies.type")} value={company.type ?? "—"} />
-          <Field label={t("admin.platform_companies.status")}>
-            {company.status ? <StatusPill status={company.status} /> : "—"}
-          </Field>
+          {/* `status` column dropped 2026-06-03 (backend `9cc8e36`) — governance
+              status below is now the single source of truth. */}
           <Field label={t("admin.platform_companies.legal_name")} value={company.legal_name ?? "—"} />
           <Field label={t("admin.platform_companies.slug")} value={company.slug ?? "—"} />
           <Field label={t("admin.platform_companies.tax_id")} value={company.tax_id ?? "—"} />
