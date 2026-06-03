@@ -290,10 +290,46 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
   const [templateModal, setTemplateModal] = useState<ContractTemplateDetail | "new" | null>(null);
   const [templateModalSaving, setTemplateModalSaving] = useState(false);
 
+  // Section-tab count badges. The HTML mock shows the count next to
+  // Companies / Seller applications / Contracts from the very first paint
+  // (Templates + Logs have no count). We fetch all three totals once on
+  // mount so the numbers are there immediately — not only after the tab is
+  // opened. Each tab's own loader keeps its number fresh afterwards.
+  const [tabCounts, setTabCounts] = useState<{
+    companies?: number;
+    applications?: number;
+    contracts?: number;
+  }>({});
+
   const baseURL = useMemo(
     () => process.env.NEXT_PUBLIC_API_URL || "https://api.zulu.am",
     []
   );
+
+  useEffect(() => {
+    if (!token || !allowed) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [c, a, ct] = await Promise.all([
+          apiPlatformCompanies(token, { page: 1, per_page: 1, archive_filter: "active" }),
+          apiSellerApplications(token, { page: 1, per_page: 1 }),
+          apiAdminContracts(token, { page: 1, per_page: 1, status: "", type: "" }),
+        ]);
+        if (cancelled) return;
+        setTabCounts({
+          companies: c.meta?.total,
+          applications: a.meta?.total,
+          contracts: ct.meta?.total,
+        });
+      } catch {
+        /* counts are non-critical chrome */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, allowed]);
 
   // ───────────────── URL sync ─────────────────
   useEffect(() => {
@@ -676,13 +712,14 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
 
             <div className="section-tabs">
               {(Object.keys(TAB_META) as MgmtTab[]).map((k) => {
-                // Live counts from the loaded data per pane (matches the
-                // HTML mock's `<span class="count">128</span>` on the first
-                // 3 tabs; Templates + Logs have no count in the mock).
+                // Counts shown on Companies / Seller applications / Contracts
+                // from first paint (mock's `<span class="count">`). Prefer the
+                // live total from the open tab; fall back to the mount-time
+                // fetch so all three show immediately. Templates + Logs: none.
                 let count: number | null = null;
-                if (k === "companies") count = companiesMeta?.total ?? companies.length;
-                else if (k === "applications") count = apps.length || null;
-                else if (k === "contracts") count = contracts.length || null;
+                if (k === "companies") count = companiesMeta?.total ?? tabCounts.companies ?? null;
+                else if (k === "applications") count = tabCounts.applications ?? (apps.length || null);
+                else if (k === "contracts") count = tabCounts.contracts ?? (contracts.length || null);
                 return (
                   <button
                     key={k}
@@ -691,7 +728,7 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                   >
                     <i className={`ti ${TAB_META[k].icon}`} />
                     {TAB_META[k].label}
-                    {count !== null && count > 0 ? <span className="count">{count}</span> : null}
+                    {count !== null ? <span className="count">{count}</span> : null}
                   </button>
                 );
               })}
