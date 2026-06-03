@@ -641,10 +641,17 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
       templates: "/platform/contract-templates",
       logs: "/platform/audit-logs",
     };
-    // scroll:false — the panes live in the same page; jumping to top on a
-    // tab click is jarring. Combined with scrollbar-gutter:stable (CSS) this
-    // kills both the vertical and horizontal jump on tab switches.
-    router.push(map[next], { scroll: false });
+    // 2026-06-04 — switch the tab PURELY client-side, exactly like the HTML
+    // mock (which just toggles `.page-pane.active` with no navigation). We
+    // previously called router.push() here, which triggered a full Next.js
+    // navigation on every tab click → re-render + data refetch + scroll/
+    // layout jump ("ամբողջ էջը աջ ու ձախ"). history.replaceState updates the
+    // address bar (so deep-link / refresh still land on the right tab via
+    // initialTab) WITHOUT any navigation, reload, or jump. The tab strip
+    // stays put; only the pane below changes.
+    if (typeof window !== "undefined") {
+      window.history.replaceState(window.history.state, "", map[next]);
+    }
   }
 
   // ───────────────── Render shell ─────────────────
