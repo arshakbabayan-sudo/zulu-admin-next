@@ -64,6 +64,9 @@ import {
   apiAdminContractTemplate,
   apiAdminCreateContractTemplate,
   apiAdminUpdateContractTemplate,
+  apiAdminSendContract,
+  apiAdminCountersignContract,
+  apiAdminTerminateContract,
   contractStatusLabel,
   contractTypeLabel,
   CONTRACT_TYPES,
@@ -726,11 +729,21 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                     if (!token || !detailCompany) return;
                     try {
                       await apiPatchCompanySellerPermissions(token, detailCompany.id, services);
-                      await apiSyncCompanyCountryPermissions(
-                        token,
-                        detailCompany.id,
-                        countries.map((c) => ({ country_code: c.country_code, country_name: c.country_name }))
-                      );
+                      // The country-permissions endpoint requires the `countries`
+                      // array to be non-empty (Laravel `required|array` treats
+                      // `[]` as missing). If the user has no extra countries to
+                      // grant (home country is implicit), skip the sync — the
+                      // services PATCH alone is the meaningful change.
+                      if (countries.length > 0) {
+                        await apiSyncCompanyCountryPermissions(
+                          token,
+                          detailCompany.id,
+                          countries.map((c) => ({
+                            country_code: c.country_code,
+                            country_name: c.country_name,
+                          }))
+                        );
+                      }
                       const [pRes, cRes, comp] = await Promise.all([
                         apiCompanySellerPermissions(token, detailCompany.id),
                         apiCompanyCountryPermissions(token, detailCompany.id),
@@ -876,6 +889,53 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
         loading={contractDrawerLoading}
         detail={contractDrawer}
         onClose={() => setContractDrawer(null)}
+        onSend={async () => {
+          if (!token || !contractDrawer) return;
+          if (!confirm(`Send contract ${contractDrawer.contract_number} to the partner?`)) return;
+          try {
+            const res = await apiAdminSendContract(token, contractDrawer.id);
+            setContractDrawer(res.data);
+            await loadContracts();
+            alert("Contract sent.");
+          } catch (e) {
+            alert(e instanceof ApiRequestError ? e.message : "Send failed");
+          }
+        }}
+        onCountersign={async () => {
+          if (!token || !contractDrawer) return;
+          if (!confirm(`Countersign contract ${contractDrawer.contract_number}?`)) return;
+          try {
+            const res = await apiAdminCountersignContract(token, contractDrawer.id);
+            setContractDrawer(res.data);
+            await loadContracts();
+            alert("Contract countersigned.");
+          } catch (e) {
+            alert(e instanceof ApiRequestError ? e.message : "Countersign failed");
+          }
+        }}
+        onTerminate={async () => {
+          if (!token || !contractDrawer) return;
+          const reason = window.prompt("Termination reason (required):");
+          if (!reason || reason.trim().length < 3) {
+            if (reason !== null) alert("A reason of at least 3 characters is required.");
+            return;
+          }
+          try {
+            const res = await apiAdminTerminateContract(token, contractDrawer.id, reason);
+            setContractDrawer(res.data);
+            await loadContracts();
+            alert("Contract terminated.");
+          } catch (e) {
+            alert(e instanceof ApiRequestError ? e.message : "Terminate failed");
+          }
+        }}
+        onPdf={() => {
+          if (!contractDrawer?.signed_pdf_url) {
+            alert("No signed PDF available for this contract yet.");
+            return;
+          }
+          window.open(contractDrawer.signed_pdf_url, "_blank", "noopener,noreferrer");
+        }}
       />
       <AuditDrawer open={auditDrawer !== null} row={auditDrawer} onClose={() => setAuditDrawer(null)} />
 
@@ -2682,6 +2742,10 @@ function ContractDrawer(props: {
   loading: boolean;
   detail: ContractDetail | null;
   onClose: () => void;
+  onSend: () => void;
+  onCountersign: () => void;
+  onTerminate: () => void;
+  onPdf: () => void;
 }) {
   const d = props.detail;
   return (
@@ -2757,19 +2821,32 @@ function ContractDrawer(props: {
           ) : null}
         </div>
         <div className="drawer-footer">
-          <button className="btn btn-sm">
+          <button className="btn btn-sm" onClick={props.onSend} disabled={!d || d.status !== "draft"}>
             <i className="ti ti-send" />
             Send
           </button>
-          <button className="btn btn-sm">
+          <button
+            className="btn btn-sm"
+            onClick={props.onCountersign}
+            disabled={!d || (d.status !== "signed_by_a" && d.status !== "signed_by_b")}
+          >
             <i className="ti ti-signature" />
             Countersign
           </button>
-          <button className="btn btn-sm btn-danger">
+          <button
+            className="btn btn-sm btn-danger"
+            onClick={props.onTerminate}
+            disabled={!d || d.status === "terminated" || d.status === "expired"}
+          >
             <i className="ti ti-ban" />
             Terminate
           </button>
-          <button className="btn btn-sm" style={{ marginLeft: "auto" }}>
+          <button
+            className="btn btn-sm"
+            style={{ marginLeft: "auto" }}
+            onClick={props.onPdf}
+            disabled={!d?.signed_pdf_url}
+          >
             <i className="ti ti-file-download" />
             PDF
           </button>
