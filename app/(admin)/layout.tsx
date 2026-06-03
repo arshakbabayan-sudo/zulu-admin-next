@@ -3,8 +3,23 @@
 import { AdminShell } from "@/components/AdminShell";
 import { AutoDocumentTitle } from "@/components/AutoDocumentTitle";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
+
+/**
+ * 2026-06-04 admin v3 — list of route prefixes that opt OUT of AdminShell.
+ * The Management routes render their OWN full 1:1 chrome (sidebar + header
+ * + page) from `docs/admin_designe/6_management.html` so the AdminShell
+ * (older paint) would visually double-up. Add a route prefix here when a
+ * page needs to control its own outer chrome.
+ */
+const MGMT_PREFIXES = [
+  "/platform/companies",
+  "/platform/seller-applications",
+  "/platform/contracts",
+  "/platform/contract-templates",
+  "/platform/audit-logs",
+];
 
 /**
  * v2 admin-redesign (2026-05-24) — AdminGroupTabs removed.
@@ -25,6 +40,7 @@ export default function AdminSectionLayout({
 }) {
   const { token, bootstrapped } = useAdminAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (bootstrapped && !token) {
@@ -42,6 +58,17 @@ export default function AdminSectionLayout({
 
   if (!token) {
     return null;
+  }
+
+  // Management routes render their own 1:1 chrome; bypass AdminShell.
+  const skipShell = !!pathname && MGMT_PREFIXES.some((p) => pathname.startsWith(p));
+  if (skipShell) {
+    return (
+      <>
+        <AutoDocumentTitle />
+        {children}
+      </>
+    );
   }
 
   return (
