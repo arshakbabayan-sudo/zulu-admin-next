@@ -107,16 +107,16 @@ const SIDEBAR_ITEMS: Array<{
   badge?: { value: string; tone?: "warn" };
 }> = [
   { key: "dashboard", href: "/dashboard", label: "Dashboard", icon: "ti-dashboard" },
-  { key: "inventory", href: "/inventory", label: "Inventory", icon: "ti-building-store" },
+  { key: "inventory", href: "/operator/hotels", label: "Inventory", icon: "ti-building-store" },
   { key: "bookings", href: "/platform/bookings", label: "Bookings", icon: "ti-calendar-event" },
-  { key: "finance", href: "/platform/finance", label: "Finance", icon: "ti-coin" },
+  { key: "finance", href: "/platform/finance-summary", label: "Finance", icon: "ti-coin" },
   { key: "directory", href: "/platform/users", label: "Directory", icon: "ti-id-badge-2" },
   { key: "hr", href: "/crm/team", label: "HR", icon: "ti-clipboard-list" },
-  { key: "inbox", href: "/notifications", label: "Inbox", icon: "ti-inbox" },
+  { key: "inbox", href: "/admin-redesign/notifications", label: "Inbox", icon: "ti-inbox" },
   { key: "management", href: "/platform/companies", label: "Management", icon: "ti-shield-check" },
-  { key: "files", href: "/files", label: "File manager", icon: "ti-folder" },
-  { key: "profile", href: "/account", label: "My profile", icon: "ti-user" },
-  { key: "settings", href: "/platform/settings", label: "Settings", icon: "ti-settings" },
+  { key: "files", href: "/admin-redesign/files", label: "File manager", icon: "ti-folder" },
+  { key: "profile", href: "/admin-redesign/profile", label: "My profile", icon: "ti-user" },
+  { key: "settings", href: "/settings/pricing-rules", label: "Settings", icon: "ti-settings" },
 ];
 
 type ApiListMeta = { current_page: number; last_page: number; per_page: number; total: number };
