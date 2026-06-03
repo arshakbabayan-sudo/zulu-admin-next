@@ -16,12 +16,19 @@
  *   />
  */
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 
 export type SectionTabItem = {
   href: string;
   label: string;
   count?: number | string;
+  /**
+   * Optional leading icon. Pass any ReactNode — admin v3 (Management redesign
+   * 2026-06-03+) passes a Tabler icon `<i className="ti ti-..."/>`; earlier
+   * callers may omit it for label-only tabs.
+   */
+  icon?: ReactNode;
 };
 
 type Props = {
@@ -45,12 +52,17 @@ export function SectionTabs({ items, activeHref, className = "" }: Props) {
             href={item.href}
             role="tab"
             aria-selected={isActive}
-            className="-mb-px inline-flex h-[38px] items-center gap-1 whitespace-nowrap border-b-2 px-[14px] text-[13px] font-medium transition"
+            className="-mb-px inline-flex h-[40px] items-center gap-1.5 whitespace-nowrap border-b-2 px-[14px] text-[13px] font-medium transition"
             style={{
               color: isActive ? "var(--admin-primary)" : "var(--admin-text-secondary)",
               borderBottomColor: isActive ? "var(--admin-primary)" : "transparent",
             }}
           >
+            {item.icon ? (
+              <span className="text-[16px] leading-none" aria-hidden>
+                {item.icon}
+              </span>
+            ) : null}
             {item.label}
             {item.count !== undefined ? (
               <span

@@ -57,6 +57,7 @@ import {
   StatCard,
   StatGrid,
   IconButton,
+  SuperAdminTag,
 } from "@/components/ui/v2";
 import { MarketplaceOpsSectionTabs } from "@/components/marketplace/MarketplaceOpsSectionTabs";
 import {
@@ -569,6 +570,7 @@ export default function PlatformCompaniesPage() {
           { label: t("admin.platform_companies.title") },
         ]}
         title={t("admin.platform_companies.title")}
+        titleBadge={<SuperAdminTag />}
         subtitle={
           meta
             ? t("admin.platform_companies.meta")

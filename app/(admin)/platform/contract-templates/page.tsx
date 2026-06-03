@@ -30,6 +30,7 @@ import {
   StatCard,
   StatGrid,
   IconButton,
+  SuperAdminTag,
 } from "@/components/ui/v2";
 import { MarketplaceOpsSectionTabs } from "@/components/marketplace/MarketplaceOpsSectionTabs";
 import {
@@ -195,6 +196,7 @@ export default function PlatformContractTemplatesPage() {
           { label: t("admin.contract_templates.title") },
         ]}
         title={t("admin.contract_templates.title")}
+        titleBadge={<SuperAdminTag />}
         subtitle="Reusable contract templates with placeholders and default variables"
         actions={
           <>

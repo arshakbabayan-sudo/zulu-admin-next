@@ -22,11 +22,18 @@ import { Breadcrumb, type BreadcrumbItem } from "./Breadcrumb";
 export type PageHeaderProps = {
   breadcrumb?: BreadcrumbItem[];
   title: ReactNode;
+  /**
+   * Optional pill rendered inline after the title. Used by Management /
+   * platform-only pages to render the "Super admin" shield-lock chip per the
+   * 6_management.html design. Pass any ReactNode; common case is
+   * `<SuperAdminTag/>` (see ./SuperAdminTag).
+   */
+  titleBadge?: ReactNode;
   subtitle?: ReactNode;
   actions?: ReactNode;
 };
 
-export function PageHeader({ breadcrumb, title, subtitle, actions }: PageHeaderProps) {
+export function PageHeader({ breadcrumb, title, titleBadge, subtitle, actions }: PageHeaderProps) {
   return (
     <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
       <div>
@@ -36,10 +43,11 @@ export function PageHeader({ breadcrumb, title, subtitle, actions }: PageHeaderP
           </div>
         ) : null}
         <h1
-          className="text-[22px] font-semibold leading-tight tracking-[-0.01em]"
+          className="flex flex-wrap items-center gap-2.5 text-[22px] font-semibold leading-tight tracking-[-0.01em]"
           style={{ color: "var(--admin-text-primary)" }}
         >
-          {title}
+          <span>{title}</span>
+          {titleBadge}
         </h1>
         {subtitle ? (
           <div

@@ -42,6 +42,7 @@ import {
   StatCard,
   StatGrid,
   IconButton,
+  SuperAdminTag,
 } from "@/components/ui/v2";
 import { LogsInnerTabs, MarketplaceOpsSectionTabs } from "@/components/marketplace/MarketplaceOpsSectionTabs";
 import {
@@ -417,6 +418,7 @@ export default function PlatformAuditLogsPage() {
           { label: t("admin.platform_audit_logs.title") },
         ]}
         title={t("admin.platform_audit_logs.title")}
+        titleBadge={<SuperAdminTag />}
         subtitle={t("admin.platform_audit_logs.subtitle")}
         actions={
           <>

@@ -22,3 +22,9 @@ export { IconButton } from "./IconButton";
 export { EmptyState } from "./EmptyState";
 export { V2Button, type V2ButtonVariant, type V2ButtonSize } from "./Button";
 export { V2Card, V2CardHeader, V2CardBody } from "./Card";
+/* admin v3 — Management redesign 2026-06-03+ primitives */
+export { SuperAdminTag } from "./SuperAdminTag";
+export { V2Badge, type V2BadgeTone } from "./Badge";
+export { V2Avatar, type V2AvatarTone } from "./Avatar";
+export { V2Drawer, V2DrawerSection, V2DrawerInfoRow } from "./Drawer";
+export { V2Modal, V2ModalSectionLabel } from "./Modal";

@@ -51,6 +51,7 @@ import {
   StatCard,
   StatGrid,
   IconButton,
+  SuperAdminTag,
 } from "@/components/ui/v2";
 import {
   AlertCircle,
@@ -221,6 +222,7 @@ export default function PlatformContractsPage() {
           { label: t("admin.contracts.title") },
         ]}
         title={t("admin.contracts.title")}
+        titleBadge={<SuperAdminTag />}
         subtitle={
           t("admin.contracts.subtitle") !== "admin.contracts.subtitle"
             ? t("admin.contracts.subtitle")

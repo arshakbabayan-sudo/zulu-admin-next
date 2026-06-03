@@ -298,7 +298,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen flex-col overflow-hidden bg-slate-100 text-slate-900">
       <header className="z-20 flex h-14 shrink-0 items-center justify-between border-b px-4 text-slate-800" style={{ backgroundColor: "var(--admin-header-bg)", borderColor: "var(--admin-border)" }}>
         <div className="flex items-center">
-          <div className={`hidden md:flex items-center gap-2 border-r pr-4 ${sidebarOpen ? "md:w-72" : "md:w-20 md:justify-center md:pr-0"}`} style={{ borderColor: "var(--admin-border)" }}>
+          <div className={`hidden md:flex items-center gap-2 border-r pr-4 ${sidebarOpen ? "md:w-[260px]" : "md:w-16 md:justify-center md:pr-0"}`} style={{ borderColor: "var(--admin-border)" }}>
             <Link href="/dashboard" aria-label={t("admin.nav.dashboard")} title={t("admin.nav.dashboard")} className="inline-flex items-center transition hover:opacity-80">
               {sidebarOpen ? (
                 /* Expanded sidebar: full ZULU wordmark from Figma Zulu_1 */
@@ -675,7 +675,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         className={`overflow-y-auto border-r bg-white fixed inset-y-0 left-0 top-14 z-30 w-72 transition-transform duration-200 ${
           mobileDrawerOpen ? "translate-x-0" : "-translate-x-full"
         } md:static md:top-0 md:z-auto md:min-h-0 md:shrink-0 md:translate-x-0 md:transition-[width] ${
-          sidebarOpen ? "md:w-72" : "md:w-20"
+          sidebarOpen ? "md:w-[260px]" : "md:w-16"
         }`}
         style={{ borderColor: "var(--admin-border)", backgroundColor: "var(--admin-surface)" }}
       >

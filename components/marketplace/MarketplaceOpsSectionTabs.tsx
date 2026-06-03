@@ -35,25 +35,42 @@ export function MarketplaceOpsSectionTabs({ activeHref, counts }: Props) {
   // Both Logs views (audit + services) highlight the same "Logs" outer tab.
   const logsActiveHref =
     activeHref === "/bucket3/service-logs" ? "/platform/audit-logs" : activeHref;
+  // Tabler icons match docs/admin_designe/6_management.html section-tabs spec.
   return (
     <SectionTabs
       activeHref={logsActiveHref}
       items={[
-        { href: "/platform/companies", label: "Companies", count: counts?.companies },
+        {
+          href: "/platform/companies",
+          label: "Companies",
+          count: counts?.companies,
+          icon: <i className="ti ti-building-community" aria-hidden />,
+        },
         {
           href: "/platform/seller-applications",
           label: "Seller applications",
           count: counts?.sellerApplications,
+          icon: <i className="ti ti-user-check" aria-hidden />,
         },
         // Phase 2C / 4A (2026-05-31) — Users tab removed from Management.
         // /platform/users now lives under the Directory sidebar group.
-        { href: "/platform/contracts", label: "Contracts", count: counts?.contracts },
+        {
+          href: "/platform/contracts",
+          label: "Contracts",
+          count: counts?.contracts,
+          icon: <i className="ti ti-file-text" aria-hidden />,
+        },
         {
           href: "/platform/contract-templates",
           label: "Contract templates",
           count: counts?.contractTemplates,
+          icon: <i className="ti ti-template" aria-hidden />,
         },
-        { href: "/platform/audit-logs", label: "Logs" },
+        {
+          href: "/platform/audit-logs",
+          label: "Logs",
+          icon: <i className="ti ti-history" aria-hidden />,
+        },
       ]}
     />
   );

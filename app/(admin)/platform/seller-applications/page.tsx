@@ -35,6 +35,7 @@ import {
   StatCard,
   StatGrid,
   IconButton,
+  SuperAdminTag,
 } from "@/components/ui/v2";
 import { MarketplaceOpsSectionTabs } from "@/components/marketplace/MarketplaceOpsSectionTabs";
 import { exportRowsAsCsv } from "@/lib/export-csv";
@@ -250,6 +251,7 @@ export default function SellerApplicationsPage() {
           { label: t("admin.seller_applications.title") },
         ]}
         title={t("admin.seller_applications.title")}
+        titleBadge={<SuperAdminTag />}
         subtitle="Companies applying to sell specific service types on the platform"
         actions={
           <>

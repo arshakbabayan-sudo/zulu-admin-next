@@ -42,6 +42,16 @@ export default function RootLayout({
   const htmlLang = getServerLang();
   return (
     <html lang={htmlLang} suppressHydrationWarning>
+      <head>
+        {/* Tabler Icons webfont — used by admin v3 surface (Management redesign
+            2026-06-03+). `<i class="ti ti-*"/>` markup in v3 components and HTML
+            specs (docs/admin_designe/) renders the icon glyph. Loaded via CDN
+            stylesheet (no JS, no bundle weight). */}
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.24.0/dist/tabler-icons.min.css"
+        />
+      </head>
       <body
         className={`${inter.variable} ${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
       >
