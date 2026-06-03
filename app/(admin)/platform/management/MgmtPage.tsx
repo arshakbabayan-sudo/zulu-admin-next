@@ -25,6 +25,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import "./management.css";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import {
@@ -227,6 +228,7 @@ const CONTRACT_STATUS_TONE: Record<string, "badge-success" | "badge-warning" | "
 export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab }) {
   const router = useRouter();
   const { token, user, logout } = useAdminAuth();
+  const { lang, setLang, languageOptions } = useLanguage();
   const allowed = canAccessPlatformAdminNav(user);
 
   // ───────────────── Top-level state ─────────────────
@@ -639,7 +641,10 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
       templates: "/platform/contract-templates",
       logs: "/platform/audit-logs",
     };
-    router.push(map[next]);
+    // scroll:false — the panes live in the same page; jumping to top on a
+    // tab click is jarring. Combined with scrollbar-gutter:stable (CSS) this
+    // kills both the vertical and horizontal jump on tab switches.
+    router.push(map[next], { scroll: false });
   }
 
   // ───────────────── Render shell ─────────────────
@@ -657,6 +662,9 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
             title={`Management · ${inCompanyDetail ? detailCompany.name : activeMeta.label}`}
             user={user ?? null}
             token={token}
+            lang={lang}
+            languageOptions={languageOptions}
+            onSetLang={setLang}
             onLogout={() => void logout().then(() => router.push("/login"))}
             onNotifications={() => router.push("/admin-redesign/notifications")}
             onApps={() => router.push("/dashboard")}
@@ -1095,6 +1103,9 @@ function Header({
   title,
   user,
   token,
+  lang,
+  languageOptions,
+  onSetLang,
   onLogout,
   onNotifications,
   onApps,
@@ -1104,12 +1115,16 @@ function Header({
   title: string;
   user: { name?: string | null; email?: string | null; context?: { world?: string } } | null;
   token: string | null;
+  lang: string;
+  languageOptions: Array<{ code: string; label: string }>;
+  onSetLang: (code: string) => void;
   onLogout: () => void;
   onNotifications: () => void;
   onApps: () => void;
 }) {
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [langMenuOpen, setLangMenuOpen] = useState(false);
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem("zulu_admin_theme");
@@ -1173,18 +1188,40 @@ function Header({
         <input type="search" placeholder="Search anything..." />
       </div>
       <div className="header-actions">
-        <button className="header-lang" title="Language">
-          {/* UK flag — verbatim from HTML mock */}
-          <svg className="header-lang-flag" viewBox="0 0 60 30" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <clipPath id="uk-t"><path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z"/></clipPath>
-            <rect width="60" height="30" fill="#012169"/>
-            <path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" strokeWidth="6"/>
-            <path d="M0,0 L60,30 M60,0 L0,30" clipPath="url(#uk-t)" stroke="#C8102E" strokeWidth="4"/>
-            <path d="M30,0 v30 M0,15 h60" stroke="#fff" strokeWidth="10"/>
-            <path d="M30,0 v30 M0,15 h60" stroke="#C8102E" strokeWidth="6"/>
-          </svg>
-          EN
-        </button>
+        <div style={{ position: "relative" }}>
+          <button className="header-lang" title="Language" onClick={() => setLangMenuOpen((v) => !v)}>
+            {/* UK flag — verbatim from HTML mock */}
+            <svg className="header-lang-flag" viewBox="0 0 60 30" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <clipPath id="uk-t"><path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z"/></clipPath>
+              <rect width="60" height="30" fill="#012169"/>
+              <path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" strokeWidth="6"/>
+              <path d="M0,0 L60,30 M60,0 L0,30" clipPath="url(#uk-t)" stroke="#C8102E" strokeWidth="4"/>
+              <path d="M30,0 v30 M0,15 h60" stroke="#fff" strokeWidth="10"/>
+              <path d="M30,0 v30 M0,15 h60" stroke="#C8102E" strokeWidth="6"/>
+            </svg>
+            {(languageOptions.find((o) => o.code === lang)?.code ?? lang).toUpperCase()}
+          </button>
+          {langMenuOpen && (
+            <div className="row-menu open" style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, minWidth: 160 }}>
+              {languageOptions.map((o) => (
+                <button
+                  key={o.code}
+                  className="menu-item"
+                  onClick={() => {
+                    onSetLang(o.code);
+                    setLangMenuOpen(false);
+                  }}
+                  style={o.code === lang ? { color: "var(--primary)", fontWeight: 600 } : undefined}
+                >
+                  <span style={{ textTransform: "uppercase", fontSize: 11, fontWeight: 600, minWidth: 22 }}>
+                    {o.code}
+                  </span>
+                  <span>{o.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <a
           className="header-icon-btn"
           href={websiteHref}

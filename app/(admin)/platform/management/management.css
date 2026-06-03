@@ -83,7 +83,8 @@
 .mgmt-page .breadcrumb a:hover { color:var(--primary); }
 .mgmt-page .breadcrumb-current { color:var(--text-primary); font-weight:500; }
 .mgmt-page .page-title { font-size:22px; font-weight:600; letter-spacing:-0.01em; display:flex; align-items:center; gap:10px; }
-.mgmt-page .page-title .super-tag { font-size:11px; font-weight:600; letter-spacing:.2px; padding:3px 8px; border-radius:var(--radius-md); background:var(--primary-light); color:var(--primary-dark); display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
+.mgmt-page .page-title .super-tag { font-size:10px; font-weight:600; letter-spacing:.2px; padding:2px 7px; border-radius:var(--radius-sm); background:var(--primary-light); color:var(--primary-dark); display:inline-flex; align-items:center; gap:3px; white-space:nowrap; line-height:1.4; }
+.mgmt-page .page-title .super-tag i { font-size:11px; }
 .mgmt-page .page-subtitle { font-size:13px; color:var(--text-secondary); margin-top:4px; }
 
 .mgmt-page .section-tabs { display:flex; gap:4px; border-bottom:1px solid var(--border-color); margin-bottom:20px; overflow-x:auto; overflow-y:hidden; flex-wrap:nowrap; }
@@ -330,3 +331,11 @@
 /* Body background — when the page is mounted, paint the FULL viewport
    with the page-background colour from the mock (--bg-tertiary). */
 .mgmt-page-host { background:#F4F5F7; min-height:100vh; }
+
+/* Always reserve the vertical scrollbar gutter while a Management page is
+   mounted. Without this, switching a section-tab to a pane that is shorter
+   (or taller) than the viewport makes the scrollbar appear/disappear, which
+   shifts the whole page left/right by the scrollbar width — the "աջ ու ձախ"
+   jump Arshak reported on tab clicks. `scrollbar-gutter:stable` keeps the
+   track space reserved at all times so the layout never shifts. */
+html:has(.mgmt-page) { scrollbar-gutter: stable; overflow-y: scroll; }
