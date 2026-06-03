@@ -30,7 +30,6 @@ import {
   formatRelativeTime,
   pickAvatarTone,
   statusBadgeStyle,
-  type StatusTone,
 } from "@/lib/admin-v2-helpers";
 import { Pagination } from "@/components/ui";
 import {
@@ -44,7 +43,7 @@ import {
   IconButton,
   SuperAdminTag,
 } from "@/components/ui/v2";
-import { LogsInnerTabs, MarketplaceOpsSectionTabs } from "@/components/marketplace/MarketplaceOpsSectionTabs";
+import { MarketplaceOpsSectionTabs } from "@/components/marketplace/MarketplaceOpsSectionTabs";
 import {
   AlertTriangle,
   CircleX,
@@ -93,13 +92,11 @@ const RESOURCE_TYPES: Array<{ value: string; label: string }> = [
   { value: "Hotel", label: "Hotel" },
 ];
 
-// Severity filter — derived from the category, no backend column yet.
-const SEVERITY_LEVELS: Array<{ value: string; label: string; tone: StatusTone }> = [
-  { value: "", label: "All", tone: "gray" },
-  { value: "info", label: "Info", tone: "info" },
-  { value: "warning", label: "Warning", tone: "warning" },
-  { value: "critical", label: "Critical", tone: "danger" },
-];
+// 2026-06-04 admin v3 — `Severity` filter + column removed. The backend
+// has no `severity` column; the previous version derived a tone from the
+// category client-side and called it "Severity" — that gave operators a
+// false signal. Use Category instead. Spec:
+// `docs/blueprints/html-handoff/Management_tab.md` TAB 5 Logs.
 
 type AuditLogRow = {
   id: string;
@@ -133,18 +130,6 @@ type IntegrityResult = {
   limit_checked: number;
 };
 
-function severityFor(row: AuditLogRow): { value: "info" | "warning" | "critical"; tone: StatusTone; label: string } {
-  const cat = row.category;
-  const action = row.action.toLowerCase();
-  if (cat === "security" || action.includes("fail") || action.includes("denied") || action.includes("breach")) {
-    return { value: "critical", tone: "danger", label: "Critical" };
-  }
-  if (cat === "auth" || cat === "admin_actions" || action.includes("delete")) {
-    return { value: "warning", tone: "warning", label: "Warning" };
-  }
-  return { value: "info", tone: "info", label: "Info" };
-}
-
 function shortType(t: string): string {
   const i = t.lastIndexOf("\\");
   return i >= 0 ? t.slice(i + 1) : t;
@@ -164,7 +149,6 @@ export default function PlatformAuditLogsPage() {
   const [actionType, setActionType] = useState("");
   const [actor, setActor] = useState("");
   const [resource, setResource] = useState("");
-  const [severity, setSeverity] = useState("");
   const [q, setQ] = useState("");
   const [appliedFilters, setAppliedFilters] = useState(0);
 
@@ -244,12 +228,6 @@ export default function PlatformAuditLogsPage() {
       .catch(() => setStats(null));
   }, [token, allowed]);
 
-  // Severity is a client-side filter — there's no backend column yet.
-  const visibleRows = useMemo(() => {
-    if (!severity) return rows;
-    return rows.filter((r) => severityFor(r).value === severity);
-  }, [rows, severity]);
-
   const applyFilters = () => {
     setPage(1);
     setAppliedFilters((n) => n + 1);
@@ -259,7 +237,6 @@ export default function PlatformAuditLogsPage() {
     setActionType("");
     setActor("");
     setResource("");
-    setSeverity("");
     setQ("");
     setPage(1);
     setAppliedFilters((n) => n + 1);
@@ -301,16 +278,6 @@ export default function PlatformAuditLogsPage() {
         },
       });
     }
-    if (severity) {
-      const lbl = SEVERITY_LEVELS.find((s) => s.value === severity)?.label ?? severity;
-      chips.push({
-        key: "severity",
-        label: `Severity: ${lbl}`,
-        clear: () => {
-          setSeverity("");
-        },
-      });
-    }
     if (q.trim()) {
       chips.push({
         key: "q",
@@ -323,7 +290,7 @@ export default function PlatformAuditLogsPage() {
       });
     }
     return chips;
-  }, [actionType, actor, resource, severity, q]);
+  }, [actionType, actor, resource, q]);
 
   const verifyIntegrity = async () => {
     if (!token) return;
@@ -449,12 +416,10 @@ export default function PlatformAuditLogsPage() {
 
       <MarketplaceOpsSectionTabs activeHref="/platform/audit-logs" />
 
-      {/* Phase 2B (2026-05-31) — Logs is one feature, two facets. Audit and
-          Services share the same backend endpoint with a category filter;
-          surfacing them as inner tabs of one Logs feature makes the
-          relationship obvious. The outer "Logs" tab in the Management strip
-          stays highlighted for both views. */}
-      <LogsInnerTabs activeHref="/platform/audit-logs" />
+      {/* 2026-06-04 admin v3 — LogsInnerTabs (Audit / Services) removed.
+          The two views hit the same endpoint with a category filter; the
+          Category dropdown below replaces the inner tab strip per
+          `docs/blueprints/html-handoff/Management_tab.md` TAB 5. */}
 
       <StatGrid cols={4} className="mb-5">
         <StatCard
@@ -552,20 +517,6 @@ export default function PlatformAuditLogsPage() {
             ))}
           </select>
         </FilterField>
-        <FilterField label="Severity">
-          <select
-            value={severity}
-            onChange={(e) => setSeverity(e.target.value)}
-            className="h-[34px] rounded-md border bg-white px-3 text-[12px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
-            style={{ borderColor: "var(--admin-border)" }}
-          >
-            {SEVERITY_LEVELS.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-        </FilterField>
         <FilterField label="Category">
           <select
             value=""
@@ -647,7 +598,6 @@ export default function PlatformAuditLogsPage() {
                 <th className="px-4 py-2.5 text-left">Actor</th>
                 <th className="px-4 py-2.5 text-left">Action</th>
                 <th className="px-4 py-2.5 text-left">Resource</th>
-                <th className="px-4 py-2.5 text-left">Severity</th>
                 <th className="px-4 py-2.5 text-left">IP</th>
                 <th className="px-4 py-2.5 text-right">Details</th>
               </tr>
@@ -656,17 +606,17 @@ export default function PlatformAuditLogsPage() {
               {loading ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={6}
                     className="px-4 py-10 text-center text-sm"
                     style={{ color: "var(--admin-text-secondary)" }}
                   >
                     {t("admin.platform_audit_logs.loading")}
                   </td>
                 </tr>
-              ) : visibleRows.length === 0 ? (
+              ) : rows.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={6}
                     className="px-4 py-10 text-center text-sm"
                     style={{ color: "var(--admin-text-secondary)" }}
                   >
@@ -674,11 +624,10 @@ export default function PlatformAuditLogsPage() {
                   </td>
                 </tr>
               ) : (
-                visibleRows.map((r) => {
+                rows.map((r) => {
                   const isSystem = !r.actor_id && (r.actor_type === "system" || r.actor_type.toLowerCase().includes("system"));
                   const actorName = isSystem ? "System" : r.actor_name_snapshot ?? r.actor_type ?? "Unknown";
                   const tone = pickAvatarTone(r.actor_id ?? r.id);
-                  const sev = severityFor(r);
                   return (
                     <tr
                       key={r.id}
@@ -744,11 +693,6 @@ export default function PlatformAuditLogsPage() {
                         ) : (
                           <span style={{ color: "var(--admin-text-tertiary)" }}>—</span>
                         )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={STATUS_BADGE_CLASS} style={statusBadgeStyle(sev.tone)}>
-                          {sev.label}
-                        </span>
                       </td>
                       <td className="px-4 py-3 font-mono text-[11px]" style={{ color: "var(--admin-text-secondary)" }}>
                         {r.ip_address ?? "—"}

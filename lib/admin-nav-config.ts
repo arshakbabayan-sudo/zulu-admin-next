@@ -327,7 +327,10 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/platform/contracts", labelKey: "admin.nav.tab.partnership_agreements", moduleKey: "ops.contracts" },
       { href: "/platform/contract-templates", labelKey: "admin.nav.tab.contract_templates", moduleKey: "ops.contracts" },
       { href: "/platform/audit-logs", labelKey: "admin.nav.tab.audit_logs" },
-      { href: "/bucket3/service-logs", labelKey: "admin.nav.tab.bucket3.service_logs" },
+      // 2026-06-04 admin v3 — `/bucket3/service-logs` page + tab removed.
+      // Was a duplicate-data view of the audit-logs endpoint filtered by
+      // category; absorbed into /platform/audit-logs via its Category
+      // dropdown. Spec `Management_tab.md` TAB 5.
     ],
     visibility: "section_marketplace_ops",
   },

@@ -32,13 +32,12 @@ type Props = {
 };
 
 export function MarketplaceOpsSectionTabs({ activeHref, counts }: Props) {
-  // Both Logs views (audit + services) highlight the same "Logs" outer tab.
-  const logsActiveHref =
-    activeHref === "/bucket3/service-logs" ? "/platform/audit-logs" : activeHref;
   // Tabler icons match docs/admin_designe/6_management.html section-tabs spec.
+  // 2026-06-04 — service-logs sibling absorbed into /platform/audit-logs; no
+  // alias remap needed.
   return (
     <SectionTabs
-      activeHref={logsActiveHref}
+      activeHref={activeHref}
       items={[
         {
           href: "/platform/companies",
@@ -76,19 +75,8 @@ export function MarketplaceOpsSectionTabs({ activeHref, counts }: Props) {
   );
 }
 
-/**
- * Inner Logs feature tabs — rendered ABOVE the page body on both
- * /platform/audit-logs and /bucket3/service-logs. Visually groups the two
- * data views (Audit / Services) as facets of one Logs feature.
- */
-export function LogsInnerTabs({ activeHref }: { activeHref: string }) {
-  return (
-    <SectionTabs
-      activeHref={activeHref}
-      items={[
-        { href: "/platform/audit-logs", label: "Audit" },
-        { href: "/bucket3/service-logs", label: "Services" },
-      ]}
-    />
-  );
-}
+// 2026-06-04 admin v3 — LogsInnerTabs (Audit / Services inner-tab strip)
+// removed. Both views shared the same backend endpoint differing only by
+// a category filter, so the strip duplicated UI. The Logs page now uses
+// its existing Category dropdown filter. Per spec
+// `docs/blueprints/html-handoff/Management_tab.md` TAB 5.
