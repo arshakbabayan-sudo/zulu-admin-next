@@ -176,11 +176,14 @@ export type CompanyApplicationRow = {
 
 export async function apiCompanyApplications(
   token: string,
-  params: { page?: number; status?: string }
+  params: { page?: number; status?: string; company_id?: number }
 ): Promise<ApiSuccessEnvelope<CompanyApplicationRow[]> & { meta: ApiListMeta }> {
   const q = new URLSearchParams();
   if (params.page != null) q.set("page", String(params.page));
   if (params.status) q.set("status", params.status);
+  // 2026-06-03 `9cc8e36` — applications can now be filtered by company_id,
+  // used by the Companies detail page's Applications tab.
+  if (params.company_id != null) q.set("company_id", String(params.company_id));
   const qs = q.toString();
   return apiFetchJson(`${PA}/applications${qs ? `?${qs}` : ""}`, { method: "GET", token });
 }
@@ -438,6 +441,36 @@ export async function apiPatchCompanyPartnerSettings(
   body: { logo?: string | null; is_partner_visible?: boolean }
 ): Promise<ApiSuccessEnvelope<PlatformCompanyRow>> {
   return apiFetchJson(`${PA}/companies/${companyId}/partner-settings`, {
+    method: "PATCH",
+    token,
+    body,
+  });
+}
+
+/**
+ * 2026-06-03 backend `9cc8e36` — PATCH `/platform-admin/companies/{id}/profile`.
+ * Admin edits the company's identity/contact fields (NOT governance, NOT
+ * partner toggle — those have their own endpoints). Ownership-gated.
+ */
+export type CompanyProfileEditable = {
+  name?: string;
+  legal_name?: string | null;
+  type?: string | null;
+  tax_id?: string | null;
+  country?: string | null;
+  city?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  website?: string | null;
+  description?: string | null;
+};
+
+export async function apiPatchCompanyProfile(
+  token: string,
+  companyId: number,
+  body: CompanyProfileEditable
+): Promise<ApiSuccessEnvelope<PlatformCompanyRow>> {
+  return apiFetchJson(`${PA}/companies/${companyId}/profile`, {
     method: "PATCH",
     token,
     body,

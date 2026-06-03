@@ -18,7 +18,6 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { PartnerSettingsModal } from "@/components/PartnerSettingsModal";
-import { TranslationsModal } from "@/components/TranslationsModal";
 import CompanyCommissionTab from "@/components/CompanyCommissionTab";
 import { StatusPill, autoStatusTone } from "@/components/ui/StatusPill";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
@@ -29,10 +28,12 @@ import { ApiRequestError } from "@/lib/api-client";
 import {
   apiCompanyApplications,
   apiPatchCompanyGovernance,
+  apiPatchCompanyProfile,
   apiPlatformCompany,
   apiPlatformUsers,
   apiToggleCompanySeller,
   type CompanyApplicationRow,
+  type CompanyProfileEditable,
   type PlatformAdminUserRow,
   type PlatformCompanyRow,
 } from "@/lib/platform-admin-api";
@@ -43,14 +44,16 @@ import { EmployeePermissionsDrawer } from "@/components/employees/EmployeePermis
 import { Plus } from "lucide-react";
 
 const GOVERNANCE_STATUSES = ["pending", "active", "suspended", "rejected"] as const;
+// 2026-06-04 admin v3 — 6-tab spec from docs/blueprints/html-handoff/Management_tab.md:
+// Profile (incl. Partner toggle) · Staff · Applications · Seller perms · Commission · Payments.
+// "Partner" + "Translations" tabs were folded/dropped; "Payments" is new.
 type Tab =
   | "profile"
   | "users"
   | "applications"
   | "permissions"
-  | "partner"
   | "commission"
-  | "translations";
+  | "payments";
 
 export default function PlatformCompanyDetailPage() {
   const params = useParams<{ id: string }>();
@@ -67,7 +70,6 @@ export default function PlatformCompanyDetailPage() {
   const [tab, setTab] = useState<Tab>("profile");
   const [draftGovernance, setDraftGovernance] = useState<string>("");
   const [partnerOpen, setPartnerOpen] = useState(false);
-  const [translateOpen, setTranslateOpen] = useState(false);
 
   // Phase 2 — lazy-loaded data for the new tabs.
   const [linkedUsers, setLinkedUsers] = useState<PlatformAdminUserRow[] | null>(null);
@@ -121,18 +123,17 @@ export default function PlatformCompanyDetailPage() {
   }, [tab, token, company, linkedUsers, t]);
 
   // Phase 2 — fetch the Applications history tab content the first time it's opened.
+  // 2026-06-04 (admin v3) — switched from name-matching to the real `company_id`
+  // filter (backend `9cc8e36` 2026-06-03 added `company_id` to GET
+  // /platform-admin/applications). Removes the brittle case-sensitive name path.
   useEffect(() => {
     if (tab !== "applications" || !token || !company || appsHistory !== null) return;
     let cancelled = false;
     (async () => {
       try {
-        // No FK from companies→applications. Best-effort match by company_name.
-        const res = await apiCompanyApplications(token, {});
+        const res = await apiCompanyApplications(token, { company_id: company.id });
         if (cancelled) return;
-        const matches = res.data.filter(
-          (a) => a.company_name.trim().toLowerCase() === company.name.trim().toLowerCase(),
-        );
-        setAppsHistory(matches);
+        setAppsHistory(res.data);
       } catch (e) {
         if (cancelled) return;
         setAppsHistoryErr(
@@ -145,6 +146,21 @@ export default function PlatformCompanyDetailPage() {
       cancelled = true;
     };
   }, [tab, token, company, appsHistory, t]);
+
+  // 2026-06-04 admin v3 — Save identity/contact via the new PATCH /profile
+  // endpoint (backend `9cc8e36` 2026-06-03). Ownership-gated server-side.
+  async function saveProfile(patch: CompanyProfileEditable) {
+    if (!token || !company) return;
+    setBusy(true);
+    try {
+      const res = await apiPatchCompanyProfile(token, company.id, patch);
+      setCompany(res.data);
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : t("admin.platform_companies.err_update"));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function saveGovernance() {
     if (!token || !company) return;
@@ -234,7 +250,7 @@ export default function PlatformCompanyDetailPage() {
 
       <div className="space-y-6">
 
-      {/* Horizontal tab bar (Admin Profile pattern) */}
+      {/* Horizontal tab bar (Admin Profile pattern) — admin v3 6-tab spec. */}
       <V2Card className="overflow-hidden">
         <nav className="flex flex-wrap border-b border-default" role="tablist">
           <TabButton
@@ -258,19 +274,16 @@ export default function PlatformCompanyDetailPage() {
             label={t("admin.platform_companies.tab_permissions")}
           />
           <TabButton
-            active={tab === "partner"}
-            onClick={() => setTab("partner")}
-            label={t("admin.platform_companies.tab_partner")}
-          />
-          <TabButton
             active={tab === "commission"}
             onClick={() => setTab("commission")}
             label={t("admin.platform_companies.tab_commission")}
           />
           <TabButton
-            active={tab === "translations"}
-            onClick={() => setTab("translations")}
-            label={t("admin.platform_companies.tab_translations")}
+            active={tab === "payments"}
+            onClick={() => setTab("payments")}
+            label={t("admin.platform_companies.tab_payments") !== "admin.platform_companies.tab_payments"
+              ? t("admin.platform_companies.tab_payments")
+              : "Payments"}
           />
         </nav>
 
@@ -288,6 +301,8 @@ export default function PlatformCompanyDetailPage() {
               draftGovernance={draftGovernance}
               onDraftGovernance={setDraftGovernance}
               onSaveGovernance={() => void saveGovernance()}
+              onSaveProfile={(p) => void saveProfile(p)}
+              onOpenPartnerSettings={() => setPartnerOpen(true)}
               onToggleSeller={() => void toggleSeller()}
               busy={busy}
             />
@@ -329,39 +344,11 @@ export default function PlatformCompanyDetailPage() {
             </div>
           )}
 
-          {tab === "partner" && (
-            <div className="space-y-3">
-              <p className="text-sm text-fg-t7">
-                {company.is_partner_visible
-                  ? t("admin.platform_companies.partner_on")
-                  : t("admin.platform_companies.partner_off")}
-              </p>
-              <button
-                type="button"
-                onClick={() => setPartnerOpen(true)}
-                className="inline-flex h-10 items-center rounded-zulu bg-primary px-4 text-sm font-semibold text-white transition hover:opacity-90"
-              >
-                {t("admin.platform_companies.edit")}
-              </button>
-            </div>
-          )}
-
           {tab === "commission" && token && (
             <CompanyCommissionTab token={token} companyId={company.id} />
           )}
 
-          {tab === "translations" && (
-            <div className="space-y-3">
-              <p className="text-sm text-fg-t7">{t("admin.platform_companies.translations")}</p>
-              <button
-                type="button"
-                onClick={() => setTranslateOpen(true)}
-                className="inline-flex h-10 items-center rounded-zulu bg-primary px-4 text-sm font-semibold text-white transition hover:opacity-90"
-              >
-                {t("admin.platform_companies.edit")}
-              </button>
-            </div>
-          )}
+          {tab === "payments" && <PaymentsTab company={company} t={t} />}
         </div>
       </V2Card>
       </div>
@@ -370,17 +357,6 @@ export default function PlatformCompanyDetailPage() {
         company={partnerOpen ? company : null}
         onClose={() => setPartnerOpen(false)}
         onSaved={(next) => setCompany((prev) => (prev ? { ...prev, ...next } : prev))}
-      />
-      <TranslationsModal
-        open={translateOpen}
-        onClose={() => setTranslateOpen(false)}
-        entityType="company"
-        entityId={company.id}
-        entityLabel={company.name}
-        fields={[
-          { name: "title", label: t("admin.platform_companies.name") },
-          { name: "description", label: t("admin.platform_companies.description"), multiline: true },
-        ]}
       />
       <AddEmployeeModal
         open={addEmployeeOpen}
@@ -490,12 +466,24 @@ function TabButton({
   );
 }
 
+/**
+ * Profile tab — admin v3 (2026-06-04).
+ *
+ * Editable identity/contact form (saves via `PATCH /platform-admin/companies/
+ * {id}/profile` — backend `9cc8e36` 2026-06-03), inline Partner-visibility
+ * toggle (opens existing PartnerSettingsModal — keeps logo upload flow), and
+ * the existing governance + seller cards.
+ *
+ * Per `docs/blueprints/html-handoff/Management_tab.md` TAB 1 detail spec.
+ */
 function ProfileTab({
   company,
   t,
   draftGovernance,
   onDraftGovernance,
   onSaveGovernance,
+  onSaveProfile,
+  onOpenPartnerSettings,
   onToggleSeller,
   busy,
 }: {
@@ -504,43 +492,222 @@ function ProfileTab({
   draftGovernance: string;
   onDraftGovernance: (v: string) => void;
   onSaveGovernance: () => void;
+  onSaveProfile: (patch: CompanyProfileEditable) => void;
+  onOpenPartnerSettings: () => void;
   onToggleSeller: () => void;
   busy: boolean;
 }) {
+  // Local draft mirrors the editable fields. Reset whenever `company` changes
+  // (after a successful save the server returns the canonical row).
+  const [draft, setDraft] = useState<CompanyProfileEditable>(() => ({
+    name: company.name,
+    legal_name: company.legal_name ?? null,
+    type: company.type ?? null,
+    tax_id: company.tax_id ?? null,
+    country: company.country ?? null,
+    city: company.city ?? null,
+    address: company.address ?? null,
+    phone: company.phone ?? null,
+    website: company.website ?? null,
+    description: company.description ?? null,
+  }));
+  useEffect(() => {
+    setDraft({
+      name: company.name,
+      legal_name: company.legal_name ?? null,
+      type: company.type ?? null,
+      tax_id: company.tax_id ?? null,
+      country: company.country ?? null,
+      city: company.city ?? null,
+      address: company.address ?? null,
+      phone: company.phone ?? null,
+      website: company.website ?? null,
+      description: company.description ?? null,
+    });
+  }, [company]);
+
+  // Did any draft field diverge from the saved company row?
+  const dirty =
+    draft.name !== company.name ||
+    (draft.legal_name ?? null) !== (company.legal_name ?? null) ||
+    (draft.type ?? null) !== (company.type ?? null) ||
+    (draft.tax_id ?? null) !== (company.tax_id ?? null) ||
+    (draft.country ?? null) !== (company.country ?? null) ||
+    (draft.city ?? null) !== (company.city ?? null) ||
+    (draft.address ?? null) !== (company.address ?? null) ||
+    (draft.phone ?? null) !== (company.phone ?? null) ||
+    (draft.website ?? null) !== (company.website ?? null) ||
+    (draft.description ?? null) !== (company.description ?? null);
+
+  const inputClass =
+    "h-10 w-full rounded-zulu border border-default bg-white px-3 text-sm text-fg-t8 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary-100";
+  const textareaClass =
+    "min-h-[84px] w-full rounded-zulu border border-default bg-white px-3 py-2 text-sm text-fg-t8 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary-100";
+  const labelClass = "block text-xs font-medium text-fg-t6";
+
   return (
     <div className="space-y-5">
-      {/* Company details card */}
+      {/* Identity card — editable */}
       <section className="rounded-zulu border border-default bg-white p-5">
-        <h3 className="mb-4 text-sm font-semibold text-fg-t8">
-          {t("admin.platform_companies.section_company_details")}
-        </h3>
-        <div className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
-          <Field label={t("admin.crud.common.id")} value={String(company.id)} />
-          <Field label={t("admin.platform_companies.name")} value={company.name} />
-          <Field label={t("admin.platform_companies.type")} value={company.type ?? "—"} />
-          {/* `status` column dropped 2026-06-03 (backend `9cc8e36`) — governance
-              status below is now the single source of truth. */}
-          <Field label={t("admin.platform_companies.legal_name")} value={company.legal_name ?? "—"} />
-          <Field label={t("admin.platform_companies.slug")} value={company.slug ?? "—"} />
-          <Field label={t("admin.platform_companies.tax_id")} value={company.tax_id ?? "—"} />
-          <Field label={t("admin.platform_companies.country")} value={company.country ?? "—"} />
-          <Field label={t("admin.platform_companies.city")} value={company.city ?? "—"} />
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h3 className="text-sm font-semibold text-fg-t8">
+            {t("admin.platform_companies.section_company_details")}
+          </h3>
+          <span className="text-xs text-fg-t6">
+            {t("admin.crud.common.id")}: #{company.id}
+            {company.created_at ? ` · ${new Date(company.created_at).toISOString().slice(0, 10)}` : ""}
+          </span>
+        </div>
+        <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+          <label className="block">
+            <span className={labelClass}>{t("admin.platform_companies.name")}</span>
+            <input
+              type="text"
+              className={`${inputClass} mt-1`}
+              value={draft.name ?? ""}
+              onChange={(e) => setDraft((p) => ({ ...p, name: e.target.value }))}
+            />
+          </label>
+          <label className="block">
+            <span className={labelClass}>{t("admin.platform_companies.legal_name")}</span>
+            <input
+              type="text"
+              className={`${inputClass} mt-1`}
+              value={draft.legal_name ?? ""}
+              onChange={(e) => setDraft((p) => ({ ...p, legal_name: e.target.value || null }))}
+            />
+          </label>
+          <label className="block">
+            <span className={labelClass}>{t("admin.platform_companies.type")}</span>
+            <input
+              type="text"
+              className={`${inputClass} mt-1`}
+              value={draft.type ?? ""}
+              placeholder="operator / agency / airline / hotel_chain / other"
+              onChange={(e) => setDraft((p) => ({ ...p, type: e.target.value || null }))}
+            />
+          </label>
+          <label className="block">
+            <span className={labelClass}>{t("admin.platform_companies.tax_id")}</span>
+            <input
+              type="text"
+              className={`${inputClass} mt-1`}
+              value={draft.tax_id ?? ""}
+              onChange={(e) => setDraft((p) => ({ ...p, tax_id: e.target.value || null }))}
+            />
+          </label>
+          <label className="block">
+            <span className={labelClass}>{t("admin.platform_companies.country")}</span>
+            <input
+              type="text"
+              className={`${inputClass} mt-1`}
+              value={draft.country ?? ""}
+              onChange={(e) => setDraft((p) => ({ ...p, country: e.target.value || null }))}
+            />
+          </label>
+          <label className="block">
+            <span className={labelClass}>{t("admin.platform_companies.city")}</span>
+            <input
+              type="text"
+              className={`${inputClass} mt-1`}
+              value={draft.city ?? ""}
+              onChange={(e) => setDraft((p) => ({ ...p, city: e.target.value || null }))}
+            />
+          </label>
+          <label className="block sm:col-span-2 lg:col-span-3">
+            <span className={labelClass}>{t("admin.platform_companies.address")}</span>
+            <input
+              type="text"
+              className={`${inputClass} mt-1`}
+              value={draft.address ?? ""}
+              onChange={(e) => setDraft((p) => ({ ...p, address: e.target.value || null }))}
+            />
+          </label>
+          <label className="block">
+            <span className={labelClass}>{t("admin.platform_companies.phone")}</span>
+            <input
+              type="tel"
+              className={`${inputClass} mt-1`}
+              value={draft.phone ?? ""}
+              onChange={(e) => setDraft((p) => ({ ...p, phone: e.target.value || null }))}
+            />
+          </label>
+          <label className="block sm:col-span-2">
+            <span className={labelClass}>{t("admin.platform_companies.website")}</span>
+            <input
+              type="url"
+              className={`${inputClass} mt-1`}
+              value={draft.website ?? ""}
+              placeholder="https://"
+              onChange={(e) => setDraft((p) => ({ ...p, website: e.target.value || null }))}
+            />
+          </label>
+          <label className="block sm:col-span-2 lg:col-span-3">
+            <span className={labelClass}>{t("admin.platform_companies.description")}</span>
+            <textarea
+              className={`${textareaClass} mt-1`}
+              value={draft.description ?? ""}
+              onChange={(e) => setDraft((p) => ({ ...p, description: e.target.value || null }))}
+            />
+          </label>
+        </div>
+        <div className="mt-4 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            disabled={busy || !dirty}
+            onClick={() => setDraft({
+              name: company.name,
+              legal_name: company.legal_name ?? null,
+              type: company.type ?? null,
+              tax_id: company.tax_id ?? null,
+              country: company.country ?? null,
+              city: company.city ?? null,
+              address: company.address ?? null,
+              phone: company.phone ?? null,
+              website: company.website ?? null,
+              description: company.description ?? null,
+            })}
+            className="inline-flex h-10 items-center rounded-zulu border border-default bg-white px-4 text-sm font-medium text-fg-t7 transition hover:bg-figma-bg-1 disabled:opacity-40"
+          >
+            {t("common.cancel")}
+          </button>
+          <button
+            type="button"
+            disabled={busy || !dirty}
+            onClick={() => onSaveProfile(draft)}
+            className="inline-flex h-10 items-center rounded-zulu bg-primary px-4 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
+          >
+            {t("common.save")}
+          </button>
         </div>
       </section>
 
-      {/* Contact card */}
+      {/* Public-Partners visibility — folds in the old standalone "Partner" tab. */}
       <section className="rounded-zulu border border-default bg-white p-5">
-        <h3 className="mb-4 text-sm font-semibold text-fg-t8">
-          {t("admin.platform_companies.section_contact")}
-        </h3>
-        <div className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
-          <Field label={t("admin.platform_companies.phone")} value={company.phone ?? "—"} />
-          <Field label={t("admin.platform_companies.website")} value={company.website ?? "—"} />
-          <Field label={t("admin.platform_companies.address")} value={company.address ?? "—"} />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-fg-t8">
+              {t("admin.platform_companies.partner_section_title") !== "admin.platform_companies.partner_section_title"
+                ? t("admin.platform_companies.partner_section_title")
+                : "Public Partners visibility"}
+            </h3>
+            <p className="mt-1 text-xs text-fg-t6">
+              {company.is_partner_visible
+                ? t("admin.platform_companies.partner_on")
+                : t("admin.platform_companies.partner_off")}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onOpenPartnerSettings}
+            className="inline-flex h-10 items-center rounded-zulu border border-default bg-white px-4 text-sm font-medium text-fg-t7 transition hover:bg-figma-bg-1"
+          >
+            {t("admin.platform_companies.edit")}
+          </button>
         </div>
       </section>
 
-      {/* Governance card — editable */}
+      {/* Governance card — editable. */}
       <section className="rounded-zulu border border-default bg-white p-5">
         <h3 className="mb-4 text-sm font-semibold text-fg-t8">
           {t("admin.platform_companies.governance")}
@@ -571,10 +738,19 @@ function ProfileTab({
           >
             {t("admin.platform_companies.save_gov")}
           </button>
+          <span className="ml-auto text-xs text-fg-t6">
+            {company.profile_completed
+              ? t("admin.platform_companies.profile_completed_yes") !== "admin.platform_companies.profile_completed_yes"
+                ? t("admin.platform_companies.profile_completed_yes")
+                : "Profile completed"
+              : t("admin.platform_companies.profile_completed_no") !== "admin.platform_companies.profile_completed_no"
+                ? t("admin.platform_companies.profile_completed_no")
+                : "Profile not yet complete"}
+          </span>
         </div>
       </section>
 
-      {/* Seller card */}
+      {/* Seller card. */}
       <section className="rounded-zulu border border-default bg-white p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -598,6 +774,82 @@ function ProfileTab({
               : t("admin.platform_companies.enable_seller")}
           </button>
         </div>
+      </section>
+    </div>
+  );
+}
+
+/**
+ * Payments tab — admin v3 (2026-06-04).
+ *
+ * Read-only Stripe Connect status for the company (charges_enabled,
+ * payouts_enabled, details_submitted, account id). Exposed by CompanyResource
+ * since backend `9cc8e36` 2026-06-03. Money-flow management proper lives in
+ * roadmap NEW-14 (Stripe money-flow visibility).
+ */
+function PaymentsTab({
+  company,
+  t,
+}: {
+  company: PlatformCompanyRow;
+  t: (k: string) => string;
+}) {
+  const hasAccount = !!company.stripe_connect_id;
+  const ready = !!(company.stripe_charges_enabled && company.stripe_payouts_enabled);
+  const onboarding = hasAccount && !ready;
+  return (
+    <div className="space-y-4">
+      <section
+        className={`rounded-zulu border p-5 ${
+          ready
+            ? "border-success-100 bg-success-50"
+            : onboarding
+              ? "border-warning-100 bg-warning-50"
+              : "border-default bg-figma-bg-1"
+        }`}
+      >
+        <h3 className="text-sm font-semibold text-fg-t8">
+          {ready
+            ? t("admin.platform_companies.payments_ready_title") !== "admin.platform_companies.payments_ready_title"
+              ? t("admin.platform_companies.payments_ready_title")
+              : "Stripe — ready"
+            : onboarding
+              ? t("admin.platform_companies.payments_onboarding_title") !== "admin.platform_companies.payments_onboarding_title"
+                ? t("admin.platform_companies.payments_onboarding_title")
+                : "Stripe — onboarding pending"
+              : t("admin.platform_companies.payments_none_title") !== "admin.platform_companies.payments_none_title"
+                ? t("admin.platform_companies.payments_none_title")
+                : "Stripe — not connected"}
+        </h3>
+        <p className="mt-1 text-xs text-fg-t7">
+          {ready
+            ? "Charges + payouts enabled. The marketplace split applies on every paid checkout."
+            : onboarding
+              ? "Account created, but Stripe still needs the operator to finish onboarding before money can move."
+              : "This company hasn't started Stripe Connect onboarding yet."}
+        </p>
+      </section>
+
+      <section className="rounded-zulu border border-default bg-white p-5">
+        <h3 className="mb-4 text-sm font-semibold text-fg-t8">Stripe Connect</h3>
+        <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
+          <Field
+            label="Account ID"
+            value={company.stripe_connect_id ?? "—"}
+          />
+          <Field
+            label="Charges enabled"
+            value={company.stripe_charges_enabled == null ? "—" : company.stripe_charges_enabled ? "Yes" : "No"}
+          />
+          <Field
+            label="Payouts enabled"
+            value={company.stripe_payouts_enabled == null ? "—" : company.stripe_payouts_enabled ? "Yes" : "No"}
+          />
+          <Field
+            label="Details submitted"
+            value={company.stripe_details_submitted == null ? "—" : company.stripe_details_submitted ? "Yes" : "No"}
+          />
+        </dl>
       </section>
     </div>
   );
