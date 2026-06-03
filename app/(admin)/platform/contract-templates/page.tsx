@@ -51,29 +51,28 @@ import {
   Download,
   Plus,
   RefreshCw,
-  Archive as ArchiveIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-type TemplateStatus = "published" | "draft" | "archived";
+// 2026-06-04 admin v3 — backend uses `active` boolean (not "published" /
+// "draft" / "archived"). The old TemplateStatus pseudo-enum was a frontend
+// invention that mapped onto the phantom `is_published` field; replaced with
+// a true/false toggle.
+type TemplateStatus = "active" | "draft";
 
 function templateStatus(tpl: ContractTemplateRow): TemplateStatus {
-  // Archived not yet modeled — treat published flag as the discriminator.
-  // (Backend list endpoint doesn't yet return `is_archived`.)
-  if (tpl.is_published) return "published";
-  return "draft";
+  // active === null (legacy rows) treated as active to match backend default.
+  return tpl.active === false ? "draft" : "active";
 }
 
 function statusMeta(s: TemplateStatus): { tone: StatusTone; label: string; icon: React.ReactNode } {
   switch (s) {
-    case "published":
-      return { tone: "success", label: "Published", icon: <CheckIcon className="h-3 w-3" /> };
-    case "archived":
-      return { tone: "gray", label: "Archived", icon: <ArchiveIcon className="h-3 w-3" /> };
+    case "active":
+      return { tone: "success", label: "Active", icon: <CheckIcon className="h-3 w-3" /> };
     case "draft":
     default:
-      return { tone: "warning", label: "Draft", icon: <EditIcon className="h-3 w-3" /> };
+      return { tone: "warning", label: "Inactive", icon: <EditIcon className="h-3 w-3" /> };
   }
 }
 
@@ -137,7 +136,7 @@ export default function PlatformContractTemplatesPage() {
           tpl.id?.toLowerCase().includes(q) ||
           tpl.name?.toLowerCase().includes(q) ||
           tpl.type?.toLowerCase().includes(q) ||
-          (tpl.version ?? "").toLowerCase().includes(q);
+          String(tpl.version ?? "").toLowerCase().includes(q);
         if (!hit) return false;
       }
       return true;
@@ -212,8 +211,8 @@ export default function PlatformContractTemplatesPage() {
                   ["name", (r) => r.name],
                   ["type", (r) => r.type],
                   ["language", (r) => r.language],
-                  ["version", (r) => r.version ?? ""],
-                  ["is_published", (r) => (r.is_published ? "1" : "0")],
+                  ["version", (r) => String(r.version ?? "")],
+                  ["active", (r) => (r.active === false ? "0" : "1")],
                   ["created_at", (r) => r.created_at ?? ""],
                   ["updated_at", (r) => r.updated_at ?? ""],
                 ])

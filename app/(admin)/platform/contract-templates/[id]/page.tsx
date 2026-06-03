@@ -37,9 +37,9 @@ export default function AdminContractTemplateDetailPage() {
     name: string;
     type: ContractType;
     language: ContractLanguage;
-    version: string;
-    body_template: string;
-    default_variables_json: string;
+    body: string;
+    variables_json: string;
+    active: boolean;
   } | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -55,9 +55,9 @@ export default function AdminContractTemplateDetailPage() {
         name: res.data.name,
         type: res.data.type,
         language: res.data.language,
-        version: res.data.version ?? "",
-        body_template: res.data.body_template ?? "",
-        default_variables_json: JSON.stringify(res.data.default_variables ?? {}, null, 2),
+        body: res.data.body ?? "",
+        variables_json: JSON.stringify(res.data.variables ?? {}, null, 2),
+        active: res.data.active !== false,
       });
     } catch (e) {
       setErr(e instanceof ApiRequestError ? e.message : t("admin.template_detail.err_load"));
@@ -73,9 +73,9 @@ export default function AdminContractTemplateDetailPage() {
     if (!form.name.trim()) return setErr(t("admin.template_form.err_name_required"));
 
     let defaults: Record<string, unknown> = {};
-    if (form.default_variables_json.trim() && form.default_variables_json.trim() !== "{}") {
+    if (form.variables_json.trim() && form.variables_json.trim() !== "{}") {
       try {
-        const parsed = JSON.parse(form.default_variables_json);
+        const parsed = JSON.parse(form.variables_json);
         if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
           return setErr(t("admin.template_form.err_defaults_must_be_object"));
         }
@@ -92,9 +92,9 @@ export default function AdminContractTemplateDetailPage() {
         name: form.name.trim(),
         type: form.type,
         language: form.language,
-        version: form.version.trim() || undefined,
-        body_template: form.body_template,
-        default_variables: defaults,
+        body: form.body,
+        variables: defaults,
+        active: form.active,
       });
       setSavedAt(new Date().toLocaleTimeString(lang));
       await load();
@@ -213,13 +213,28 @@ export default function AdminContractTemplateDetailPage() {
               ))}
             </Select>
           </FormField>
-          <FormField label={t("admin.contract_templates.col_version")} htmlFor="tpl-version">
+          <FormField label={t("admin.contract_templates.col_version")} htmlFor="tpl-version" helperText="Server-managed — bumps on body change.">
             <Input
               id="tpl-version"
-              value={form.version}
-              onChange={(e) => setForm((p) => p && { ...p, version: e.target.value })}
+              value={String(tpl.version ?? "")}
+              readOnly
             />
           </FormField>
+        </div>
+        <div className="mt-3 flex items-center gap-2">
+          <label className="inline-flex cursor-pointer items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={form.active}
+              onChange={(e) => setForm((p) => p && { ...p, active: e.target.checked })}
+              className="h-4 w-4"
+              style={{ accentColor: "var(--admin-primary)" }}
+            />
+            <span style={{ color: "var(--admin-text-primary)" }}>Active</span>
+            <span className="text-xs" style={{ color: "var(--admin-text-secondary)" }}>
+              (uncheck to hide this template from the new-contract picker without deleting it)
+            </span>
+          </label>
         </div>
       </V2Card>
 
@@ -231,8 +246,8 @@ export default function AdminContractTemplateDetailPage() {
             id="tpl-body"
             rows={14}
             className="font-mono text-xs"
-            value={form.body_template}
-            onChange={(e) => setForm((p) => p && { ...p, body_template: e.target.value })}
+            value={form.body}
+            onChange={(e) => setForm((p) => p && { ...p, body: e.target.value })}
           />
         </FormField>
       </V2Card>
@@ -245,9 +260,9 @@ export default function AdminContractTemplateDetailPage() {
             id="tpl-defaults"
             rows={6}
             className="font-mono text-xs"
-            value={form.default_variables_json}
+            value={form.variables_json}
             onChange={(e) =>
-              setForm((p) => p && { ...p, default_variables_json: e.target.value })
+              setForm((p) => p && { ...p, variables_json: e.target.value })
             }
           />
         </FormField>

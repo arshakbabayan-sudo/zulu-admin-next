@@ -5,7 +5,17 @@
  * (see AdminContractController + AdminContractTemplateController).
  * Seller-side endpoints under /seller/contracts (see SellerContractController).
  *
- * Contract type is "platform" (ZULU ↔ partner) or "partner" (operator ↔ agent).
+ * 2026-06-04 admin v3 — CONTRACT_TYPES, ContractTemplateRow/Detail, and the
+ * Create/Update payload were realigned with the backend `ContractTemplate`
+ * model (`docs/blueprints/html-handoff/Management_tab.md` TAB 4):
+ *   - 4 type values: platform · partner_supplier · partner_reseller · partner_default
+ *     (the old `["platform","partner"]` only allowed the first; PATCH would 422 on the
+ *     other 3 even though seeded templates carry them).
+ *   - `body` / `variables` / `active` replace the wrong `body_template` /
+ *     `default_variables` / `is_published` names. The old names were silently
+ *     dropped by Laravel's validate() — that's why the edit form opened EMPTY.
+ *   - `version` is a server-managed int, not a free-text string.
+ *
  * Status flow: draft → sent → signed_by_a/signed_by_b → countersigned → active → expired/terminated/disputed.
  */
 import { apiFetchJson } from "./api-client";
@@ -13,7 +23,12 @@ import type { ApiListMeta, ApiSuccessEnvelope } from "./api-envelope";
 
 const PA = "/platform-admin";
 
-export const CONTRACT_TYPES = ["platform", "partner"] as const;
+export const CONTRACT_TYPES = [
+  "platform",
+  "partner_supplier",
+  "partner_reseller",
+  "partner_default",
+] as const;
 export type ContractType = (typeof CONTRACT_TYPES)[number];
 
 export const CONTRACT_STATUSES = [
@@ -39,15 +54,21 @@ export type ContractTemplateRow = {
   name: string;
   type: ContractType;
   language: ContractLanguage;
-  version: string | null;
-  is_published?: boolean | null;
+  /** Server int — bumped on body change. Older code passed/parsed it as
+   *  string; both forms accepted for backward compat while pages migrate. */
+  version: number | string | null;
+  /** Live boolean toggle from the backend model. Replaces the old phantom
+   *  `is_published` which the backend silently ignored. */
+  active?: boolean | null;
   created_at?: string | null;
   updated_at?: string | null;
 };
 
 export type ContractTemplateDetail = ContractTemplateRow & {
-  body_template?: string | null;
-  default_variables?: Record<string, unknown> | null;
+  /** Body text with `{{placeholders}}` (backend `body` column). */
+  body?: string | null;
+  /** Default `{{placeholder}} → value` map (backend `variables` jsonb). */
+  variables?: Record<string, unknown> | null;
 };
 
 export type ContractRow = {
@@ -193,9 +214,9 @@ export type CreateContractTemplatePayload = {
   name: string;
   type: ContractType;
   language: ContractLanguage;
-  version?: string;
-  body_template: string;
-  default_variables?: Record<string, unknown>;
+  body: string;
+  variables?: Record<string, unknown>;
+  active?: boolean;
 };
 
 export async function apiAdminCreateContractTemplate(
@@ -290,5 +311,14 @@ export function contractStatusLabel(status: ContractStatus): string {
 }
 
 export function contractTypeLabel(type: ContractType): string {
-  return type === "platform" ? "Platform (ZULU ↔ partner)" : "Partner (operator ↔ agent)";
+  switch (type) {
+    case "platform":
+      return "Platform (ZULU ↔ partner)";
+    case "partner_supplier":
+      return "Partner — supplier";
+    case "partner_reseller":
+      return "Partner — reseller";
+    case "partner_default":
+      return "Partner — default";
+  }
 }

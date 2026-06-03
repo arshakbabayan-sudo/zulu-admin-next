@@ -32,18 +32,16 @@ type FormState = {
   name: string;
   type: ContractType;
   language: ContractLanguage;
-  version: string;
-  body_template: string;
-  default_variables_json: string;
+  body: string;
+  variables_json: string;
 };
 
 const EMPTY: FormState = {
   name: "",
   type: "platform",
   language: "en",
-  version: "1.0",
-  body_template: "",
-  default_variables_json: "{}",
+  body: "",
+  variables_json: "{}",
 };
 
 export default function AdminContractTemplateNewPage() {
@@ -75,9 +73,8 @@ export default function AdminContractTemplateNewPage() {
           name: `${src.name} (copy)`,
           type: src.type,
           language: src.language,
-          version: "1.0",
-          body_template: src.body_template ?? "",
-          default_variables_json: JSON.stringify(src.default_variables ?? {}, null, 2),
+          body: src.body ?? "",
+          variables_json: JSON.stringify(src.variables ?? {}, null, 2),
         });
       } catch (e) {
         if (!cancelled) {
@@ -95,12 +92,12 @@ export default function AdminContractTemplateNewPage() {
   async function handleSubmit() {
     if (!token) return;
     if (!form.name.trim()) return setErr(t("admin.template_form.err_name_required"));
-    if (!form.body_template.trim()) return setErr(t("admin.template_form.err_body_required"));
+    if (!form.body.trim()) return setErr(t("admin.template_form.err_body_required"));
 
     let defaults: Record<string, unknown> = {};
-    if (form.default_variables_json.trim() && form.default_variables_json.trim() !== "{}") {
+    if (form.variables_json.trim() && form.variables_json.trim() !== "{}") {
       try {
-        const parsed = JSON.parse(form.default_variables_json);
+        const parsed = JSON.parse(form.variables_json);
         if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
           return setErr(t("admin.template_form.err_defaults_must_be_object"));
         }
@@ -117,9 +114,8 @@ export default function AdminContractTemplateNewPage() {
         name: form.name.trim(),
         type: form.type,
         language: form.language,
-        version: form.version.trim() || undefined,
-        body_template: form.body_template,
-        default_variables: defaults,
+        body: form.body,
+        variables: defaults,
       });
       router.push(`/platform/contract-templates/${res.data.id}`);
     } catch (e) {
@@ -215,13 +211,8 @@ export default function AdminContractTemplateNewPage() {
               ))}
             </Select>
           </FormField>
-          <FormField label={t("admin.contract_templates.col_version")} htmlFor="tpl-version" helperText={t("admin.template_form.version_hint")}>
-            <Input
-              id="tpl-version"
-              value={form.version}
-              onChange={(e) => setForm((p) => ({ ...p, version: e.target.value }))}
-            />
-          </FormField>
+          {/* Version is server-managed (bumped on body change). The old free-text
+              field has been removed to match the backend integer column. */}
         </div>
       </V2Card>
 
@@ -238,8 +229,8 @@ export default function AdminContractTemplateNewPage() {
             id="tpl-body"
             rows={14}
             className="font-mono text-xs"
-            value={form.body_template}
-            onChange={(e) => setForm((p) => ({ ...p, body_template: e.target.value }))}
+            value={form.body}
+            onChange={(e) => setForm((p) => ({ ...p, body: e.target.value }))}
             placeholder={t("admin.template_form.body_placeholder")}
           />
         </FormField>
@@ -257,8 +248,8 @@ export default function AdminContractTemplateNewPage() {
             id="tpl-defaults"
             rows={6}
             className="font-mono text-xs"
-            value={form.default_variables_json}
-            onChange={(e) => setForm((p) => ({ ...p, default_variables_json: e.target.value }))}
+            value={form.variables_json}
+            onChange={(e) => setForm((p) => ({ ...p, variables_json: e.target.value }))}
           />
         </FormField>
       </V2Card>
