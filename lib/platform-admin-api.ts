@@ -715,6 +715,29 @@ export async function apiSellerApplications(
   return apiFetchJson(`${PA}/seller-applications${qs ? `?${qs}` : ""}`, { method: "GET", token });
 }
 
+/**
+ * 2026-06-03 backend `094b67d` — `GET /platform-admin/seller-applications/{id}`.
+ * Returns the application + the linked company card + reviewer info, used to
+ * fill the detail drawer on /platform/seller-applications.
+ */
+export type SellerApplicationDetail = SellerApplicationRow & {
+  company?: {
+    id: number;
+    name: string;
+    type?: string | null;
+    country?: string | null;
+    city?: string | null;
+  } | null;
+  reviewer?: { id: number; name: string; email?: string | null } | null;
+};
+
+export async function apiSellerApplicationDetail(
+  token: string,
+  id: number
+): Promise<ApiSuccessEnvelope<SellerApplicationDetail>> {
+  return apiFetchJson(`${PA}/seller-applications/${id}`, { method: "GET", token });
+}
+
 export async function apiApproveSellerApplication(
   token: string,
   id: number,

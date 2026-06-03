@@ -20,7 +20,9 @@ import type { ApiListMeta } from "@/lib/api-envelope";
 import {
   apiApproveSellerApplication,
   apiRejectSellerApplication,
+  apiSellerApplicationDetail,
   apiSellerApplications,
+  type SellerApplicationDetail,
   type SellerApplicationRow,
 } from "@/lib/platform-admin-api";
 import { apiSellerApplicationsStats, type SellerApplicationsStats } from "@/lib/marketplace-stats-api";
@@ -36,6 +38,11 @@ import {
   StatGrid,
   IconButton,
   SuperAdminTag,
+  V2Drawer,
+  V2DrawerSection,
+  V2DrawerInfoRow,
+  V2Badge,
+  V2Avatar,
 } from "@/components/ui/v2";
 import { MarketplaceOpsSectionTabs } from "@/components/marketplace/MarketplaceOpsSectionTabs";
 import { exportRowsAsCsv } from "@/lib/export-csv";
@@ -105,6 +112,31 @@ export default function SellerApplicationsPage() {
   const [busyId, setBusyId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<SellerApplicationsStats | null>(null);
+  // 2026-06-04 admin v3 — detail drawer state (Step 2.3). Backend
+  // `094b67d` 2026-06-03 added GET /platform-admin/seller-applications/{id}.
+  const [detail, setDetail] = useState<SellerApplicationDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailErr, setDetailErr] = useState<string | null>(null);
+
+  async function openDetail(id: number) {
+    if (!token) return;
+    setDetailErr(null);
+    setDetailLoading(true);
+    setDetail({ id } as SellerApplicationDetail); // opens the drawer immediately with a stub
+    try {
+      const res = await apiSellerApplicationDetail(token, id);
+      setDetail(res.data);
+    } catch (e) {
+      setDetailErr(e instanceof ApiRequestError ? e.message : "Failed to load application");
+    } finally {
+      setDetailLoading(false);
+    }
+  }
+  function closeDetail() {
+    setDetail(null);
+    setDetailErr(null);
+    setDetailLoading(false);
+  }
 
   const load = useCallback(async () => {
     if (!token || !allowed) return;
@@ -441,8 +473,9 @@ export default function SellerApplicationsPage() {
                   return (
                     <tr
                       key={r.id}
-                      className="border-t transition hover:bg-[color:var(--admin-bg-secondary)]"
+                      className="cursor-pointer border-t transition hover:bg-[color:var(--admin-bg-secondary)]"
                       style={{ borderColor: "var(--admin-border)" }}
+                      onClick={() => void openDetail(r.id)}
                     >
                       <td className="px-4 py-3 font-mono text-[12px] text-fg-t7">
                         #APP-{String(r.id).padStart(3, "0")}
@@ -478,7 +511,7 @@ export default function SellerApplicationsPage() {
                       <td className="px-4 py-3 text-[12px]" style={{ color: "var(--admin-text-secondary)" }} title={r.applied_at ?? undefined}>
                         {formatRelativeTime(r.applied_at)}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1.5">
                           {canAct ? (
                             <>
@@ -541,6 +574,167 @@ export default function SellerApplicationsPage() {
           </div>
         ) : null}
       </V2Card>
+
+      {/* admin v3 — Detail drawer (Step 2.3, 2026-06-04). Row click → drawer.
+          Fields populated from `GET /platform-admin/seller-applications/{id}`
+          (backend `094b67d` 2026-06-03). */}
+      <V2Drawer
+        open={detail !== null}
+        onClose={closeDetail}
+        title={
+          detail
+            ? `Application #APP-${String(detail.id).padStart(3, "0")}`
+            : "Application"
+        }
+        width={560}
+        footer={
+          detail && (detail.status === "pending" || detail.status === "under_review") ? (
+            <>
+              <V2Button
+                variant="success"
+                onClick={async () => {
+                  if (!detail) return;
+                  await approve(detail.id);
+                  closeDetail();
+                }}
+                icon={<CheckIcon className="h-4 w-4" />}
+              >
+                Approve
+              </V2Button>
+              <V2Button
+                variant="danger"
+                onClick={async () => {
+                  if (!detail) return;
+                  await reject(detail.id);
+                  closeDetail();
+                }}
+                icon={<XIcon className="h-4 w-4" />}
+              >
+                Reject
+              </V2Button>
+              <V2Button
+                as="link"
+                href={detail.company?.id ? `/platform/companies/${detail.company.id}` : `/platform/companies/${detail.company_id}`}
+                variant="ghost"
+                icon={<Eye className="h-4 w-4" />}
+              >
+                View company
+              </V2Button>
+            </>
+          ) : detail ? (
+            <V2Button
+              as="link"
+              href={detail.company?.id ? `/platform/companies/${detail.company.id}` : `/platform/companies/${detail.company_id}`}
+              variant="default"
+              icon={<Eye className="h-4 w-4" />}
+            >
+              View company
+            </V2Button>
+          ) : null
+        }
+      >
+        {detailErr ? (
+          <div
+            className="mb-3 rounded-md border px-3 py-2 text-sm"
+            style={{
+              backgroundColor: "var(--admin-danger-light)",
+              borderColor: "var(--admin-danger-light)",
+              color: "var(--admin-danger-dark)",
+            }}
+          >
+            {detailErr}
+          </div>
+        ) : null}
+
+        {detailLoading && !detail?.service_type ? (
+          <p className="text-sm" style={{ color: "var(--admin-text-secondary)" }}>
+            Loading…
+          </p>
+        ) : detail && detail.service_type ? (
+          <>
+            <V2DrawerSection>Company</V2DrawerSection>
+            <div className="mb-3 flex items-center gap-3">
+              <V2Avatar
+                label={detail.company?.name ?? detail.company_name ?? `#${detail.company_id}`}
+                tone={(() => {
+                  const t = pickAvatarTone(detail.company_id);
+                  return t === "purple" ? "default" : t;
+                })()}
+              />
+              <div className="min-w-0">
+                <div className="text-[14px] font-semibold" style={{ color: "var(--admin-text-primary)" }}>
+                  {detail.company?.name ?? detail.company_name ?? `Company #${detail.company_id}`}
+                </div>
+                <div className="text-[12px]" style={{ color: "var(--admin-text-secondary)" }}>
+                  {[detail.company?.type, detail.company?.country, detail.company?.city]
+                    .filter(Boolean)
+                    .join(" · ") || `#${detail.company_id}`}
+                </div>
+              </div>
+            </div>
+
+            <V2DrawerSection>Application</V2DrawerSection>
+            <div className="space-y-0">
+              <V2DrawerInfoRow
+                label="Service type"
+                value={
+                  <V2Badge tone="gray">{formatServiceType(detail.service_type)}</V2Badge>
+                }
+              />
+              <V2DrawerInfoRow
+                label="Status"
+                value={
+                  <V2Badge tone={statusMeta(detail.status).tone}>
+                    {statusMeta(detail.status).icon}
+                    {statusMeta(detail.status).label}
+                  </V2Badge>
+                }
+              />
+              <V2DrawerInfoRow
+                label="Applied"
+                value={detail.applied_at ? new Date(detail.applied_at).toLocaleString() : "—"}
+              />
+              <V2DrawerInfoRow
+                label="Reviewed"
+                value={detail.reviewed_at ? new Date(detail.reviewed_at).toLocaleString() : "—"}
+              />
+              <V2DrawerInfoRow
+                label="Reviewer"
+                value={
+                  detail.reviewer
+                    ? `${detail.reviewer.name}${detail.reviewer.email ? ` (${detail.reviewer.email})` : ""}`
+                    : "—"
+                }
+              />
+            </div>
+
+            {detail.notes ? (
+              <>
+                <V2DrawerSection>Notes</V2DrawerSection>
+                <p className="text-[13px] whitespace-pre-wrap" style={{ color: "var(--admin-text-primary)" }}>
+                  {detail.notes}
+                </p>
+              </>
+            ) : null}
+
+            {detail.rejection_reason ? (
+              <>
+                <V2DrawerSection>Rejection reason</V2DrawerSection>
+                <p
+                  className="rounded-md border px-3 py-2 text-[13px] whitespace-pre-wrap"
+                  style={{
+                    backgroundColor: "var(--admin-danger-light)",
+                    borderColor: "var(--admin-danger-light)",
+                    color: "var(--admin-danger-dark)",
+                  }}
+                >
+                  {detail.rejection_reason}
+                </p>
+              </>
+            ) : null}
+          </>
+        ) : null}
+      </V2Drawer>
     </div>
   );
 }
