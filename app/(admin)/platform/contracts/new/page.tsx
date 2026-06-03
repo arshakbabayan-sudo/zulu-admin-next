@@ -44,10 +44,17 @@ type FormState = {
   expiry_date: string;
   auto_renew: boolean;
   termination_notice_days: string;
+  // 2026-06-04 admin v3 — Terms section (replaces 3 raw-JSON textareas)
+  // per `docs/blueprints/html-handoff/Management_tab.md` TAB 3.
+  commission_type: "percent" | "amount";
+  commission_value: string;
+  payment_collector: "platform" | "operator";
+  payment_days: string;
+  cancellation_notice_days: string;
+  cancellation_fee_percent: string;
+  // Variables stays as optional advanced JSON — surfaced only via a
+  // disclosure since most contracts use the template defaults.
   variables_json: string;
-  commission_clause_json: string;
-  payment_terms_json: string;
-  cancellation_policy_json: string;
 };
 
 const EMPTY: FormState = {
@@ -59,10 +66,13 @@ const EMPTY: FormState = {
   expiry_date: "",
   auto_renew: false,
   termination_notice_days: "30",
+  commission_type: "percent",
+  commission_value: "",
+  payment_collector: "platform",
+  payment_days: "30",
+  cancellation_notice_days: "30",
+  cancellation_fee_percent: "",
   variables_json: "{}",
-  commission_clause_json: "{}",
-  payment_terms_json: "{}",
-  cancellation_policy_json: "{}",
 };
 
 function tryParseJson(label: string, raw: string): { ok: true; value: Record<string, unknown> } | { ok: false; error: string } {
@@ -132,12 +142,38 @@ export default function AdminContractCreatePage() {
 
     const variables = tryParseJson("Variables", form.variables_json);
     if (!variables.ok) return setErr(variables.error);
-    const commission = tryParseJson("Commission clause", form.commission_clause_json);
-    if (!commission.ok) return setErr(commission.error);
-    const payment = tryParseJson("Payment terms", form.payment_terms_json);
-    if (!payment.ok) return setErr(payment.error);
-    const cancellation = tryParseJson("Cancellation policy", form.cancellation_policy_json);
-    if (!cancellation.ok) return setErr(cancellation.error);
+
+    // 2026-06-04 admin v3 — build structured Terms objects from the form
+    // instead of accepting raw JSON. The shape mirrors what the backend
+    // template-render layer reads when filling {{placeholders}}.
+    const commissionNumeric = form.commission_value.trim() === "" ? null : Number(form.commission_value);
+    if (commissionNumeric !== null && (!Number.isFinite(commissionNumeric) || commissionNumeric < 0)) {
+      return setErr("Commission value must be a non-negative number");
+    }
+    const paymentDaysNumeric = form.payment_days.trim() === "" ? null : Number(form.payment_days);
+    if (paymentDaysNumeric !== null && (!Number.isInteger(paymentDaysNumeric) || paymentDaysNumeric < 0)) {
+      return setErr("Payment terms (T+N days) must be a non-negative integer");
+    }
+    const cancelDaysNumeric = form.cancellation_notice_days.trim() === "" ? null : Number(form.cancellation_notice_days);
+    if (cancelDaysNumeric !== null && (!Number.isInteger(cancelDaysNumeric) || cancelDaysNumeric < 0)) {
+      return setErr("Cancellation notice (days) must be a non-negative integer");
+    }
+    const cancelFeeNumeric = form.cancellation_fee_percent.trim() === "" ? null : Number(form.cancellation_fee_percent);
+    if (cancelFeeNumeric !== null && (!Number.isFinite(cancelFeeNumeric) || cancelFeeNumeric < 0 || cancelFeeNumeric > 100)) {
+      return setErr("Cancellation fee must be a percentage between 0 and 100");
+    }
+
+    const commission: Record<string, unknown> =
+      commissionNumeric === null
+        ? {}
+        : { type: form.commission_type, value: commissionNumeric };
+    const payment: Record<string, unknown> =
+      paymentDaysNumeric === null
+        ? { collector: form.payment_collector }
+        : { collector: form.payment_collector, t_plus_days: paymentDaysNumeric };
+    const cancellation: Record<string, unknown> = {};
+    if (cancelDaysNumeric !== null) cancellation.notice_days = cancelDaysNumeric;
+    if (cancelFeeNumeric !== null) cancellation.fee_percent = cancelFeeNumeric;
 
     setBusy(true);
     setErr(null);
@@ -154,9 +190,9 @@ export default function AdminContractCreatePage() {
           ? Number(form.termination_notice_days)
           : undefined,
         variables: variables.value,
-        commission_clause: commission.value,
-        payment_terms: payment.value,
-        cancellation_policy: cancellation.value,
+        commission_clause: commission,
+        payment_terms: payment,
+        cancellation_policy: cancellation,
       });
       router.push(`/platform/contracts/${res.data.id}`);
     } catch (e) {
@@ -332,10 +368,113 @@ export default function AdminContractCreatePage() {
         </div>
       </V2Card>
 
+      {/* 2026-06-04 admin v3 — Section 2: Terms (structured inputs, replaces
+          3 raw-JSON textareas — commission / payment / cancellation). Spec:
+          docs/blueprints/html-handoff/Management_tab.md TAB 3 Contracts. */}
       <V2Card className="p-4">
-        <h2 className="mb-3 text-base font-semibold">{t("admin.contract_new.section.variables")}</h2>
-        <p className="mb-3 text-xs text-fg-t6">{t("admin.contract_new.section.variables_hint")}</p>
+        <h2 className="mb-3 text-base font-semibold">Terms</h2>
+        <p className="mb-3 text-xs text-fg-t6">
+          Commercial terms applied to this contract. They render into the
+          {" {{placeholders}}"} declared by the template.
+        </p>
+
+        <h3 className="mb-2 mt-3 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{ color: "var(--admin-text-tertiary)" }}>
+          Commission
+        </h3>
         <div className="grid gap-3 sm:grid-cols-2">
+          <FormField label="Type" htmlFor="commission-type">
+            <Select
+              id="commission-type"
+              value={form.commission_type}
+              onChange={(e) => setForm((p) => ({ ...p, commission_type: e.target.value as "percent" | "amount" }))}
+            >
+              <option value="percent">Percent (%)</option>
+              <option value="amount">Fixed amount</option>
+            </Select>
+          </FormField>
+          <FormField
+            label={form.commission_type === "percent" ? "Value (%)" : "Value (USD)"}
+            htmlFor="commission-value"
+          >
+            <Input
+              id="commission-value"
+              type="number"
+              min={0}
+              step={form.commission_type === "percent" ? 0.1 : 1}
+              value={form.commission_value}
+              onChange={(e) => setForm((p) => ({ ...p, commission_value: e.target.value }))}
+              placeholder={form.commission_type === "percent" ? "e.g. 12.5" : "e.g. 500"}
+            />
+          </FormField>
+        </div>
+
+        <h3 className="mb-2 mt-5 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{ color: "var(--admin-text-tertiary)" }}>
+          Payment terms
+        </h3>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <FormField label="Who collects" htmlFor="payment-collector">
+            <Select
+              id="payment-collector"
+              value={form.payment_collector}
+              onChange={(e) => setForm((p) => ({ ...p, payment_collector: e.target.value as "platform" | "operator" }))}
+            >
+              <option value="platform">Platform (ZULU)</option>
+              <option value="operator">Operator</option>
+            </Select>
+          </FormField>
+          <FormField label="Settlement (T + N days)" htmlFor="payment-days" helperText="Days after the booking to settle with the partner.">
+            <Input
+              id="payment-days"
+              type="number"
+              min={0}
+              max={365}
+              value={form.payment_days}
+              onChange={(e) => setForm((p) => ({ ...p, payment_days: e.target.value }))}
+              placeholder="e.g. 30"
+            />
+          </FormField>
+        </div>
+
+        <h3 className="mb-2 mt-5 text-[11px] font-semibold uppercase tracking-[0.4px]" style={{ color: "var(--admin-text-tertiary)" }}>
+          Cancellation policy
+        </h3>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <FormField label="Notice (days)" htmlFor="cancellation-notice-days">
+            <Input
+              id="cancellation-notice-days"
+              type="number"
+              min={0}
+              max={365}
+              value={form.cancellation_notice_days}
+              onChange={(e) => setForm((p) => ({ ...p, cancellation_notice_days: e.target.value }))}
+              placeholder="e.g. 30"
+            />
+          </FormField>
+          <FormField label="Fee (%)" htmlFor="cancellation-fee-percent" helperText="Charged if cancellation happens inside the notice window.">
+            <Input
+              id="cancellation-fee-percent"
+              type="number"
+              min={0}
+              max={100}
+              step={0.1}
+              value={form.cancellation_fee_percent}
+              onChange={(e) => setForm((p) => ({ ...p, cancellation_fee_percent: e.target.value }))}
+              placeholder="e.g. 25"
+            />
+          </FormField>
+        </div>
+      </V2Card>
+
+      {/* Advanced — template placeholder map. Most contracts inherit the
+          defaults from the picked template; this only matters when a
+          template was authored with required placeholders that have no
+          default. Collapsed by default. */}
+      <V2Card className="p-4">
+        <details>
+          <summary className="cursor-pointer text-sm font-semibold">Advanced — template variables (JSON)</summary>
+          <p className="mb-3 mt-2 text-xs text-fg-t6">
+            {t("admin.contract_new.section.variables_hint")}
+          </p>
           <FormField label={t("admin.contract_new.field.variables")} htmlFor="variables-json">
             <Input
               as="textarea"
@@ -346,37 +485,7 @@ export default function AdminContractCreatePage() {
               onChange={(e) => setForm((p) => ({ ...p, variables_json: e.target.value }))}
             />
           </FormField>
-          <FormField label={t("admin.contract_new.field.commission_clause")} htmlFor="commission-json">
-            <Input
-              as="textarea"
-              id="commission-json"
-              rows={4}
-              className="font-mono text-xs"
-              value={form.commission_clause_json}
-              onChange={(e) => setForm((p) => ({ ...p, commission_clause_json: e.target.value }))}
-            />
-          </FormField>
-          <FormField label={t("admin.contract_new.field.payment_terms")} htmlFor="payment-json">
-            <Input
-              as="textarea"
-              id="payment-json"
-              rows={4}
-              className="font-mono text-xs"
-              value={form.payment_terms_json}
-              onChange={(e) => setForm((p) => ({ ...p, payment_terms_json: e.target.value }))}
-            />
-          </FormField>
-          <FormField label={t("admin.contract_new.field.cancellation_policy")} htmlFor="cancellation-json">
-            <Input
-              as="textarea"
-              id="cancellation-json"
-              rows={4}
-              className="font-mono text-xs"
-              value={form.cancellation_policy_json}
-              onChange={(e) => setForm((p) => ({ ...p, cancellation_policy_json: e.target.value }))}
-            />
-          </FormField>
-        </div>
+        </details>
       </V2Card>
 
       <div className="flex gap-2">
