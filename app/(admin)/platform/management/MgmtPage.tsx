@@ -36,17 +36,27 @@ import {
   apiPatchCompanyPartnerSettings,
   apiPlatformUsers,
   apiCompanyApplications,
+  apiCompanySellerPermissions,
+  apiPatchCompanySellerPermissions,
+  apiCompanyCountryPermissions,
+  apiSyncCompanyCountryPermissions,
   apiSellerApplications,
   apiSellerApplicationDetail,
   apiApproveSellerApplication,
   apiRejectSellerApplication,
+  SELLER_SERVICE_TYPES,
   type CompanyProfileEditable,
   type CompanyApplicationRow,
+  type CompanyCountryPermissionApiRow,
+  type CompanySellerPermissionApiRow,
   type PlatformAdminUserRow,
   type PlatformCompanyRow,
   type SellerApplicationDetail,
   type SellerApplicationRow,
 } from "@/lib/platform-admin-api";
+import CompanyCommissionTab from "@/components/CompanyCommissionTab";
+import { AddEmployeeModal } from "@/components/employees/AddEmployeeModal";
+import { PartnerSettingsModal } from "@/components/PartnerSettingsModal";
 import {
   apiAdminContracts,
   apiAdminContract,
@@ -237,6 +247,10 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
   const [detailStaff, setDetailStaff] = useState<PlatformAdminUserRow[] | null>(null);
   const [detailApps, setDetailApps] = useState<CompanyApplicationRow[] | null>(null);
   const [detailLang, setDetailLang] = useState<"EN" | "RU" | "HY">("EN");
+  const [detailPerms, setDetailPerms] = useState<CompanySellerPermissionApiRow[] | null>(null);
+  const [detailCountries, setDetailCountries] = useState<CompanyCountryPermissionApiRow[] | null>(null);
+  const [addEmployeeOpen, setAddEmployeeOpen] = useState(false);
+  const [partnerModalOpen, setPartnerModalOpen] = useState(false);
 
   // Applications
   const [apps, setApps] = useState<SellerApplicationRow[]>([]);
@@ -355,6 +369,31 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
       cancelled = true;
     };
   }, [detailSubTab, detailCompany, detailStaff, token]);
+
+  // Seller permissions + countries loader (perms tab)
+  useEffect(() => {
+    if (detailSubTab !== "perms" || !detailCompany || !token || detailPerms !== null) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [pRes, cRes] = await Promise.all([
+          apiCompanySellerPermissions(token, detailCompany.id),
+          apiCompanyCountryPermissions(token, detailCompany.id),
+        ]);
+        if (cancelled) return;
+        setDetailPerms(pRes.data.permissions);
+        setDetailCountries(cRes.data.permissions);
+      } catch {
+        if (!cancelled) {
+          setDetailPerms([]);
+          setDetailCountries([]);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [detailSubTab, detailCompany, detailPerms, token]);
 
   // Applications history loader (for Company detail Apps tab)
   useEffect(() => {
@@ -663,6 +702,7 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                 />
               ) : (
                 <CompaniesDetail
+                  token={token}
                   company={detailCompany}
                   subTab={detailSubTab}
                   onSubTab={setDetailSubTab}
@@ -670,17 +710,46 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                   onLang={setDetailLang}
                   staff={detailStaff}
                   apps={detailApps}
+                  perms={detailPerms}
+                  countries={detailCountries}
+                  onAddEmployee={() => setAddEmployeeOpen(true)}
+                  onOpenLogo={() => setPartnerModalOpen(true)}
                   onBack={() => {
                     setDetailCompanyId(null);
                     setDetailCompany(null);
                     setDetailStaff(null);
                     setDetailApps(null);
+                    setDetailPerms(null);
+                    setDetailCountries(null);
+                  }}
+                  onSavePermissions={async (services, countries) => {
+                    if (!token || !detailCompany) return;
+                    try {
+                      await apiPatchCompanySellerPermissions(token, detailCompany.id, services);
+                      await apiSyncCompanyCountryPermissions(
+                        token,
+                        detailCompany.id,
+                        countries.map((c) => ({ country_code: c.country_code, country_name: c.country_name }))
+                      );
+                      const [pRes, cRes, comp] = await Promise.all([
+                        apiCompanySellerPermissions(token, detailCompany.id),
+                        apiCompanyCountryPermissions(token, detailCompany.id),
+                        apiPlatformCompany(token, detailCompany.id),
+                      ]);
+                      setDetailPerms(pRes.data.permissions);
+                      setDetailCountries(cRes.data.permissions);
+                      setDetailCompany(comp.data);
+                      alert("Permissions saved.");
+                    } catch (e) {
+                      alert(e instanceof ApiRequestError ? e.message : "Save failed");
+                    }
                   }}
                   onSaveProfile={async (patch) => {
                     if (!token || !detailCompany) return;
                     try {
                       const res = await apiPatchCompanyProfile(token, detailCompany.id, patch);
                       setDetailCompany(res.data);
+                      alert("Profile saved.");
                     } catch (e) {
                       alert(e instanceof ApiRequestError ? e.message : "Save failed");
                     }
@@ -691,6 +760,7 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                       await apiPatchCompanyGovernance(token, detailCompany.id, { governance_status: next });
                       const res = await apiPlatformCompany(token, detailCompany.id);
                       setDetailCompany(res.data);
+                      alert("Governance saved.");
                     } catch (e) {
                       alert(e instanceof ApiRequestError ? e.message : "Save failed");
                     }
@@ -701,6 +771,7 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                       await apiPatchCompanyPartnerSettings(token, detailCompany.id, { is_partner_visible: visible });
                       const res = await apiPlatformCompany(token, detailCompany.id);
                       setDetailCompany(res.data);
+                      alert("Branding saved.");
                     } catch (e) {
                       alert(e instanceof ApiRequestError ? e.message : "Save failed");
                     }
@@ -807,6 +878,30 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
         onClose={() => setContractDrawer(null)}
       />
       <AuditDrawer open={auditDrawer !== null} row={auditDrawer} onClose={() => setAuditDrawer(null)} />
+
+      {/* Company-detail add-employee modal */}
+      {detailCompany && (
+        <AddEmployeeModal
+          open={addEmployeeOpen}
+          onClose={() => setAddEmployeeOpen(false)}
+          token={token}
+          companyId={detailCompany.id}
+          companyName={detailCompany.name}
+          onSuccess={() => {
+            setAddEmployeeOpen(false);
+            setDetailStaff(null);
+          }}
+        />
+      )}
+
+      {/* Company-detail branding / logo / partner-visibility modal */}
+      <PartnerSettingsModal
+        company={partnerModalOpen ? detailCompany : null}
+        onClose={() => setPartnerModalOpen(false)}
+        onSaved={(next) => {
+          setDetailCompany((prev) => (prev ? { ...prev, ...next } : prev));
+        }}
+      />
 
       {/* ───────── MODALS ───────── */}
       <TemplateModal
@@ -1151,6 +1246,7 @@ function CompaniesList(props: {
 }
 
 function CompaniesDetail(props: {
+  token: string | null;
   company: PlatformCompanyRow | null;
   subTab: "profile" | "staff" | "apps" | "perms" | "commission" | "payments";
   onSubTab: (s: "profile" | "staff" | "apps" | "perms" | "commission" | "payments") => void;
@@ -1158,10 +1254,18 @@ function CompaniesDetail(props: {
   onLang: (l: "EN" | "RU" | "HY") => void;
   staff: PlatformAdminUserRow[] | null;
   apps: CompanyApplicationRow[] | null;
+  perms: CompanySellerPermissionApiRow[] | null;
+  countries: CompanyCountryPermissionApiRow[] | null;
+  onAddEmployee: () => void;
+  onOpenLogo: () => void;
   onBack: () => void;
   onSaveProfile: (patch: CompanyProfileEditable) => Promise<void>;
   onSaveGovernance: (next: string) => Promise<void>;
   onSavePartner: (visible: boolean) => Promise<void>;
+  onSavePermissions: (
+    services: string[],
+    countries: Array<{ country_code: string; country_name: string }>
+  ) => Promise<void>;
 }) {
   const c = props.company;
   const [draft, setDraft] = useState<CompanyProfileEditable>({});
@@ -1362,7 +1466,7 @@ function CompaniesDetail(props: {
                 <div className="logo-upload mb-4">
                   <div className="logo-box">{initialsFor(c.name)}</div>
                   <div>
-                    <button className="btn btn-sm">
+                    <button className="btn btn-sm" onClick={props.onOpenLogo}>
                       <i className="ti ti-upload" />
                       Upload logo
                     </button>
@@ -1445,7 +1549,7 @@ function CompaniesDetail(props: {
               <div className="card-title">Employees</div>
               <div className="card-subtitle">People who work on behalf of this company</div>
             </div>
-            <button className="btn btn-primary btn-sm">
+            <button className="btn btn-primary btn-sm" onClick={props.onAddEmployee}>
               <i className="ti ti-plus" />
               Add employee
             </button>
@@ -1572,43 +1676,25 @@ function CompaniesDetail(props: {
         </div>
       </div>
 
-      {/* PERMS — placeholder linking to existing page */}
+      {/* PERMS — full editor (services × countries) */}
       <div className={`detail-pane ${props.subTab === "perms" ? "active" : ""}`}>
-        <div className="card" style={{ marginBottom: 0 }}>
-          <div className="card-header">
-            <div>
-              <div className="card-title">Seller permissions</div>
-              <div className="card-subtitle">Service types this company may sell, and in which countries</div>
-            </div>
-          </div>
-          <div className="card-body cell-muted">
-            Granular editor lives at{" "}
-            <a
-              href={`/platform/companies/${c.id}/module-permissions`}
-              style={{ color: "var(--primary)" }}
-            >
-              /platform/companies/{c.id}/module-permissions
-            </a>
-            . Active seller services: {c.active_seller_permissions_count ?? 0}.
-          </div>
-        </div>
+        <PermsEditor
+          perms={props.perms}
+          countries={props.countries}
+          homeCountry={c.country ?? null}
+          onSave={props.onSavePermissions}
+        />
       </div>
 
-      {/* COMMISSION */}
+      {/* COMMISSION — full editor (CompanyCommissionTab reuse) */}
       <div className={`detail-pane ${props.subTab === "commission" ? "active" : ""}`}>
         <div className="card" style={{ marginBottom: 0 }}>
-          <div className="card-header">
-            <div>
-              <div className="card-title">Default commission</div>
-              <div className="card-subtitle">Applied to this company unless an override exists</div>
-            </div>
-          </div>
-          <div className="card-body cell-muted">
-            Detailed commission editor opens at{" "}
-            <Link href={`/platform/commissions?company_id=${c.id}`} style={{ color: "var(--primary)" }}>
-              /platform/commissions?company_id={c.id}
-            </Link>
-            .
+          <div className="card-body">
+            {props.token ? (
+              <CompanyCommissionTab token={props.token} companyId={c.id} />
+            ) : (
+              <p className="cell-muted">Sign in to view commission settings.</p>
+            )}
           </div>
         </div>
       </div>
@@ -1676,6 +1762,186 @@ function CompaniesDetail(props: {
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+const PERM_SERVICE_META: Record<string, { name: string; icon: string }> = {
+  hotel: { name: "Hotels", icon: "ti-bed" },
+  flight: { name: "Flights", icon: "ti-plane" },
+  transfer: { name: "Transfers", icon: "ti-car" },
+  car: { name: "Car rental", icon: "ti-steering-wheel" },
+  excursion: { name: "Excursions", icon: "ti-mountain" },
+  visa: { name: "Visa", icon: "ti-id" },
+  package: { name: "Packages", icon: "ti-package" },
+};
+
+function PermsEditor(props: {
+  perms: CompanySellerPermissionApiRow[] | null;
+  countries: CompanyCountryPermissionApiRow[] | null;
+  homeCountry: string | null;
+  onSave: (
+    services: string[],
+    countries: Array<{ country_code: string; country_name: string }>
+  ) => Promise<void>;
+}) {
+  const [draftServices, setDraftServices] = useState<Record<string, boolean>>({});
+  const [draftCountries, setDraftCountries] = useState<Record<string, { code: string; name: string }>>({});
+  const [allCountries, setAllCountries] = useState<Array<{ code: string; name: string }>>([]);
+  const [adding, setAdding] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (props.perms === null) return;
+    const next: Record<string, boolean> = {};
+    for (const t of SELLER_SERVICE_TYPES) next[t] = false;
+    for (const p of props.perms) {
+      if (p.status === "active" && (SELLER_SERVICE_TYPES as readonly string[]).includes(p.service_type)) {
+        next[p.service_type] = true;
+      }
+    }
+    setDraftServices(next);
+  }, [props.perms]);
+  useEffect(() => {
+    if (props.countries === null) return;
+    const next: Record<string, { code: string; name: string }> = {};
+    for (const c of props.countries) {
+      if (c.status === "active") next[c.country_code] = { code: c.country_code, name: c.country_name };
+    }
+    setDraftCountries(next);
+  }, [props.countries]);
+
+  async function loadAllCountries() {
+    if (allCountries.length > 0) return;
+    setAdding(true);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL ?? "https://api.zulu.am"}/locations/search?types=country&limit=200`,
+        { headers: { Accept: "application/json" } }
+      );
+      const json = await res.json();
+      if (Array.isArray(json?.data)) {
+        const arr = json.data.map((c: { country_code: string; name: string }) => ({
+          code: c.country_code,
+          name: c.name,
+        }));
+        arr.sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name));
+        setAllCountries(arr);
+      }
+    } catch {
+      setAllCountries([]);
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  if (props.perms === null || props.countries === null) {
+    return (
+      <div className="card" style={{ marginBottom: 0 }}>
+        <div className="card-body cell-muted">Loading…</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="card" style={{ marginBottom: 0 }}>
+      <div className="card-header">
+        <div>
+          <div className="card-title">Seller permissions</div>
+          <div className="card-subtitle">Service types this company may sell, and in which countries</div>
+        </div>
+      </div>
+      <div className="card-body">
+        {SELLER_SERVICE_TYPES.map((svc) => {
+          const meta = PERM_SERVICE_META[svc] ?? { name: svc, icon: "ti-circle" };
+          const active = !!draftServices[svc];
+          return (
+            <div key={svc} className={`perm-row ${active ? "" : "off"}`}>
+              <div className="perm-svc">
+                <i className={`ti ${meta.icon}`} />
+                <div>
+                  <div className="ps-name">{meta.name}</div>
+                  <div className="ps-key font-mono">{svc}</div>
+                </div>
+                <label className="switch" style={{ marginLeft: "auto" }}>
+                  <input
+                    type="checkbox"
+                    checked={active}
+                    onChange={(e) => setDraftServices((p) => ({ ...p, [svc]: e.target.checked }))}
+                  />
+                  <span className="switch-slider" />
+                </label>
+              </div>
+              <div className="perm-countries">
+                {props.homeCountry && (
+                  <span className="mchip on" title="Home country — always allowed">
+                    {props.homeCountry}
+                  </span>
+                )}
+                {Object.values(draftCountries)
+                  .filter((c) => c.name.toLowerCase() !== (props.homeCountry ?? "").toLowerCase())
+                  .map((c) => (
+                    <span
+                      key={c.code}
+                      className="mchip on"
+                      onClick={() =>
+                        setDraftCountries((p) => {
+                          const n = { ...p };
+                          delete n[c.code];
+                          return n;
+                        })
+                      }
+                      title="Click to remove"
+                    >
+                      {c.name}
+                      <i className="ti ti-x" style={{ fontSize: 12 }} />
+                    </span>
+                  ))}
+                <span
+                  className="mchip"
+                  onClick={() => {
+                    if (allCountries.length === 0) void loadAllCountries();
+                    const code = window.prompt(
+                      `Country code (ISO 2 letters) — e.g. AM, GE, RU.\n\nLoaded ${allCountries.length} countries.`
+                    );
+                    if (!code) return;
+                    const found = allCountries.find((c) => c.code.toUpperCase() === code.toUpperCase());
+                    if (!found) {
+                      alert(`Country ${code} not in catalogue.`);
+                      return;
+                    }
+                    setDraftCountries((p) => ({ ...p, [found.code]: { code: found.code, name: found.name } }));
+                  }}
+                >
+                  <i className="ti ti-plus" style={{ fontSize: 12 }} />
+                  Add
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="card-foot">
+        <button
+          className="btn btn-primary"
+          disabled={saving || adding}
+          onClick={async () => {
+            setSaving(true);
+            const services = Object.entries(draftServices)
+              .filter(([, v]) => v)
+              .map(([k]) => k);
+            const countries = Object.values(draftCountries).map((c) => ({
+              country_code: c.code,
+              country_name: c.name,
+            }));
+            await props.onSave(services, countries);
+            setSaving(false);
+          }}
+        >
+          <i className="ti ti-device-floppy" />
+          {saving ? "Saving…" : "Save permissions"}
+        </button>
       </div>
     </div>
   );
