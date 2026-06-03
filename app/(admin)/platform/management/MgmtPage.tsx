@@ -620,7 +620,10 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
             onHamburger={() => setSidebarCollapsed((v) => !v)}
             title={`Management · ${inCompanyDetail ? detailCompany.name : activeMeta.label}`}
             user={user ?? null}
+            token={token}
             onLogout={() => void logout().then(() => router.push("/login"))}
+            onNotifications={() => router.push("/admin-redesign/notifications")}
+            onApps={() => router.push("/dashboard")}
           />
           <div className="page">
             <div className="page-header">
@@ -1046,19 +1049,59 @@ function Sidebar({ collapsed: _c, activeKey }: { collapsed: boolean; activeKey: 
   );
 }
 
+const HEADER_FRONTEND_URL =
+  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_FRONTEND_URL) || "https://zulu.am";
+
 function Header({
   collapsed: _c,
   onHamburger,
   title,
   user,
+  token,
   onLogout,
+  onNotifications,
+  onApps,
 }: {
   collapsed: boolean;
   onHamburger: () => void;
   title: string;
   user: { name?: string | null; email?: string | null; context?: { world?: string } } | null;
+  token: string | null;
   onLogout: () => void;
+  onNotifications: () => void;
+  onApps: () => void;
 }) {
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem("zulu_admin_theme");
+      if (stored === "dark") {
+        setTheme("dark");
+        document.documentElement.classList.add("dark");
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  function toggleTheme() {
+    setTheme((prev) => {
+      const next = prev === "dark" ? "light" : "dark";
+      if (next === "dark") document.documentElement.classList.add("dark");
+      else document.documentElement.classList.remove("dark");
+      try {
+        window.localStorage.setItem("zulu_admin_theme", next);
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }
+  // Open the public website carrying the admin's token through web's /sso
+  // handoff so the operator lands already logged in (same as AdminShell).
+  const websiteHref = token
+    ? `${HEADER_FRONTEND_URL}/sso?${new URLSearchParams({ token, next: "/" }).toString()}`
+    : HEADER_FRONTEND_URL;
   return (
     <header className="header">
       <div className="header-brand">
@@ -1093,7 +1136,7 @@ function Header({
         <input type="search" placeholder="Search anything..." />
       </div>
       <div className="header-actions">
-        <button className="header-lang">
+        <button className="header-lang" title="Language">
           {/* UK flag — verbatim from HTML mock */}
           <svg className="header-lang-flag" viewBox="0 0 60 30" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <clipPath id="uk-t"><path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z"/></clipPath>
@@ -1105,27 +1148,71 @@ function Header({
           </svg>
           EN
         </button>
-        <button className="header-icon-btn">
+        <a
+          className="header-icon-btn"
+          href={websiteHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Open ZULU website"
+        >
           <i className="ti ti-external-link" />
+        </a>
+        <button
+          className="header-icon-btn"
+          onClick={toggleTheme}
+          title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+        >
+          <i className={theme === "dark" ? "ti ti-sun" : "ti ti-moon"} />
         </button>
-        <button className="header-icon-btn">
-          <i className="ti ti-moon" />
-        </button>
-        <button className="header-icon-btn">
+        <button className="header-icon-btn" onClick={onNotifications} title="Notifications">
           <i className="ti ti-bell" />
           <span className="dot" />
         </button>
-        <button className="header-icon-btn">
+        <button className="header-icon-btn" onClick={onApps} title="Apps">
           <i className="ti ti-grid-dots" />
         </button>
         <div className="header-divider" />
-        <div className="header-user" onClick={onLogout} title="Click to logout">
-          <span className="user-avatar">{(user?.name ?? "?").slice(0, 1).toUpperCase()}</span>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 500 }}>{user?.name ?? "User"}</div>
-            <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>{user?.context?.world ?? ""}</div>
+        <div style={{ position: "relative" }}>
+          <div
+            className="header-user"
+            onClick={() => setUserMenuOpen((v) => !v)}
+            title="Account menu"
+          >
+            <span className="user-avatar">{(user?.name ?? "?").slice(0, 1).toUpperCase()}</span>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 500 }}>{user?.name ?? "User"}</div>
+              <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>{user?.context?.world ?? ""}</div>
+            </div>
+            <i
+              className="ti ti-chevron-down"
+              style={{
+                fontSize: 15,
+                color: "var(--text-secondary)",
+                transform: userMenuOpen ? "rotate(180deg)" : "none",
+                transition: "transform .15s",
+              }}
+            />
           </div>
-          <i className="ti ti-chevron-down" style={{ fontSize: 15, color: "var(--text-secondary)" }} />
+          {userMenuOpen && (
+            <div className="row-menu open" style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, minWidth: 200 }}>
+              {user && (
+                <div style={{ padding: "8px 12px", borderBottom: "1px solid var(--border-color)" }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>{user.name}</div>
+                  <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>{user.email}</div>
+                </div>
+              )}
+              <button
+                className="menu-item danger"
+                onClick={() => {
+                  setUserMenuOpen(false);
+                  onLogout();
+                }}
+              >
+                <i className="ti ti-logout" />
+                <span>Log out</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>
