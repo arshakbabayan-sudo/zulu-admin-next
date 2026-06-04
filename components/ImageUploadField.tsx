@@ -66,7 +66,12 @@ export function ImageUploadField({
     form.append("section", section);
 
     try {
-      const res = await fetch(`${getApiBaseUrl().replace(/\/$/, "")}/api/media/upload`, {
+      // 2026-06-04 — was `/api/media/upload`. getApiBaseUrl() already returns the
+      // API base (which already ends with `/api` on prod and `/api/proxy` on dev),
+      // so prefixing the path with another `/api/` produced `…/api/api/media/upload`
+      // and a 404 "Not found" red error on the Partner-settings modal Save flow.
+      // Mirrors how every other API call composes paths (e.g. `${base}/platform-admin/users`).
+      const res = await fetch(`${getApiBaseUrl().replace(/\/$/, "")}/media/upload`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
