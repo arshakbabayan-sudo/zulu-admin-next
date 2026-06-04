@@ -54,7 +54,6 @@ export type AdminNavGroup = {
    * keep the sidebar readable in the meantime.
    */
   labelFallback?: string;
-  icon: string;
   /** Sidebar link points here. Usually the first tab. */
   defaultHref: string;
   tabs: AdminNavTab[];
@@ -117,7 +116,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     key: "dashboard",
     labelKey: "admin.nav.section.dashboard",
     labelFallback: "Dashboard",
-    icon: "/icons/menu/dashboard.svg",
     defaultHref: "/dashboard",
     // Phase Ա.9 (2026-05-28) — Detailed stats is surfaced as a super-admin
     // header button on the Dashboard page (the admin no longer renders
@@ -136,7 +134,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     key: "inventory",
     labelKey: "admin.nav.section.inventory",
     labelFallback: "Inventory",
-    icon: "/icons/menu/hotel.svg",
     defaultHref: "/operator/hotels",
     tabs: [
       { href: "/operator/hotels", labelKey: "admin.nav.tab.hotels", serviceType: "hotel", moduleKey: "inventory.hotels" },
@@ -171,7 +168,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     key: "bookings",
     labelKey: "admin.nav.section.bookings",
     labelFallback: "Bookings",
-    icon: "/icons/menu/booking.svg",
     defaultHref: "/platform/bookings",
     tabs: [
       { href: "/platform/bookings", labelKey: "admin.nav.tab.all_bookings", moduleKey: "ops.bookings" },
@@ -193,7 +189,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     key: "crm",
     labelKey: "admin.nav.section.crm",
     labelFallback: "CRM",
-    icon: "/icons/menu/crm.svg",
     defaultHref: "/crm/pipeline",
     tabs: [
       { href: "/crm/pipeline", labelKey: "admin.nav.tab.crm.pipeline" },
@@ -215,7 +210,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     key: "chat",
     labelKey: "admin.nav.section.chat",
     labelFallback: "Chat",
-    icon: "/icons/menu/chat.svg",
     defaultHref: "/chat",
     tabs: [],
     visibility: "section_chat",
@@ -234,7 +228,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     key: "finance",
     labelKey: "admin.nav.section.finance",
     labelFallback: "Finance",
-    icon: "/icons/menu/finance.svg",
     defaultHref: "/platform/finance-summary",
     tabs: [
       { href: "/platform/finance-summary", labelKey: "admin.nav.tab.finance_summary", moduleKey: "ops.finance" },
@@ -259,7 +252,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     key: "my_company",
     labelKey: "admin.nav.section.my_company",
     labelFallback: "My company",
-    icon: "/icons/menu/company.svg",
     // 2026-06-02 (Arshak) — "My company" used to default to /bucket3/employees,
     // which redirects to the Directory people page → clicking My company showed
     // "Directory", which was confusing/meaningless. Repointed to a real
@@ -295,7 +287,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     key: "hr",
     labelKey: "admin.nav.section.hr",
     labelFallback: "HR",
-    icon: "/icons/menu/profile.svg",
     defaultHref: "/bucket3/non-service-hours",
     tabs: [
       { href: "/bucket3/non-service-hours", labelKey: "admin.nav.tab.bucket3.non_service_hours" },
@@ -317,7 +308,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     key: "marketplace_ops",
     labelKey: "admin.nav.section.management",
     labelFallback: "Management",
-    icon: "/icons/menu/checklist.svg",
     defaultHref: "/platform/companies",
     tabs: [
       { href: "/platform/companies", labelKey: "admin.nav.tab.companies_access" },
@@ -353,7 +343,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     key: "directory",
     labelKey: "admin.nav.section.directory",
     labelFallback: "Directory",
-    icon: "/icons/menu/users.svg",
     defaultHref: "/platform/users",
     tabs: [
       // 2026-06-02 (Arshak) — Companies tab REMOVED from Directory. The
@@ -386,7 +375,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     key: "file_manager",
     labelKey: "admin.nav.section.file_manager",
     labelFallback: "File manager",
-    icon: "/icons/menu/folder.svg",
     defaultHref: "/admin-redesign/files",
     tabs: [],
     visibility: "always",
@@ -395,7 +383,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     key: "my_profile",
     labelKey: "admin.nav.section.my_profile",
     labelFallback: "My profile",
-    icon: "/icons/menu/profile.svg",
     defaultHref: "/admin-redesign/profile",
     tabs: [],
     visibility: "always",
@@ -413,7 +400,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     key: "notifications_v2",
     labelKey: "admin.nav.section.inbox",
     labelFallback: "Inbox",
-    icon: "/icons/menu/bell.svg",
     defaultHref: "/admin-redesign/notifications",
     tabs: [
       { href: "/admin-redesign/notifications", labelKey: "admin.nav.tab.my_notifications" },
@@ -430,7 +416,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     key: "settings",
     labelKey: "admin.nav.section.settings",
     labelFallback: "Settings",
-    icon: "/icons/menu/settings.svg",
     defaultHref: "/settings/pricing-rules",
     // Tabs grouped logically per Bucket B audit: Pricing & money → Permissions
     // → Localization → Content/CMS → Layout → Promotions → Inventory config →
@@ -483,6 +468,29 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     visibility: "section_settings",
   },
 ];
+
+// ─── Sidebar icons (admin v3, 2026-06-04) ──────────────────────────────────
+// The v3 chrome uses Tabler webfont glyphs (`<i class="ti ti-*"/>`, loaded in
+// app/layout.tsx) instead of per-file PNG/SVG images. This map keys each nav
+// group to its Tabler class so AdminShell and the Management MgmtPage render
+// the SAME icon. (Supersedes the old AdminNavGroup.icon `/icons/menu/*.svg`
+// paths, whose files were removed in the SVG→webfont migration.)
+export const SIDEBAR_TABLER_ICON: Record<string, string> = {
+  dashboard: "ti-dashboard",
+  inventory: "ti-building-store",
+  bookings: "ti-calendar-event",
+  crm: "ti-users",
+  chat: "ti-message-2",
+  finance: "ti-coin",
+  my_company: "ti-building",
+  hr: "ti-clipboard-list",
+  marketplace_ops: "ti-shield-check",
+  directory: "ti-id-badge-2",
+  file_manager: "ti-folder",
+  my_profile: "ti-user",
+  notifications_v2: "ti-inbox",
+  settings: "ti-settings",
+};
 
 // ─── Settings sub-group structure (Phase 2D — 2026-05-31) ────────────────
 //

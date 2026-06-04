@@ -258,9 +258,20 @@ export type CompanyArchiveFilter = "active" | "archived" | "all";
 
 export async function apiPlatformCompany(
   token: string,
-  companyId: number
+  companyId: number,
+  /**
+   * Optional explicit content language (e.g. "hy"). When set, the request
+   * pins `?lang=` so translatable fields (description) come back in that
+   * language regardless of the admin's content-preview default. Used by the
+   * company-detail EN/RU/HY segment. The api-client leaves an already-present
+   * `lang=` untouched, so this override wins.
+   */
+  lang?: string
 ): Promise<ApiSuccessEnvelope<PlatformCompanyRow>> {
-  return apiFetchJson(`${PA}/companies/${companyId}`, { method: "GET", token });
+  const url = lang
+    ? `${PA}/companies/${companyId}?lang=${encodeURIComponent(lang)}`
+    : `${PA}/companies/${companyId}`;
+  return apiFetchJson(url, { method: "GET", token });
 }
 
 export async function apiPlatformCompanies(

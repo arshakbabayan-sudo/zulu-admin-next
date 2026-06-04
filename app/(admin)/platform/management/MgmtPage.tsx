@@ -31,6 +31,7 @@ import {
   ADMIN_NAV_GROUPS,
   type AdminNavGroup,
   findActiveGroup,
+  SIDEBAR_TABLER_ICON,
 } from "@/lib/admin-nav-config";
 import { apiNotificationsUnreadCount } from "@/lib/notifications-api";
 import {
@@ -173,25 +174,8 @@ const TTYPE_KEY: Record<string, MgmtKey> = {
   partner_default: "ttypePartnerDefault",
 };
 
-// Tabler icon per nav-group key — keeps the HTML-mock glyph styling while the
-// labels / hrefs / visibility come from the shared ADMIN_NAV_GROUPS so the
-// Management sidebar is identical (and identically gated) to AdminShell's.
-const SIDEBAR_TABLER_ICON: Record<string, string> = {
-  dashboard: "ti-dashboard",
-  inventory: "ti-building-store",
-  bookings: "ti-calendar-event",
-  crm: "ti-users",
-  chat: "ti-message-2",
-  finance: "ti-coin",
-  my_company: "ti-building",
-  hr: "ti-clipboard-list",
-  marketplace_ops: "ti-shield-check",
-  directory: "ti-id-badge-2",
-  file_manager: "ti-folder",
-  my_profile: "ti-user",
-  notifications_v2: "ti-inbox",
-  settings: "ti-settings",
-};
+// Sidebar Tabler-icon map is shared with AdminShell — imported from
+// admin-nav-config (SIDEBAR_TABLER_ICON) so both chromes stay in sync.
 
 type ApiListMeta = { current_page: number; last_page: number; per_page: number; total: number };
 type AuditLogRow = {
@@ -325,6 +309,7 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
   const router = useRouter();
   const { token, user, logout } = useAdminAuth();
   const { lang, setLang, languageOptions } = useLanguage();
+  const s = mgmtStrings(lang);
   const allowed = canAccessPlatformAdminNav(user);
 
   // ───────────────── Top-level state ─────────────────
@@ -502,7 +487,9 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
     let cancelled = false;
     (async () => {
       try {
-        const res = await apiPlatformCompany(token, detailCompanyId);
+        // Pin the content language to the detail EN/RU/HY segment so the
+        // translatable description comes back in the picked language (2a).
+        const res = await apiPlatformCompany(token, detailCompanyId, detailLang.toLowerCase());
         if (!cancelled) setDetailCompany(res.data);
       } catch (e) {
         if (!cancelled) console.error("company detail load failed", e);
@@ -511,7 +498,7 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
     return () => {
       cancelled = true;
     };
-  }, [detailCompanyId, token]);
+  }, [detailCompanyId, token, detailLang]);
 
   // Staff loader
   useEffect(() => {
@@ -680,19 +667,19 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
       setAppDrawer(null);
       void loadApps();
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Approve failed");
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
     }
   }
 
   async function rejectApp(id: number) {
     if (!token) return;
-    const reason = window.prompt("Rejection reason (optional)") ?? "";
+    const reason = window.prompt(s.promptRejection) ?? "";
     try {
       await apiRejectSellerApplication(token, id, reason);
       setAppDrawer(null);
       void loadApps();
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Reject failed");
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
     }
   }
 
@@ -774,7 +761,6 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
   }
 
   // ───────────────── Render shell ─────────────────
-  const s = mgmtStrings(lang);
   const activeMeta = TAB_META[tab];
   const activeLabel = s[activeMeta.labelKey];
   const inCompanyDetail = tab === "companies" && detailCompanyId !== null && detailCompany !== null;
@@ -943,9 +929,9 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                       setDetailPerms(pRes.data.permissions);
                       setDetailCountries(cRes.data.permissions);
                       setDetailCompany(comp.data);
-                      alert("Permissions saved.");
+                      alert(s.okSaved);
                     } catch (e) {
-                      alert(e instanceof ApiRequestError ? e.message : "Save failed");
+                      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
                     }
                   }}
                   onSaveProfile={async (patch) => {
@@ -953,9 +939,9 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                     try {
                       const res = await apiPatchCompanyProfile(token, detailCompany.id, patch);
                       setDetailCompany(res.data);
-                      alert("Profile saved.");
+                      alert(s.okSaved);
                     } catch (e) {
-                      alert(e instanceof ApiRequestError ? e.message : "Save failed");
+                      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
                     }
                   }}
                   onSaveGovernance={async (next) => {
@@ -964,9 +950,9 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                       await apiPatchCompanyGovernance(token, detailCompany.id, { governance_status: next });
                       const res = await apiPlatformCompany(token, detailCompany.id);
                       setDetailCompany(res.data);
-                      alert("Governance saved.");
+                      alert(s.okSaved);
                     } catch (e) {
-                      alert(e instanceof ApiRequestError ? e.message : "Save failed");
+                      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
                     }
                   }}
                   onSavePartner={async (visible) => {
@@ -975,9 +961,9 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                       await apiPatchCompanyPartnerSettings(token, detailCompany.id, { is_partner_visible: visible });
                       const res = await apiPlatformCompany(token, detailCompany.id);
                       setDetailCompany(res.data);
-                      alert("Branding saved.");
+                      alert(s.okSaved);
                     } catch (e) {
-                      alert(e instanceof ApiRequestError ? e.message : "Save failed");
+                      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
                     }
                   }}
                 />
@@ -1032,7 +1018,7 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                     await apiAdminUpdateContractTemplate(token, row.id, { active: row.active === false });
                     await loadTemplates();
                   } catch (e) {
-                    alert(e instanceof ApiRequestError ? e.message : "Toggle failed");
+                    alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
                   }
                 }}
               />
@@ -1082,47 +1068,47 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
         onClose={() => setContractDrawer(null)}
         onSend={async () => {
           if (!token || !contractDrawer) return;
-          if (!confirm(`Send contract ${contractDrawer.contract_number} to the partner?`)) return;
+          if (!confirm(s.confirmSend)) return;
           try {
             const res = await apiAdminSendContract(token, contractDrawer.id);
             setContractDrawer(res.data);
             await loadContracts();
-            alert("Contract sent.");
+            alert(s.okSent);
           } catch (e) {
-            alert(e instanceof ApiRequestError ? e.message : "Send failed");
+            alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
           }
         }}
         onCountersign={async () => {
           if (!token || !contractDrawer) return;
-          if (!confirm(`Countersign contract ${contractDrawer.contract_number}?`)) return;
+          if (!confirm(s.confirmCountersign)) return;
           try {
             const res = await apiAdminCountersignContract(token, contractDrawer.id);
             setContractDrawer(res.data);
             await loadContracts();
-            alert("Contract countersigned.");
+            alert(s.okCountersigned);
           } catch (e) {
-            alert(e instanceof ApiRequestError ? e.message : "Countersign failed");
+            alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
           }
         }}
         onTerminate={async () => {
           if (!token || !contractDrawer) return;
-          const reason = window.prompt("Termination reason (required):");
+          const reason = window.prompt(s.promptTermination);
           if (!reason || reason.trim().length < 3) {
-            if (reason !== null) alert("A reason of at least 3 characters is required.");
+            if (reason !== null) alert(s.errTerminationShort);
             return;
           }
           try {
             const res = await apiAdminTerminateContract(token, contractDrawer.id, reason);
             setContractDrawer(res.data);
             await loadContracts();
-            alert("Contract terminated.");
+            alert(s.okTerminated);
           } catch (e) {
-            alert(e instanceof ApiRequestError ? e.message : "Terminate failed");
+            alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
           }
         }}
         onPdf={() => {
           if (!contractDrawer?.signed_pdf_url) {
-            alert("No signed PDF available for this contract yet.");
+            alert(s.errNoPdf);
             return;
           }
           window.open(contractDrawer.signed_pdf_url, "_blank", "noopener,noreferrer");
@@ -1184,7 +1170,7 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
               try {
                 variables = JSON.parse(form.variables_json) as Record<string, unknown>;
               } catch {
-                alert("Variables: invalid JSON");
+                alert(s.errInvalidJson);
                 setTemplateModalSaving(false);
                 return;
               }
@@ -1211,7 +1197,7 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
             setTemplateModal(null);
             await loadTemplates();
           } catch (e) {
-            alert(e instanceof ApiRequestError ? e.message : "Save failed");
+            alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
           } finally {
             setTemplateModalSaving(false);
           }
@@ -2450,13 +2436,11 @@ function PermsEditor(props: {
                   className="mchip"
                   onClick={() => {
                     if (allCountries.length === 0) void loadAllCountries();
-                    const code = window.prompt(
-                      `Country code (ISO 2 letters) — e.g. AM, GE, RU.\n\nLoaded ${allCountries.length} countries.`
-                    );
+                    const code = window.prompt(s.promptCountryCode);
                     if (!code) return;
                     const found = allCountries.find((c) => c.code.toUpperCase() === code.toUpperCase());
                     if (!found) {
-                      alert(`Country ${code} not in catalogue.`);
+                      alert(s.errCountryNotFound);
                       return;
                     }
                     setDraftCountries((p) => ({ ...p, [found.code]: { code: found.code, name: found.name } }));
@@ -3793,7 +3777,7 @@ function NewContractModal(props: {
       try {
         variables = JSON.parse(form.variables_json) as Record<string, unknown>;
       } catch {
-        alert("Variables: invalid JSON");
+        alert(s.errInvalidJson);
         return;
       }
     }
@@ -3831,7 +3815,7 @@ function NewContractModal(props: {
       });
       props.onCreated();
     } catch (e) {
-      alert(e instanceof ApiRequestError ? e.message : "Create failed");
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
     } finally {
       setSaving(false);
     }

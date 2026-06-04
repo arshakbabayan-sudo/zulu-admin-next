@@ -18,6 +18,7 @@ import {
   type AdminNavGroup,
   findActiveGroup,
   resolveAdminPageTitle,
+  SIDEBAR_TABLER_ICON,
 } from "@/lib/admin-nav-config";
 import {
   canAccessAgentToolsNav,
@@ -559,12 +560,12 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 </p>
                 <div className="grid grid-cols-3 gap-1">
                   {[
-                    { href: "/dashboard", label: t("admin.nav.dashboard"), icon: "/icons/menu/dashboard.svg" },
-                    { href: "/platform/users", label: t("admin.nav.users"), icon: "/icons/menu/users.svg" },
-                    { href: "/platform/bookings", label: t("admin.nav.bookings"), icon: "/icons/menu/booking.svg" },
-                    { href: "/platform/companies", label: t("admin.nav.platform_companies"), icon: "/icons/menu/company.svg" },
-                    { href: "/platform/finance", label: t("admin.nav.finance"), icon: "/icons/menu/finance.svg" },
-                    { href: "/platform/settings", label: t("admin.nav.settings"), icon: "/icons/menu/settings.svg" },
+                    { href: "/dashboard", label: t("admin.nav.dashboard"), icon: "ti-dashboard" },
+                    { href: "/platform/users", label: t("admin.nav.users"), icon: "ti-id-badge-2" },
+                    { href: "/platform/bookings", label: t("admin.nav.bookings"), icon: "ti-calendar-event" },
+                    { href: "/platform/companies", label: t("admin.nav.platform_companies"), icon: "ti-building" },
+                    { href: "/platform/finance", label: t("admin.nav.finance"), icon: "ti-coin" },
+                    { href: "/platform/settings", label: t("admin.nav.settings"), icon: "ti-settings" },
                   ].map((item) => (
                     <Link
                       key={item.href}
@@ -572,7 +573,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                       onClick={() => setAppsOpen(false)}
                       className="flex flex-col items-center gap-1 rounded-md p-2 text-center transition hover:bg-slate-50"
                     >
-                      <img src={item.icon} alt="" aria-hidden className="h-5 w-5 opacity-70" />
+                      <i className={`ti ${item.icon} text-[20px] text-slate-500`} aria-hidden />
                       <span className="text-[10px] font-medium leading-tight text-slate-700 line-clamp-2">{item.label}</span>
                     </Link>
                   ))}
@@ -834,7 +835,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                       : undefined
                   }
                 >
-                  <img src={g.icon} alt="" aria-hidden className="h-[18px] w-[18px] shrink-0 opacity-80" />
+                  <i
+                    className={`ti ${SIDEBAR_TABLER_ICON[g.key] ?? "ti-point"} shrink-0 text-[18px]`}
+                    aria-hidden
+                  />
                   {sidebarOpen && <span className="flex-1 truncate">{label}</span>}
                   {showBadge ? (
                     <span
