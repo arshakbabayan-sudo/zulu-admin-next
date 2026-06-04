@@ -315,6 +315,30 @@
 .mgmt-page .menu-item.danger:hover { background:var(--danger-light); }
 .mgmt-page .menu-item i { font-size:16px; }
 
+/* Notifications dropdown (bell → Screen 2) */
+.mgmt-page .notif-pop { position:absolute; top:calc(100% + 6px); right:0; width:340px; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--radius-md); box-shadow:0 8px 28px rgba(0,0,0,.12); z-index:70; overflow:hidden; }
+.mgmt-page .notif-pop-head { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; border-bottom:1px solid var(--border-color); }
+.mgmt-page .notif-pop-title { font-size:13px; font-weight:600; color:var(--text-primary); display:inline-flex; align-items:center; gap:8px; }
+.mgmt-page .notif-pop-badge { background:var(--danger); color:#fff; font-size:10px; font-weight:700; padding:1px 6px; border-radius:10px; }
+.mgmt-page .notif-pop-seeall { font-size:12px; font-weight:500; color:var(--primary); cursor:pointer; }
+.mgmt-page .notif-pop-seeall:hover { text-decoration:underline; }
+.mgmt-page .notif-pop-body { max-height:360px; overflow-y:auto; }
+.mgmt-page .notif-pop-empty { padding:24px 16px; text-align:center; font-size:12px; color:var(--text-secondary); }
+.mgmt-page .notif-pop-item { display:block; width:100%; text-align:left; padding:10px 16px; border:none; border-bottom:1px solid var(--border-color); background:none; cursor:pointer; font-family:inherit; }
+.mgmt-page .notif-pop-item:last-child { border-bottom:none; }
+.mgmt-page .notif-pop-item:hover { background:var(--bg-secondary); }
+.mgmt-page .notif-pop-item-title { font-size:12px; font-weight:600; color:var(--text-primary); }
+.mgmt-page .notif-pop-item-msg { font-size:11px; color:var(--text-secondary); margin-top:2px; }
+
+/* Apps launcher dropdown (grid-dots → Screen 4) */
+.mgmt-page .apps-pop { position:absolute; top:calc(100% + 6px); right:0; width:280px; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--radius-md); box-shadow:0 8px 28px rgba(0,0,0,.12); z-index:70; padding:8px; }
+.mgmt-page .apps-pop-title { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.5px; color:var(--text-secondary); padding:4px 6px 6px; }
+.mgmt-page .apps-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; }
+.mgmt-page .apps-grid-item { display:flex; flex-direction:column; align-items:center; gap:6px; padding:12px 6px; border:none; background:none; border-radius:var(--radius-md); cursor:pointer; font-family:inherit; }
+.mgmt-page .apps-grid-item:hover { background:var(--bg-secondary); }
+.mgmt-page .apps-grid-item i { font-size:22px; color:var(--primary); }
+.mgmt-page .apps-grid-item span { font-size:11px; font-weight:500; line-height:1.2; text-align:center; color:var(--text-primary); }
+
 /* Key/value editor (template variables) */
 .mgmt-page .kv-editor { display:flex; flex-direction:column; gap:8px; }
 .mgmt-page .kv-row { display:flex; gap:8px; align-items:center; }

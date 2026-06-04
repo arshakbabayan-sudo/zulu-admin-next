@@ -76,6 +76,11 @@ const EN = {
   navFinance: "Finance",
   navDirectory: "Directory",
   navSettings: "Settings",
+  navUsers: "Users",
+  navPlatformCompanies: "Platform companies",
+  appsHeader: "Apps",
+  seeAll: "See all",
+  noNotifications: "No notifications.",
   commissionSignIn: "Sign in to view commission settings.",
 
   // ── alert / prompt / confirm messages ───────────────────────────
@@ -483,6 +488,11 @@ const HY: Partial<Record<MgmtKey, string>> = {
   navFinance: "Ֆինանսներ",
   navDirectory: "Տեղեկագիրք",
   navSettings: "Կարգավորումներ",
+  navUsers: "Օգտատերեր",
+  navPlatformCompanies: "Հարթակի ընկերություններ",
+  appsHeader: "Հավելվածներ",
+  seeAll: "Տեսնել բոլորը",
+  noNotifications: "Ծանուցումներ չկան։",
   commissionSignIn: "Մուտք գործիր՝ միջնորդավճարի կարգավորումները տեսնելու համար։",
 
   errGeneric: "Մի բան սխալ գնաց։ Փորձիր նորից։",
@@ -868,6 +878,11 @@ const RU: Partial<Record<MgmtKey, string>> = {
   navFinance: "Финансы",
   navDirectory: "Справочник",
   navSettings: "Настройки",
+  navUsers: "Пользователи",
+  navPlatformCompanies: "Компании платформы",
+  appsHeader: "Приложения",
+  seeAll: "Показать все",
+  noNotifications: "Уведомлений нет.",
   commissionSignIn: "Войдите, чтобы увидеть настройки комиссии.",
 
   errGeneric: "Что-то пошло не так. Попробуйте ещё раз.",

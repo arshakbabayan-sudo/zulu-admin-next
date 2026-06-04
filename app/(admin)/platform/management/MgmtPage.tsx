@@ -33,7 +33,11 @@ import {
   findActiveGroup,
   SIDEBAR_TABLER_ICON,
 } from "@/lib/admin-nav-config";
-import { apiNotificationsUnreadCount } from "@/lib/notifications-api";
+import {
+  apiNotificationsUnreadCount,
+  apiNotificationsPaginated,
+  type NotificationRow,
+} from "@/lib/notifications-api";
 import {
   canAccessPlatformAdminNav,
   canAccessAgentToolsNav,
@@ -1357,15 +1361,16 @@ const LANG_FLAG: Record<string, string> = {
   ru: "/flags/RU.png",
 };
 
-// Header apps-launcher (grid-dots) quick links. Replaces the old behaviour
-// where the icon wrongly navigated straight to /dashboard.
+// Header apps-launcher (grid-dots) quick links — rendered as the 3-col grid
+// dropdown (mirrors AdminShell). Replaces the old behaviour where the icon
+// wrongly navigated straight to /dashboard.
 const APPS_QUICKLINKS: Array<{ href: string; icon: string; labelKey: MgmtKey }> = [
   { href: "/dashboard", icon: "ti-dashboard", labelKey: "navDashboard" },
-  { href: "/platform/companies", icon: "ti-building", labelKey: "tabCompanies" },
+  { href: "/platform/users", icon: "ti-id-badge-2", labelKey: "navUsers" },
   { href: "/platform/bookings", icon: "ti-calendar-event", labelKey: "navBookings" },
-  { href: "/platform/finance-summary", icon: "ti-coin", labelKey: "navFinance" },
-  { href: "/platform/users", icon: "ti-id-badge-2", labelKey: "navDirectory" },
-  { href: "/settings/pricing-rules", icon: "ti-settings", labelKey: "navSettings" },
+  { href: "/platform/companies", icon: "ti-building", labelKey: "navPlatformCompanies" },
+  { href: "/platform/finance", icon: "ti-coin", labelKey: "navFinance" },
+  { href: "/platform/settings", icon: "ti-settings", labelKey: "navSettings" },
 ];
 
 function Header({
@@ -1398,8 +1403,11 @@ function Header({
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   const [appsMenuOpen, setAppsMenuOpen] = useState(false);
+  const [notifMenuOpen, setNotifMenuOpen] = useState(false);
+  const [recentNotifications, setRecentNotifications] = useState<NotificationRow[]>([]);
   const langRef = useRef<HTMLDivElement>(null);
   const appsRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
   // Close any open header dropdown on an outside click or Escape (Arshak:
   // the avatar menu wouldn't close when clicking elsewhere).
@@ -1408,12 +1416,14 @@ function Header({
       const t = e.target as Node;
       if (langRef.current && !langRef.current.contains(t)) setLangMenuOpen(false);
       if (appsRef.current && !appsRef.current.contains(t)) setAppsMenuOpen(false);
+      if (notifRef.current && !notifRef.current.contains(t)) setNotifMenuOpen(false);
       if (userRef.current && !userRef.current.contains(t)) setUserMenuOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setLangMenuOpen(false);
         setAppsMenuOpen(false);
+        setNotifMenuOpen(false);
         setUserMenuOpen(false);
       }
     };
@@ -1424,6 +1434,22 @@ function Header({
       document.removeEventListener("keydown", onKey);
     };
   }, []);
+  // Lazy-load recent notifications the first time the bell dropdown opens.
+  useEffect(() => {
+    if (!notifMenuOpen || !token) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await apiNotificationsPaginated(token, { page: 1, per_page: 5 });
+        if (!cancelled) setRecentNotifications(res.data ?? []);
+      } catch {
+        if (!cancelled) setRecentNotifications([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [notifMenuOpen, token]);
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem("zulu_admin_theme");
@@ -1516,33 +1542,72 @@ function Header({
         >
           <i className={theme === "dark" ? "ti ti-sun" : "ti ti-moon"} />
         </button>
-        <button
-          className="header-icon-btn"
-          onClick={() => onNavigate("/admin-redesign/notifications")}
-          title={s.notifications}
-        >
-          <i className="ti ti-bell" />
-          {unreadCount > 0 && <span className="dot" />}
-        </button>
+        <div ref={notifRef} style={{ position: "relative" }}>
+          <button className="header-icon-btn" onClick={() => setNotifMenuOpen((v) => !v)} title={s.notifications}>
+            <i className="ti ti-bell" />
+            {unreadCount > 0 && <span className="dot" />}
+          </button>
+          {notifMenuOpen && (
+            <div className="notif-pop">
+              <div className="notif-pop-head">
+                <span className="notif-pop-title">
+                  {s.notifications}
+                  {unreadCount > 0 && <span className="notif-pop-badge">{unreadCount > 99 ? "99+" : unreadCount}</span>}
+                </span>
+                <a
+                  className="notif-pop-seeall"
+                  onClick={() => {
+                    onNavigate("/admin-redesign/notifications");
+                    setNotifMenuOpen(false);
+                  }}
+                >
+                  {s.seeAll}
+                </a>
+              </div>
+              <div className="notif-pop-body">
+                {recentNotifications.length === 0 ? (
+                  <div className="notif-pop-empty">{s.noNotifications}</div>
+                ) : (
+                  recentNotifications.map((n) => (
+                    <button
+                      key={n.id}
+                      className="notif-pop-item"
+                      onClick={() => {
+                        onNavigate("/admin-redesign/notifications");
+                        setNotifMenuOpen(false);
+                      }}
+                    >
+                      <div className="notif-pop-item-title">{n.title}</div>
+                      <div className="notif-pop-item-msg">{n.message}</div>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
         <div ref={appsRef} style={{ position: "relative" }}>
           <button className="header-icon-btn" onClick={() => setAppsMenuOpen((v) => !v)} title={s.apps}>
             <i className="ti ti-grid-dots" />
           </button>
           {appsMenuOpen && (
-            <div className="row-menu open" style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, minWidth: 190 }}>
-              {APPS_QUICKLINKS.map((a) => (
-                <button
-                  key={a.href}
-                  className="menu-item"
-                  onClick={() => {
-                    onNavigate(a.href);
-                    setAppsMenuOpen(false);
-                  }}
-                >
-                  <i className={`ti ${a.icon}`} />
-                  <span>{s[a.labelKey]}</span>
-                </button>
-              ))}
+            <div className="apps-pop">
+              <div className="apps-pop-title">{s.appsHeader}</div>
+              <div className="apps-grid">
+                {APPS_QUICKLINKS.map((a) => (
+                  <button
+                    key={a.href}
+                    className="apps-grid-item"
+                    onClick={() => {
+                      onNavigate(a.href);
+                      setAppsMenuOpen(false);
+                    }}
+                  >
+                    <i className={`ti ${a.icon}`} />
+                    <span>{s[a.labelKey]}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>
