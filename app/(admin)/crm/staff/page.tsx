@@ -300,7 +300,7 @@ export default function CrmStaffPage() {
         }
       />
 
-      <CrmSectionTabs activeHref="/crm/staff" counts={{ staff: stats?.total }} />
+      <CrmSectionTabs activeHref="/crm/staff" counts={{ staff: meta?.total }} />
 
       <StatGrid cols={4} className="mb-5">
         <StatCard

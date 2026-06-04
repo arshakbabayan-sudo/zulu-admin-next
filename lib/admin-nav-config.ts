@@ -31,6 +31,14 @@ export type AdminOperatorNavLink = {
 export type AdminNavTab = {
   href: string;
   labelKey: string;
+  /**
+   * 2026-06-04 — plain-English fallback rendered when t(labelKey) returns the
+   * raw key (translation row not yet seeded into ui_translations). Mirrors the
+   * existing `AdminNavGroup.labelFallback` field so newly-added tabs do not
+   * flash a `admin.nav.tab.…` key in the AdminShell header before their DB
+   * row ships.
+   */
+  labelFallback?: string;
   superAdminOnly?: boolean;
   perm?: string;
   serviceType?: SellerServiceType;
@@ -202,7 +210,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       // employees) view folds into CRM as a dedicated tab. Was Directory >
       // People > Staff(operator/agent/admin) chip. Rename: parentheses dropped
       // ("Staff" only — the role mix is filterable inside the page).
-      { href: "/crm/staff", labelKey: "admin.nav.tab.crm.staff" },
+      { href: "/crm/staff", labelKey: "admin.nav.tab.crm.staff", labelFallback: "Staff" },
       { href: "/crm/options", labelKey: "admin.nav.tab.crm.options" },
     ],
     visibility: "section_crm",
@@ -322,8 +330,8 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       // governance section owns every cross-tenant people lookup. Staff
       // (operator/agent/admin employees) moved to CRM → Staff. People
       // detail page stays at /platform/users/{id} (linked from both tabs).
-      { href: "/platform/b2c-customers", labelKey: "admin.nav.tab.b2c_customers" },
-      { href: "/platform/unverified", labelKey: "admin.nav.tab.unverified_accounts" },
+      { href: "/platform/b2c-customers", labelKey: "admin.nav.tab.b2c_customers", labelFallback: "B2C customers" },
+      { href: "/platform/unverified", labelKey: "admin.nav.tab.unverified_accounts", labelFallback: "Unverified accounts" },
       { href: "/platform/contracts", labelKey: "admin.nav.tab.partnership_agreements", moduleKey: "ops.contracts" },
       { href: "/platform/contract-templates", labelKey: "admin.nav.tab.contract_templates", moduleKey: "ops.contracts" },
       { href: "/platform/audit-logs", labelKey: "admin.nav.tab.audit_logs" },
@@ -632,11 +640,15 @@ export function resolveAdminPageTitle(pathname: string, t: (key: string) => stri
   for (const group of ADMIN_NAV_GROUPS) {
     for (const tab of group.tabs) {
       if (pathname === tab.href || pathname.startsWith(`${tab.href}/`)) {
-        return t(tab.labelKey);
+        const raw = t(tab.labelKey);
+        // 2026-06-04 — honour tab.labelFallback when the i18n row hasn't been
+        // seeded yet (raw key returned). Mirrors the group fallback below.
+        return raw === tab.labelKey && tab.labelFallback ? tab.labelFallback : raw;
       }
     }
     if (pathname === group.defaultHref || pathname.startsWith(`${group.defaultHref}/`)) {
-      return t(group.labelKey);
+      const raw = t(group.labelKey);
+      return raw === group.labelKey && group.labelFallback ? group.labelFallback : raw;
     }
   }
 
