@@ -71,6 +71,11 @@ const EN = {
   apps: "Apps",
   logout: "Log out",
   userFallback: "User",
+  navDashboard: "Dashboard",
+  navBookings: "Bookings",
+  navFinance: "Finance",
+  navDirectory: "Directory",
+  navSettings: "Settings",
   commissionSignIn: "Sign in to view commission settings.",
 
   // ── alert / prompt / confirm messages ───────────────────────────
@@ -88,6 +93,8 @@ const EN = {
   errInvalidJson: "Variables: invalid JSON.",
   promptCountryCode: "Country code (ISO 2 letters) — e.g. AM, GE, RU.",
   errCountryNotFound: "That country isn’t in the catalogue.",
+  pickCountryTitle: "Add a country",
+  pickCountrySearch: "Search country…",
 
   // ── filter labels ───────────────────────────────────────────────
   filterSearch: "Search",
@@ -471,6 +478,11 @@ const HY: Partial<Record<MgmtKey, string>> = {
   apps: "Հավելվածներ",
   logout: "Դուրս գալ",
   userFallback: "Օգտատեր",
+  navDashboard: "Վահանակ",
+  navBookings: "Ամրագրումներ",
+  navFinance: "Ֆինանսներ",
+  navDirectory: "Տեղեկագիրք",
+  navSettings: "Կարգավորումներ",
   commissionSignIn: "Մուտք գործիր՝ միջնորդավճարի կարգավորումները տեսնելու համար։",
 
   errGeneric: "Մի բան սխալ գնաց։ Փորձիր նորից։",
@@ -487,6 +499,8 @@ const HY: Partial<Record<MgmtKey, string>> = {
   errInvalidJson: "Փոփոխականներ՝ անվավեր JSON։",
   promptCountryCode: "Երկրի կոդ (2 տառ ISO)՝ օր․ AM, GE, RU։",
   errCountryNotFound: "Այդ երկիրը ցանկում չկա։",
+  pickCountryTitle: "Ավելացնել երկիր",
+  pickCountrySearch: "Որոնել երկիր…",
 
   filterSearch: "Որոնում",
   filterStatus: "Կարգավիճակ",
@@ -849,6 +863,11 @@ const RU: Partial<Record<MgmtKey, string>> = {
   apps: "Приложения",
   logout: "Выйти",
   userFallback: "Пользователь",
+  navDashboard: "Панель",
+  navBookings: "Брони",
+  navFinance: "Финансы",
+  navDirectory: "Справочник",
+  navSettings: "Настройки",
   commissionSignIn: "Войдите, чтобы увидеть настройки комиссии.",
 
   errGeneric: "Что-то пошло не так. Попробуйте ещё раз.",
@@ -865,6 +884,8 @@ const RU: Partial<Record<MgmtKey, string>> = {
   errInvalidJson: "Переменные: неверный JSON.",
   promptCountryCode: "Код страны (2 буквы ISO) — напр. AM, GE, RU.",
   errCountryNotFound: "Этой страны нет в каталоге.",
+  pickCountryTitle: "Добавить страну",
+  pickCountrySearch: "Поиск страны…",
 
   filterSearch: "Поиск",
   filterStatus: "Статус",

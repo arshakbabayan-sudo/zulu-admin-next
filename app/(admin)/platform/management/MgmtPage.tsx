@@ -22,7 +22,7 @@
 
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./management.css";
 import { mgmtStrings, type MgmtKey } from "./management-i18n";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
@@ -395,6 +395,8 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
   const [auditDrawer, setAuditDrawer] = useState<AuditLogRow | null>(null);
   const [templateModal, setTemplateModal] = useState<ContractTemplateDetail | "new" | null>(null);
   const [templateModalSaving, setTemplateModalSaving] = useState(false);
+  // When cloning, the modal opens in "new" mode pre-filled from this source (R2-6).
+  const [templateClone, setTemplateClone] = useState<ContractTemplateDetail | null>(null);
 
   // Section-tab count badges. The HTML mock shows the count next to
   // Companies / Seller applications / Contracts from the very first paint
@@ -700,9 +702,23 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
     if (!token) return;
     try {
       const res = await apiAdminContractTemplate(token, id);
+      setTemplateClone(null);
       setTemplateModal(res.data);
     } catch (e) {
       console.error("template detail failed", e);
+    }
+  }
+
+  // Clone a template — fetch it, then open the modal in "new" mode pre-filled
+  // from the source so saving creates a copy (R2-6).
+  async function cloneTemplate(id: string) {
+    if (!token) return;
+    try {
+      const res = await apiAdminContractTemplate(token, id);
+      setTemplateClone(res.data);
+      setTemplateModal("new");
+    } catch (e) {
+      console.error("template clone load failed", e);
     }
   }
 
@@ -781,8 +797,7 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
             onSetLang={setLang}
             unreadCount={unreadCount}
             onLogout={() => void logout().then(() => router.push("/login"))}
-            onNotifications={() => router.push("/admin-redesign/notifications")}
-            onApps={() => router.push("/dashboard")}
+            onNavigate={(href) => router.push(href)}
           />
           <div className="page">
             <div className="page-header">
@@ -1012,6 +1027,7 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                 loading={templatesLoading}
                 rows={templates}
                 onOpen={openTemplateModal}
+                onClone={(id) => void cloneTemplate(id)}
                 onToggleActive={async (row) => {
                   if (!token) return;
                   try {
@@ -1160,7 +1176,11 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
         open={templateModal !== null}
         saving={templateModalSaving}
         target={templateModal}
-        onClose={() => setTemplateModal(null)}
+        cloneFrom={templateClone}
+        onClose={() => {
+          setTemplateModal(null);
+          setTemplateClone(null);
+        }}
         onSave={async (form) => {
           if (!token) return;
           setTemplateModalSaving(true);
@@ -1195,6 +1215,7 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
               });
             }
             setTemplateModal(null);
+            setTemplateClone(null);
             await loadTemplates();
           } catch (e) {
             alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
@@ -1336,6 +1357,17 @@ const LANG_FLAG: Record<string, string> = {
   ru: "/flags/RU.png",
 };
 
+// Header apps-launcher (grid-dots) quick links. Replaces the old behaviour
+// where the icon wrongly navigated straight to /dashboard.
+const APPS_QUICKLINKS: Array<{ href: string; icon: string; labelKey: MgmtKey }> = [
+  { href: "/dashboard", icon: "ti-dashboard", labelKey: "navDashboard" },
+  { href: "/platform/companies", icon: "ti-building", labelKey: "tabCompanies" },
+  { href: "/platform/bookings", icon: "ti-calendar-event", labelKey: "navBookings" },
+  { href: "/platform/finance-summary", icon: "ti-coin", labelKey: "navFinance" },
+  { href: "/platform/users", icon: "ti-id-badge-2", labelKey: "navDirectory" },
+  { href: "/settings/pricing-rules", icon: "ti-settings", labelKey: "navSettings" },
+];
+
 function Header({
   collapsed: _c,
   onHamburger,
@@ -1347,8 +1379,7 @@ function Header({
   onSetLang,
   unreadCount,
   onLogout,
-  onNotifications,
-  onApps,
+  onNavigate,
 }: {
   collapsed: boolean;
   onHamburger: () => void;
@@ -1360,13 +1391,39 @@ function Header({
   onSetLang: (code: string) => void;
   unreadCount: number;
   onLogout: () => void;
-  onNotifications: () => void;
-  onApps: () => void;
+  onNavigate: (href: string) => void;
 }) {
   const s = mgmtStrings(lang);
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
+  const [appsMenuOpen, setAppsMenuOpen] = useState(false);
+  const langRef = useRef<HTMLDivElement>(null);
+  const appsRef = useRef<HTMLDivElement>(null);
+  const userRef = useRef<HTMLDivElement>(null);
+  // Close any open header dropdown on an outside click or Escape (Arshak:
+  // the avatar menu wouldn't close when clicking elsewhere).
+  useEffect(() => {
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (langRef.current && !langRef.current.contains(t)) setLangMenuOpen(false);
+      if (appsRef.current && !appsRef.current.contains(t)) setAppsMenuOpen(false);
+      if (userRef.current && !userRef.current.contains(t)) setUserMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setLangMenuOpen(false);
+        setAppsMenuOpen(false);
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, []);
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem("zulu_admin_theme");
@@ -1413,8 +1470,8 @@ function Header({
         <input type="search" placeholder={s.searchPlaceholder} />
       </div>
       <div className="header-actions">
-        <div style={{ position: "relative" }}>
-          <button className="header-lang" title="Language" onClick={() => setLangMenuOpen((v) => !v)}>
+        <div ref={langRef} style={{ position: "relative" }}>
+          <button className="header-lang" title={languageOptions.find((o) => o.code === lang)?.label ?? "Language"} onClick={() => setLangMenuOpen((v) => !v)}>
             {/* Active-language flag — dominant assets public/flags/{GB,AM,RU}.png (Arshak 2026-06-04) */}
             <img className="header-lang-flag" src={LANG_FLAG[lang] ?? LANG_FLAG.en} alt="" />
             {(languageOptions.find((o) => o.code === lang)?.code ?? lang).toUpperCase()}
@@ -1459,15 +1516,38 @@ function Header({
         >
           <i className={theme === "dark" ? "ti ti-sun" : "ti ti-moon"} />
         </button>
-        <button className="header-icon-btn" onClick={onNotifications} title={s.notifications}>
+        <button
+          className="header-icon-btn"
+          onClick={() => onNavigate("/admin-redesign/notifications")}
+          title={s.notifications}
+        >
           <i className="ti ti-bell" />
           {unreadCount > 0 && <span className="dot" />}
         </button>
-        <button className="header-icon-btn" onClick={onApps} title={s.apps}>
-          <i className="ti ti-grid-dots" />
-        </button>
+        <div ref={appsRef} style={{ position: "relative" }}>
+          <button className="header-icon-btn" onClick={() => setAppsMenuOpen((v) => !v)} title={s.apps}>
+            <i className="ti ti-grid-dots" />
+          </button>
+          {appsMenuOpen && (
+            <div className="row-menu open" style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, minWidth: 190 }}>
+              {APPS_QUICKLINKS.map((a) => (
+                <button
+                  key={a.href}
+                  className="menu-item"
+                  onClick={() => {
+                    onNavigate(a.href);
+                    setAppsMenuOpen(false);
+                  }}
+                >
+                  <i className={`ti ${a.icon}`} />
+                  <span>{s[a.labelKey]}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <div className="header-divider" />
-        <div style={{ position: "relative" }}>
+        <div ref={userRef} style={{ position: "relative" }}>
           <div
             className="header-user"
             onClick={() => setUserMenuOpen((v) => !v)}
@@ -1792,6 +1872,7 @@ function CompaniesDetail(props: {
   // translatable description); the chrome language comes from useLanguage().
   const { lang: chromeLang } = useLanguage();
   const s = mgmtStrings(chromeLang);
+  const router = useRouter();
   const c = props.company;
   const [draft, setDraft] = useState<CompanyProfileEditable>({});
   const [draftGov, setDraftGov] = useState<string>("");
@@ -2193,7 +2274,11 @@ function CompaniesDetail(props: {
                         <td className="cell-muted">{fmtDate(a.reviewed_at ?? null)}</td>
                         <td onClick={(e) => e.stopPropagation()}>
                           <div className="row-actions">
-                            <button className="icon-btn" title={s.actionView}>
+                            <button
+                              className="icon-btn"
+                              title={s.actionView}
+                              onClick={() => router.push(`/platform/company-applications/${a.id}`)}
+                            >
                               <i className="ti ti-eye" />
                             </button>
                           </div>
@@ -2325,6 +2410,9 @@ function PermsEditor(props: {
   const [allCountries, setAllCountries] = useState<Array<{ code: string; name: string }>>([]);
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Country-picker modal (replaces the old window.prompt — R2-5).
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerSearch, setPickerSearch] = useState("");
 
   useEffect(() => {
     if (props.perms === null) return;
@@ -2435,15 +2523,9 @@ function PermsEditor(props: {
                 <span
                   className="mchip"
                   onClick={() => {
-                    if (allCountries.length === 0) void loadAllCountries();
-                    const code = window.prompt(s.promptCountryCode);
-                    if (!code) return;
-                    const found = allCountries.find((c) => c.code.toUpperCase() === code.toUpperCase());
-                    if (!found) {
-                      alert(s.errCountryNotFound);
-                      return;
-                    }
-                    setDraftCountries((p) => ({ ...p, [found.code]: { code: found.code, name: found.name } }));
+                    void loadAllCountries();
+                    setPickerSearch("");
+                    setPickerOpen(true);
                   }}
                 >
                   <i className="ti ti-plus" style={{ fontSize: 12 }} />
@@ -2453,6 +2535,79 @@ function PermsEditor(props: {
             </div>
           );
         })}
+      </div>
+
+      {/* Country picker modal — R2-5 (replaces the browser prompt). Searchable
+          list, click to toggle; a check marks already-granted countries. */}
+      <div
+        className={`modal-overlay ${pickerOpen ? "open" : ""}`}
+        onClick={(e) => e.target === e.currentTarget && setPickerOpen(false)}
+      >
+        <div className="modal">
+          <div className="modal-header">
+            <div className="modal-title">{s.pickCountryTitle}</div>
+            <button className="icon-btn" onClick={() => setPickerOpen(false)}>
+              <i className="ti ti-x" />
+            </button>
+          </div>
+          <div className="modal-body" style={{ paddingTop: 14 }}>
+            <div className="fld" style={{ marginBottom: 12 }}>
+              <input
+                type="text"
+                placeholder={s.pickCountrySearch}
+                value={pickerSearch}
+                onChange={(e) => setPickerSearch(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div style={{ maxHeight: 320, overflowY: "auto", display: "flex", flexDirection: "column", gap: 2 }}>
+              {adding ? (
+                <div className="cell-muted" style={{ padding: 12 }}>{s.loading}</div>
+              ) : (
+                (() => {
+                  const home = (props.homeCountry ?? "").toLowerCase();
+                  const q = pickerSearch.trim().toLowerCase();
+                  const list = allCountries
+                    .filter((c) => c.name.toLowerCase() !== home)
+                    .filter((c) => !q || c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q));
+                  if (list.length === 0) {
+                    return <div className="cell-muted" style={{ padding: 12 }}>{s.errCountryNotFound}</div>;
+                  }
+                  return list.map((c) => {
+                    const selected = !!draftCountries[c.code];
+                    return (
+                      <button
+                        key={c.code}
+                        className="menu-item"
+                        style={selected ? { color: "var(--primary)", fontWeight: 600 } : undefined}
+                        onClick={() =>
+                          setDraftCountries((p) => {
+                            const n = { ...p };
+                            if (n[c.code]) delete n[c.code];
+                            else n[c.code] = { code: c.code, name: c.name };
+                            return n;
+                          })
+                        }
+                      >
+                        <i
+                          className={selected ? "ti ti-square-check" : "ti ti-square"}
+                          style={{ fontSize: 16, color: selected ? "var(--primary)" : "var(--text-tertiary)" }}
+                        />
+                        <span style={{ flex: 1, textAlign: "left" }}>{c.name}</span>
+                        <span className="font-mono cell-muted" style={{ fontSize: 11 }}>{c.code}</span>
+                      </button>
+                    );
+                  });
+                })()
+              )}
+            </div>
+          </div>
+          <div className="modal-footer">
+            <button className="btn btn-primary" onClick={() => setPickerOpen(false)}>
+              {s.actionClose}
+            </button>
+          </div>
+        </div>
       </div>
       <div className="card-foot">
         <button
@@ -2845,6 +3000,7 @@ function TemplatesPane(props: {
   loading: boolean;
   rows: ContractTemplateRow[];
   onOpen: (id: string) => void;
+  onClone: (id: string) => void;
   onToggleActive: (row: ContractTemplateRow) => void;
 }) {
   const { lang } = useLanguage();
@@ -2926,7 +3082,7 @@ function TemplatesPane(props: {
                         <button
                           className="icon-btn"
                           title={s.actionClone}
-                          onClick={() => props.onOpen(r.id)}
+                          onClick={() => props.onClone(r.id)}
                         >
                           <i className="ti ti-copy" />
                         </button>
@@ -3540,6 +3696,8 @@ function TemplateModal(props: {
   open: boolean;
   saving: boolean;
   target: ContractTemplateDetail | "new" | null;
+  /** When opening in "new" mode to CLONE, pre-fill the form from this source (R2-6). */
+  cloneFrom?: ContractTemplateDetail | null;
   onClose: () => void;
   onSave: (form: {
     name: string;
@@ -3563,10 +3721,9 @@ function TemplateModal(props: {
   // raw JSON textarea. Serialized back to a JSON object on save.
   const [kvRows, setKvRows] = useState<Array<{ key: string; value: string }>>([]);
   useEffect(() => {
-    if (props.target && props.target !== "new" && typeof props.target !== "string") {
-      const t = props.target;
+    const fillFrom = (t: ContractTemplateDetail, copy: boolean) => {
       setForm({
-        name: t.name,
+        name: copy ? `${t.name} (copy)` : t.name,
         type: t.type,
         language: t.language,
         body: t.body ?? "",
@@ -3574,11 +3731,18 @@ function TemplateModal(props: {
       });
       const vars = (t.variables ?? {}) as Record<string, unknown>;
       setKvRows(Object.entries(vars).map(([key, value]) => ({ key, value: String(value ?? "") })));
+    };
+    if (props.target && props.target !== "new" && typeof props.target !== "string") {
+      fillFrom(props.target, false);
     } else if (props.target === "new") {
-      setForm({ name: "", type: "platform", language: "en", body: "", active: true });
-      setKvRows([]);
+      if (props.cloneFrom) {
+        fillFrom(props.cloneFrom, true);
+      } else {
+        setForm({ name: "", type: "platform", language: "en", body: "", active: true });
+        setKvRows([]);
+      }
     }
-  }, [props.target]);
+  }, [props.target, props.cloneFrom]);
 
   function handleSave() {
     const obj: Record<string, string> = {};
