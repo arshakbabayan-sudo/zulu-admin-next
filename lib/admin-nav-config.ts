@@ -324,6 +324,12 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     defaultHref: "/platform/companies",
     tabs: [
       { href: "/platform/companies", labelKey: "admin.nav.tab.companies_access" },
+      // 2026-06-04 (Arshak) — company REGISTRATION applications (B2B join requests)
+      // had no menu link: the page existed at /platform/company-applications but was
+      // only in the legacy flat list, so super-admin couldn't find pending registrations
+      // to approve. Surfaced here in Management next to Companies. NOTE: distinct from
+      // "Seller applications" below (an existing company asking to sell a service type).
+      { href: "/platform/company-applications", labelKey: "admin.nav.tab.company_applications", labelFallback: "Company applications" },
       { href: "/platform/seller-applications", labelKey: "admin.nav.tab.seller_applications" },
       // 2026-06-04 (Arshak) — Directory group DELETED. Its B2C customers +
       // Unverified accounts views fold into Management here so super-admin's
