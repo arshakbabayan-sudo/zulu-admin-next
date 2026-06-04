@@ -682,6 +682,22 @@ export type PlatformAdminUserRecentOrder = {
   agent: { id: number; name: string } | null;
 };
 
+/** Admin note attached to a user (Notes sub-tab on the customer detail). */
+export type PlatformAdminUserNote = {
+  id: number;
+  body: string;
+  created_at: string | null;
+  author: { id: number; name: string } | null;
+};
+
+/** Loyalty summary nested on the user-detail payload (null = no account). */
+export type PlatformAdminUserLoyalty = {
+  tier: string;
+  points_balance: number;
+  points_earned: number;
+  points_redeemed: number;
+};
+
 export type PlatformAdminUserDetail = PlatformAdminUserRow & {
   phone: string | null;
   preferred_language: string | null;
@@ -700,7 +716,43 @@ export type PlatformAdminUserDetail = PlatformAdminUserRow & {
   two_factor_method?: string | null;
   two_factor_required?: boolean;
   recent_orders?: PlatformAdminUserRecentOrder[];
+  /**
+   * Admin v3 (2026-06-04) — wired to the new inline detail panes. `loyalty`
+   * is null when the user has no LoyaltyAccount row (most B2C customers
+   * today). `notes` is the 10 most recent admin notes on this user.
+   */
+  loyalty?: PlatformAdminUserLoyalty | null;
+  notes?: PlatformAdminUserNote[];
 };
+
+/** Paginated list of admin notes for the Notes sub-tab "View all" flow. */
+export async function apiPlatformUserNotes(
+  token: string,
+  id: number,
+  params: { page?: number; per_page?: number } = {}
+): Promise<ApiSuccessEnvelope<PlatformAdminUserNote[]> & { meta: ApiListMeta }> {
+  const q = new URLSearchParams();
+  if (params.page != null) q.set("page", String(params.page));
+  if (params.per_page != null) q.set("per_page", String(params.per_page));
+  const qs = q.toString();
+  return apiFetchJson(`${PA}/users/${id}/notes${qs ? `?${qs}` : ""}`, {
+    method: "GET",
+    token,
+  });
+}
+
+/** POST a new admin note onto a user. */
+export async function apiAddPlatformUserNote(
+  token: string,
+  id: number,
+  body: string
+): Promise<ApiSuccessEnvelope<PlatformAdminUserNote>> {
+  return apiFetchJson(`${PA}/users/${id}/notes`, {
+    method: "POST",
+    token,
+    body: { body },
+  });
+}
 
 export async function apiShowPlatformUser(
   token: string,

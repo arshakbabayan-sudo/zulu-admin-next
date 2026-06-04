@@ -72,11 +72,13 @@ import {
   apiPlatformUsers,
   apiPlatformUsersStats,
   apiShowPlatformUser,
+  apiUpdatePlatformUser,
   apiDeactivatePlatformUser,
   apiHardDeletePlatformUser,
   apiBulkRemindUsers,
   apiBulkDeleteUsers,
   apiAnonymizePlatformUser,
+  apiAddPlatformUserNote,
   apiCompanyApplications,
   apiCompanySellerPermissions,
   apiPatchCompanySellerPermissions,
@@ -98,6 +100,7 @@ import {
   type SellerApplicationDetail,
   type SellerApplicationRow,
 } from "@/lib/platform-admin-api";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import { apiCompaniesList, type CompanyListRow } from "@/lib/inventory-crud-api";
 import CompanyCommissionTab from "@/components/CompanyCommissionTab";
 import { AddEmployeeModal } from "@/components/employees/AddEmployeeModal";
@@ -444,6 +447,12 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
 
   // Shared stats card data for customers + unverified panes.
   const [usersStats, setUsersStats] = useState<PlatformUsersStats | null>(null);
+
+  // Inline customer-detail modals (admin v3 2026-06-04) — Edit + Add-note.
+  const [editCustomerOpen, setEditCustomerOpen] = useState(false);
+  const [editCustomerSaving, setEditCustomerSaving] = useState(false);
+  const [addNoteOpen, setAddNoteOpen] = useState(false);
+  const [addNoteSaving, setAddNoteSaving] = useState(false);
 
   // Drawers / modals
   const [appDrawer, setAppDrawer] = useState<SellerApplicationDetail | null>(null);
@@ -1039,6 +1048,51 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
     }
   }
 
+  // Edit customer profile (modal saves via apiUpdatePlatformUser).
+  async function saveDetailCustomer(input: {
+    name: string;
+    phone: string | null;
+    preferred_language: string | null;
+    nationality: string | null;
+    status: string;
+  }) {
+    if (!token || !detailCustomer) return;
+    setEditCustomerSaving(true);
+    try {
+      await apiUpdatePlatformUser(token, detailCustomer.id, input);
+      const res = await apiShowPlatformUser(token, detailCustomer.id);
+      setDetailCustomer(res.data);
+      setEditCustomerOpen(false);
+      await loadCustomers();
+    } catch (e) {
+      console.error("save customer failed", e);
+      if (typeof window !== "undefined") {
+        window.alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+      }
+    } finally {
+      setEditCustomerSaving(false);
+    }
+  }
+
+  // Add an admin note onto the open customer detail.
+  async function addDetailCustomerNote(body: string) {
+    if (!token || !detailCustomer) return;
+    setAddNoteSaving(true);
+    try {
+      await apiAddPlatformUserNote(token, detailCustomer.id, body);
+      const res = await apiShowPlatformUser(token, detailCustomer.id);
+      setDetailCustomer(res.data);
+      setAddNoteOpen(false);
+    } catch (e) {
+      console.error("add note failed", e);
+      if (typeof window !== "undefined") {
+        window.alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+      }
+    } finally {
+      setAddNoteSaving(false);
+    }
+  }
+
   // Unverified detail — Send reminder / Delete (single).
   async function remindDetailUnverified() {
     if (!token || !detailUnverified) return;
@@ -1176,7 +1230,34 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                 {(tab === "customers" || tab === "unverified") &&
                   !inCustomerDetail &&
                   !inUnverifiedDetail && (
-                    <button className="btn">
+                    <button
+                      className="btn"
+                      onClick={() => {
+                        if (tab === "customers") {
+                          exportRowsAsCsv("b2c-customers", customers, [
+                            ["id", (r) => r.id],
+                            ["name", (r) => r.name],
+                            ["email", (r) => r.email],
+                            ["status", (r) => r.status],
+                            ["bookings_count", (r) => r.bookings_count ?? 0],
+                            ["created_at", (r) => r.created_at ?? ""],
+                            ["last_login_at", (r) => r.last_login_at ?? ""],
+                          ]);
+                        } else if (tab === "unverified") {
+                          exportRowsAsCsv("unverified-accounts", unverified, [
+                            ["id", (r) => r.id],
+                            ["name", (r) => r.name],
+                            ["email", (r) => r.email],
+                            [
+                              "intended_role",
+                              (r) =>
+                                (r as { intended_role?: string | null }).intended_role ?? "",
+                            ],
+                            ["created_at", (r) => r.created_at ?? ""],
+                          ]);
+                        }
+                      }}
+                    >
                       <i className="ti ti-download" />
                       {s.actionExport}
                     </button>
@@ -1429,6 +1510,13 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                     setDetailCustomer(null);
                   }}
                   isSuper={user?.is_super_admin === true}
+                  onMessage={() => {
+                    if (detailCustomer?.email && typeof window !== "undefined") {
+                      window.open(`mailto:${detailCustomer.email}`, "_blank");
+                    }
+                  }}
+                  onEdit={() => setEditCustomerOpen(true)}
+                  onAddNote={() => setAddNoteOpen(true)}
                   onDeactivate={() => void deactivateDetailCustomer()}
                   onAnonymize={() => void anonymizeDetailCustomer()}
                   onHardDelete={() => void hardDeleteDetailCustomer()}
@@ -1648,6 +1736,21 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
           setNewContractOpen(false);
           void loadContracts();
         }}
+      />
+
+      {/* B2C customer Edit + Add-note modals (admin v3 2026-06-04). */}
+      <CustomerEditModal
+        open={editCustomerOpen}
+        saving={editCustomerSaving}
+        customer={detailCustomer}
+        onClose={() => setEditCustomerOpen(false)}
+        onSave={(input) => void saveDetailCustomer(input)}
+      />
+      <AddNoteModal
+        open={addNoteOpen}
+        saving={addNoteSaving}
+        onClose={() => setAddNoteOpen(false)}
+        onSave={(body) => void addDetailCustomerNote(body)}
       />
     </div>
   );
@@ -4273,6 +4376,9 @@ function CustomerDetail(props: {
   onRevealNationality: () => void;
   onBack: () => void;
   isSuper: boolean;
+  onMessage: () => void;
+  onEdit: () => void;
+  onAddNote: () => void;
   onDeactivate: () => void;
   onAnonymize: () => void;
   onHardDelete: () => void;
@@ -4313,6 +4419,11 @@ function CustomerDetail(props: {
   const lifetimeStr = Object.entries(lifetimeValue)
     .map(([cur, total]) => fmtMoney(total, cur))
     .join(" · ") || "—";
+  // Total-bookings cell: prefer the denormalised `bookings_count` (whole user
+  // history), but fall back to recent_orders length when the field is unset.
+  const totalBookings = Math.max(c.bookings_count ?? 0, orderCount);
+  const loyalty = c.loyalty ?? null;
+  const notes = c.notes ?? [];
   return (
     <div>
       <button className="btn btn-sm btn-ghost detail-back" onClick={props.onBack}>
@@ -4338,15 +4449,15 @@ function CustomerDetail(props: {
           </div>
         </div>
         <div className="hero-actions">
-          <button className="btn btn-sm">
+          <button className="btn btn-sm" onClick={props.onMessage} disabled={!c.email}>
             <i className="ti ti-message" />
             {s.cuActionMessage}
           </button>
-          <button className="btn btn-sm">
+          <button className="btn btn-sm" onClick={props.onAddNote}>
             <i className="ti ti-note" />
             {s.cuActionAddNote}
           </button>
-          <button className="btn btn-sm btn-primary">
+          <button className="btn btn-sm btn-primary" onClick={props.onEdit}>
             <i className="ti ti-edit" />
             {s.cuActionEdit}
           </button>
@@ -4424,7 +4535,7 @@ function CustomerDetail(props: {
               <div className="info-grid">
                 <div className="info-row wide">
                   <span className="info-label">{s.cuFldTotalBookings}</span>
-                  <span className="info-value">{c.bookings_count ?? orderCount}</span>
+                  <span className="info-value">{totalBookings}</span>
                 </div>
                 <div className="info-row wide">
                   <span className="info-label">{s.cuFldLifetimeValue}</span>
@@ -4432,11 +4543,22 @@ function CustomerDetail(props: {
                 </div>
                 <div className="info-row wide">
                   <span className="info-label">{s.cuFldLoyaltyTier}</span>
-                  <span className="info-value muted-dash">—</span>
+                  <span className="info-value">
+                    {loyalty ? (
+                      <span className="loyalty-badge">
+                        <i className="ti ti-crown" style={{ fontSize: 12 }} />
+                        {loyalty.tier}
+                      </span>
+                    ) : (
+                      <span className="muted-dash">—</span>
+                    )}
+                  </span>
                 </div>
                 <div className="info-row wide">
                   <span className="info-label">{s.cuFldPointsBalance}</span>
-                  <span className="info-value muted-dash">—</span>
+                  <span className="info-value">
+                    {loyalty ? `${loyalty.points_balance.toLocaleString()} pts` : <span className="muted-dash">—</span>}
+                  </span>
                 </div>
               </div>
             </div>
@@ -4524,34 +4646,105 @@ function CustomerDetail(props: {
         <div className="card" style={{ marginBottom: 0 }}>
           <div className="card-header">
             <div className="card-title">{s.cuNotesTitle}</div>
-            <button className="btn btn-sm btn-primary">
+            <button className="btn btn-sm btn-primary" onClick={props.onAddNote}>
               <i className="ti ti-plus" />
               {s.cuActionAddNote}
             </button>
           </div>
           <div className="card-body">
-            <div className="empty-state">
-              <i className="ti ti-note" />
-              <div className="text-sm" style={{ marginTop: 6 }}>
-                {s.cuNotesEmpty}
+            {notes.length === 0 ? (
+              <div className="empty-state">
+                <i className="ti ti-note" />
+                <div className="text-sm" style={{ marginTop: 6 }}>
+                  {s.cuNotesEmpty}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="info-grid">
+                {notes.map((n) => (
+                  <div
+                    key={n.id}
+                    className="info-row"
+                    style={{ gridTemplateColumns: "1fr", gap: 4 }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className={`avatar sm ${avatarToneFor(n.author?.id ?? n.id)}`}>
+                        {initialsFor(n.author?.name ?? "—")}
+                      </span>
+                      <span className="font-semibold">{n.author?.name ?? "—"}</span>
+                      <span className="text-sm cell-muted">· {fmtDateTime(n.created_at)}</span>
+                    </div>
+                    <div className="text-sm" style={{ marginLeft: 32, whiteSpace: "pre-wrap" }}>
+                      {n.body}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Loyalty pane */}
       <div className={`ud-pane ${props.subTab === "loyalty" ? "active" : ""}`}>
-        <div className="card" style={{ marginBottom: 0 }}>
-          <div className="card-body">
-            <div className="empty-state">
-              <i className="ti ti-crown" />
-              <div className="text-sm" style={{ marginTop: 6 }}>
-                {s.cuLoyaltyEmpty}
+        {!loyalty ? (
+          <div className="card" style={{ marginBottom: 0 }}>
+            <div className="card-body">
+              <div className="empty-state">
+                <i className="ti ti-crown" />
+                <div className="text-sm" style={{ marginTop: 6 }}>
+                  {s.cuLoyaltyEmpty}
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <>
+            <div className="hero-card" style={{ marginBottom: 16 }}>
+              <div
+                className="hero-avatar"
+                style={{
+                  background: "linear-gradient(135deg,var(--warning-light),#FBE3B3)",
+                  color: "var(--warning-dark)",
+                }}
+              >
+                <i className="ti ti-crown" />
+              </div>
+              <div>
+                <div className="hero-name" style={{ fontSize: 18 }}>
+                  {loyalty.tier}
+                </div>
+                <div className="hero-meta">{s.cuLoyaltyNextTier}: —</div>
+              </div>
+            </div>
+            <div className="stat-grid">
+              <Stat
+                icon="ti-arrow-up-right"
+                tone="success"
+                value={loyalty.points_earned.toLocaleString()}
+                label={s.cuLoyaltyEarned}
+              />
+              <Stat
+                icon="ti-arrow-down-left"
+                tone="info"
+                value={loyalty.points_redeemed.toLocaleString()}
+                label={s.cuLoyaltyRedeemed}
+              />
+              <Stat
+                icon="ti-wallet"
+                tone="primary"
+                value={loyalty.points_balance.toLocaleString()}
+                label={s.cuLoyaltyBalance}
+              />
+              <Stat
+                icon="ti-stars"
+                tone="warning"
+                value={loyalty.tier}
+                label={s.cuLoyaltyTierLabel}
+              />
+            </div>
+          </>
+        )}
       </div>
 
       {/* Sticky footer actions */}
@@ -4682,6 +4875,167 @@ function UnverifiedDetail(props: {
           <i className="ti ti-trash" />
           {s.uvFooterDelete}
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// B2C customer EDIT modal + Add-note modal (admin v3 2026-06-04)
+// ═══════════════════════════════════════════════════════════════
+
+function CustomerEditModal(props: {
+  open: boolean;
+  saving: boolean;
+  customer: PlatformAdminUserDetail | null;
+  onClose: () => void;
+  onSave: (input: {
+    name: string;
+    phone: string | null;
+    preferred_language: string | null;
+    nationality: string | null;
+    status: string;
+  }) => void;
+}) {
+  const { lang } = useLanguage();
+  const s = mgmtStrings(lang);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [language, setLanguage] = useState("");
+  const [nationality, setNationality] = useState("");
+  const [status, setStatus] = useState("active");
+  useEffect(() => {
+    if (props.open && props.customer) {
+      setName(props.customer.name ?? "");
+      setPhone(props.customer.phone ?? "");
+      setLanguage(props.customer.preferred_language ?? "");
+      setNationality(props.customer.nationality ?? "");
+      setStatus(props.customer.status ?? "active");
+    }
+  }, [props.open, props.customer]);
+  return (
+    <div
+      className={`modal-overlay ${props.open ? "open" : ""}`}
+      onClick={(e) => e.target === e.currentTarget && props.onClose()}
+    >
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <div className="modal-title">{s.cuActionEdit}</div>
+          <button className="icon-btn" onClick={props.onClose}>
+            <i className="ti ti-x" />
+          </button>
+        </div>
+        <div className="modal-body">
+          <div className="form-grid-2">
+            <div className="fld">
+              <span className="fld-label">{s.cuFldFullName}</span>
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)} />
+            </div>
+            <div className="fld">
+              <span className="fld-label">{s.cuFldPhone}</span>
+              <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            </div>
+            <div className="fld">
+              <span className="fld-label">{s.cuFldLanguage}</span>
+              <select value={language} onChange={(e) => setLanguage(e.target.value)}>
+                <option value="">—</option>
+                <option value="en">English</option>
+                <option value="hy">Armenian</option>
+                <option value="ru">Russian</option>
+              </select>
+            </div>
+            <div className="fld">
+              <span className="fld-label">{s.cuFldNationality}</span>
+              <input
+                type="text"
+                value={nationality}
+                onChange={(e) => setNationality(e.target.value)}
+              />
+            </div>
+            <div className="fld">
+              <span className="fld-label">{s.filterStatus}</span>
+              <select value={status} onChange={(e) => setStatus(e.target.value)}>
+                <option value="active">{s.optActive}</option>
+                <option value="inactive">{s.optInactive}</option>
+                <option value="pending">{s.optPending}</option>
+                <option value="suspended">{s.optSuspended}</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn" onClick={props.onClose} disabled={props.saving}>
+            {s.actionCancel}
+          </button>
+          <button
+            className="btn btn-primary"
+            disabled={props.saving || !name.trim()}
+            onClick={() =>
+              props.onSave({
+                name: name.trim(),
+                phone: phone.trim() || null,
+                preferred_language: language || null,
+                nationality: nationality.trim() || null,
+                status,
+              })
+            }
+          >
+            <i className="ti ti-device-floppy" />
+            {props.saving ? s.saving : s.actionSaveProfile}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AddNoteModal(props: {
+  open: boolean;
+  saving: boolean;
+  onClose: () => void;
+  onSave: (body: string) => void;
+}) {
+  const { lang } = useLanguage();
+  const s = mgmtStrings(lang);
+  const [body, setBody] = useState("");
+  useEffect(() => {
+    if (props.open) setBody("");
+  }, [props.open]);
+  return (
+    <div
+      className={`modal-overlay ${props.open ? "open" : ""}`}
+      onClick={(e) => e.target === e.currentTarget && props.onClose()}
+    >
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <div className="modal-title">{s.cuActionAddNote}</div>
+          <button className="icon-btn" onClick={props.onClose}>
+            <i className="ti ti-x" />
+          </button>
+        </div>
+        <div className="modal-body">
+          <div className="fld">
+            <span className="fld-label">{s.cuNotesTitle}</span>
+            <textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              style={{ minHeight: 120 }}
+            />
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn" onClick={props.onClose} disabled={props.saving}>
+            {s.actionCancel}
+          </button>
+          <button
+            className="btn btn-primary"
+            disabled={props.saving || body.trim().length === 0}
+            onClick={() => props.onSave(body.trim())}
+          >
+            <i className="ti ti-check" />
+            {props.saving ? s.saving : s.actionAdd}
+          </button>
+        </div>
       </div>
     </div>
   );
