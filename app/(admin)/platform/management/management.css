@@ -356,6 +356,57 @@
 .mgmt-page .note-inline { font-size:12px; color:var(--text-secondary); display:flex; align-items:center; gap:6px; margin-bottom:12px; }
 .mgmt-page .note-inline i { font-size:15px; color:var(--info); }
 
+/* ===== B2C customers + Unverified accounts (admin v3, 2026-06-04) =====
+   1:1 from docs/admin_designe/6_management_new.html lines 305-338. New
+   primitives the two user-list panes use for the inline detail view:
+   hero-card on top, ud-pane sub-tab bodies, sticky footer actions, and
+   the bulk-select bar + wide info-row variant for verification queues. */
+.mgmt-page .hero-card { display:flex; align-items:center; gap:16px; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:20px; margin-bottom:16px; flex-wrap:wrap; }
+.mgmt-page .hero-avatar { width:60px; height:60px; border-radius:50%; background:var(--primary-light); color:var(--primary-dark); display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700; flex-shrink:0; }
+.mgmt-page .hero-name { font-size:24px; font-weight:700; letter-spacing:-0.01em; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.mgmt-page .hero-meta { font-size:13px; color:var(--text-secondary); margin-top:4px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.mgmt-page .hero-actions { margin-left:auto; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.mgmt-page .loyalty-badge { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.3px; padding:3px 9px; border-radius:999px; background:linear-gradient(135deg,var(--warning-light),#FBE3B3); color:var(--warning-dark); }
+/* user-detail sub-panes (independent of the company .detail-pane) */
+.mgmt-page .ud-pane { display:none; }
+.mgmt-page .ud-pane.active { display:block; }
+/* sticky footer actions on inline detail pages */
+.mgmt-page .sticky-actions { position:sticky; bottom:0; z-index:10; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:12px 16px; display:flex; gap:8px; align-items:center; margin-top:16px; box-shadow:0 -6px 18px rgba(22,19,67,.05); }
+.mgmt-page .sticky-actions .spacer { flex:1; }
+/* info-row variant with wider label for user-detail cards */
+.mgmt-page .info-row.wide { grid-template-columns:150px 1fr; }
+.mgmt-page .reveal-link { color:var(--primary); cursor:pointer; font-size:12px; display:inline-flex; align-items:center; gap:4px; }
+.mgmt-page .reveal-link:hover { text-decoration:underline; }
+/* row checkbox + select-all (Unverified bulk-action queue) */
+.mgmt-page .row-check, .mgmt-page .check-all { width:16px; height:16px; accent-color:var(--primary); cursor:pointer; vertical-align:middle; }
+.mgmt-page .table td.check-cell, .mgmt-page .table th.check-cell { width:40px; text-align:center; padding-left:16px; padding-right:0; }
+/* bulk action bar — pinned above the table when selection is non-empty */
+.mgmt-page .bulk-bar { display:none; align-items:center; gap:10px; padding:10px 16px; background:var(--primary-soft); border-bottom:1px solid var(--border-color); }
+.mgmt-page .bulk-bar.show { display:flex; }
+.mgmt-page .bulk-bar .bulk-count { font-size:13px; font-weight:600; color:var(--primary-dark); }
+/* awaiting-verification pill (large, sits in the hero-name row) */
+.mgmt-page .pill-warn { display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:600; padding:4px 10px; border-radius:999px; background:var(--warning-light); color:var(--warning-dark); }
+.mgmt-page .num-cell { text-align:right; font-variant-numeric:tabular-nums; }
+/* Back-link button at the top of an inline detail view */
+.mgmt-page .detail-back { margin-bottom:14px; }
+/* Customer detail overview: 2-card grid (Personal information + Summary) */
+.mgmt-page .detail-card-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+@media (max-width:880px) { .mgmt-page .detail-card-grid { grid-template-columns:1fr; } }
+/* sub-tab strip used inside customer detail (Overview / Bookings / …) */
+.mgmt-page .sub-tabs { display:flex; gap:4px; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:4px; margin-bottom:16px; overflow-x:auto; }
+.mgmt-page .sub-tab { border:0; background:transparent; padding:8px 14px; font-size:13px; font-weight:500; color:var(--text-secondary); cursor:pointer; border-radius:var(--radius-sm); white-space:nowrap; }
+.mgmt-page .sub-tab.active { background:var(--primary-soft); color:var(--primary-dark); font-weight:600; }
+.mgmt-page .sub-tab:hover:not(.active) { background:var(--bg-tertiary); }
+/* muted dash placeholder for empty cells */
+.mgmt-page .muted-dash { color:var(--text-tertiary); }
+/* empty-state block used inside ud-panes (Communication tab) */
+.mgmt-page .empty-state { text-align:center; padding:40px 20px; color:var(--text-secondary); }
+.mgmt-page .empty-state i { font-size:34px; color:var(--text-tertiary); }
+/* Dark-mode loyalty badge — keep gradient readable */
+html.dark .mgmt-page .loyalty-badge { background:linear-gradient(135deg,#3a2e10,#4a3a18); color:#f3c969; }
+html.dark .mgmt-page .pill-warn { background:#3a2e10; color:#f3c969; }
+html.dark .mgmt-page .hero-avatar { background:#3a2540; color:#e0b8d8; }
+
 /* Body background — when the page is mounted, paint the FULL viewport
    with the page-background colour from the mock (--bg-tertiary). */
 .mgmt-page-host { background:#F4F5F7; min-height:100vh; }

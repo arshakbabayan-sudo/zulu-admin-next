@@ -71,6 +71,9 @@ import {
   apiPatchCompanyPartnerSettings,
   apiPlatformUsers,
   apiPlatformUsersStats,
+  apiShowPlatformUser,
+  apiDeactivatePlatformUser,
+  apiHardDeletePlatformUser,
   apiBulkRemindUsers,
   apiBulkDeleteUsers,
   apiAnonymizePlatformUser,
@@ -88,6 +91,7 @@ import {
   type CompanyApplicationRow,
   type CompanyCountryPermissionApiRow,
   type CompanySellerPermissionApiRow,
+  type PlatformAdminUserDetail,
   type PlatformAdminUserRow,
   type PlatformCompanyRow,
   type PlatformUsersStats,
@@ -414,6 +418,16 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
   const [customersPage, setCustomersPage] = useState(1);
   const [customersSearch, setCustomersSearch] = useState("");
   const [customersFilterStatus, setCustomersFilterStatus] = useState("");
+  // Inline customer-detail view (admin v3 2026-06-04 — replaces the old
+  // navigate-to-/platform/users/[id] handoff; mirrors CompaniesDetail's
+  // detailCompanyId pattern so list↔detail is a pure state toggle).
+  const [detailCustomerId, setDetailCustomerId] = useState<number | null>(null);
+  const [detailCustomer, setDetailCustomer] = useState<PlatformAdminUserDetail | null>(null);
+  const [detailCustomerLoading, setDetailCustomerLoading] = useState(false);
+  const [detailCustomerSubTab, setDetailCustomerSubTab] = useState<
+    "overview" | "bookings" | "comm" | "notes" | "loyalty"
+  >("overview");
+  const [nationalityRevealed, setNationalityRevealed] = useState(false);
 
   // Unverified accounts (2026-06-04 — folded in from Directory deletion)
   const [unverified, setUnverified] = useState<PlatformAdminUserRow[]>([]);
@@ -423,6 +437,10 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
   const [unverifiedSearch, setUnverifiedSearch] = useState("");
   const [unverifiedSelectedIds, setUnverifiedSelectedIds] = useState<Set<number>>(new Set());
   const [unverifiedBulkBusy, setUnverifiedBulkBusy] = useState(false);
+  // Inline unverified-detail view (same pattern as customers).
+  const [detailUnverifiedId, setDetailUnverifiedId] = useState<number | null>(null);
+  const [detailUnverified, setDetailUnverified] = useState<PlatformAdminUserDetail | null>(null);
+  const [detailUnverifiedLoading, setDetailUnverifiedLoading] = useState(false);
 
   // Shared stats card data for customers + unverified panes.
   const [usersStats, setUsersStats] = useState<PlatformUsersStats | null>(null);
@@ -746,6 +764,56 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
       .catch(() => setUsersStats(null));
   }, [token, allowed, tab, usersStats]);
 
+  // ───────────────── User DETAIL loader (B2C + Unverified) ─────────────────
+  // One loader for both — the user-detail endpoint returns the union of all
+  // PII + recent_orders + email_verified_at + intended_role + 2FA state; the
+  // panes consume the relevant subset.
+  useEffect(() => {
+    if (detailCustomerId === null || !token) {
+      setDetailCustomer(null);
+      return;
+    }
+    let cancelled = false;
+    setDetailCustomerLoading(true);
+    setNationalityRevealed(false);
+    setDetailCustomerSubTab("overview");
+    (async () => {
+      try {
+        const res = await apiShowPlatformUser(token, detailCustomerId);
+        if (!cancelled) setDetailCustomer(res.data);
+      } catch (e) {
+        if (!cancelled) console.error("customer detail load failed", e);
+      } finally {
+        if (!cancelled) setDetailCustomerLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [detailCustomerId, token]);
+
+  useEffect(() => {
+    if (detailUnverifiedId === null || !token) {
+      setDetailUnverified(null);
+      return;
+    }
+    let cancelled = false;
+    setDetailUnverifiedLoading(true);
+    (async () => {
+      try {
+        const res = await apiShowPlatformUser(token, detailUnverifiedId);
+        if (!cancelled) setDetailUnverified(res.data);
+      } catch (e) {
+        if (!cancelled) console.error("unverified detail load failed", e);
+      } finally {
+        if (!cancelled) setDetailUnverifiedLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [detailUnverifiedId, token]);
+
   // ───────────────── Actions ─────────────────
   async function openAppDrawer(id: number) {
     if (!token) return;
@@ -911,9 +979,95 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
     }
   }
 
+  // Sticky footer action handlers (admin v3 2026-06-04 — customer detail).
+  async function deactivateDetailCustomer() {
+    if (!token || !detailCustomer) return;
+    if (typeof window !== "undefined" && !window.confirm(`Deactivate ${detailCustomer.name}?`)) return;
+    try {
+      await apiDeactivatePlatformUser(token, detailCustomer.id);
+      // Refetch the detail so the status pill updates, then refresh the list.
+      const res = await apiShowPlatformUser(token, detailCustomer.id);
+      setDetailCustomer(res.data);
+      await loadCustomers();
+    } catch (e) {
+      console.error("deactivate failed", e);
+    }
+  }
+
+  async function anonymizeDetailCustomer() {
+    if (!token || !detailCustomer) return;
+    const typed =
+      typeof window !== "undefined"
+        ? window.prompt(`Type "${detailCustomer.name}" to confirm anonymization.`)
+        : null;
+    if (typed === null) return;
+    if (typed.trim() !== detailCustomer.name.trim()) {
+      if (typeof window !== "undefined") window.alert(s.errGeneric);
+      return;
+    }
+    try {
+      await apiAnonymizePlatformUser(token, detailCustomer.id, null);
+      setDetailCustomerId(null);
+      setDetailCustomer(null);
+      await loadCustomers();
+    } catch (e) {
+      console.error("anonymize failed", e);
+    }
+  }
+
+  async function hardDeleteDetailCustomer() {
+    if (!token || !detailCustomer || !user?.is_super_admin) return;
+    const typed =
+      typeof window !== "undefined"
+        ? window.prompt(`Type "${detailCustomer.name}" to confirm HARD delete (irreversible).`)
+        : null;
+    if (typed === null) return;
+    if (typed.trim() !== detailCustomer.name.trim()) {
+      if (typeof window !== "undefined") window.alert(s.errGeneric);
+      return;
+    }
+    const reason =
+      typeof window !== "undefined" ? window.prompt("Reason (required):") : null;
+    if (!reason || reason.trim().length < 3) return;
+    try {
+      await apiHardDeletePlatformUser(token, detailCustomer.id, reason);
+      setDetailCustomerId(null);
+      setDetailCustomer(null);
+      await loadCustomers();
+    } catch (e) {
+      console.error("hard delete failed", e);
+    }
+  }
+
+  // Unverified detail — Send reminder / Delete (single).
+  async function remindDetailUnverified() {
+    if (!token || !detailUnverified) return;
+    try {
+      await apiBulkRemindUsers(token, [detailUnverified.id]);
+      if (typeof window !== "undefined") window.alert("Reminder sent.");
+    } catch (e) {
+      console.error("remind failed", e);
+    }
+  }
+
+  async function deleteDetailUnverified() {
+    if (!token || !detailUnverified) return;
+    if (typeof window !== "undefined" && !window.confirm(s.uvConfirmDeleteBody)) return;
+    try {
+      await apiBulkDeleteUsers(token, [detailUnverified.id]);
+      setDetailUnverifiedId(null);
+      setDetailUnverified(null);
+      await loadUnverified();
+    } catch (e) {
+      console.error("delete unverified failed", e);
+    }
+  }
+
   function switchTab(next: MgmtTab) {
     setTab(next);
     setDetailCompanyId(null);
+    setDetailCustomerId(null);
+    setDetailUnverifiedId(null);
     // Update URL so deep-links / refresh land on the right route
     const map: Record<MgmtTab, string> = {
       companies: "/platform/companies",
@@ -941,6 +1095,15 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
   const activeMeta = TAB_META[tab];
   const activeLabel = s[activeMeta.labelKey];
   const inCompanyDetail = tab === "companies" && detailCompanyId !== null && detailCompany !== null;
+  const inCustomerDetail = tab === "customers" && detailCustomerId !== null;
+  const inUnverifiedDetail = tab === "unverified" && detailUnverifiedId !== null;
+  const detailHeaderName = inCompanyDetail
+    ? detailCompany.name
+    : inCustomerDetail
+    ? detailCustomer?.name ?? "…"
+    : inUnverifiedDetail
+    ? detailUnverified?.name ?? "…"
+    : null;
 
   return (
     <div className="mgmt-page mgmt-page-host">
@@ -950,7 +1113,7 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
           <Header
             collapsed={sidebarCollapsed}
             onHamburger={() => setSidebarCollapsed((v) => !v)}
-            title={`${s.sectionManagement} · ${inCompanyDetail ? detailCompany.name : activeLabel}`}
+            title={`${s.sectionManagement} · ${detailHeaderName ?? activeLabel}`}
             user={user ?? null}
             token={token}
             lang={lang}
@@ -967,18 +1130,22 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                   <a onClick={() => router.push("/dashboard")}>{s.breadcrumbHome}</a>
                   <i className="ti ti-chevron-right" />
                   <span className="breadcrumb-current">
-                    {inCompanyDetail ? detailCompany.name : activeLabel}
+                    {detailHeaderName ?? activeLabel}
                   </span>
                 </div>
                 <h1 className="page-title">
-                  <span>{inCompanyDetail ? detailCompany.name : activeLabel}</span>
+                  <span>{detailHeaderName ?? activeLabel}</span>
                   <span className="super-tag">
                     <i className="ti ti-shield-lock" style={{ fontSize: 13 }} />
                     {s.superAdmin}
                   </span>
                 </h1>
                 <div className="page-subtitle">
-                  {inCompanyDetail ? s.companyDetail : s[activeMeta.subtitleKey]}
+                  {inCompanyDetail
+                    ? s.companyDetail
+                    : inCustomerDetail || inUnverifiedDetail
+                    ? ""
+                    : s[activeMeta.subtitleKey]}
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -1006,12 +1173,14 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                     {s.actionNewTemplate}
                   </button>
                 )}
-                {(tab === "customers" || tab === "unverified") && (
-                  <button className="btn">
-                    <i className="ti ti-download" />
-                    {s.actionExport}
-                  </button>
-                )}
+                {(tab === "customers" || tab === "unverified") &&
+                  !inCustomerDetail &&
+                  !inUnverifiedDetail && (
+                    <button className="btn">
+                      <i className="ti ti-download" />
+                      {s.actionExport}
+                    </button>
+                  )}
               </div>
             </div>
 
@@ -1229,46 +1398,78 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
               />
             </div>
 
-            {/* ───────── B2C CUSTOMERS pane (2026-06-04) ───────── */}
+            {/* ───────── B2C CUSTOMERS pane (admin v3 2026-06-04) ───────── */}
             <div className={`page-pane ${tab === "customers" ? "active" : ""}`}>
-              <B2cCustomersPane
-                loading={customersLoading}
-                rows={customers}
-                meta={customersMeta}
-                page={customersPage}
-                onPage={setCustomersPage}
-                search={customersSearch}
-                onSearch={setCustomersSearch}
-                filterStatus={customersFilterStatus}
-                onFilterStatus={setCustomersFilterStatus}
-                stats={usersStats}
-                onApply={loadCustomers}
-                onOpenRow={(id) => router.push(`/platform/users/${id}`)}
-                onAnonymize={(row) => void anonymizeCustomer(row)}
-              />
+              {!inCustomerDetail ? (
+                <B2cCustomersPane
+                  loading={customersLoading}
+                  rows={customers}
+                  meta={customersMeta}
+                  page={customersPage}
+                  onPage={setCustomersPage}
+                  search={customersSearch}
+                  onSearch={setCustomersSearch}
+                  filterStatus={customersFilterStatus}
+                  onFilterStatus={setCustomersFilterStatus}
+                  stats={usersStats}
+                  onApply={loadCustomers}
+                  onOpenRow={(id) => setDetailCustomerId(id)}
+                  onAnonymize={(row) => void anonymizeCustomer(row)}
+                />
+              ) : (
+                <CustomerDetail
+                  loading={detailCustomerLoading}
+                  customer={detailCustomer}
+                  subTab={detailCustomerSubTab}
+                  onSubTab={setDetailCustomerSubTab}
+                  nationalityRevealed={nationalityRevealed}
+                  onRevealNationality={() => setNationalityRevealed(true)}
+                  onBack={() => {
+                    setDetailCustomerId(null);
+                    setDetailCustomer(null);
+                  }}
+                  isSuper={user?.is_super_admin === true}
+                  onDeactivate={() => void deactivateDetailCustomer()}
+                  onAnonymize={() => void anonymizeDetailCustomer()}
+                  onHardDelete={() => void hardDeleteDetailCustomer()}
+                />
+              )}
             </div>
 
-            {/* ───────── UNVERIFIED pane (2026-06-04) ───────── */}
+            {/* ───────── UNVERIFIED pane (admin v3 2026-06-04) ───────── */}
             <div className={`page-pane ${tab === "unverified" ? "active" : ""}`}>
-              <UnverifiedPane
-                loading={unverifiedLoading}
-                rows={unverified}
-                meta={unverifiedMeta}
-                page={unverifiedPage}
-                onPage={setUnverifiedPage}
-                search={unverifiedSearch}
-                onSearch={setUnverifiedSearch}
-                stats={usersStats}
-                onApply={loadUnverified}
-                onOpenRow={(id) => router.push(`/platform/users/${id}`)}
-                selectedIds={unverifiedSelectedIds}
-                onToggleSelected={toggleUnverifiedSelected}
-                onSelectAll={(ids) => setUnverifiedSelectedIds(new Set(ids))}
-                onClearSelection={() => setUnverifiedSelectedIds(new Set())}
-                bulkBusy={unverifiedBulkBusy}
-                onBulkRemind={() => void bulkRemindUnverified()}
-                onBulkDelete={() => void bulkDeleteUnverified()}
-              />
+              {!inUnverifiedDetail ? (
+                <UnverifiedPane
+                  loading={unverifiedLoading}
+                  rows={unverified}
+                  meta={unverifiedMeta}
+                  page={unverifiedPage}
+                  onPage={setUnverifiedPage}
+                  search={unverifiedSearch}
+                  onSearch={setUnverifiedSearch}
+                  stats={usersStats}
+                  onApply={loadUnverified}
+                  onOpenRow={(id) => setDetailUnverifiedId(id)}
+                  selectedIds={unverifiedSelectedIds}
+                  onToggleSelected={toggleUnverifiedSelected}
+                  onSelectAll={(ids) => setUnverifiedSelectedIds(new Set(ids))}
+                  onClearSelection={() => setUnverifiedSelectedIds(new Set())}
+                  bulkBusy={unverifiedBulkBusy}
+                  onBulkRemind={() => void bulkRemindUnverified()}
+                  onBulkDelete={() => void bulkDeleteUnverified()}
+                />
+              ) : (
+                <UnverifiedDetail
+                  loading={detailUnverifiedLoading}
+                  unverified={detailUnverified}
+                  onBack={() => {
+                    setDetailUnverifiedId(null);
+                    setDetailUnverified(null);
+                  }}
+                  onRemind={() => void remindDetailUnverified()}
+                  onDelete={() => void deleteDetailUnverified()}
+                />
+              )}
             </div>
           </div>
         </div>
@@ -4018,6 +4219,469 @@ function UnverifiedPane(props: {
             </div>
           </div>
         ) : null}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// B2C customer DETAIL — inline (admin v3 2026-06-04)
+// ═══════════════════════════════════════════════════════════════
+
+function fmtMoney(amount: number | string | null | undefined, currency: string | null | undefined): string {
+  if (amount === null || amount === undefined) return "—";
+  const num = typeof amount === "string" ? Number(amount) : amount;
+  if (!Number.isFinite(num)) return String(amount);
+  const cur = (currency || "USD").toUpperCase();
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: cur,
+      maximumFractionDigits: 0,
+    }).format(num);
+  } catch {
+    return `${num} ${cur}`;
+  }
+}
+
+function customerOrderStatusKey(status: string | null | undefined): MgmtKey {
+  const s = (status ?? "").toLowerCase();
+  if (s.includes("complete")) return "cuStatusCompleted";
+  if (s.includes("upcoming") || s.includes("future")) return "cuStatusUpcoming";
+  if (s.includes("refund")) return "cuStatusRefunded";
+  if (s.includes("paid")) return "cuStatusPaid";
+  if (s.includes("cancel")) return "cuStatusCancelled";
+  return "cuStatusPending";
+}
+
+function customerOrderStatusTone(status: string | null | undefined): string {
+  const s = (status ?? "").toLowerCase();
+  if (s.includes("complete") || s.includes("paid")) return "badge-success";
+  if (s.includes("upcoming") || s.includes("future") || s.includes("pending")) return "badge-warning";
+  if (s.includes("refund") || s.includes("cancel")) return "badge-gray";
+  return "badge-gray";
+}
+
+type CustomerSubTab = "overview" | "bookings" | "comm" | "notes" | "loyalty";
+
+function CustomerDetail(props: {
+  loading: boolean;
+  customer: PlatformAdminUserDetail | null;
+  subTab: CustomerSubTab;
+  onSubTab: (t: CustomerSubTab) => void;
+  nationalityRevealed: boolean;
+  onRevealNationality: () => void;
+  onBack: () => void;
+  isSuper: boolean;
+  onDeactivate: () => void;
+  onAnonymize: () => void;
+  onHardDelete: () => void;
+}) {
+  const { lang } = useLanguage();
+  const s = mgmtStrings(lang);
+  const c = props.customer;
+  const subTabs: Array<{ key: CustomerSubTab; label: MgmtKey }> = [
+    { key: "overview", label: "cuSubOverview" },
+    { key: "bookings", label: "cuSubBookings" },
+    { key: "comm", label: "cuSubComm" },
+    { key: "notes", label: "cuSubNotes" },
+    { key: "loyalty", label: "cuSubLoyalty" },
+  ];
+  if (props.loading || !c) {
+    return (
+      <div>
+        <button className="btn btn-sm btn-ghost detail-back" onClick={props.onBack}>
+          <i className="ti ti-arrow-left" />
+          {s.cuBackToList}
+        </button>
+        <div className="card" style={{ marginBottom: 0 }}>
+          <div className="card-body" style={{ textAlign: "center", padding: 40 }}>
+            {s.loading}
+          </div>
+        </div>
+      </div>
+    );
+  }
+  const recentOrders = c.recent_orders ?? [];
+  const orderCount = recentOrders.length;
+  const lifetimeValue = recentOrders.reduce<Record<string, number>>((acc, o) => {
+    const cur = (o.currency || "USD").toUpperCase();
+    const n = typeof o.total === "string" ? Number(o.total) : o.total ?? 0;
+    if (Number.isFinite(n)) acc[cur] = (acc[cur] ?? 0) + (n as number);
+    return acc;
+  }, {});
+  const lifetimeStr = Object.entries(lifetimeValue)
+    .map(([cur, total]) => fmtMoney(total, cur))
+    .join(" · ") || "—";
+  return (
+    <div>
+      <button className="btn btn-sm btn-ghost detail-back" onClick={props.onBack}>
+        <i className="ti ti-arrow-left" />
+        {s.cuBackToList}
+      </button>
+
+      {/* Hero card */}
+      <div className="hero-card">
+        <div className="hero-avatar">{initialsFor(c.name)}</div>
+        <div>
+          <div className="hero-name">
+            <span>{c.name}</span>
+          </div>
+          <div className="hero-meta">
+            <span>{c.email}</span>
+            {c.phone && (
+              <>
+                <span>·</span>
+                <span>{c.phone}</span>
+              </>
+            )}
+          </div>
+        </div>
+        <div className="hero-actions">
+          <button className="btn btn-sm">
+            <i className="ti ti-message" />
+            {s.cuActionMessage}
+          </button>
+          <button className="btn btn-sm">
+            <i className="ti ti-note" />
+            {s.cuActionAddNote}
+          </button>
+          <button className="btn btn-sm btn-primary">
+            <i className="ti ti-edit" />
+            {s.cuActionEdit}
+          </button>
+        </div>
+      </div>
+
+      {/* Sub-tabs */}
+      <div className="sub-tabs">
+        {subTabs.map((t) => (
+          <button
+            key={t.key}
+            className={`sub-tab ${props.subTab === t.key ? "active" : ""}`}
+            onClick={() => props.onSubTab(t.key)}
+          >
+            {s[t.label]}
+          </button>
+        ))}
+      </div>
+
+      {/* Overview pane */}
+      <div className={`ud-pane ${props.subTab === "overview" ? "active" : ""}`}>
+        <div className="detail-card-grid">
+          <div className="card" style={{ marginBottom: 0 }}>
+            <div className="card-header">
+              <div className="card-title">{s.cuCardPersonal}</div>
+            </div>
+            <div className="card-body">
+              <div className="info-grid">
+                <div className="info-row wide">
+                  <span className="info-label">{s.cuFldFullName}</span>
+                  <span className="info-value">{c.name}</span>
+                </div>
+                <div className="info-row wide">
+                  <span className="info-label">{s.cuFldEmail}</span>
+                  <span className="info-value">{c.email}</span>
+                </div>
+                <div className="info-row wide">
+                  <span className="info-label">{s.cuFldPhone}</span>
+                  <span className="info-value">{c.phone ?? "—"}</span>
+                </div>
+                <div className="info-row wide">
+                  <span className="info-label">{s.cuFldNationality}</span>
+                  <span className="info-value">
+                    {c.nationality && props.nationalityRevealed ? (
+                      <span>{c.nationality}</span>
+                    ) : c.nationality ? (
+                      <>
+                        <span>•••••••</span>{" "}
+                        <span className="reveal-link" onClick={props.onRevealNationality}>
+                          <i className="ti ti-eye" />
+                          {s.cuFldNatReveal}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="muted-dash">—</span>
+                    )}
+                  </span>
+                </div>
+                <div className="info-row wide">
+                  <span className="info-label">{s.cuFldLanguage}</span>
+                  <span className="info-value">{c.preferred_language ?? "—"}</span>
+                </div>
+                <div className="info-row wide">
+                  <span className="info-label">{s.cuFldMemberSince}</span>
+                  <span className="info-value">{fmtDate(c.created_at ?? null)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="card" style={{ marginBottom: 0 }}>
+            <div className="card-header">
+              <div className="card-title">{s.cuCardSummary}</div>
+            </div>
+            <div className="card-body">
+              <div className="info-grid">
+                <div className="info-row wide">
+                  <span className="info-label">{s.cuFldTotalBookings}</span>
+                  <span className="info-value">{c.bookings_count ?? orderCount}</span>
+                </div>
+                <div className="info-row wide">
+                  <span className="info-label">{s.cuFldLifetimeValue}</span>
+                  <span className="info-value">{lifetimeStr}</span>
+                </div>
+                <div className="info-row wide">
+                  <span className="info-label">{s.cuFldLoyaltyTier}</span>
+                  <span className="info-value muted-dash">—</span>
+                </div>
+                <div className="info-row wide">
+                  <span className="info-label">{s.cuFldPointsBalance}</span>
+                  <span className="info-value muted-dash">—</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Bookings pane */}
+      <div className={`ud-pane ${props.subTab === "bookings" ? "active" : ""}`}>
+        <div className="note-inline">
+          <i className="ti ti-shopping-cart" />
+          {s.cuBookingsHint}
+        </div>
+        <div className="card" style={{ marginBottom: 0 }}>
+          <div className="card-header">
+            <div className="card-title">{s.cuBookingsHistory}</div>
+            <div className="text-sm cell-muted">
+              {orderCount} {s.cuOrderUnits}
+            </div>
+          </div>
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>{s.cuColOrder}</th>
+                  <th>{s.cuColService}</th>
+                  <th>{s.cuColSeller}</th>
+                  <th>{s.cuColAgent}</th>
+                  <th className="num-cell">{s.cuColAmount}</th>
+                  <th>{s.cuColStatus}</th>
+                  <th>{s.cuColDate}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {orderCount === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>
+                      {s.cuBookingsEmpty}
+                    </td>
+                  </tr>
+                ) : (
+                  recentOrders.map((o) => {
+                    const stKey = customerOrderStatusKey(o.status);
+                    const stTone = customerOrderStatusTone(o.status);
+                    return (
+                      <tr key={o.id}>
+                        <td className="font-mono">{o.order_number ?? `#${o.id}`}</td>
+                        <td className="cell-muted">—</td>
+                        <td>{o.seller?.name ?? "—"}</td>
+                        <td className="cell-muted">{o.agent?.name ?? "—"}</td>
+                        <td className="num-cell font-mono">{fmtMoney(o.total, o.currency)}</td>
+                        <td>
+                          <span className={`badge ${stTone}`}>{s[stKey]}</span>
+                        </td>
+                        <td className="cell-muted">{fmtDate(o.created_at)}</td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {/* Communication pane */}
+      <div className={`ud-pane ${props.subTab === "comm" ? "active" : ""}`}>
+        <div className="card" style={{ marginBottom: 0 }}>
+          <div className="card-body">
+            <div className="empty-state">
+              <i className="ti ti-mail-off" />
+              <div className="font-semibold" style={{ marginTop: 10, color: "var(--text-primary)" }}>
+                {s.cuCommEmptyTitle}
+              </div>
+              <div className="text-sm" style={{ marginTop: 4 }}>
+                {s.cuCommEmptyBody}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Notes pane */}
+      <div className={`ud-pane ${props.subTab === "notes" ? "active" : ""}`}>
+        <div className="card" style={{ marginBottom: 0 }}>
+          <div className="card-header">
+            <div className="card-title">{s.cuNotesTitle}</div>
+            <button className="btn btn-sm btn-primary">
+              <i className="ti ti-plus" />
+              {s.cuActionAddNote}
+            </button>
+          </div>
+          <div className="card-body">
+            <div className="empty-state">
+              <i className="ti ti-note" />
+              <div className="text-sm" style={{ marginTop: 6 }}>
+                {s.cuNotesEmpty}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Loyalty pane */}
+      <div className={`ud-pane ${props.subTab === "loyalty" ? "active" : ""}`}>
+        <div className="card" style={{ marginBottom: 0 }}>
+          <div className="card-body">
+            <div className="empty-state">
+              <i className="ti ti-crown" />
+              <div className="text-sm" style={{ marginTop: 6 }}>
+                {s.cuLoyaltyEmpty}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Sticky footer actions */}
+      <div className="sticky-actions">
+        <button className="btn btn-sm" onClick={props.onDeactivate}>
+          <i className="ti ti-user-off" />
+          {s.cuFooterDeactivate}
+        </button>
+        <button
+          className="btn btn-sm"
+          style={{ color: "var(--danger-dark)", borderColor: "var(--danger-light)" }}
+          onClick={props.onAnonymize}
+        >
+          <i className="ti ti-eraser" />
+          {s.cuFooterAnonymize}
+        </button>
+        <div className="spacer" />
+        {props.isSuper && (
+          <button className="btn btn-sm btn-danger" onClick={props.onHardDelete}>
+            <i className="ti ti-trash" />
+            {s.cuFooterHardDelete}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Unverified DETAIL — inline (admin v3 2026-06-04)
+// ═══════════════════════════════════════════════════════════════
+
+function UnverifiedDetail(props: {
+  loading: boolean;
+  unverified: PlatformAdminUserDetail | null;
+  onBack: () => void;
+  onRemind: () => void;
+  onDelete: () => void;
+}) {
+  const { lang } = useLanguage();
+  const s = mgmtStrings(lang);
+  const u = props.unverified;
+  if (props.loading || !u) {
+    return (
+      <div>
+        <button className="btn btn-sm btn-ghost detail-back" onClick={props.onBack}>
+          <i className="ti ti-arrow-left" />
+          {s.uvBackToList}
+        </button>
+        <div className="card" style={{ marginBottom: 0 }}>
+          <div className="card-body" style={{ textAlign: "center", padding: 40 }}>
+            {s.loading}
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div>
+      <button className="btn btn-sm btn-ghost detail-back" onClick={props.onBack}>
+        <i className="ti ti-arrow-left" />
+        {s.uvBackToList}
+      </button>
+
+      <div className="hero-card">
+        <div className="hero-avatar">{initialsFor(u.name)}</div>
+        <div>
+          <div className="hero-name" style={{ fontSize: 22 }}>
+            <span>{u.name}</span>
+            <span className="pill-warn">
+              <i className="ti ti-clock" />
+              {s.uvAwaitingPill}
+            </span>
+          </div>
+          <div className="hero-meta">
+            <span>{u.email}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 0 }}>
+        <div className="card-header">
+          <div className="card-title">{s.uvCardAccount}</div>
+        </div>
+        <div className="card-body">
+          <div className="info-grid">
+            <div className="info-row wide">
+              <span className="info-label">{s.uvFldFullName}</span>
+              <span className="info-value">{u.name}</span>
+            </div>
+            <div className="info-row wide">
+              <span className="info-label">{s.uvFldEmail}</span>
+              <span className="info-value">{u.email}</span>
+            </div>
+            <div className="info-row wide">
+              <span className="info-label">{s.uvFldIntendedRole}</span>
+              <span className="info-value">
+                <span className="badge badge-gray">{intendedRoleLabel(u, s)}</span>
+              </span>
+            </div>
+            <div className="info-row wide">
+              <span className="info-label">{s.uvFldRegistered}</span>
+              <span className="info-value">{fmtDate(u.created_at ?? null)}</span>
+            </div>
+            <div className="info-row wide">
+              <span className="info-label">{s.uvFldVerifiedAt}</span>
+              <span className="info-value muted-dash">
+                {u.email_verified_at ? fmtDateTime(u.email_verified_at) : "—"}
+              </span>
+            </div>
+            <div className="info-row wide">
+              <span className="info-label">{s.uvFld2FA}</span>
+              <span className="info-value cell-muted">
+                {u.two_factor_method ?? s.uvFld2FANotSet}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="sticky-actions">
+        <button className="btn btn-sm btn-primary" onClick={props.onRemind}>
+          <i className="ti ti-mail-fast" />
+          {s.uvFooterRemind}
+        </button>
+        <div className="spacer" />
+        <button className="btn btn-sm btn-danger" onClick={props.onDelete}>
+          <i className="ti ti-trash" />
+          {s.uvFooterDelete}
+        </button>
       </div>
     </div>
   );

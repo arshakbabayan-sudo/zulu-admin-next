@@ -666,6 +666,22 @@ export async function apiHardDeletePlatformUser(
   });
 }
 
+/**
+ * One row of `users.recent_orders` returned by the user-detail endpoint.
+ * Shipped 2026-06-03 (Directory_tab.md): powers the customer Bookings tab
+ * — "who they bought from" (seller) and the referring company (agent).
+ */
+export type PlatformAdminUserRecentOrder = {
+  id: number;
+  order_number: string | null;
+  status: string;
+  total: number | string | null;
+  currency: string | null;
+  created_at: string | null;
+  seller: { id: number; name: string } | null;
+  agent: { id: number; name: string } | null;
+};
+
 export type PlatformAdminUserDetail = PlatformAdminUserRow & {
   phone: string | null;
   preferred_language: string | null;
@@ -673,6 +689,17 @@ export type PlatformAdminUserDetail = PlatformAdminUserRow & {
   birth_date: string | null;
   nationality: string | null;
   is_super_admin: boolean;
+  /**
+   * Fields added 2026-06-03 (Directory_tab.md) for the inline customer/
+   * unverified detail panes. `intended_role` distinguishes pre-verified
+   * staff vs B2C (legacy null = B2C). `recent_orders` powers the customer
+   * Bookings tab — empty array on staff/agent rows.
+   */
+  email_verified_at?: string | null;
+  intended_role?: string | null;
+  two_factor_method?: string | null;
+  two_factor_required?: boolean;
+  recent_orders?: PlatformAdminUserRecentOrder[];
 };
 
 export async function apiShowPlatformUser(
