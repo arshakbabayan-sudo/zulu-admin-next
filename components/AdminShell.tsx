@@ -301,16 +301,18 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <div className={`hidden md:flex items-center gap-2 border-r pr-4 ${sidebarOpen ? "md:w-[260px]" : "md:w-16 md:justify-center md:pr-0"}`} style={{ borderColor: "var(--admin-border)" }}>
             <Link href="/dashboard" aria-label={t("admin.nav.dashboard")} title={t("admin.nav.dashboard")} className="inline-flex items-center transition hover:opacity-80">
               {sidebarOpen ? (
-                /* Expanded sidebar: full ZULU wordmark from Figma Zulu_1 */
-                <img src="/branding/logo-zulu.svg" alt="ZULU" className="h-7 w-auto" />
+                /* Expanded sidebar: full ZULU SPIN wordmark — dominant asset
+                   public/logo_1.png (Arshak 2026-06-04) */
+                <img src="/logo_1.png" alt="ZULU" className="h-7 w-auto" />
               ) : (
-                /* Collapsed sidebar: icon mark (the dot of "i" from the wordmark) */
-                <img src="/branding/brand-icon.svg" alt="ZULU" className="h-5 w-5" />
+                /* Collapsed sidebar: icon mark — dominant asset public/logo_icon.png
+                   (the old /branding/brand-icon.svg never existed → broken) */
+                <img src="/logo_icon.png" alt="ZULU" className="h-5 w-5" />
               )}
             </Link>
           </div>
           <Link href="/dashboard" aria-label={t("admin.nav.dashboard")} title={t("admin.nav.dashboard")} className="md:hidden">
-            <img src="/branding/logo-zulu.svg" alt="ZULU" className="h-6 w-auto" />
+            <img src="/logo_1.png" alt="ZULU" className="h-6 w-auto" />
           </Link>
           <button
             type="button"
@@ -369,7 +371,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             >
               {lang === "en" ? (
                 <Image
-                  src="/flags/gb.svg"
+                  src="/flags/GB.png"
                   alt=""
                   width={20}
                   height={14}
@@ -377,7 +379,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 />
               ) : lang === "hy" ? (
                 <Image
-                  src="/flags/am.svg"
+                  src="/flags/AM.png"
                   alt=""
                   width={20}
                   height={14}
@@ -385,7 +387,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 />
               ) : lang === "ru" ? (
                 <Image
-                  src="/flags/ru.svg"
+                  src="/flags/RU.png"
                   alt=""
                   width={20}
                   height={14}
@@ -416,11 +418,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                     }}
                   >
                     {option.code === "en" ? (
-                      <Image src="/flags/gb.svg" alt="" width={20} height={14} className="h-3.5 w-[1.25rem] shrink-0 rounded-[2px] object-cover" />
+                      <Image src="/flags/GB.png" alt="" width={20} height={14} className="h-3.5 w-[1.25rem] shrink-0 rounded-[2px] object-cover" />
                     ) : option.code === "hy" ? (
-                      <Image src="/flags/am.svg" alt="" width={20} height={14} className="h-3.5 w-[1.25rem] shrink-0 rounded-[2px] object-cover" />
+                      <Image src="/flags/AM.png" alt="" width={20} height={14} className="h-3.5 w-[1.25rem] shrink-0 rounded-[2px] object-cover" />
                     ) : option.code === "ru" ? (
-                      <Image src="/flags/ru.svg" alt="" width={20} height={14} className="h-3.5 w-[1.25rem] shrink-0 rounded-[2px] object-cover" />
+                      <Image src="/flags/RU.png" alt="" width={20} height={14} className="h-3.5 w-[1.25rem] shrink-0 rounded-[2px] object-cover" />
                     ) : (
                       <span className="text-sm leading-none" aria-hidden>{option.flag ?? "🌐"}</span>
                     )}

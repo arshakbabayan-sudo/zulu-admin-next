@@ -21,12 +21,42 @@
  */
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import "./management.css";
+import { mgmtStrings, type MgmtKey } from "./management-i18n";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { canAccessPlatformAdminNav } from "@/lib/access";
+import {
+  ADMIN_NAV_GROUPS,
+  type AdminNavGroup,
+  findActiveGroup,
+} from "@/lib/admin-nav-config";
+import { apiNotificationsUnreadCount } from "@/lib/notifications-api";
+import {
+  canAccessPlatformAdminNav,
+  canAccessAgentToolsNav,
+  canAccessBookingsSection,
+  canAccessChatSection,
+  canAccessCrmSection,
+  canAccessDashboardSection,
+  canAccessFinanceSection,
+  canAccessInventoryOversightNav,
+  canAccessInventorySection,
+  canAccessLocalizationSectionNav,
+  canAccessMarketplaceOpsSection,
+  canAccessMyCompanySection,
+  canSeeOwnCompanyNav,
+  canAccessNotificationsNav,
+  canAccessOperatorToolsNav,
+  canAccessSalesWorkspaceSection,
+  canAccessSettingsSection,
+  canAccessSuperAdminOnlyPlatformNav,
+  userHasModuleAccess,
+  userHasPermission,
+  userHasSellerServiceType,
+} from "@/lib/access";
+import type { AdminUser } from "@/lib/auth-types";
 import { ApiRequestError } from "@/lib/api-client";
 import {
   apiPlatformCompanies,
@@ -54,8 +84,10 @@ import {
   type SellerApplicationDetail,
   type SellerApplicationRow,
 } from "@/lib/platform-admin-api";
+import { apiCompaniesList, type CompanyListRow } from "@/lib/inventory-crud-api";
 import CompanyCommissionTab from "@/components/CompanyCommissionTab";
 import { AddEmployeeModal } from "@/components/employees/AddEmployeeModal";
+import { EmployeePermissionsDrawer } from "@/components/employees/EmployeePermissionsDrawer";
 import { PartnerSettingsModal } from "@/components/PartnerSettingsModal";
 import {
   apiAdminContracts,
@@ -67,8 +99,7 @@ import {
   apiAdminSendContract,
   apiAdminCountersignContract,
   apiAdminTerminateContract,
-  contractStatusLabel,
-  contractTypeLabel,
+  apiAdminCreateContract,
   CONTRACT_TYPES,
   CONTRACT_LANGUAGES,
   type ContractDetail,
@@ -81,56 +112,86 @@ import {
 
 export type MgmtTab = "companies" | "applications" | "contracts" | "templates" | "logs";
 
+// Tab → i18n keys + Tabler icon. Labels/subtitles resolve through the local
+// mgmtStrings() dictionary (see ./management-i18n) so they swap instantly with
+// the admin chrome language.
 const TAB_META: Record<
   MgmtTab,
-  { label: string; subtitle: string; icon: string }
+  { labelKey: MgmtKey; subtitleKey: MgmtKey; icon: string }
 > = {
-  companies: {
-    label: "Companies",
-    subtitle: "Platform partners — operators, agencies, airlines.",
-    icon: "ti-building-community",
-  },
-  applications: {
-    label: "Seller applications",
-    subtitle: "Review and approve marketplace seller requests.",
-    icon: "ti-user-check",
-  },
-  contracts: {
-    label: "Contracts",
-    subtitle: "Legal agreements with sellers and partners.",
-    icon: "ti-file-text",
-  },
-  templates: {
-    label: "Contract templates",
-    subtitle: "Reusable contract templates and variables.",
-    icon: "ti-template",
-  },
-  logs: {
-    label: "Logs",
-    subtitle: "Audit trail of who did what, when.",
-    icon: "ti-history",
-  },
+  companies: { labelKey: "tabCompanies", subtitleKey: "subCompanies", icon: "ti-building-community" },
+  applications: { labelKey: "tabApplications", subtitleKey: "subApplications", icon: "ti-user-check" },
+  contracts: { labelKey: "tabContracts", subtitleKey: "subContracts", icon: "ti-file-text" },
+  templates: { labelKey: "tabTemplates", subtitleKey: "subTemplates", icon: "ti-template" },
+  logs: { labelKey: "tabLogs", subtitleKey: "subLogs", icon: "ti-history" },
 };
 
-const SIDEBAR_ITEMS: Array<{
-  key: string;
-  href: string;
-  label: string;
-  icon: string;
-  badge?: { value: string; tone?: "warn" };
-}> = [
-  { key: "dashboard", href: "/dashboard", label: "Dashboard", icon: "ti-dashboard" },
-  { key: "inventory", href: "/operator/hotels", label: "Inventory", icon: "ti-building-store" },
-  { key: "bookings", href: "/platform/bookings", label: "Bookings", icon: "ti-calendar-event" },
-  { key: "finance", href: "/platform/finance-summary", label: "Finance", icon: "ti-coin" },
-  { key: "directory", href: "/platform/users", label: "Directory", icon: "ti-id-badge-2" },
-  { key: "hr", href: "/crm/team", label: "HR", icon: "ti-clipboard-list" },
-  { key: "inbox", href: "/admin-redesign/notifications", label: "Inbox", icon: "ti-inbox", badge: { value: "3", tone: "warn" } },
-  { key: "management", href: "/platform/companies", label: "Management", icon: "ti-shield-check" },
-  { key: "files", href: "/admin-redesign/files", label: "File manager", icon: "ti-folder" },
-  { key: "profile", href: "/admin-redesign/profile", label: "My profile", icon: "ti-user" },
-  { key: "settings", href: "/settings/pricing-rules", label: "Settings", icon: "ti-settings" },
-];
+// Enum → dictionary key maps (resolved via mgmtStrings() at render).
+const TYPE_KEY: Record<string, MgmtKey> = {
+  operator: "typeOperator",
+  agency: "typeAgency",
+  airline: "typeAirline",
+  hotel_chain: "typeHotelChain",
+  other: "typeOther",
+};
+const GOV_KEY: Record<string, MgmtKey> = {
+  active: "optActive",
+  pending: "optPending",
+  suspended: "optSuspended",
+  rejected: "optRejected",
+};
+const APP_STATUS_KEY: Record<string, MgmtKey> = {
+  approved: "optApproved",
+  pending: "optPending",
+  under_review: "optUnderReview",
+  rejected: "optRejected",
+};
+const SVC_KEY: Record<string, MgmtKey> = {
+  hotel: "svcHotel",
+  flight: "svcFlight",
+  transfer: "svcTransfer",
+  car: "svcCar",
+  excursion: "svcExcursion",
+  visa: "svcVisa",
+  package: "svcPackage",
+};
+const CSTATUS_KEY: Record<string, MgmtKey> = {
+  draft: "cstatusDraft",
+  sent: "cstatusSent",
+  signed_by_a: "cstatusSignedByA",
+  signed_by_b: "cstatusSignedByB",
+  countersigned: "cstatusCountersigned",
+  active: "cstatusActive",
+  expired: "cstatusExpired",
+  terminated: "cstatusTerminated",
+  disputed: "cstatusDisputed",
+};
+const TTYPE_KEY: Record<string, MgmtKey> = {
+  platform: "ttypePlatform",
+  partner_supplier: "ttypePartnerSupplier",
+  partner_reseller: "ttypePartnerReseller",
+  partner_default: "ttypePartnerDefault",
+};
+
+// Tabler icon per nav-group key — keeps the HTML-mock glyph styling while the
+// labels / hrefs / visibility come from the shared ADMIN_NAV_GROUPS so the
+// Management sidebar is identical (and identically gated) to AdminShell's.
+const SIDEBAR_TABLER_ICON: Record<string, string> = {
+  dashboard: "ti-dashboard",
+  inventory: "ti-building-store",
+  bookings: "ti-calendar-event",
+  crm: "ti-users",
+  chat: "ti-message-2",
+  finance: "ti-coin",
+  my_company: "ti-building",
+  hr: "ti-clipboard-list",
+  marketplace_ops: "ti-shield-check",
+  directory: "ti-id-badge-2",
+  file_manager: "ti-folder",
+  my_profile: "ti-user",
+  notifications_v2: "ti-inbox",
+  settings: "ti-settings",
+};
 
 type ApiListMeta = { current_page: number; last_page: number; per_page: number; total: number };
 type AuditLogRow = {
@@ -152,6 +213,49 @@ type AuditLogRow = {
 };
 
 type IntegrityResult = { is_intact: boolean; limit_checked: number; corrupted_log_ids: string[] };
+
+// ── Contract-drawer term formatters (Fix #7) ──────────────────────────────
+// The contract Terms objects are free-form JSON the new-contract form writes
+// ({type,value} / {collector,t_plus_days} / {notice_days,fee_percent}). These
+// render them as a compact human line, falling back to "—" when empty.
+type TermObj = Record<string, unknown> | null | undefined;
+function fmtCommission(cc: TermObj, s: Record<MgmtKey, string>): string {
+  if (!cc || cc.value == null) return "—";
+  const v = String(cc.value);
+  return cc.type === "percent" ? `${v}% · ${s.cdCommission.toLowerCase()}` : v;
+}
+function fmtPayment(pt: TermObj, s: Record<MgmtKey, string>): string {
+  if (!pt) return "—";
+  const collector =
+    pt.collector === "operator" || pt.collector === "partner" ? s.cmCollectorOperator : s.cmCollectorPlatform;
+  const days = pt.t_plus_days != null ? ` · T+${String(pt.t_plus_days)}` : "";
+  return `${collector}${days}`;
+}
+function fmtCancellation(cp: TermObj, s: Record<MgmtKey, string>): string {
+  if (!cp) return "—";
+  const parts: string[] = [];
+  if (cp.notice_days != null) parts.push(`${String(cp.notice_days)} ${s.cdNoticeDays}`);
+  if (cp.fee_percent != null) parts.push(`${String(cp.fee_percent)}%`);
+  return parts.length ? parts.join(" · ") : "—";
+}
+function fmtSignature(sig: TermObj, key: "party_a" | "party_b"): string {
+  if (!sig) return "—";
+  const entry = sig[key] as Record<string, unknown> | undefined;
+  if (!entry) return "—";
+  const name = entry.name != null ? String(entry.name) : "";
+  const at = entry.signed_at != null ? fmtDateTime(String(entry.signed_at)) : "";
+  return [name, at].filter(Boolean).join(" · ") || "—";
+}
+function fmtRenderedBody(rb: TermObj): string {
+  if (!rb) return "";
+  if (typeof rb.text === "string") return rb.text;
+  if (typeof rb.body === "string") return rb.body;
+  try {
+    return JSON.stringify(rb, null, 2);
+  } catch {
+    return "";
+  }
+}
 
 function avatarToneFor(id: number | string | null | undefined): "" | "avatar-teal" | "avatar-amber" | "avatar-blue" {
   if (id == null) return "";
@@ -198,14 +302,6 @@ const GOVERNANCE_TONE: Record<string, "badge-success" | "badge-warning" | "badge
   suspended: "badge-gray",
 };
 
-const TYPE_LABEL: Record<string, string> = {
-  operator: "Operator",
-  agency: "Agency",
-  airline: "Airline",
-  hotel_chain: "Hotel chain",
-  other: "Other",
-};
-
 const APP_STATUS_TONE: Record<string, "badge-success" | "badge-warning" | "badge-danger" | "badge-info"> = {
   approved: "badge-success",
   pending: "badge-warning",
@@ -234,6 +330,29 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
   // ───────────────── Top-level state ─────────────────
   const [tab, setTab] = useState<MgmtTab>(initialTab);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // Unread notification count — single source for the header bell dot AND the
+  // Inbox sidebar badge (mirrors AdminShell). Fetched once on mount.
+  const [unreadCount, setUnreadCount] = useState(0);
+  useEffect(() => {
+    if (!token || !canAccessNotificationsNav(user)) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await apiNotificationsUnreadCount(token);
+        if (!cancelled) setUnreadCount(res.data.unread_count ?? 0);
+      } catch {
+        /* badge is non-critical chrome */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, user]);
+
+  // New-contract modal (admin v3 — replaces the old /platform/contracts/new page).
+  const [newContractOpen, setNewContractOpen] = useState(false);
+  // Staff → Permissions drawer (company detail Staff tab).
+  const [permDrawerUser, setPermDrawerUser] = useState<PlatformAdminUserRow | null>(null);
 
   // Companies
   const [companies, setCompanies] = useState<PlatformCompanyRow[]>([]);
@@ -655,23 +774,26 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
   }
 
   // ───────────────── Render shell ─────────────────
+  const s = mgmtStrings(lang);
   const activeMeta = TAB_META[tab];
+  const activeLabel = s[activeMeta.labelKey];
   const inCompanyDetail = tab === "companies" && detailCompanyId !== null && detailCompany !== null;
 
   return (
     <div className="mgmt-page mgmt-page-host">
       <div className={`layout ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
-        <Sidebar collapsed={sidebarCollapsed} activeKey="management" />
+        <Sidebar collapsed={sidebarCollapsed} unreadCount={unreadCount} />
         <div className="main">
           <Header
             collapsed={sidebarCollapsed}
             onHamburger={() => setSidebarCollapsed((v) => !v)}
-            title={`Management · ${inCompanyDetail ? detailCompany.name : activeMeta.label}`}
+            title={`${s.sectionManagement} · ${inCompanyDetail ? detailCompany.name : activeLabel}`}
             user={user ?? null}
             token={token}
             lang={lang}
             languageOptions={languageOptions}
             onSetLang={setLang}
+            unreadCount={unreadCount}
             onLogout={() => void logout().then(() => router.push("/login"))}
             onNotifications={() => router.push("/admin-redesign/notifications")}
             onApps={() => router.push("/dashboard")}
@@ -680,46 +802,46 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
             <div className="page-header">
               <div>
                 <div className="breadcrumb">
-                  <a onClick={() => router.push("/dashboard")}>Home</a>
+                  <a onClick={() => router.push("/dashboard")}>{s.breadcrumbHome}</a>
                   <i className="ti ti-chevron-right" />
                   <span className="breadcrumb-current">
-                    {inCompanyDetail ? detailCompany.name : activeMeta.label}
+                    {inCompanyDetail ? detailCompany.name : activeLabel}
                   </span>
                 </div>
                 <h1 className="page-title">
-                  <span>{inCompanyDetail ? detailCompany.name : activeMeta.label}</span>
+                  <span>{inCompanyDetail ? detailCompany.name : activeLabel}</span>
                   <span className="super-tag">
                     <i className="ti ti-shield-lock" style={{ fontSize: 13 }} />
-                    Super admin
+                    {s.superAdmin}
                   </span>
                 </h1>
                 <div className="page-subtitle">
-                  {inCompanyDetail ? `Company detail` : activeMeta.subtitle}
+                  {inCompanyDetail ? s.companyDetail : s[activeMeta.subtitleKey]}
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 {tab === "companies" && !inCompanyDetail && (
                   <button className="btn">
                     <i className="ti ti-download" />
-                    Export
+                    {s.actionExport}
                   </button>
                 )}
                 {tab === "applications" && (
                   <button className="btn">
                     <i className="ti ti-download" />
-                    Export
+                    {s.actionExport}
                   </button>
                 )}
                 {tab === "contracts" && (
-                  <button className="btn btn-primary" onClick={() => router.push("/platform/contracts/new")}>
+                  <button className="btn btn-primary" onClick={() => setNewContractOpen(true)}>
                     <i className="ti ti-plus" />
-                    New contract
+                    {s.actionNewContract}
                   </button>
                 )}
                 {tab === "templates" && (
                   <button className="btn btn-primary" onClick={() => setTemplateModal("new")}>
                     <i className="ti ti-plus" />
-                    New template
+                    {s.actionNewTemplate}
                   </button>
                 )}
               </div>
@@ -742,7 +864,7 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                     onClick={() => switchTab(k)}
                   >
                     <i className={`ti ${TAB_META[k].icon}`} />
-                    {TAB_META[k].label}
+                    {s[TAB_META[k].labelKey]}
                     {count !== null ? <span className="count">{count}</span> : null}
                   </button>
                 );
@@ -784,6 +906,7 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                   perms={detailPerms}
                   countries={detailCountries}
                   onAddEmployee={() => setAddEmployeeOpen(true)}
+                  onEditPermissions={(u) => setPermDrawerUser(u)}
                   onOpenLogo={() => setPartnerModalOpen(true)}
                   onBack={() => {
                     setDetailCompanyId(null);
@@ -1022,6 +1145,21 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
         />
       )}
 
+      {/* Company-detail Staff → per-employee permissions drawer (Ե.2). Reuses
+          the existing per-employee override editor (richer than the mock's
+          5-switch sketch — keeps the real allow/deny-per-action capability). */}
+      {detailCompany && (
+        <EmployeePermissionsDrawer
+          open={permDrawerUser !== null}
+          onClose={() => setPermDrawerUser(null)}
+          token={token ?? ""}
+          companyId={detailCompany.id}
+          userId={permDrawerUser?.id ?? null}
+          userName={permDrawerUser?.name}
+          onSaved={() => setDetailStaff(null)}
+        />
+      )}
+
       {/* Company-detail branding / logo / partner-visibility modal */}
       <PartnerSettingsModal
         company={partnerModalOpen ? detailCompany : null}
@@ -1079,6 +1217,19 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
           }
         }}
       />
+
+      {/* New-contract modal (Fix #6 / Ժ.1) — replaces the old V2-styled
+          /platform/contracts/new page; opens in-place over the Management
+          chrome exactly like the HTML mock's contractModal. */}
+      <NewContractModal
+        open={newContractOpen}
+        token={token}
+        onClose={() => setNewContractOpen(false)}
+        onCreated={() => {
+          setNewContractOpen(false);
+          void loadContracts();
+        }}
+      />
     </div>
   );
 }
@@ -1087,22 +1238,117 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
 // SHELL — sidebar + header
 // ═══════════════════════════════════════════════════════════════
 
-function Sidebar({ collapsed: _c, activeKey }: { collapsed: boolean; activeKey: string }) {
+// Visibility predicate per group — mirrors AdminShell.tsx exactly so the
+// Management chrome shows the same items each role is allowed elsewhere.
+function isMgmtGroupVisible(g: AdminNavGroup, user: AdminUser | null): boolean {
+  switch (g.visibility) {
+    case "always":
+      return true;
+    case "platform_admin":
+      return canAccessPlatformAdminNav(user);
+    case "operator_tools":
+      return canAccessOperatorToolsNav(user);
+    case "inventory_oversight":
+      return canAccessInventoryOversightNav(user);
+    case "localization":
+      return canAccessLocalizationSectionNav(user);
+    case "super_admin":
+      return canAccessSuperAdminOnlyPlatformNav(user);
+    case "bucket3":
+      return canAccessPlatformAdminNav(user);
+    case "agent_tools":
+      return canAccessAgentToolsNav(user);
+    case "section_dashboard":
+      return canAccessDashboardSection(user);
+    case "section_inventory":
+      return canAccessInventorySection(user);
+    case "section_bookings":
+      return canAccessBookingsSection(user);
+    case "section_crm":
+      return canAccessCrmSection(user);
+    case "section_chat":
+      return canAccessChatSection(user);
+    case "section_sales_workspace":
+      return canAccessSalesWorkspaceSection(user);
+    case "section_finance":
+      return canAccessFinanceSection(user);
+    case "section_my_company":
+      return canAccessMyCompanySection(user);
+    case "section_own_company":
+      return canSeeOwnCompanyNav(user);
+    case "section_marketplace_ops":
+      return canAccessMarketplaceOpsSection(user);
+    case "section_settings":
+      return canAccessSettingsSection(user);
+    default:
+      return false;
+  }
+}
+
+function isMgmtTabVisible(
+  tab: {
+    superAdminOnly?: boolean;
+    perm?: string;
+    serviceType?: import("@/lib/auth-types").SellerServiceType;
+    moduleKey?: string;
+  },
+  user: AdminUser | null,
+): boolean {
+  if (tab.superAdminOnly && !canAccessSuperAdminOnlyPlatformNav(user) && !user?.is_super_admin) return false;
+  if (tab.perm && !userHasPermission(user, tab.perm)) return false;
+  if (tab.serviceType && !userHasSellerServiceType(user, tab.serviceType)) return false;
+  if (tab.moduleKey && !userHasModuleAccess(user, tab.moduleKey)) return false;
+  return true;
+}
+
+function Sidebar({ collapsed: _c, unreadCount }: { collapsed: boolean; unreadCount: number }) {
+  const pathname = usePathname();
+  const { user } = useAdminAuth();
+  const { t } = useLanguage();
+
+  const visibleGroups = ADMIN_NAV_GROUPS.filter((g) => {
+    if (!isMgmtGroupVisible(g, user)) return false;
+    if (g.tabs.length === 0) return true;
+    return g.tabs.some((tab) => isMgmtTabVisible(tab, user));
+  });
+  const activeGroup = findActiveGroup(pathname ?? "");
+
   return (
     <aside className="sidebar">
-      {SIDEBAR_ITEMS.map((it) => (
-        <Link key={it.key} href={it.href} className={`sidebar-item ${activeKey === it.key ? "active" : ""}`}>
-          <i className={`ti ${it.icon}`} />
-          <span>{it.label}</span>
-          {it.badge && <span className={`sidebar-badge ${it.badge.tone ?? ""}`}>{it.badge.value}</span>}
-        </Link>
-      ))}
+      {visibleGroups.map((g) => {
+        const firstVisibleTab = g.tabs.find((tab) => isMgmtTabVisible(tab, user));
+        const href = firstVisibleTab?.href ?? g.defaultHref;
+        const active = activeGroup?.key === g.key;
+        const rawLabel = t(g.labelKey);
+        const label = rawLabel === g.labelKey && g.labelFallback ? g.labelFallback : rawLabel;
+        const icon = SIDEBAR_TABLER_ICON[g.key] ?? "ti-point";
+        const badgeValue = g.badgeSource === "notifications_unread" ? unreadCount : 0;
+        return (
+          <Link key={g.key} href={href} className={`sidebar-item ${active ? "active" : ""}`}>
+            <i className={`ti ${icon}`} />
+            <span>{label}</span>
+            {badgeValue > 0 && (
+              <span className={`sidebar-badge ${g.badgeKind === "warn" ? "warn" : ""}`}>
+                {badgeValue > 99 ? "99+" : badgeValue}
+              </span>
+            )}
+          </Link>
+        );
+      })}
     </aside>
   );
 }
 
 const HEADER_FRONTEND_URL =
   (typeof process !== "undefined" && process.env.NEXT_PUBLIC_FRONTEND_URL) || "https://zulu.am";
+
+// Dominant flag assets (Arshak 2026-06-04) — public/flags/{GB,AM,RU}.png.
+// Used for the active-language flag in the header and the language dropdown.
+const LANG_FLAG: Record<string, string> = {
+  en: "/flags/GB.png",
+  hy: "/flags/AM.png",
+  ru: "/flags/RU.png",
+};
 
 function Header({
   collapsed: _c,
@@ -1113,6 +1359,7 @@ function Header({
   lang,
   languageOptions,
   onSetLang,
+  unreadCount,
   onLogout,
   onNotifications,
   onApps,
@@ -1125,10 +1372,12 @@ function Header({
   lang: string;
   languageOptions: Array<{ code: string; label: string }>;
   onSetLang: (code: string) => void;
+  unreadCount: number;
   onLogout: () => void;
   onNotifications: () => void;
   onApps: () => void;
 }) {
+  const s = mgmtStrings(lang);
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
@@ -1164,48 +1413,24 @@ function Header({
   return (
     <header className="header">
       <div className="header-brand">
-        {/* ZULU wordmark — verbatim SVG from docs/admin_designe/6_management.html */}
-        <svg className="brand-logo-svg" width="1588" height="1123" viewBox="0 0 1588 1123" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="ZULU">
-          <path d="M711.017 479.667C711.017 481.8 710.483 483.778 709.409 485.6C708.391 487.383 706.891 488.974 705.014 490.293C703.138 491.612 700.944 492.659 698.426 493.434C695.906 494.17 693.282 494.558 690.442 494.558H598.447C589.766 494.558 580.98 493.86 572.088 492.502C563.193 491.145 554.567 489.051 546.262 486.221C537.958 483.352 530.135 479.747 522.792 475.364C515.454 470.981 509.078 465.746 503.558 459.737C498.094 453.727 493.753 446.825 490.591 439.07C487.485 431.316 485.879 422.63 485.879 413.09V331.663H505.207V396.88C505.207 405.668 506.548 413.664 509.137 420.8C511.776 427.936 515.393 434.295 519.952 439.823C524.556 445.355 529.875 450.177 535.993 454.214C542.119 458.248 548.642 461.564 555.567 464.205C562.495 466.81 569.688 468.736 577.107 469.987C584.521 471.24 591.849 471.88 599.089 471.88C636.398 471.88 673.707 471.778 711.017 471.778V479.667Z" fill="#483762"/>
-          <path d="M1070.91 483.395C1070.91 485.58 1070.38 487.607 1069.3 489.473C1068.28 491.3 1066.78 492.93 1064.91 494.281C1063.03 495.632 1060.84 496.705 1058.32 497.498C1055.8 498.253 1053.18 498.65 1050.34 498.65H958.341C949.66 498.65 940.874 497.935 931.982 496.544C923.087 495.154 914.461 493.008 906.156 490.109C897.852 487.17 890.03 483.477 882.687 478.987C875.349 474.497 868.972 469.134 863.452 462.978C857.988 456.821 853.647 449.75 850.485 441.806C847.379 433.862 845.773 424.964 845.773 415.19V331.772H865.102V398.584C865.102 407.586 866.442 415.778 869.031 423.089C871.67 430.4 875.287 436.914 879.847 442.577C884.45 448.244 889.769 453.184 895.887 457.32C902.013 461.452 908.537 464.85 915.461 467.555C922.389 470.224 929.582 472.197 937.001 473.478C944.415 474.761 951.743 475.417 958.983 475.417C996.292 475.417 1033.6 475.313 1070.91 475.313V483.395Z" fill="#483762"/>
-          <path d="M709.34 331.696H690.012V410.067H709.34V331.696Z" fill="#483762"/>
-          <path d="M1402.99 483.43C1402.99 485.615 1402.46 487.643 1401.38 489.509C1400.37 491.337 1398.87 492.967 1396.99 494.318C1395.11 495.67 1392.92 496.743 1390.4 497.537C1387.88 498.291 1385.26 498.688 1382.42 498.688H1290.42C1281.74 498.688 1272.96 497.973 1264.06 496.582C1255.17 495.192 1246.54 493.046 1238.24 490.146C1229.93 487.206 1222.11 483.512 1214.77 479.021C1207.43 474.53 1201.05 469.166 1195.53 463.008C1190.07 456.85 1185.73 449.777 1182.57 441.832C1179.46 433.886 1177.85 424.986 1177.85 415.21V331.773H1197.18V398.6C1197.18 407.605 1198.52 415.798 1201.11 423.111C1203.75 430.423 1207.37 436.938 1211.93 442.604C1216.53 448.271 1221.85 453.213 1227.97 457.349C1234.09 461.482 1240.62 464.881 1247.54 467.587C1254.47 470.256 1261.66 472.23 1269.08 473.511C1276.5 474.795 1283.82 475.451 1291.06 475.451C1328.37 475.451 1365.69 475.347 1402.99 475.347V483.43Z" fill="#483762"/>
-          <path fillRule="evenodd" clipRule="evenodd" d="M182.278 477.351L366.012 354.152C302.053 352.728 237.907 353.582 173.924 353.582C173.924 348.984 173.018 343.912 176.121 340.186C177.511 338.459 179.56 336.917 182.123 335.637C184.685 334.361 187.68 333.346 191.119 332.594C194.562 331.88 198.145 331.506 202.028 331.506C226.951 331.506 251.955 331.853 276.783 331.931C312.136 332.044 347.295 331.913 382.668 331.913C389.59 331.913 399.319 335.488 403.235 341.301C405.034 343.772 405.664 346.349 405.167 349.026L234.329 472.513C287.21 473.325 359.112 472.796 413.521 472.796C413.521 477.394 414.427 482.466 411.324 486.192C409.934 487.919 407.885 489.461 405.321 490.741C402.76 492.016 399.765 493.031 396.326 493.783C392.883 494.498 389.3 494.871 385.417 494.871C360.494 494.871 335.49 494.524 310.662 494.447C275.309 494.333 240.15 494.464 204.777 494.464C197.855 494.464 188.126 490.89 184.21 485.076C182.411 482.606 181.781 480.029 182.278 477.351Z" fill="#483762"/>
-          <path d="M1187.6 635.395C1187.6 633.247 1188.11 631.253 1189.15 629.418C1190.13 627.621 1191.58 626.018 1193.39 624.69C1195.2 623.36 1197.31 622.306 1199.74 621.525C1202.17 620.783 1204.7 620.393 1207.44 620.393H1296.15C1304.52 620.393 1312.99 621.096 1321.56 622.463C1330.14 623.831 1338.46 625.941 1346.47 628.792C1354.48 631.683 1362.02 635.315 1369.1 639.731C1376.17 644.147 1382.32 649.42 1387.65 655.475C1392.92 661.53 1397.1 668.484 1400.15 676.297C1403.15 684.11 1404.69 692.861 1404.69 702.474V784.513H1386.06V718.805C1386.06 709.952 1384.76 701.895 1382.27 694.705C1379.72 687.515 1376.23 681.109 1371.84 675.539C1367.4 669.966 1362.27 665.107 1356.37 661.04C1350.46 656.976 1344.17 653.634 1337.49 650.973C1330.81 648.349 1323.88 646.408 1316.72 645.149C1309.58 643.886 1302.51 643.241 1295.53 643.241C1259.55 643.241 1223.57 643.344 1187.6 643.344V635.395Z" fill="#483762"/>
-          <path d="M1207.85 705.107H1189.22V784.719H1207.85V705.107Z" fill="#483762"/>
-          <path d="M589.912 637.789C579.612 641.962 570.651 646.961 562.899 652.691C555.223 658.424 549.129 665.004 544.684 672.397C541.512 677.773 539.455 683.618 538.571 689.905H570.689L570.733 689.821C604.801 627.297 778.31 639.858 826.743 641.207C826.743 655.683 828.238 669.535 821.226 682.662C817.52 689.467 812.439 695.531 806.035 700.803C799.566 706.077 792.1 710.677 783.506 714.526C774.905 718.371 765.74 721.533 756.015 724.051C746.286 726.536 736.182 728.373 725.765 729.564C668.892 736.102 596.511 731.273 538.07 731.273H537.689C537.689 749.305 537.861 767.336 537.843 785.377L565.17 785.395L565.216 752.981C618.751 752.988 680.089 756.508 732.814 751.034C745.306 749.741 757.422 747.744 769.081 745.046C780.749 742.309 791.734 738.872 802.047 734.693C812.351 730.514 821.308 725.522 829.062 719.792C836.736 714.06 842.878 707.502 847.274 700.085C857.208 683.323 856.059 641.522 855.799 619.431C781.261 616.291 648.377 614.101 589.912 637.789Z" fill="#483762"/>
-          <path fillRule="evenodd" clipRule="evenodd" d="M411.682 767.237L227.949 641.982C291.907 640.534 356.054 641.403 420.037 641.403C420.037 636.728 420.943 631.571 417.84 627.783C416.45 626.028 414.401 624.46 411.837 623.158C409.276 621.862 406.281 620.83 402.842 620.065C399.399 619.339 395.816 618.959 391.933 618.959C367.009 618.959 342.006 619.312 317.178 619.391C281.825 619.506 246.666 619.373 211.293 619.373C204.371 619.373 194.642 623.007 190.726 628.917C188.926 631.429 188.297 634.049 188.794 636.771L359.632 762.318C306.75 763.144 234.848 762.605 180.44 762.605C180.44 767.28 179.534 772.437 182.637 776.225C184.027 777.981 186.076 779.549 188.639 780.85C191.201 782.147 194.195 783.178 197.634 783.943C201.078 784.669 204.66 785.05 208.544 785.05C233.467 785.05 258.47 784.697 283.299 784.617C318.652 784.502 353.811 784.635 389.184 784.635C396.105 784.635 405.835 781.001 409.751 775.091C411.55 772.579 412.18 769.959 411.682 767.237Z" fill="#483762"/>
-          <path fillRule="evenodd" clipRule="evenodd" d="M1028.7 552.382C993.515 552.382 964.992 580.904 964.992 616.088C964.992 651.273 993.515 679.795 1028.7 679.795C1063.88 679.795 1092.41 651.273 1092.41 616.088C1092.41 580.904 1063.88 552.382 1028.7 552.382ZM1028.7 563.601C999.71 563.601 976.211 587.1 976.211 616.088C976.211 645.077 999.71 668.576 1028.7 668.576C1057.69 668.576 1081.19 645.077 1081.19 616.088C1081.19 587.1 1057.69 563.601 1028.7 563.601Z" fill="#B04F9C"/>
-          <path fillRule="evenodd" clipRule="evenodd" d="M1017.88 578.974C997.383 578.974 980.766 595.591 980.766 616.088C980.766 636.586 997.383 653.203 1017.88 653.203C1038.38 653.203 1055 636.586 1055 616.088C1055 595.591 1038.38 578.974 1017.88 578.974ZM1017.88 585.51C1000.99 585.51 987.302 599.2 987.302 616.088C987.302 632.976 1000.99 646.667 1017.88 646.667C1034.77 646.667 1048.46 632.976 1048.46 616.088C1048.46 599.2 1034.77 585.51 1017.88 585.51Z" fill="#B04F9C"/>
-          <path d="M1401.32 331.696H1381.99V410.067H1381.99V410.067H1401.32V331.696Z" fill="#483762"/>
-          <path d="M1038.02 705.107H1019.38V784.719H1038.02V705.107Z" fill="#483762"/>
-        </svg>
-        {/* Collapsed icon-only ZULU mark */}
-        <svg className="brand-logo-icon" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <path fillRule="evenodd" clipRule="evenodd" d="M63.7065 0C28.5225 0 0 28.5226 0 63.7066C0 98.8909 28.5225 127.413 63.7065 127.413C98.8909 127.413 127.413 98.8909 127.413 63.7066C127.413 28.5226 98.8909 0 63.7065 0ZM63.7065 11.2188C34.7183 11.2188 11.2188 34.7183 11.2188 63.7066C11.2188 92.6948 34.7183 116.194 63.7065 116.194C92.6947 116.194 116.195 92.6948 116.195 63.7066C116.195 34.7183 92.6947 11.2188 63.7065 11.2188Z" fill="#B04F9C"/>
-          <path fillRule="evenodd" clipRule="evenodd" d="M52.8884 26.592C32.3909 26.592 15.7742 43.2087 15.7742 63.7066C15.7742 84.2045 32.3909 100.821 52.8884 100.821C73.3863 100.821 90.003 84.2045 90.003 63.7066C90.003 43.2087 73.3863 26.592 52.8884 26.592ZM52.8884 33.128C36.0003 33.128 22.3097 46.8185 22.3097 63.7066C22.3097 80.5947 36.0003 94.2853 52.8884 94.2853C69.7768 94.2853 83.467 80.5947 83.467 63.7066C83.467 46.8185 69.7768 33.128 52.8884 33.128Z" fill="#B04F9C"/>
-        </svg>
+        {/* ZULU SPIN wordmark — dominant asset public/logo_1.png (Arshak 2026-06-04) */}
+        <img className="brand-logo-svg" src="/logo_1.png" alt="ZULU" />
+        {/* Collapsed icon-only mark — public/logo_icon.png */}
+        <img className="brand-logo-icon" src="/logo_icon.png" alt="ZULU" />
       </div>
-      <button className="header-hamburger" onClick={onHamburger} title="Toggle menu">
+      <button className="header-hamburger" onClick={onHamburger} title={s.toggleSidebar}>
         <i className="ti ti-menu-2" />
       </button>
       <div className="header-title">{title}</div>
       <div className="header-search">
         <i className="ti ti-search" />
-        <input type="search" placeholder="Search anything..." />
+        <input type="search" placeholder={s.searchPlaceholder} />
       </div>
       <div className="header-actions">
         <div style={{ position: "relative" }}>
           <button className="header-lang" title="Language" onClick={() => setLangMenuOpen((v) => !v)}>
-            {/* UK flag — verbatim from HTML mock */}
-            <svg className="header-lang-flag" viewBox="0 0 60 30" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <clipPath id="uk-t"><path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z"/></clipPath>
-              <rect width="60" height="30" fill="#012169"/>
-              <path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" strokeWidth="6"/>
-              <path d="M0,0 L60,30 M60,0 L0,30" clipPath="url(#uk-t)" stroke="#C8102E" strokeWidth="4"/>
-              <path d="M30,0 v30 M0,15 h60" stroke="#fff" strokeWidth="10"/>
-              <path d="M30,0 v30 M0,15 h60" stroke="#C8102E" strokeWidth="6"/>
-            </svg>
+            {/* Active-language flag — dominant assets public/flags/{GB,AM,RU}.png (Arshak 2026-06-04) */}
+            <img className="header-lang-flag" src={LANG_FLAG[lang] ?? LANG_FLAG.en} alt="" />
             {(languageOptions.find((o) => o.code === lang)?.code ?? lang).toUpperCase()}
           </button>
           {langMenuOpen && (
@@ -1220,6 +1445,9 @@ function Header({
                   }}
                   style={o.code === lang ? { color: "var(--primary)", fontWeight: 600 } : undefined}
                 >
+                  {LANG_FLAG[o.code] ? (
+                    <img className="header-lang-flag" src={LANG_FLAG[o.code]} alt="" />
+                  ) : null}
                   <span style={{ textTransform: "uppercase", fontSize: 11, fontWeight: 600, minWidth: 22 }}>
                     {o.code}
                   </span>
@@ -1234,22 +1462,22 @@ function Header({
           href={websiteHref}
           target="_blank"
           rel="noopener noreferrer"
-          title="Open ZULU website"
+          title={s.openWebsite}
         >
           <i className="ti ti-external-link" />
         </a>
         <button
           className="header-icon-btn"
           onClick={toggleTheme}
-          title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+          title={theme === "dark" ? s.themeLight : s.themeDark}
         >
           <i className={theme === "dark" ? "ti ti-sun" : "ti ti-moon"} />
         </button>
-        <button className="header-icon-btn" onClick={onNotifications} title="Notifications">
+        <button className="header-icon-btn" onClick={onNotifications} title={s.notifications}>
           <i className="ti ti-bell" />
-          <span className="dot" />
+          {unreadCount > 0 && <span className="dot" />}
         </button>
-        <button className="header-icon-btn" onClick={onApps} title="Apps">
+        <button className="header-icon-btn" onClick={onApps} title={s.apps}>
           <i className="ti ti-grid-dots" />
         </button>
         <div className="header-divider" />
@@ -1257,12 +1485,12 @@ function Header({
           <div
             className="header-user"
             onClick={() => setUserMenuOpen((v) => !v)}
-            title="Account menu"
+            title={s.accountMenu}
           >
             <span className="user-avatar">{(user?.name ?? "?").slice(0, 1).toUpperCase()}</span>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 500 }}>{user?.name ?? "User"}</div>
-              <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>{user?.context?.world ?? ""}</div>
+              <div style={{ fontSize: 13, fontWeight: 500 }}>{user?.name ?? s.userFallback}</div>
+              <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>{user?.context?.world || user?.email || ""}</div>
             </div>
             <i
               className="ti ti-chevron-down"
@@ -1290,7 +1518,7 @@ function Header({
                 }}
               >
                 <i className="ti ti-logout" />
-                <span>Log out</span>
+                <span>{s.logout}</span>
               </button>
             </div>
           )}
@@ -1323,6 +1551,8 @@ function CompaniesList(props: {
   onOpen: (id: number) => void;
   onApply: () => void;
 }) {
+  const { lang } = useLanguage();
+  const s = mgmtStrings(lang);
   const stats = useMemo(() => {
     const total = props.meta?.total ?? props.rows.length;
     const active = props.rows.filter((r) => r.governance_status === "active").length;
@@ -1334,63 +1564,63 @@ function CompaniesList(props: {
   return (
     <div>
       <div className="stat-grid">
-        <Stat icon="ti-building-community" tone="primary" value={String(stats.total)} label="Total companies" />
-        <Stat icon="ti-circle-check" tone="success" value={String(stats.active)} label="Active" />
-        <Stat icon="ti-rosette-discount-check" tone="info" value={String(stats.sellers)} label="Verified sellers" />
-        <Stat icon="ti-archive" tone="warning" value={String(stats.archived)} label="Archived" />
+        <Stat icon="ti-building-community" tone="primary" value={String(stats.total)} label={s.coStatTotal} />
+        <Stat icon="ti-circle-check" tone="success" value={String(stats.active)} label={s.coStatActive} />
+        <Stat icon="ti-rosette-discount-check" tone="info" value={String(stats.sellers)} label={s.coStatSellers} />
+        <Stat icon="ti-archive" tone="warning" value={String(stats.archived)} label={s.coStatArchived} />
       </div>
 
       <div className="filter-card">
         <div className="filter-field" style={{ flex: 2 }}>
-          <span className="filter-label">Search</span>
+          <span className="filter-label">{s.filterSearch}</span>
           <input
             type="text"
-            placeholder="Name, legal name, slug…"
+            placeholder={s.coSearchPh}
             value={props.search}
             onChange={(e) => props.onSearch(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && props.onApply()}
           />
         </div>
         <div className="filter-field">
-          <span className="filter-label">Status</span>
+          <span className="filter-label">{s.filterStatus}</span>
           <select value={props.filterGov} onChange={(e) => props.onFilterGov(e.target.value)}>
-            <option value="">All statuses</option>
-            <option value="pending">Pending</option>
-            <option value="active">Active</option>
-            <option value="suspended">Suspended</option>
-            <option value="rejected">Rejected</option>
+            <option value="">{s.optAllStatuses}</option>
+            <option value="pending">{s.optPending}</option>
+            <option value="active">{s.optActive}</option>
+            <option value="suspended">{s.optSuspended}</option>
+            <option value="rejected">{s.optRejected}</option>
           </select>
         </div>
         <div className="filter-field">
-          <span className="filter-label">Type</span>
+          <span className="filter-label">{s.filterType}</span>
           <select value={props.filterType} onChange={(e) => props.onFilterType(e.target.value)}>
-            <option value="">All types</option>
-            <option value="operator">Operator</option>
-            <option value="agency">Agency</option>
-            <option value="airline">Airline</option>
-            <option value="hotel_chain">Hotel chain</option>
-            <option value="other">Other</option>
+            <option value="">{s.optAllTypes}</option>
+            <option value="operator">{s.typeOperator}</option>
+            <option value="agency">{s.typeAgency}</option>
+            <option value="airline">{s.typeAirline}</option>
+            <option value="hotel_chain">{s.typeHotelChain}</option>
+            <option value="other">{s.typeOther}</option>
           </select>
         </div>
         <div className="filter-field">
-          <span className="filter-label">Seller</span>
+          <span className="filter-label">{s.filterSeller}</span>
           <select value={props.filterSeller} onChange={(e) => props.onFilterSeller(e.target.value)}>
-            <option value="">All</option>
-            <option value="1">Sellers only</option>
-            <option value="0">Non-sellers</option>
+            <option value="">{s.optAll}</option>
+            <option value="1">{s.optSellersOnly}</option>
+            <option value="0">{s.optNonSellers}</option>
           </select>
         </div>
         <div className="filter-field">
-          <span className="filter-label">Archive</span>
+          <span className="filter-label">{s.filterArchive}</span>
           <select value={props.filterArchive} onChange={(e) => props.onFilterArchive(e.target.value as "active" | "archived" | "all")}>
-            <option value="active">Active</option>
-            <option value="archived">Archived</option>
-            <option value="all">All</option>
+            <option value="active">{s.optActive}</option>
+            <option value="archived">{s.optArchived}</option>
+            <option value="all">{s.optAll}</option>
           </select>
         </div>
         <button className="btn" onClick={props.onApply}>
           <i className="ti ti-filter" />
-          Apply
+          {s.actionApply}
         </button>
       </div>
 
@@ -1399,27 +1629,27 @@ function CompaniesList(props: {
           <table className="table">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Company</th>
-                <th>Country / City</th>
-                <th>Status</th>
-                <th>Seller</th>
-                <th>Payments-ready</th>
-                <th>Created</th>
-                <th style={{ textAlign: "right" }}>Actions</th>
+                <th>{s.coColId}</th>
+                <th>{s.coColCompany}</th>
+                <th>{s.coColLocation}</th>
+                <th>{s.coColStatus}</th>
+                <th>{s.coColSeller}</th>
+                <th>{s.coColPayments}</th>
+                <th>{s.coColCreated}</th>
+                <th style={{ textAlign: "right" }}>{s.coColActions}</th>
               </tr>
             </thead>
             <tbody>
               {props.loading && props.rows.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="cell-muted" style={{ textAlign: "center", padding: 40 }}>
-                    Loading…
+                    {s.loading}
                   </td>
                 </tr>
               ) : props.rows.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="cell-muted" style={{ textAlign: "center", padding: 40 }}>
-                    No companies match these filters.
+                    {s.coEmpty}
                   </td>
                 </tr>
               ) : (
@@ -1437,7 +1667,7 @@ function CompaniesList(props: {
                         <div className="flex items-center gap-2">
                           <span className={`avatar sm ${avatarToneFor(r.id)}`}>{initialsFor(r.name)}</span>
                           <span className="font-semibold">{r.name}</span>
-                          {r.type && <span className="type-badge">{TYPE_LABEL[r.type] ?? r.type}</span>}
+                          {r.type && <span className="type-badge">{s[TYPE_KEY[r.type] ?? "typeOther"]}</span>}
                         </div>
                       </td>
                       <td className="cell-muted">
@@ -1445,32 +1675,32 @@ function CompaniesList(props: {
                       </td>
                       <td>
                         <span className={`badge ${govTone}`}>
-                          {r.governance_status.charAt(0).toUpperCase() + r.governance_status.slice(1)}
+                          {s[GOV_KEY[r.governance_status] ?? "optActive"]}
                         </span>
                       </td>
                       <td>
                         {r.is_seller ? (
                           <>
-                            <span className="font-semibold">Yes</span>{" "}
+                            <span className="font-semibold">{s.yes}</span>{" "}
                             <span className="cell-muted">· {r.active_seller_permissions_count ?? 0}</span>
                           </>
                         ) : (
-                          <span className="cell-muted">No</span>
+                          <span className="cell-muted">{s.no}</span>
                         )}
                       </td>
                       <td>
                         {payState === "ready" ? (
                           <span className="badge badge-success">
                             <i className="ti ti-circle-check" style={{ fontSize: 12 }} />
-                            Ready
+                            {s.payReady}
                           </span>
                         ) : payState === "incomplete" ? (
                           <span className="badge badge-warning">
                             <i className="ti ti-clock" style={{ fontSize: 12 }} />
-                            Onboarding
+                            {s.payOnboarding}
                           </span>
                         ) : (
-                          <span className="badge badge-gray">Not connected</span>
+                          <span className="badge badge-gray">{s.payNotConnected}</span>
                         )}
                       </td>
                       <td className="cell-muted">{fmtDate(r.created_at)}</td>
@@ -1478,14 +1708,14 @@ function CompaniesList(props: {
                         <div className="row-actions">
                           <button className="btn btn-sm" onClick={() => props.onOpen(r.id)}>
                             <i className="ti ti-eye" />
-                            View
+                            {s.actionView}
                           </button>
                           <button
                             className="icon-btn"
-                            title="More"
+                            title={s.actionMore}
                             onClick={(e) => {
                               e.stopPropagation();
-                              alert("Suspend / Archive actions — open the company detail to manage governance status.");
+                              props.onOpen(r.id);
                             }}
                           >
                             <i className="ti ti-dots-vertical" />
@@ -1502,9 +1732,9 @@ function CompaniesList(props: {
         {props.meta && props.meta.last_page > 1 && (
           <div className="pagination">
             <div className="pagination-info">
-              Showing {(props.meta.current_page - 1) * props.meta.per_page + 1}–
-              {Math.min(props.meta.current_page * props.meta.per_page, props.meta.total)} of {props.meta.total}{" "}
-              companies
+              {s.showing} {(props.meta.current_page - 1) * props.meta.per_page + 1}–
+              {Math.min(props.meta.current_page * props.meta.per_page, props.meta.total)} {s.of}{" "}
+              {props.meta.total} {s.coUnit}
             </div>
             <div className="pagination-controls">
               <button
@@ -1514,7 +1744,15 @@ function CompaniesList(props: {
               >
                 <i className="ti ti-chevron-left" />
               </button>
-              <button className="btn btn-sm btn-primary">{props.meta.current_page}</button>
+              {pageWindow(props.meta.current_page, props.meta.last_page).map((p) => (
+                <button
+                  key={p}
+                  className={`btn btn-sm ${p === props.meta!.current_page ? "btn-primary" : ""}`}
+                  onClick={() => props.onPage(p)}
+                >
+                  {p}
+                </button>
+              ))}
               <button
                 className="btn btn-sm"
                 disabled={props.page >= props.meta.last_page}
@@ -1530,6 +1768,17 @@ function CompaniesList(props: {
   );
 }
 
+// Compact page-number window around the current page (mirrors the mock's
+// 1 / 2 / 3 strip). Shows up to 3 numbers centred on current, clamped to
+// [1, lastPage].
+function pageWindow(current: number, lastPage: number): number[] {
+  const start = Math.max(1, Math.min(current - 1, lastPage - 2));
+  const end = Math.min(lastPage, start + 2);
+  const out: number[] = [];
+  for (let p = start; p <= end; p++) out.push(p);
+  return out;
+}
+
 function CompaniesDetail(props: {
   token: string | null;
   company: PlatformCompanyRow | null;
@@ -1542,6 +1791,7 @@ function CompaniesDetail(props: {
   perms: CompanySellerPermissionApiRow[] | null;
   countries: CompanyCountryPermissionApiRow[] | null;
   onAddEmployee: () => void;
+  onEditPermissions: (u: PlatformAdminUserRow) => void;
   onOpenLogo: () => void;
   onBack: () => void;
   onSaveProfile: (patch: CompanyProfileEditable) => Promise<void>;
@@ -1552,6 +1802,10 @@ function CompaniesDetail(props: {
     countries: Array<{ country_code: string; country_name: string }>
   ) => Promise<void>;
 }) {
+  // props.lang is the CONTENT field language segment (EN/RU/HY for the
+  // translatable description); the chrome language comes from useLanguage().
+  const { lang: chromeLang } = useLanguage();
+  const s = mgmtStrings(chromeLang);
   const c = props.company;
   const [draft, setDraft] = useState<CompanyProfileEditable>({});
   const [draftGov, setDraftGov] = useState<string>("");
@@ -1578,7 +1832,7 @@ function CompaniesDetail(props: {
     return (
       <div className="card">
         <div className="card-body cell-muted" style={{ textAlign: "center", padding: 40 }}>
-          Loading…
+          {s.loading}
         </div>
       </div>
     );
@@ -1590,7 +1844,7 @@ function CompaniesDetail(props: {
     <div>
       <button className="btn btn-sm btn-ghost detail-back" onClick={props.onBack}>
         <i className="ti ti-arrow-left" />
-        Back to companies
+        {s.actionBackToCompanies}
       </button>
 
       <div className="detail-head">
@@ -1598,9 +1852,9 @@ function CompaniesDetail(props: {
         <div>
           <div className="detail-title">
             <span>{c.name}</span>
-            {c.type && <span className="type-badge">{TYPE_LABEL[c.type] ?? c.type}</span>}
+            {c.type && <span className="type-badge">{s[TYPE_KEY[c.type] ?? "typeOther"]}</span>}
             <span className={`badge ${govTone}`}>
-              {c.governance_status.charAt(0).toUpperCase() + c.governance_status.slice(1)}
+              {s[GOV_KEY[c.governance_status] ?? "optActive"]}
             </span>
           </div>
           <div className="detail-meta">
@@ -1631,12 +1885,8 @@ function CompaniesDetail(props: {
           </div>
           <button
             className="icon-btn"
-            title="More"
-            onClick={() =>
-              alert(
-                "More actions — Suspend / Archive belong on the Governance card on the Profile tab below."
-              )
-            }
+            title={s.actionMore}
+            onClick={() => props.onSubTab("profile")}
           >
             <i className="ti ti-dots-vertical" />
           </button>
@@ -1646,12 +1896,12 @@ function CompaniesDetail(props: {
       <div className="sub-tabs">
         {(
           [
-            ["profile", "Profile"],
-            ["staff", "Staff"],
-            ["apps", "Applications"],
-            ["perms", "Seller permissions"],
-            ["commission", "Commission"],
-            ["payments", "Payments"],
+            ["profile", s.dTabProfile],
+            ["staff", s.dTabStaff],
+            ["apps", s.dTabApps],
+            ["perms", s.dTabPerms],
+            ["commission", s.dTabCommission],
+            ["payments", s.dTabPayments],
           ] as const
         ).map(([key, label]) => (
           <button
@@ -1671,71 +1921,71 @@ function CompaniesDetail(props: {
             <div className="card">
               <div className="card-header">
                 <div>
-                  <div className="card-title">Identity &amp; contact</div>
-                  <div className="card-subtitle">Editable — saved to the company profile</div>
+                  <div className="card-title">{s.dIdentityTitle}</div>
+                  <div className="card-subtitle">{s.dIdentitySub}</div>
                 </div>
               </div>
               <div className="card-body">
                 <div className="form-grid">
-                  <Fld label="Name">
+                  <Fld label={s.fldName}>
                     <input value={draft.name ?? ""} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
                   </Fld>
-                  <Fld label="Legal name">
+                  <Fld label={s.fldLegalName}>
                     <input
                       value={draft.legal_name ?? ""}
                       onChange={(e) => setDraft({ ...draft, legal_name: e.target.value || null })}
                     />
                   </Fld>
-                  <Fld label="Type">
+                  <Fld label={s.fldType}>
                     <select
                       value={draft.type ?? ""}
                       onChange={(e) => setDraft({ ...draft, type: e.target.value || null })}
                     >
                       <option value="">—</option>
-                      <option value="operator">Operator</option>
-                      <option value="agency">Agency</option>
-                      <option value="airline">Airline</option>
-                      <option value="hotel_chain">Hotel chain</option>
-                      <option value="other">Other</option>
+                      <option value="operator">{s.typeOperator}</option>
+                      <option value="agency">{s.typeAgency}</option>
+                      <option value="airline">{s.typeAirline}</option>
+                      <option value="hotel_chain">{s.typeHotelChain}</option>
+                      <option value="other">{s.typeOther}</option>
                     </select>
                   </Fld>
-                  <Fld label="Tax ID">
+                  <Fld label={s.fldTaxId}>
                     <input
                       value={draft.tax_id ?? ""}
                       onChange={(e) => setDraft({ ...draft, tax_id: e.target.value || null })}
                     />
                   </Fld>
-                  <Fld label="Country">
+                  <Fld label={s.fldCountry}>
                     <input
                       value={draft.country ?? ""}
                       onChange={(e) => setDraft({ ...draft, country: e.target.value || null })}
                     />
                   </Fld>
-                  <Fld label="City">
+                  <Fld label={s.fldCity}>
                     <input
                       value={draft.city ?? ""}
                       onChange={(e) => setDraft({ ...draft, city: e.target.value || null })}
                     />
                   </Fld>
-                  <Fld label="Address" span2>
+                  <Fld label={s.fldAddress} span2>
                     <input
                       value={draft.address ?? ""}
                       onChange={(e) => setDraft({ ...draft, address: e.target.value || null })}
                     />
                   </Fld>
-                  <Fld label="Phone">
+                  <Fld label={s.fldPhone}>
                     <input
                       value={draft.phone ?? ""}
                       onChange={(e) => setDraft({ ...draft, phone: e.target.value || null })}
                     />
                   </Fld>
-                  <Fld label="Website">
+                  <Fld label={s.fldWebsite}>
                     <input
                       value={draft.website ?? ""}
                       onChange={(e) => setDraft({ ...draft, website: e.target.value || null })}
                     />
                   </Fld>
-                  <Fld label={`Description · translatable (${props.lang})`} span2>
+                  <Fld label={`${s.fldDescription} · ${s.translatable} (${props.lang})`} span2>
                     <textarea
                       value={draft.description ?? ""}
                       onChange={(e) => setDraft({ ...draft, description: e.target.value || null })}
@@ -1746,7 +1996,7 @@ function CompaniesDetail(props: {
               <div className="card-foot">
                 <button className="btn btn-primary" onClick={() => void props.onSaveProfile(draft)}>
                   <i className="ti ti-device-floppy" />
-                  Save profile
+                  {s.actionSaveProfile}
                 </button>
               </div>
             </div>
@@ -1755,7 +2005,7 @@ function CompaniesDetail(props: {
             <div className="card">
               <div className="card-header">
                 <div>
-                  <div className="card-title">Branding &amp; visibility</div>
+                  <div className="card-title">{s.dBrandingTitle}</div>
                 </div>
               </div>
               <div className="card-body">
@@ -1764,10 +2014,10 @@ function CompaniesDetail(props: {
                   <div>
                     <button className="btn btn-sm" onClick={props.onOpenLogo}>
                       <i className="ti ti-upload" />
-                      Upload logo
+                      {s.actionUploadLogo}
                     </button>
                     <div className="fld-hint" style={{ marginTop: 6 }}>
-                      PNG / SVG, up to 1MB.
+                      {s.dLogoHint}
                     </div>
                   </div>
                 </div>
@@ -1780,13 +2030,13 @@ function CompaniesDetail(props: {
                     />
                     <span className="switch-slider" />
                   </label>
-                  <span>Show on the public &ldquo;Partners&rdquo; strip</span>
+                  <span>{s.dPartnersToggle}</span>
                 </div>
               </div>
               <div className="card-foot">
                 <button className="btn btn-primary" onClick={() => void props.onSavePartner(partnerToggle)}>
                   <i className="ti ti-device-floppy" />
-                  Save branding
+                  {s.actionSaveBranding}
                 </button>
               </div>
             </div>
@@ -1794,34 +2044,34 @@ function CompaniesDetail(props: {
             <div className="card">
               <div className="card-header">
                 <div>
-                  <div className="card-title">Governance</div>
+                  <div className="card-title">{s.dGovernanceTitle}</div>
                 </div>
               </div>
               <div className="card-body">
                 <div className="fld mb-4">
-                  <span className="fld-label">Governance status</span>
+                  <span className="fld-label">{s.dGovernanceStatus}</span>
                   <select value={draftGov} onChange={(e) => setDraftGov(e.target.value)}>
-                    <option value="pending">Pending</option>
-                    <option value="active">Active</option>
-                    <option value="suspended">Suspended</option>
-                    <option value="rejected">Rejected</option>
+                    <option value="pending">{s.optPending}</option>
+                    <option value="active">{s.optActive}</option>
+                    <option value="suspended">{s.optSuspended}</option>
+                    <option value="rejected">{s.optRejected}</option>
                   </select>
                 </div>
                 <div className="info-grid">
                   <div className="info-row">
-                    <span className="info-label">Profile completed</span>
+                    <span className="info-label">{s.dProfileCompleted}</span>
                     <span className="info-value">
                       <span className="ro-badge">
                         <i
                           className={c.profile_completed ? "ti ti-circle-check" : "ti ti-clock"}
                           style={{ color: c.profile_completed ? "var(--success)" : "var(--warning)" }}
                         />
-                        {c.profile_completed ? "Complete" : "Pending"}
+                        {c.profile_completed ? s.dComplete : s.dIncomplete}
                       </span>
                     </span>
                   </div>
                   <div className="info-row">
-                    <span className="info-label">Created</span>
+                    <span className="info-label">{s.dCreated}</span>
                     <span className="info-value">{fmtDate(c.created_at)}</span>
                   </div>
                 </div>
@@ -1829,7 +2079,7 @@ function CompaniesDetail(props: {
               <div className="card-foot">
                 <button className="btn btn-primary" onClick={() => void props.onSaveGovernance(draftGov)}>
                   <i className="ti ti-device-floppy" />
-                  Save governance
+                  {s.actionSaveGovernance}
                 </button>
               </div>
             </div>
@@ -1842,37 +2092,37 @@ function CompaniesDetail(props: {
         <div className="card" style={{ marginBottom: 0 }}>
           <div className="card-header">
             <div>
-              <div className="card-title">Employees</div>
-              <div className="card-subtitle">People who work on behalf of this company</div>
+              <div className="card-title">{s.stTitle}</div>
+              <div className="card-subtitle">{s.stSubtitle}</div>
             </div>
             <button className="btn btn-primary btn-sm" onClick={props.onAddEmployee}>
               <i className="ti ti-plus" />
-              Add employee
+              {s.actionAddEmployee}
             </button>
           </div>
           <div className="table-wrap">
             <table className="table">
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Role</th>
-                  <th>Status</th>
-                  <th>Last login</th>
-                  <th style={{ textAlign: "right" }}>Actions</th>
+                  <th>{s.stColName}</th>
+                  <th>{s.stColEmail}</th>
+                  <th>{s.stColRole}</th>
+                  <th>{s.stColStatus}</th>
+                  <th>{s.stColLastLogin}</th>
+                  <th style={{ textAlign: "right" }}>{s.stColActions}</th>
                 </tr>
               </thead>
               <tbody>
                 {props.staff === null ? (
                   <tr>
                     <td colSpan={6} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>
-                      Loading…
+                      {s.loading}
                     </td>
                   </tr>
                 ) : props.staff.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>
-                      No employees yet.
+                      {s.stEmpty}
                     </td>
                   </tr>
                 ) : (
@@ -1888,15 +2138,15 @@ function CompaniesDetail(props: {
                       <td>{u.companies?.find((c) => c.id === props.company?.id)?.role ?? "—"}</td>
                       <td>
                         <span className={`badge ${u.status === "active" ? "badge-success" : "badge-gray"}`}>
-                          {u.status ?? "—"}
+                          {u.status === "active" ? s.optActive : (u.status ?? "—")}
                         </span>
                       </td>
                       <td className="cell-muted">{fmtDateTime(u.last_login_at ?? u.updated_at ?? null)}</td>
                       <td onClick={(e) => e.stopPropagation()}>
                         <div className="row-actions">
-                          <button className="btn btn-sm">
+                          <button className="btn btn-sm" onClick={() => props.onEditPermissions(u)}>
                             <i className="ti ti-key" />
-                            Permissions
+                            {s.actionPermissions}
                           </button>
                         </div>
                       </td>
@@ -1913,32 +2163,32 @@ function CompaniesDetail(props: {
       <div className={`detail-pane ${props.subTab === "apps" ? "active" : ""}`}>
         <div className="note-inline">
           <i className="ti ti-link" />
-          Linked by <span className="font-mono">company_id</span> — reliable, no name-matching.
+          {s.apNotePrefix} <span className="font-mono">company_id</span> {s.apNoteSuffix}
         </div>
         <div className="card" style={{ marginBottom: 0 }}>
           <div className="table-wrap">
             <table className="table">
               <thead>
                 <tr>
-                  <th>App ID</th>
-                  <th>Type</th>
-                  <th>Status</th>
-                  <th>Submitted</th>
-                  <th>Reviewed</th>
-                  <th style={{ textAlign: "right" }}>Actions</th>
+                  <th>{s.apColAppId}</th>
+                  <th>{s.apColType}</th>
+                  <th>{s.apColStatus}</th>
+                  <th>{s.apColSubmitted}</th>
+                  <th>{s.apColReviewed}</th>
+                  <th style={{ textAlign: "right" }}>{s.apColActions}</th>
                 </tr>
               </thead>
               <tbody>
                 {props.apps === null ? (
                   <tr>
                     <td colSpan={6} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>
-                      Loading…
+                      {s.loading}
                     </td>
                   </tr>
                 ) : props.apps.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>
-                      No applications.
+                      {s.apEmpty}
                     </td>
                   </tr>
                 ) : (
@@ -1947,17 +2197,17 @@ function CompaniesDetail(props: {
                     return (
                       <tr key={a.id}>
                         <td className="font-mono">APP-{String(a.id).padStart(4, "0")}</td>
-                        <td>Registration</td>
+                        <td>{s.apTypeRegistration}</td>
                         <td>
                           <span className={`badge ${tone}`}>
-                            {a.status.charAt(0).toUpperCase() + a.status.slice(1)}
+                            {s[APP_STATUS_KEY[a.status] ?? "optPending"]}
                           </span>
                         </td>
                         <td className="cell-muted">{fmtDate(a.submitted_at ?? null)}</td>
                         <td className="cell-muted">{fmtDate(a.reviewed_at ?? null)}</td>
                         <td onClick={(e) => e.stopPropagation()}>
                           <div className="row-actions">
-                            <button className="icon-btn" title="View">
+                            <button className="icon-btn" title={s.actionView}>
                               <i className="ti ti-eye" />
                             </button>
                           </div>
@@ -1989,7 +2239,7 @@ function CompaniesDetail(props: {
             {props.token ? (
               <CompanyCommissionTab token={props.token} companyId={c.id} />
             ) : (
-              <p className="cell-muted">Sign in to view commission settings.</p>
+              <p className="cell-muted">{s.commissionSignIn}</p>
             )}
           </div>
         </div>
@@ -2002,16 +2252,16 @@ function CompaniesDetail(props: {
             <div className="pay-banner ready">
               <i className="ti ti-circle-check" />
               <div>
-                <div className="pb-title">Ready to receive money</div>
-                <div className="pb-sub">Stripe Connect onboarding complete — charges and payouts are enabled.</div>
+                <div className="pb-title">{s.payReadyTitle}</div>
+                <div className="pb-sub">{s.payReadySub}</div>
               </div>
             </div>
           ) : (
             <div className="pay-banner incomplete">
               <i className="ti ti-clock" />
               <div>
-                <div className="pb-title">Onboarding pending</div>
-                <div className="pb-sub">Stripe still needs the operator to finish onboarding.</div>
+                <div className="pb-title">{s.payPendingTitle}</div>
+                <div className="pb-sub">{s.payPendingSub}</div>
               </div>
             </div>
           )
@@ -2019,38 +2269,38 @@ function CompaniesDetail(props: {
           <div className="pay-banner none">
             <i className="ti ti-circle-dashed" />
             <div>
-              <div className="pb-title">Not connected</div>
-              <div className="pb-sub">This company hasn&rsquo;t started Stripe Connect onboarding yet.</div>
+              <div className="pb-title">{s.payNoneTitle}</div>
+              <div className="pb-sub">{s.payNoneSub}</div>
             </div>
           </div>
         )}
         <div className="card" style={{ marginBottom: 0 }}>
           <div className="card-header">
             <div>
-              <div className="card-title">Stripe Connect</div>
-              <div className="card-subtitle">Read-only — mirrored from Stripe</div>
+              <div className="card-title">{s.payConnectTitle}</div>
+              <div className="card-subtitle">{s.payConnectSub}</div>
             </div>
           </div>
           <div className="card-body">
             <div className="info-grid">
               <div className="info-row">
-                <span className="info-label">Connected account</span>
+                <span className="info-label">{s.payConnectedAccount}</span>
                 <span className="info-value font-mono">{c.stripe_connect_id ?? "—"}</span>
               </div>
               <div className="info-row">
-                <span className="info-label">Charges enabled</span>
+                <span className="info-label">{s.payChargesEnabled}</span>
                 <span className="info-value">
                   <PayBadge value={c.stripe_charges_enabled ?? null} />
                 </span>
               </div>
               <div className="info-row">
-                <span className="info-label">Payouts enabled</span>
+                <span className="info-label">{s.payPayoutsEnabled}</span>
                 <span className="info-value">
                   <PayBadge value={c.stripe_payouts_enabled ?? null} />
                 </span>
               </div>
               <div className="info-row">
-                <span className="info-label">Details submitted</span>
+                <span className="info-label">{s.payDetailsSubmitted}</span>
                 <span className="info-value">
                   <PayBadge value={c.stripe_details_submitted ?? null} />
                 </span>
@@ -2082,6 +2332,8 @@ function PermsEditor(props: {
     countries: Array<{ country_code: string; country_name: string }>
   ) => Promise<void>;
 }) {
+  const { lang } = useLanguage();
+  const s = mgmtStrings(lang);
   const [draftServices, setDraftServices] = useState<Record<string, boolean>>({});
   const [draftCountries, setDraftCountries] = useState<Record<string, { code: string; name: string }>>({});
   const [allCountries, setAllCountries] = useState<Array<{ code: string; name: string }>>([]);
@@ -2135,7 +2387,7 @@ function PermsEditor(props: {
   if (props.perms === null || props.countries === null) {
     return (
       <div className="card" style={{ marginBottom: 0 }}>
-        <div className="card-body cell-muted">Loading…</div>
+        <div className="card-body cell-muted">{s.loading}</div>
       </div>
     );
   }
@@ -2144,8 +2396,8 @@ function PermsEditor(props: {
     <div className="card" style={{ marginBottom: 0 }}>
       <div className="card-header">
         <div>
-          <div className="card-title">Seller permissions</div>
-          <div className="card-subtitle">Service types this company may sell, and in which countries</div>
+          <div className="card-title">{s.permTitle}</div>
+          <div className="card-subtitle">{s.permSubtitle}</div>
         </div>
       </div>
       <div className="card-body">
@@ -2157,7 +2409,7 @@ function PermsEditor(props: {
               <div className="perm-svc">
                 <i className={`ti ${meta.icon}`} />
                 <div>
-                  <div className="ps-name">{meta.name}</div>
+                  <div className="ps-name">{s[SVC_KEY[svc] ?? "svcHotel"]}</div>
                   <div className="ps-key font-mono">{svc}</div>
                 </div>
                 <label className="switch" style={{ marginLeft: "auto" }}>
@@ -2171,7 +2423,7 @@ function PermsEditor(props: {
               </div>
               <div className="perm-countries">
                 {props.homeCountry && (
-                  <span className="mchip on" title="Home country — always allowed">
+                  <span className="mchip on" title={s.permHomeCountry}>
                     {props.homeCountry}
                   </span>
                 )}
@@ -2188,7 +2440,7 @@ function PermsEditor(props: {
                           return n;
                         })
                       }
-                      title="Click to remove"
+                      title={s.permRemoveCountry}
                     >
                       {c.name}
                       <i className="ti ti-x" style={{ fontSize: 12 }} />
@@ -2211,7 +2463,7 @@ function PermsEditor(props: {
                   }}
                 >
                   <i className="ti ti-plus" style={{ fontSize: 12 }} />
-                  Add
+                  {s.actionAdd}
                 </span>
               </div>
             </div>
@@ -2236,7 +2488,7 @@ function PermsEditor(props: {
           }}
         >
           <i className="ti ti-device-floppy" />
-          {saving ? "Saving…" : "Save permissions"}
+          {saving ? s.saving : s.actionSavePermissions}
         </button>
       </div>
     </div>
@@ -2244,6 +2496,8 @@ function PermsEditor(props: {
 }
 
 function PayBadge({ value }: { value: boolean | null }) {
+  const { lang } = useLanguage();
+  const s = mgmtStrings(lang);
   if (value == null) {
     return <span className="ro-badge cell-muted">—</span>;
   }
@@ -2253,7 +2507,7 @@ function PayBadge({ value }: { value: boolean | null }) {
         className={value ? "ti ti-circle-check" : "ti ti-circle-x"}
         style={{ color: value ? "var(--success)" : "var(--danger)" }}
       />
-      {value ? "Yes" : "No"}
+      {value ? s.yes : s.no}
     </span>
   );
 }
@@ -2316,6 +2570,8 @@ function ApplicationsPane(props: {
   onReject: (id: number) => void;
   onOpenCompany: (id: number) => void;
 }) {
+  const { lang } = useLanguage();
+  const s = mgmtStrings(lang);
   const stats = useMemo(() => {
     const pending = props.rows.filter((r) => r.status === "pending" || r.status === "under_review").length;
     const approved = props.rows.filter((r) => r.status === "approved").length;
@@ -2325,45 +2581,45 @@ function ApplicationsPane(props: {
   return (
     <div>
       <div className="stat-grid">
-        <Stat icon="ti-clock-hour-4" tone="warning" value={String(stats.pending)} label="Pending review" />
-        <Stat icon="ti-circle-check" tone="success" value={String(stats.approved)} label="Approved" />
-        <Stat icon="ti-circle-x" tone="danger" value={String(stats.rejected)} label="Rejected" />
-        <Stat icon="ti-hourglass" tone="info" value="—" label="Avg review time" />
+        <Stat icon="ti-clock-hour-4" tone="warning" value={String(stats.pending)} label={s.apStatPending} />
+        <Stat icon="ti-circle-check" tone="success" value={String(stats.approved)} label={s.apStatApproved} />
+        <Stat icon="ti-circle-x" tone="danger" value={String(stats.rejected)} label={s.apStatRejected} />
+        <Stat icon="ti-hourglass" tone="info" value="—" label={s.apStatAvgTime} />
       </div>
       <div className="filter-card">
         <div className="filter-field" style={{ flex: 2 }}>
-          <span className="filter-label">Search</span>
+          <span className="filter-label">{s.filterSearch}</span>
           <input
             type="text"
-            placeholder="Company, applicant, ID…"
+            placeholder={s.apSearchPh}
             value={props.search}
             onChange={(e) => props.onSearch(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && props.onApply()}
           />
         </div>
         <div className="filter-field">
-          <span className="filter-label">Status</span>
+          <span className="filter-label">{s.filterStatus}</span>
           <select value={props.filterStatus} onChange={(e) => props.onFilterStatus(e.target.value)}>
-            <option value="">All statuses</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
+            <option value="">{s.optAllStatuses}</option>
+            <option value="pending">{s.optPending}</option>
+            <option value="approved">{s.optApproved}</option>
+            <option value="rejected">{s.optRejected}</option>
           </select>
         </div>
         <div className="filter-field">
-          <span className="filter-label">Service type</span>
+          <span className="filter-label">{s.filterServiceType}</span>
           <select value={props.filterService} onChange={(e) => props.onFilterService(e.target.value)}>
-            <option value="">All services</option>
-            <option value="hotel">Hotels</option>
-            <option value="flight">Flights</option>
-            <option value="package">Packages</option>
-            <option value="transfer">Transfers</option>
-            <option value="excursion">Excursions</option>
+            <option value="">{s.optAllServices}</option>
+            <option value="hotel">{s.svcHotel}</option>
+            <option value="flight">{s.svcFlight}</option>
+            <option value="package">{s.svcPackage}</option>
+            <option value="transfer">{s.svcTransfer}</option>
+            <option value="excursion">{s.svcExcursion}</option>
           </select>
         </div>
         <button className="btn" onClick={props.onApply}>
           <i className="ti ti-filter" />
-          Apply
+          {s.actionApply}
         </button>
       </div>
       <div className="card" style={{ marginBottom: 0 }}>
@@ -2371,25 +2627,25 @@ function ApplicationsPane(props: {
           <table className="table">
             <thead>
               <tr>
-                <th>App ID</th>
-                <th>Company</th>
-                <th>Service type</th>
-                <th>Applied</th>
-                <th>Status</th>
-                <th style={{ textAlign: "right" }}>Actions</th>
+                <th>{s.apColAppId}</th>
+                <th>{s.apColCompany}</th>
+                <th>{s.apColServiceType}</th>
+                <th>{s.apColApplied}</th>
+                <th>{s.apColStatus}</th>
+                <th style={{ textAlign: "right" }}>{s.apColActions}</th>
               </tr>
             </thead>
             <tbody>
               {props.loading && props.rows.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>
-                    Loading…
+                    {s.loading}
                   </td>
                 </tr>
               ) : props.rows.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>
-                    No applications.
+                    {s.apEmpty}
                   </td>
                 </tr>
               ) : (
@@ -2415,11 +2671,11 @@ function ApplicationsPane(props: {
                             <span className="font-semibold">{r.company_name ?? `Company #${r.company_id}`}</span>
                           </div>
                         </td>
-                        <td>{r.service_type.charAt(0).toUpperCase() + r.service_type.slice(1)}</td>
+                        <td>{s[SVC_KEY[r.service_type] ?? "svcHotel"]}</td>
                         <td className="cell-muted">{fmtDate(r.applied_at ?? null)}</td>
                         <td>
                           <span className={`badge ${tone}`}>
-                            {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
+                            {s[APP_STATUS_KEY[r.status] ?? "optPending"]}
                           </span>
                         </td>
                         <td onClick={(e) => e.stopPropagation()}>
@@ -2428,24 +2684,24 @@ function ApplicationsPane(props: {
                               <>
                                 <button className="btn btn-sm btn-primary" onClick={() => props.onApprove(r.id)}>
                                   <i className="ti ti-check" />
-                                  Approve
+                                  {s.actionApprove}
                                 </button>
                                 <button className="btn btn-sm" onClick={() => props.onReject(r.id)}>
                                   <i className="ti ti-x" />
-                                  Reject
+                                  {s.actionReject}
                                 </button>
                               </>
                             ) : null}
                             <button
                               className="icon-btn"
-                              title="View company"
+                              title={s.actionViewCompany}
                               onClick={() => props.onOpenCompany(r.company_id)}
                             >
                               <i className="ti ti-building" />
                             </button>
                             <button
                               className="icon-btn"
-                              title="View application"
+                              title={s.actionViewApplication}
                               onClick={() => props.onOpenDrawer(r.id)}
                             >
                               <i className="ti ti-eye" />
@@ -2478,6 +2734,8 @@ function ContractsPane(props: {
   onApply: () => void;
   onOpenDrawer: (id: string) => void;
 }) {
+  const { lang } = useLanguage();
+  const s = mgmtStrings(lang);
   const stats = useMemo(() => {
     const total = props.rows.length;
     const signed = props.rows.filter((r) => r.status === "active" || r.status === "countersigned").length;
@@ -2495,37 +2753,37 @@ function ContractsPane(props: {
   return (
     <div>
       <div className="stat-grid">
-        <Stat icon="ti-file-text" tone="primary" value={String(stats.total)} label="Total contracts" />
-        <Stat icon="ti-signature" tone="success" value={String(stats.signed)} label="Signed" />
-        <Stat icon="ti-pencil" tone="warning" value={String(stats.drafts)} label="Draft" />
-        <Stat icon="ti-calendar-x" tone="danger" value={String(stats.in30d)} label="Expiring in 30d" />
+        <Stat icon="ti-file-text" tone="primary" value={String(stats.total)} label={s.ctStatTotal} />
+        <Stat icon="ti-signature" tone="success" value={String(stats.signed)} label={s.ctStatSigned} />
+        <Stat icon="ti-pencil" tone="warning" value={String(stats.drafts)} label={s.ctStatDraft} />
+        <Stat icon="ti-calendar-x" tone="danger" value={String(stats.in30d)} label={s.ctStatExpiring} />
       </div>
       <div className="filter-card">
         <div className="filter-field" style={{ flex: 2 }}>
-          <span className="filter-label">Search</span>
+          <span className="filter-label">{s.filterSearch}</span>
           <input
             type="text"
-            placeholder="Contract #, party, title…"
+            placeholder={s.ctSearchPh}
             value={props.search}
             onChange={(e) => props.onSearch(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && props.onApply()}
           />
         </div>
         <div className="filter-field">
-          <span className="filter-label">Status</span>
+          <span className="filter-label">{s.filterStatus}</span>
           <select value={props.filterStatus} onChange={(e) => props.onFilterStatus(e.target.value)}>
-            <option value="">All statuses</option>
-            <option value="draft">Draft</option>
-            <option value="sent">Sent</option>
-            <option value="countersigned">Countersigned</option>
-            <option value="active">Active</option>
-            <option value="expired">Expired</option>
-            <option value="terminated">Terminated</option>
+            <option value="">{s.optAllStatuses}</option>
+            <option value="draft">{s.cstatusOptDraft}</option>
+            <option value="sent">{s.cstatusOptSent}</option>
+            <option value="countersigned">{s.cstatusOptCountersigned}</option>
+            <option value="active">{s.cstatusOptActive}</option>
+            <option value="expired">{s.cstatusOptExpired}</option>
+            <option value="terminated">{s.cstatusOptTerminated}</option>
           </select>
         </div>
         <button className="btn" onClick={props.onApply}>
           <i className="ti ti-filter" />
-          Apply
+          {s.actionApply}
         </button>
       </div>
       <div className="card" style={{ marginBottom: 0 }}>
@@ -2533,27 +2791,27 @@ function ContractsPane(props: {
           <table className="table">
             <thead>
               <tr>
-                <th>Contract #</th>
-                <th>Type</th>
-                <th>Party B</th>
-                <th>Template</th>
-                <th>Status</th>
-                <th>Effective</th>
-                <th>Expires</th>
-                <th style={{ textAlign: "right" }}>Actions</th>
+                <th>{s.ctColNumber}</th>
+                <th>{s.ctColType}</th>
+                <th>{s.ctColPartyB}</th>
+                <th>{s.ctColTemplate}</th>
+                <th>{s.ctColStatus}</th>
+                <th>{s.ctColEffective}</th>
+                <th>{s.ctColExpires}</th>
+                <th style={{ textAlign: "right" }}>{s.ctColActions}</th>
               </tr>
             </thead>
             <tbody>
               {props.loading && props.rows.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>
-                    Loading…
+                    {s.loading}
                   </td>
                 </tr>
               ) : props.rows.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>
-                    No contracts.
+                    {s.ctEmpty}
                   </td>
                 </tr>
               ) : (
@@ -2564,21 +2822,21 @@ function ContractsPane(props: {
                     <tr key={r.id} onClick={() => props.onOpenDrawer(r.id)}>
                       <td className="font-mono">{r.contract_number}</td>
                       <td>
-                        <span className="type-badge">{r.type === "platform" ? "Platform" : "Partner"}</span>
+                        <span className="type-badge">{s[r.type === "platform" ? "ctypePlatform" : "ctypePartner"]}</span>
                       </td>
                       <td>{partyB}</td>
                       <td className="cell-muted">{r.template?.name ?? "—"}</td>
                       <td>
-                        <span className={`badge ${tone}`}>{contractStatusLabel(r.status)}</span>
+                        <span className={`badge ${tone}`}>{s[CSTATUS_KEY[r.status] ?? "cstatusDraft"]}</span>
                       </td>
                       <td className="cell-muted">{fmtDate(r.effective_date)}</td>
                       <td className="cell-muted">{fmtDate(r.expiry_date)}</td>
                       <td onClick={(e) => e.stopPropagation()}>
                         <div className="row-actions">
-                          <button className="icon-btn" title="View" onClick={() => props.onOpenDrawer(r.id)}>
+                          <button className="icon-btn" title={s.actionView} onClick={() => props.onOpenDrawer(r.id)}>
                             <i className="ti ti-eye" />
                           </button>
-                          <button className="icon-btn" title="Download PDF">
+                          <button className="icon-btn" title={s.actionDownloadPdf}>
                             <i className="ti ti-file-download" />
                           </button>
                         </div>
@@ -2605,6 +2863,8 @@ function TemplatesPane(props: {
   onOpen: (id: string) => void;
   onToggleActive: (row: ContractTemplateRow) => void;
 }) {
+  const { lang } = useLanguage();
+  const s = mgmtStrings(lang);
   const stats = useMemo(() => {
     const total = props.rows.length;
     const active = props.rows.filter((r) => r.active !== false).length;
@@ -2615,43 +2875,43 @@ function TemplatesPane(props: {
   return (
     <div>
       <div className="stat-grid">
-        <Stat icon="ti-template" tone="primary" value={String(stats.total)} label="Templates" />
-        <Stat icon="ti-circle-check" tone="success" value={String(stats.active)} label="Active" />
-        <Stat icon="ti-pencil" tone="warning" value={String(stats.inactive)} label="Drafts" />
-        <Stat icon="ti-language" tone="info" value={String(stats.langs)} label="Languages" />
+        <Stat icon="ti-template" tone="primary" value={String(stats.total)} label={s.tplStatTotal} />
+        <Stat icon="ti-circle-check" tone="success" value={String(stats.active)} label={s.tplStatActive} />
+        <Stat icon="ti-pencil" tone="warning" value={String(stats.inactive)} label={s.tplStatDrafts} />
+        <Stat icon="ti-language" tone="info" value={String(stats.langs)} label={s.tplStatLangs} />
       </div>
       <div className="card" style={{ marginBottom: 0 }}>
         <div className="table-wrap">
           <table className="table">
             <thead>
               <tr>
-                <th>Template #</th>
-                <th>Name</th>
-                <th>Type</th>
-                <th>Language</th>
-                <th>Version</th>
-                <th>Active</th>
-                <th>Updated</th>
-                <th style={{ textAlign: "right" }}>Actions</th>
+                <th>{s.tplColNumber}</th>
+                <th>{s.tplColName}</th>
+                <th>{s.tplColType}</th>
+                <th>{s.tplColLanguage}</th>
+                <th>{s.tplColVersion}</th>
+                <th>{s.tplColActive}</th>
+                <th>{s.tplColUpdated}</th>
+                <th style={{ textAlign: "right" }}>{s.tplColActions}</th>
               </tr>
             </thead>
             <tbody>
               {props.loading && props.rows.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>
-                    Loading…
+                    {s.loading}
                   </td>
                 </tr>
               ) : props.rows.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>
-                    No templates.
+                    {s.tplEmpty}
                   </td>
                 </tr>
               ) : (
                 props.rows.map((r) => (
                   <tr key={r.id} onClick={() => props.onOpen(r.id)}>
-                    <td className="font-mono">{r.id.slice(0, 8).toUpperCase()}</td>
+                    <td className="font-mono">TPL-{r.id.slice(0, 6).toUpperCase()}</td>
                     <td>
                       <div className="font-semibold">{r.name}</div>
                       <div className="cell-muted text-sm">
@@ -2659,7 +2919,7 @@ function TemplatesPane(props: {
                       </div>
                     </td>
                     <td>
-                      <span className="type-badge">{contractTypeLabel(r.type)}</span>
+                      <span className="type-badge">{s[TTYPE_KEY[r.type] ?? "ttypePlatform"]}</span>
                     </td>
                     <td className="cell-muted">{r.language.toUpperCase()}</td>
                     <td className="font-mono">v{r.version ?? "1"}</td>
@@ -2676,13 +2936,13 @@ function TemplatesPane(props: {
                     <td className="cell-muted">{fmtDate(r.updated_at ?? r.created_at ?? null)}</td>
                     <td onClick={(e) => e.stopPropagation()}>
                       <div className="row-actions">
-                        <button className="icon-btn" title="Edit" onClick={() => props.onOpen(r.id)}>
+                        <button className="icon-btn" title={s.actionEdit} onClick={() => props.onOpen(r.id)}>
                           <i className="ti ti-edit" />
                         </button>
                         <button
                           className="icon-btn"
-                          title="Clone"
-                          onClick={() => alert("Clone — opens a new template draft pre-filled from this one (TODO: wire to /new?clone=" + r.id + ").")}
+                          title={s.actionClone}
+                          onClick={() => props.onOpen(r.id)}
                         >
                           <i className="ti ti-copy" />
                         </button>
@@ -2719,46 +2979,59 @@ function LogsPane(props: {
   onApply: () => void;
   onOpenDrawer: (row: AuditLogRow) => void;
 }) {
+  const { lang } = useLanguage();
+  const s = mgmtStrings(lang);
+  // Stat cards computed from the loaded page (honest, current-page scoped) —
+  // replaces the three hardcoded "—" placeholders (Թ.2/Թ.3).
+  const logStats = useMemo(() => {
+    const admins = new Set(props.rows.filter((r) => r.actor_id != null).map((r) => r.actor_id)).size;
+    const suspicious = props.rows.filter(
+      (r) => r.category === "security" || r.action.toLowerCase().includes("suspicious")
+    ).length;
+    const failed = props.rows.filter(
+      (r) => r.action.toLowerCase().includes("login") && r.action.toLowerCase().includes("fail")
+    ).length;
+    return { admins, suspicious, failed };
+  }, [props.rows]);
   return (
     <div>
       <div className="alert">
         <i className="ti ti-shield-check" />
         <div style={{ flex: 1 }}>
-          <div className="font-semibold">Hash-chained audit trail</div>
+          <div className="font-semibold">{s.logAlertTitle}</div>
           <div className="text-sm">
-            Every entry is linked to the previous one. Run a verification to confirm the chain has not been
-            tampered with.
+            {s.logAlertBody}
             {props.integrity && (
-              <> · {props.integrity.is_intact ? "✓ Verified" : `✗ ${props.integrity.corrupted_log_ids.length} tampered`}</>
+              <> · {props.integrity.is_intact ? `✓ ${s.logVerified}` : `✗ ${props.integrity.corrupted_log_ids.length} ${s.logTampered}`}</>
             )}
           </div>
         </div>
         <button className="btn btn-sm" onClick={props.onVerify}>
           <i className="ti ti-shield-check" />
-          Verify integrity
+          {s.actionVerifyIntegrity}
         </button>
       </div>
       <div className="stat-grid">
-        <Stat icon="ti-activity" tone="primary" value={String(props.rows.length)} label="Events (current page)" />
-        <Stat icon="ti-users" tone="info" value="—" label="Active admins" />
-        <Stat icon="ti-alert-triangle" tone="warning" value="—" label="Suspicious" />
-        <Stat icon="ti-lock-x" tone="danger" value="—" label="Failed logins" />
+        <Stat icon="ti-activity" tone="primary" value={String(props.rows.length)} label={s.logStatEvents} />
+        <Stat icon="ti-users" tone="info" value={String(logStats.admins)} label={s.logStatAdmins} />
+        <Stat icon="ti-alert-triangle" tone="warning" value={String(logStats.suspicious)} label={s.logStatSuspicious} />
+        <Stat icon="ti-lock-x" tone="danger" value={String(logStats.failed)} label={s.logStatFailed} />
       </div>
       <div className="filter-card">
         <div className="filter-field" style={{ flex: 2 }}>
-          <span className="filter-label">Search</span>
+          <span className="filter-label">{s.filterSearch}</span>
           <input
             type="text"
-            placeholder="Actor, action, resource…"
+            placeholder={s.logSearchPh}
             value={props.search}
             onChange={(e) => props.onSearch(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && props.onApply()}
           />
         </div>
         <div className="filter-field">
-          <span className="filter-label">Category</span>
+          <span className="filter-label">{s.filterCategory}</span>
           <select value={props.filterCategory} onChange={(e) => props.onFilterCategory(e.target.value)}>
-            <option value="">All categories</option>
+            <option value="">{s.optAllCategories}</option>
             <option value="auth">auth</option>
             <option value="data_change">data_change</option>
             <option value="financial">financial</option>
@@ -2773,16 +3046,16 @@ function LogsPane(props: {
           </select>
         </div>
         <div className="filter-field">
-          <span className="filter-label">From</span>
+          <span className="filter-label">{s.filterFrom}</span>
           <input type="date" value={props.filterFrom} onChange={(e) => props.onFilterFrom(e.target.value)} />
         </div>
         <div className="filter-field">
-          <span className="filter-label">To</span>
+          <span className="filter-label">{s.filterTo}</span>
           <input type="date" value={props.filterTo} onChange={(e) => props.onFilterTo(e.target.value)} />
         </div>
         <button className="btn" onClick={props.onApply}>
           <i className="ti ti-filter" />
-          Apply
+          {s.actionApply}
         </button>
       </div>
       <div className="card" style={{ marginBottom: 0 }}>
@@ -2790,31 +3063,31 @@ function LogsPane(props: {
           <table className="table">
             <thead>
               <tr>
-                <th>When</th>
-                <th>Actor</th>
-                <th>Action</th>
-                <th>Resource</th>
-                <th>IP</th>
-                <th style={{ textAlign: "right" }}>Details</th>
+                <th>{s.logColWhen}</th>
+                <th>{s.logColActor}</th>
+                <th>{s.logColAction}</th>
+                <th>{s.logColResource}</th>
+                <th>{s.logColIp}</th>
+                <th style={{ textAlign: "right" }}>{s.logColDetails}</th>
               </tr>
             </thead>
             <tbody>
               {props.loading && props.rows.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>
-                    Loading…
+                    {s.loading}
                   </td>
                 </tr>
               ) : props.rows.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>
-                    No events.
+                    {s.logEmpty}
                   </td>
                 </tr>
               ) : (
                 props.rows.map((r) => {
                   const isSystem = !r.actor_id && r.actor_type.toLowerCase().includes("system");
-                  const actorName = isSystem ? "System" : r.actor_name_snapshot ?? r.actor_type ?? "Unknown";
+                  const actorName = isSystem ? s.logSystem : r.actor_name_snapshot ?? r.actor_type ?? s.logUnknown;
                   return (
                     <tr key={r.id} onClick={() => props.onOpenDrawer(r)}>
                       <td className="cell-muted">{fmtDateTime(r.created_at)}</td>
@@ -2864,6 +3137,8 @@ function ApplicationDrawer(props: {
   onReject: () => void;
   onOpenCompany: (id: number) => void;
 }) {
+  const { lang } = useLanguage();
+  const s = mgmtStrings(lang);
   const d = props.detail;
   const canAct = d && (d.status === "pending" || d.status === "under_review");
   return (
@@ -2872,12 +3147,12 @@ function ApplicationDrawer(props: {
       <div className={`drawer ${props.open ? "open" : ""}`}>
         <div className="drawer-header">
           <div>
-            <div style={{ fontSize: 15, fontWeight: 600 }}>Seller application</div>
+            <div style={{ fontSize: 15, fontWeight: 600 }}>{s.adTitle}</div>
             <div className="text-sm text-secondary" style={{ marginTop: 2 }}>
               {d && (
                 <>
                   <span className="font-mono">APP-{String(d.id).padStart(4, "0")}</span> ·{" "}
-                  {d.service_type ?? "—"}
+                  {d.service_type ? s[SVC_KEY[d.service_type] ?? "svcHotel"] : "—"}
                 </>
               )}
             </div>
@@ -2888,10 +3163,10 @@ function ApplicationDrawer(props: {
         </div>
         <div className="drawer-body">
           {props.loading && !d?.company ? (
-            <p className="cell-muted">Loading…</p>
+            <p className="cell-muted">{s.loading}</p>
           ) : d ? (
             <>
-              <div className="drawer-section">Company</div>
+              <div className="drawer-section">{s.adCompany}</div>
               <div className="card" style={{ marginBottom: 0 }}>
                 <div className="card-body" style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <span className={`avatar ${avatarToneFor(d.company?.id ?? d.company_id)}`}>
@@ -2908,42 +3183,42 @@ function ApplicationDrawer(props: {
                     onClick={() => props.onOpenCompany(d.company?.id ?? d.company_id)}
                   >
                     <i className="ti ti-external-link" />
-                    Open
+                    {s.actionOpen}
                   </button>
                 </div>
               </div>
-              <div className="drawer-section">Status</div>
+              <div className="drawer-section">{s.adStatus}</div>
               <div className="timeline">
                 <div className={`tl-item ${d.applied_at ? "done" : ""}`}>
                   <div className="tl-dot" />
-                  <div className="tl-title">Submitted</div>
+                  <div className="tl-title">{s.adTlSubmitted}</div>
                   <div className="tl-time">{fmtDateTime(d.applied_at ?? null)}</div>
                 </div>
                 <div className={`tl-item ${d.reviewed_at ? "done" : "active"}`}>
                   <div className="tl-dot" />
-                  <div className="tl-title">Review</div>
-                  <div className="tl-time">{d.reviewed_at ? fmtDateTime(d.reviewed_at) : "Awaiting a super-admin decision"}</div>
+                  <div className="tl-title">{s.adTlReview}</div>
+                  <div className="tl-time">{d.reviewed_at ? fmtDateTime(d.reviewed_at) : s.adTlAwaiting}</div>
                 </div>
                 <div className={`tl-item ${d.status === "rejected" ? "reject" : d.status === "approved" ? "done" : ""}`}>
                   <div className="tl-dot" />
-                  <div className="tl-title">Decision</div>
-                  <div className="tl-time">{d.status === "approved" ? "Approved" : d.status === "rejected" ? "Rejected" : "—"}</div>
+                  <div className="tl-title">{s.adTlDecision}</div>
+                  <div className="tl-time">{d.status === "approved" ? s.optApproved : d.status === "rejected" ? s.optRejected : "—"}</div>
                 </div>
               </div>
-              <div className="drawer-section">Reviewer</div>
+              <div className="drawer-section">{s.adReviewer}</div>
               <div className="info-grid">
                 <div className="info-row">
-                  <span className="info-label">Assigned to</span>
+                  <span className="info-label">{s.adAssigned}</span>
                   <span className="info-value">{d.reviewer?.name ?? "—"}</span>
                 </div>
                 <div className="info-row">
-                  <span className="info-label">Email</span>
+                  <span className="info-label">{s.adEmail}</span>
                   <span className="info-value">{d.reviewer?.email ?? "—"}</span>
                 </div>
               </div>
               {d.notes && (
                 <>
-                  <div className="drawer-section">Notes</div>
+                  <div className="drawer-section">{s.adNotes}</div>
                   <div className="fld">
                     <textarea defaultValue={d.notes} readOnly />
                   </div>
@@ -2951,7 +3226,7 @@ function ApplicationDrawer(props: {
               )}
               {d.rejection_reason && (
                 <>
-                  <div className="drawer-section">Rejection reason</div>
+                  <div className="drawer-section">{s.adRejection}</div>
                   <div className="code-block">{d.rejection_reason}</div>
                 </>
               )}
@@ -2963,16 +3238,16 @@ function ApplicationDrawer(props: {
             <>
               <button className="btn btn-primary" onClick={props.onApprove}>
                 <i className="ti ti-check" />
-                Approve
+                {s.actionApprove}
               </button>
               <button className="btn btn-danger" onClick={props.onReject}>
                 <i className="ti ti-x" />
-                Reject
+                {s.actionReject}
               </button>
             </>
           )}
           <button className="btn btn-ghost" style={{ marginLeft: "auto" }} onClick={props.onClose}>
-            Close
+            {s.actionClose}
           </button>
         </div>
       </div>
@@ -2990,6 +3265,8 @@ function ContractDrawer(props: {
   onTerminate: () => void;
   onPdf: () => void;
 }) {
+  const { lang } = useLanguage();
+  const s = mgmtStrings(lang);
   const d = props.detail;
   return (
     <>
@@ -2997,13 +3274,13 @@ function ContractDrawer(props: {
       <div className={`drawer ${props.open ? "open" : ""}`}>
         <div className="drawer-header">
           <div>
-            <div style={{ fontSize: 15, fontWeight: 600 }}>{d?.template?.name ?? "Contract"}</div>
+            <div style={{ fontSize: 15, fontWeight: 600 }}>{d?.template?.name ?? s.cdTitle}</div>
             <div className="text-sm text-secondary" style={{ marginTop: 2 }}>
               {d && (
                 <>
                   <span className="font-mono">{d.contract_number}</span> ·{" "}
                   <span className={`badge ${CONTRACT_STATUS_TONE[d.status] ?? "badge-gray"}`}>
-                    {contractStatusLabel(d.status)}
+                    {s[CSTATUS_KEY[d.status] ?? "cstatusDraft"]}
                   </span>
                 </>
               )}
@@ -3015,49 +3292,109 @@ function ContractDrawer(props: {
         </div>
         <div className="drawer-body">
           {props.loading && !d ? (
-            <p className="cell-muted">Loading…</p>
+            <p className="cell-muted">{s.loading}</p>
           ) : d ? (
             <>
-              <div className="drawer-section">Parties</div>
+              <div className="drawer-section">{s.cdParties}</div>
               <div className="info-grid">
                 <div className="info-row">
-                  <span className="info-label">Party A</span>
+                  <span className="info-label">{s.cdPartyA}</span>
                   <span className="info-value">{d.partyA?.name ?? "ZULU Platform"}</span>
                 </div>
                 <div className="info-row">
-                  <span className="info-label">Party B</span>
+                  <span className="info-label">{s.cdPartyB}</span>
                   <span className="info-value">{d.partyB?.name ?? `Company #${d.party_b_company_id}`}</span>
                 </div>
                 <div className="info-row">
-                  <span className="info-label">Template</span>
+                  <span className="info-label">{s.cdTemplate}</span>
                   <span className="info-value">
                     {d.template?.name ?? "—"}
                     {d.template?.version ? ` · v${d.template.version}` : ""}
                   </span>
                 </div>
               </div>
-              <div className="drawer-section">Schedule</div>
+
+              {/* Terms — structured (Fix #7). Reads the commission / payment /
+                  cancellation objects the new-contract form writes. */}
+              {(d.commission_clause || d.payment_terms || d.cancellation_policy) && (
+                <>
+                  <div className="drawer-section">{s.cdTerms}</div>
+                  <div className="info-grid">
+                    <div className="info-row">
+                      <span className="info-label">{s.cdCommission}</span>
+                      <span className="info-value">{fmtCommission(d.commission_clause, s)}</span>
+                    </div>
+                    <div className="info-row">
+                      <span className="info-label">{s.cdPaymentTerms}</span>
+                      <span className="info-value">{fmtPayment(d.payment_terms, s)}</span>
+                    </div>
+                    <div className="info-row">
+                      <span className="info-label">{s.cdCancellation}</span>
+                      <span className="info-value">{fmtCancellation(d.cancellation_policy, s)}</span>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <div className="drawer-section">{s.cdSchedule}</div>
               <div className="info-grid">
                 <div className="info-row">
-                  <span className="info-label">Effective</span>
+                  <span className="info-label">{s.cdEffective}</span>
                   <span className="info-value">{fmtDate(d.effective_date)}</span>
                 </div>
                 <div className="info-row">
-                  <span className="info-label">Expires</span>
+                  <span className="info-label">{s.cdExpires}</span>
                   <span className="info-value">{fmtDate(d.expiry_date)}</span>
                 </div>
                 <div className="info-row">
-                  <span className="info-label">Auto-renew</span>
+                  <span className="info-label">{s.cdAutoRenew}</span>
                   <span className="info-value">
-                    {d.auto_renew ? "Yes" : "No"}
-                    {d.termination_notice_days ? ` · ${d.termination_notice_days}-day notice` : ""}
+                    {d.auto_renew ? s.yes : s.no}
+                    {d.termination_notice_days ? ` · ${d.termination_notice_days}-${s.cdNoticeDays}` : ""}
                   </span>
                 </div>
               </div>
-              {d.commission_clause && (
+
+              {/* Signatures (Fix #7) */}
+              {d.signatures && Object.keys(d.signatures).length > 0 && (
                 <>
-                  <div className="drawer-section">Terms</div>
-                  <div className="code-block">{JSON.stringify(d.commission_clause, null, 2)}</div>
+                  <div className="drawer-section">{s.cdSignatures}</div>
+                  <div className="info-grid">
+                    <div className="info-row">
+                      <span className="info-label">{s.cdPartyA}</span>
+                      <span className="info-value">{fmtSignature(d.signatures, "party_a")}</span>
+                    </div>
+                    <div className="info-row">
+                      <span className="info-label">{s.cdPartyB}</span>
+                      <span className="info-value">{fmtSignature(d.signatures, "party_b")}</span>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Rendered body (Fix #7) */}
+              {d.rendered_body && (
+                <>
+                  <div className="drawer-section">{s.cdBody}</div>
+                  <div className="code-block">{fmtRenderedBody(d.rendered_body) || s.cdNoBody}</div>
+                </>
+              )}
+
+              {/* Version history (Fix #7) */}
+              {d.versions && d.versions.length > 0 && (
+                <>
+                  <div className="drawer-section">{s.cdVersions}</div>
+                  <div className="info-grid">
+                    {d.versions.map((v, i) => (
+                      <div className="info-row" key={v.id}>
+                        <span className="info-label">v{v.version_number}</span>
+                        <span className="info-value">
+                          {i === 0 ? s.cdCurrent : s.cdSuperseded}
+                          {v.created_at ? ` · ${fmtDate(v.created_at)}` : ""}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </>
               )}
             </>
@@ -3066,7 +3403,7 @@ function ContractDrawer(props: {
         <div className="drawer-footer">
           <button className="btn btn-sm" onClick={props.onSend} disabled={!d || d.status !== "draft"}>
             <i className="ti ti-send" />
-            Send
+            {s.actionSend}
           </button>
           <button
             className="btn btn-sm"
@@ -3074,7 +3411,7 @@ function ContractDrawer(props: {
             disabled={!d || (d.status !== "signed_by_a" && d.status !== "signed_by_b")}
           >
             <i className="ti ti-signature" />
-            Countersign
+            {s.actionCountersign}
           </button>
           <button
             className="btn btn-sm btn-danger"
@@ -3082,7 +3419,7 @@ function ContractDrawer(props: {
             disabled={!d || d.status === "terminated" || d.status === "expired"}
           >
             <i className="ti ti-ban" />
-            Terminate
+            {s.actionTerminate}
           </button>
           <button
             className="btn btn-sm"
@@ -3100,7 +3437,11 @@ function ContractDrawer(props: {
 }
 
 function AuditDrawer(props: { open: boolean; row: AuditLogRow | null; onClose: () => void }) {
+  const { lang } = useLanguage();
+  const s = mgmtStrings(lang);
+  const router = useRouter();
   const r = props.row;
+  const resourceHref = r ? auditResourceHref(r.subject_type, r.subject_id) : null;
   return (
     <>
       <div className={`drawer-overlay ${props.open ? "open" : ""}`} onClick={props.onClose} />
@@ -3119,57 +3460,57 @@ function AuditDrawer(props: { open: boolean; row: AuditLogRow | null; onClose: (
         <div className="drawer-body">
           {r && (
             <>
-              <div className="drawer-section">Entry</div>
+              <div className="drawer-section">{s.auEntry}</div>
               <div className="info-grid">
                 <div className="info-row">
-                  <span className="info-label">Event ID</span>
+                  <span className="info-label">{s.auEventId}</span>
                   <span className="info-value font-mono">{r.id}</span>
                 </div>
                 <div className="info-row">
-                  <span className="info-label">Timestamp</span>
+                  <span className="info-label">{s.auTimestamp}</span>
                   <span className="info-value">{fmtDateTime(r.created_at)}</span>
                 </div>
                 <div className="info-row">
-                  <span className="info-label">Actor</span>
+                  <span className="info-label">{s.auActor}</span>
                   <span className="info-value">
                     {r.actor_name_snapshot ?? r.actor_type} {r.actor_id ? `#${r.actor_id}` : ""}
                   </span>
                 </div>
                 <div className="info-row">
-                  <span className="info-label">Resource</span>
+                  <span className="info-label">{s.auResource}</span>
                   <span className="info-value font-mono">
                     {r.subject_type ? `${shortenSubject(r.subject_type)} ${r.subject_id ?? ""}` : "—"}
                   </span>
                 </div>
                 <div className="info-row">
-                  <span className="info-label">IP address</span>
+                  <span className="info-label">{s.auIp}</span>
                   <span className="info-value font-mono">{r.ip_address ?? "—"}</span>
                 </div>
                 <div className="info-row">
-                  <span className="info-label">User agent</span>
+                  <span className="info-label">{s.auUserAgent}</span>
                   <span className="info-value">{r.user_agent ?? "—"}</span>
                 </div>
               </div>
-              <div className="drawer-section">Hash chain</div>
+              <div className="drawer-section">{s.auHashChain}</div>
               <div className="hash-line mb-3">
                 <span className="badge badge-success">
                   <i className="ti ti-shield-check" style={{ fontSize: 12 }} />
-                  Linked
+                  {s.auVerified}
                 </span>
               </div>
               <div className="info-grid">
                 <div className="info-row">
-                  <span className="info-label">Hash</span>
+                  <span className="info-label">{s.auHash}</span>
                   <span className="info-value font-mono">{r.hash}</span>
                 </div>
                 <div className="info-row">
-                  <span className="info-label">Previous hash</span>
+                  <span className="info-label">{s.auPrevHash}</span>
                   <span className="info-value font-mono">{r.previous_log_hash ?? "—"}</span>
                 </div>
               </div>
               {(r.before || r.after) && (
                 <>
-                  <div className="drawer-section">Changes</div>
+                  <div className="drawer-section">{s.auChanges}</div>
                   <div className="code-block">{JSON.stringify({ before: r.before, after: r.after }, null, 2)}</div>
                 </>
               )}
@@ -3177,13 +3518,34 @@ function AuditDrawer(props: { open: boolean; row: AuditLogRow | null; onClose: (
           )}
         </div>
         <div className="drawer-footer">
+          {resourceHref && (
+            <button className="btn btn-sm" onClick={() => router.push(resourceHref)}>
+              <i className="ti ti-external-link" />
+              {s.actionOpenResource}
+            </button>
+          )}
           <button className="btn btn-sm" style={{ marginLeft: "auto" }} onClick={props.onClose}>
-            Close
+            {s.actionClose}
           </button>
         </div>
       </div>
     </>
   );
+}
+
+// Map an audit subject (e.g. "App\Models\Company" + id) to an admin route so
+// the AuditDrawer "Open resource" button (Թ.10) can deep-link. Returns null
+// when the subject type has no admin page.
+function auditResourceHref(subjectType: string | null | undefined, subjectId: number | null | undefined): string | null {
+  if (!subjectType || subjectId == null) return null;
+  const name = shortenSubject(subjectType);
+  const map: Record<string, string> = {
+    company: `/platform/companies/${subjectId}`,
+    booking: `/platform/bookings/${subjectId}`,
+    user: `/platform/users/${subjectId}`,
+    contract: `/platform/contracts/${subjectId}`,
+  };
+  return map[name] ?? null;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -3204,14 +3566,18 @@ function TemplateModal(props: {
     active: boolean;
   }) => void;
 }) {
+  const { lang } = useLanguage();
+  const s = mgmtStrings(lang);
   const [form, setForm] = useState({
     name: "",
     type: "platform" as ContractType,
     language: "en" as ContractLanguage,
     body: "",
-    variables_json: "{}",
     active: true,
   });
+  // Fix #8 — variables are edited as key/value rows (kv-editor) instead of a
+  // raw JSON textarea. Serialized back to a JSON object on save.
+  const [kvRows, setKvRows] = useState<Array<{ key: string; value: string }>>([]);
   useEffect(() => {
     if (props.target && props.target !== "new" && typeof props.target !== "string") {
       const t = props.target;
@@ -3220,19 +3586,31 @@ function TemplateModal(props: {
         type: t.type,
         language: t.language,
         body: t.body ?? "",
-        variables_json: JSON.stringify(t.variables ?? {}, null, 2),
         active: t.active !== false,
       });
+      const vars = (t.variables ?? {}) as Record<string, unknown>;
+      setKvRows(Object.entries(vars).map(([key, value]) => ({ key, value: String(value ?? "") })));
     } else if (props.target === "new") {
-      setForm({ name: "", type: "platform", language: "en", body: "", variables_json: "{}", active: true });
+      setForm({ name: "", type: "platform", language: "en", body: "", active: true });
+      setKvRows([]);
     }
   }, [props.target]);
+
+  function handleSave() {
+    const obj: Record<string, string> = {};
+    for (const row of kvRows) {
+      const k = row.key.trim();
+      if (k) obj[k] = row.value;
+    }
+    props.onSave({ ...form, variables_json: JSON.stringify(obj) });
+  }
+
   return (
     <div className={`modal-overlay ${props.open ? "open" : ""}`} onClick={(e) => e.target === e.currentTarget && props.onClose()}>
       <div className="modal lg">
         <div className="modal-header">
           <div className="modal-title">
-            {props.target === "new" ? "New template" : `Contract template${form.name ? ` — ${form.name}` : ""}`}
+            {props.target === "new" ? s.tmNew : `${s.tmEdit}${form.name ? ` — ${form.name}` : ""}`}
           </div>
           <button className="icon-btn" onClick={props.onClose}>
             <i className="ti ti-x" />
@@ -3240,22 +3618,22 @@ function TemplateModal(props: {
         </div>
         <div className="modal-body">
           <div className="form-grid-2">
-            <Fld label="Name">
+            <Fld label={s.tmName}>
               <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </Fld>
-            <Fld label="Type">
+            <Fld label={s.tmType}>
               <select
                 value={form.type}
                 onChange={(e) => setForm({ ...form, type: e.target.value as ContractType })}
               >
                 {CONTRACT_TYPES.map((t) => (
                   <option key={t} value={t}>
-                    {t}
+                    {s[TTYPE_KEY[t] ?? "ttypePlatform"]}
                   </option>
                 ))}
               </select>
             </Fld>
-            <Fld label="Language">
+            <Fld label={s.tmLanguage}>
               <select
                 value={form.language}
                 onChange={(e) => setForm({ ...form, language: e.target.value as ContractLanguage })}
@@ -3267,7 +3645,7 @@ function TemplateModal(props: {
                 ))}
               </select>
             </Fld>
-            <Fld label="Active">
+            <Fld label={s.tmActive}>
               <label className="switch-row">
                 <label className="switch">
                   <input
@@ -3277,13 +3655,13 @@ function TemplateModal(props: {
                   />
                   <span className="switch-slider" />
                 </label>
-                <span>{form.active ? "Yes" : "No"}</span>
+                <span>{form.active ? s.yes : s.no}</span>
               </label>
             </Fld>
           </div>
           <div className="fld span-2 mb-4" style={{ marginTop: 14 }}>
             <span className="fld-label">
-              Body <span className="fld-hint">· use {`{{placeholder}}`} tokens</span>
+              {s.tmBody} <span className="fld-hint">· {s.tmBodyHint}</span>
             </span>
             <textarea
               style={{ minHeight: 120 }}
@@ -3291,22 +3669,348 @@ function TemplateModal(props: {
               onChange={(e) => setForm({ ...form, body: e.target.value })}
             />
           </div>
-          <div className="modal-section-label">Variables (JSON)</div>
-          <div className="fld">
-            <textarea
-              style={{ minHeight: 100, fontFamily: "ui-monospace, monospace", fontSize: 12 }}
-              value={form.variables_json}
-              onChange={(e) => setForm({ ...form, variables_json: e.target.value })}
-            />
+          <div className="modal-section-label">{s.tmVariables}</div>
+          <div className="kv-editor">
+            {kvRows.map((row, i) => (
+              <div className="kv-row" key={i}>
+                <input
+                  className="kv-key"
+                  placeholder={s.tmVarKey}
+                  value={row.key}
+                  onChange={(e) =>
+                    setKvRows((rows) => rows.map((r, j) => (j === i ? { ...r, key: e.target.value } : r)))
+                  }
+                />
+                <input
+                  placeholder={s.tmVarValue}
+                  value={row.value}
+                  onChange={(e) =>
+                    setKvRows((rows) => rows.map((r, j) => (j === i ? { ...r, value: e.target.value } : r)))
+                  }
+                />
+                <button
+                  className="icon-btn danger"
+                  onClick={() => setKvRows((rows) => rows.filter((_, j) => j !== i))}
+                >
+                  <i className="ti ti-trash" />
+                </button>
+              </div>
+            ))}
           </div>
+          <button
+            className="btn btn-sm"
+            style={{ marginTop: 8 }}
+            onClick={() => setKvRows((rows) => [...rows, { key: "", value: "" }])}
+          >
+            <i className="ti ti-plus" />
+            {s.tmAddVariable}
+          </button>
         </div>
         <div className="modal-footer">
           <button className="btn" onClick={props.onClose} disabled={props.saving}>
-            Cancel
+            {s.actionCancel}
           </button>
-          <button className="btn btn-primary" onClick={() => props.onSave(form)} disabled={props.saving}>
+          <button className="btn btn-primary" onClick={handleSave} disabled={props.saving}>
             <i className="ti ti-device-floppy" />
-            {props.saving ? "Saving…" : "Save template"}
+            {props.saving ? s.saving : s.actionSaveTemplate}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NEW CONTRACT MODAL (Fix #6 / Ժ.1)
+// ═══════════════════════════════════════════════════════════════
+
+function NewContractModal(props: {
+  open: boolean;
+  token: string | null;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const { lang } = useLanguage();
+  const s = mgmtStrings(lang);
+  const [templates, setTemplates] = useState<ContractTemplateRow[]>([]);
+  const [companies, setCompanies] = useState<CompanyListRow[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [form, setForm] = useState({
+    template_id: "",
+    party_b_company_id: "",
+    language: "en" as ContractLanguage,
+    commission_type: "percent" as "percent" | "amount",
+    commission_value: "",
+    payment_collector: "platform" as "platform" | "operator",
+    payment_days: "30",
+    cancellation_notice_days: "30",
+    cancellation_fee_percent: "",
+    effective_date: "",
+    expiry_date: "",
+    auto_renew: false,
+    termination_notice_days: "30",
+    variables_json: "{}",
+  });
+
+  useEffect(() => {
+    if (!props.open || !props.token) return;
+    const token = props.token;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const [tpl, co] = await Promise.all([
+          apiAdminContractTemplates(token, { per_page: 100 }),
+          apiCompaniesList(token),
+        ]);
+        if (cancelled) return;
+        setTemplates(tpl.data);
+        setCompanies(co.data);
+      } catch {
+        /* options are best-effort */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [props.open, props.token]);
+
+  const selectedTemplate = templates.find((t) => t.id === form.template_id);
+  const isPlatformType = selectedTemplate?.type === "platform";
+
+  async function handleCreate() {
+    if (!props.token) return;
+    if (!form.template_id) {
+      alert(s.cmErrTemplate);
+      return;
+    }
+    if (!form.party_b_company_id) {
+      alert(s.cmErrPartyB);
+      return;
+    }
+    let variables: Record<string, unknown> = {};
+    if (form.variables_json.trim() && form.variables_json.trim() !== "{}") {
+      try {
+        variables = JSON.parse(form.variables_json) as Record<string, unknown>;
+      } catch {
+        alert("Variables: invalid JSON");
+        return;
+      }
+    }
+    const commissionNumeric = form.commission_value.trim() === "" ? null : Number(form.commission_value);
+    const paymentDaysNumeric = form.payment_days.trim() === "" ? null : Number(form.payment_days);
+    const cancelDaysNumeric =
+      form.cancellation_notice_days.trim() === "" ? null : Number(form.cancellation_notice_days);
+    const cancelFeeNumeric =
+      form.cancellation_fee_percent.trim() === "" ? null : Number(form.cancellation_fee_percent);
+    const commission: Record<string, unknown> =
+      commissionNumeric === null ? {} : { type: form.commission_type, value: commissionNumeric };
+    const payment: Record<string, unknown> =
+      paymentDaysNumeric === null
+        ? { collector: form.payment_collector }
+        : { collector: form.payment_collector, t_plus_days: paymentDaysNumeric };
+    const cancellation: Record<string, unknown> = {};
+    if (cancelDaysNumeric !== null) cancellation.notice_days = cancelDaysNumeric;
+    if (cancelFeeNumeric !== null) cancellation.fee_percent = cancelFeeNumeric;
+
+    setSaving(true);
+    try {
+      await apiAdminCreateContract(props.token, {
+        template_id: form.template_id,
+        party_a_company_id: isPlatformType ? null : null,
+        party_b_company_id: Number(form.party_b_company_id),
+        language: form.language,
+        effective_date: form.effective_date || null,
+        expiry_date: form.expiry_date || null,
+        auto_renew: form.auto_renew,
+        termination_notice_days: form.termination_notice_days ? Number(form.termination_notice_days) : undefined,
+        variables,
+        commission_clause: commission,
+        payment_terms: payment,
+        cancellation_policy: cancellation,
+      });
+      props.onCreated();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : "Create failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div
+      className={`modal-overlay ${props.open ? "open" : ""}`}
+      onClick={(e) => e.target === e.currentTarget && props.onClose()}
+    >
+      <div className="modal lg">
+        <div className="modal-header">
+          <div className="modal-title">{s.cmTitle}</div>
+          <button className="icon-btn" onClick={props.onClose}>
+            <i className="ti ti-x" />
+          </button>
+        </div>
+        <div className="modal-body">
+          <div className="modal-section-label">{s.cmPartiesTemplate}</div>
+          <div className="form-grid-2">
+            <Fld label={s.cmTemplate}>
+              <select
+                value={form.template_id}
+                onChange={(e) => setForm({ ...form, template_id: e.target.value })}
+              >
+                <option value="">{s.cmPickTemplate}</option>
+                {templates.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} ({t.language.toUpperCase()})
+                  </option>
+                ))}
+              </select>
+            </Fld>
+            <Fld label={s.cmLanguage}>
+              <select
+                value={form.language}
+                onChange={(e) => setForm({ ...form, language: e.target.value as ContractLanguage })}
+              >
+                {CONTRACT_LANGUAGES.map((l) => (
+                  <option key={l} value={l}>
+                    {l.toUpperCase()}
+                  </option>
+                ))}
+              </select>
+            </Fld>
+            <Fld label={s.cmPartyB}>
+              <select
+                value={form.party_b_company_id}
+                onChange={(e) => setForm({ ...form, party_b_company_id: e.target.value })}
+              >
+                <option value="">{s.cmPickCompany}</option>
+                {companies.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </Fld>
+            <Fld label={s.cmPartyA}>
+              <input value="ZULU Platform" disabled style={{ opacity: 0.7 }} />
+            </Fld>
+          </div>
+
+          <div className="modal-section-label">{s.cmTerms}</div>
+          <div className="form-grid-2">
+            <Fld label={s.cmCommissionType}>
+              <select
+                value={form.commission_type}
+                onChange={(e) => setForm({ ...form, commission_type: e.target.value as "percent" | "amount" })}
+              >
+                <option value="percent">{s.cmPercent}</option>
+                <option value="amount">{s.cmAmount}</option>
+              </select>
+            </Fld>
+            <Fld label={s.cmCommission}>
+              <input
+                type="number"
+                placeholder={s.cmCommissionPh}
+                value={form.commission_value}
+                onChange={(e) => setForm({ ...form, commission_value: e.target.value })}
+              />
+            </Fld>
+            <Fld label={s.cmPaymentCollector}>
+              <select
+                value={form.payment_collector}
+                onChange={(e) => setForm({ ...form, payment_collector: e.target.value as "platform" | "operator" })}
+              >
+                <option value="platform">{s.cmCollectorPlatform}</option>
+                <option value="operator">{s.cmCollectorOperator}</option>
+              </select>
+            </Fld>
+            <Fld label={s.cmPaymentDays}>
+              <input
+                type="number"
+                value={form.payment_days}
+                onChange={(e) => setForm({ ...form, payment_days: e.target.value })}
+              />
+            </Fld>
+            <Fld label={s.cmCancellationNotice}>
+              <input
+                type="number"
+                value={form.cancellation_notice_days}
+                onChange={(e) => setForm({ ...form, cancellation_notice_days: e.target.value })}
+              />
+            </Fld>
+            <Fld label={s.cmCancellationFee}>
+              <input
+                type="number"
+                value={form.cancellation_fee_percent}
+                onChange={(e) => setForm({ ...form, cancellation_fee_percent: e.target.value })}
+              />
+            </Fld>
+          </div>
+
+          <div className="modal-section-label">{s.cmSchedule}</div>
+          <div className="form-grid-2">
+            <Fld label={s.cmEffectiveDate}>
+              <input
+                type="date"
+                value={form.effective_date}
+                onChange={(e) => setForm({ ...form, effective_date: e.target.value })}
+              />
+            </Fld>
+            <Fld label={s.cmExpiryDate}>
+              <input
+                type="date"
+                value={form.expiry_date}
+                onChange={(e) => setForm({ ...form, expiry_date: e.target.value })}
+              />
+            </Fld>
+          </div>
+          <div className="flex items-center gap-3" style={{ marginTop: 4 }}>
+            <div className="switch-row">
+              <label className="switch">
+                <input
+                  type="checkbox"
+                  checked={form.auto_renew}
+                  onChange={(e) => setForm({ ...form, auto_renew: e.target.checked })}
+                />
+                <span className="switch-slider" />
+              </label>
+              <span>{s.cmAutoRenew}</span>
+            </div>
+            <Fld label={s.cmTerminationNotice}>
+              <input
+                type="number"
+                value={form.termination_notice_days}
+                onChange={(e) => setForm({ ...form, termination_notice_days: e.target.value })}
+              />
+            </Fld>
+          </div>
+
+          <details style={{ marginTop: 14 }} open={showAdvanced}>
+            <summary
+              className="fld-label"
+              style={{ cursor: "pointer" }}
+              onClick={(e) => {
+                e.preventDefault();
+                setShowAdvanced((v) => !v);
+              }}
+            >
+              {s.cmAdvanced}
+            </summary>
+            <div className="fld" style={{ marginTop: 8 }}>
+              <textarea
+                style={{ minHeight: 80, fontFamily: "ui-monospace, monospace", fontSize: 12 }}
+                value={form.variables_json}
+                onChange={(e) => setForm({ ...form, variables_json: e.target.value })}
+              />
+            </div>
+          </details>
+        </div>
+        <div className="modal-footer">
+          <button className="btn" onClick={props.onClose} disabled={saving}>
+            {s.actionCancel}
+          </button>
+          <button className="btn btn-primary" onClick={handleCreate} disabled={saving}>
+            <i className="ti ti-plus" />
+            {saving ? s.saving : s.actionCreateContract}
           </button>
         </div>
       </div>

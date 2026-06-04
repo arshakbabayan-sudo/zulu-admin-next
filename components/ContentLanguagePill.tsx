@@ -15,15 +15,17 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
+// Dominant flag assets — public/flags/{GB,AM,RU}.png (Arshak 2026-06-04).
+// The earlier lowercase .svg paths (gb.svg/am.svg/ru.svg) never existed → 404.
 function FlagFor({ code }: { code: string }) {
   if (code === "en") {
-    return <Image src="/flags/gb.svg" alt="" width={18} height={12} className="h-3 w-[1.1rem] shrink-0 rounded-[2px] object-cover" />;
+    return <Image src="/flags/GB.png" alt="" width={18} height={12} className="h-3 w-[1.1rem] shrink-0 rounded-[2px] object-cover" />;
   }
   if (code === "hy") {
-    return <Image src="/flags/am.svg" alt="" width={18} height={12} className="h-3 w-[1.1rem] shrink-0 rounded-[2px] object-cover" />;
+    return <Image src="/flags/AM.png" alt="" width={18} height={12} className="h-3 w-[1.1rem] shrink-0 rounded-[2px] object-cover" />;
   }
   if (code === "ru") {
-    return <Image src="/flags/ru.svg" alt="" width={18} height={12} className="h-3 w-[1.1rem] shrink-0 rounded-[2px] object-cover" />;
+    return <Image src="/flags/RU.png" alt="" width={18} height={12} className="h-3 w-[1.1rem] shrink-0 rounded-[2px] object-cover" />;
   }
   return <span className="text-xs leading-none" aria-hidden>🌐</span>;
 }
