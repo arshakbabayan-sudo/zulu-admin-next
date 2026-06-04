@@ -2003,7 +2003,17 @@ function CompaniesList(props: {
                       <td className="font-mono">#{r.id}</td>
                       <td>
                         <div className="flex items-center gap-2">
-                          <span className={`avatar sm ${avatarToneFor(r.id)}`}>{initialsFor(r.name)}</span>
+                          {r.logo ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={r.logo}
+                              alt={`${r.name} logo`}
+                              className="avatar sm"
+                              style={{ objectFit: "cover" }}
+                            />
+                          ) : (
+                            <span className={`avatar sm ${avatarToneFor(r.id)}`}>{initialsFor(r.name)}</span>
+                          )}
                           <span className="font-semibold">{r.name}</span>
                           {r.type && <span className="type-badge">{s[TYPE_KEY[r.type] ?? "typeOther"]}</span>}
                         </div>
@@ -2187,7 +2197,18 @@ function CompaniesDetail(props: {
       </button>
 
       <div className="detail-head">
-        <div className="detail-logo">{initialsFor(c.name)}</div>
+        <div className="detail-logo">
+          {c.logo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={c.logo}
+              alt={`${c.name} logo`}
+              style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "var(--radius-md)" }}
+            />
+          ) : (
+            initialsFor(c.name)
+          )}
+        </div>
         <div>
           <div className="detail-title">
             <span>{c.name}</span>
@@ -2349,7 +2370,18 @@ function CompaniesDetail(props: {
               </div>
               <div className="card-body">
                 <div className="logo-upload mb-4">
-                  <div className="logo-box">{initialsFor(c.name)}</div>
+                  <div className="logo-box">
+                    {c.logo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={c.logo}
+                        alt={`${c.name} logo`}
+                        style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "var(--radius-md)" }}
+                      />
+                    ) : (
+                      initialsFor(c.name)
+                    )}
+                  </div>
                   <div>
                     <button className="btn btn-sm" onClick={props.onOpenLogo}>
                       <i className="ti ti-upload" />
