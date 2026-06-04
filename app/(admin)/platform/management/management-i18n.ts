@@ -116,6 +116,7 @@ const EN = {
   // ── tab labels + subtitles ──────────────────────────────────────
   tabCompanies: "Companies",
   tabApplications: "Seller applications",
+  tabCompanyApplications: "Company applications",
   tabContracts: "Contracts",
   tabTemplates: "Contract templates",
   tabLogs: "Logs",
@@ -639,6 +640,7 @@ const HY: Partial<Record<MgmtKey, string>> = {
 
   tabCompanies: "Ընկերություններ",
   tabApplications: "Վաճառողի դիմումներ",
+  tabCompanyApplications: "Ընկերության դիմումներ",
   tabContracts: "Պայմանագրեր",
   tabTemplates: "Պայմանագրի ձևանմուշներ",
   tabLogs: "Մատյաններ",
@@ -1138,6 +1140,7 @@ const RU: Partial<Record<MgmtKey, string>> = {
 
   tabCompanies: "Компании",
   tabApplications: "Заявки продавцов",
+  tabCompanyApplications: "Заявки компаний",
   tabContracts: "Договоры",
   tabTemplates: "Шаблоны договоров",
   tabLogs: "Журналы",

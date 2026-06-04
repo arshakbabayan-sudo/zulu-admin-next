@@ -1289,6 +1289,17 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                   </button>
                 );
               })}
+              {/* 2026-06-04 — Company REGISTRATION applications (B2B join
+                  requests) live on a separate pre-v3 page; surface them here as
+                  a navigate-tab so super-admin can reach pending applications to
+                  approve. Distinct from "Seller applications" (service requests). */}
+              <button
+                className="section-tab"
+                onClick={() => router.push("/platform/company-applications")}
+              >
+                <i className="ti ti-file-invoice" />
+                {s.tabCompanyApplications}
+              </button>
             </div>
 
             {/* ───────── COMPANIES pane ───────── */}
