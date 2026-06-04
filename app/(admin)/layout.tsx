@@ -19,6 +19,10 @@ const MGMT_PREFIXES = [
   "/platform/contracts",
   "/platform/contract-templates",
   "/platform/audit-logs",
+  // 2026-06-04 — Directory deletion: B2C customers + Unverified accounts moved
+  // under Management and reuse its self-contained 1:1 chrome.
+  "/platform/b2c-customers",
+  "/platform/unverified",
 ];
 
 /**

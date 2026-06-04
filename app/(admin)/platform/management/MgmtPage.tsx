@@ -70,6 +70,10 @@ import {
   apiPatchCompanyGovernance,
   apiPatchCompanyPartnerSettings,
   apiPlatformUsers,
+  apiPlatformUsersStats,
+  apiBulkRemindUsers,
+  apiBulkDeleteUsers,
+  apiAnonymizePlatformUser,
   apiCompanyApplications,
   apiCompanySellerPermissions,
   apiPatchCompanySellerPermissions,
@@ -86,6 +90,7 @@ import {
   type CompanySellerPermissionApiRow,
   type PlatformAdminUserRow,
   type PlatformCompanyRow,
+  type PlatformUsersStats,
   type SellerApplicationDetail,
   type SellerApplicationRow,
 } from "@/lib/platform-admin-api";
@@ -115,7 +120,14 @@ import {
   type ContractLanguage,
 } from "@/lib/contracts-api";
 
-export type MgmtTab = "companies" | "applications" | "contracts" | "templates" | "logs";
+export type MgmtTab =
+  | "companies"
+  | "applications"
+  | "contracts"
+  | "templates"
+  | "logs"
+  | "customers"
+  | "unverified";
 
 // Tab → i18n keys + Tabler icon. Labels/subtitles resolve through the local
 // mgmtStrings() dictionary (see ./management-i18n) so they swap instantly with
@@ -129,6 +141,10 @@ const TAB_META: Record<
   contracts: { labelKey: "tabContracts", subtitleKey: "subContracts", icon: "ti-file-text" },
   templates: { labelKey: "tabTemplates", subtitleKey: "subTemplates", icon: "ti-template" },
   logs: { labelKey: "tabLogs", subtitleKey: "subLogs", icon: "ti-history" },
+  // 2026-06-04 — Directory deletion: B2C customers + Unverified accounts folded
+  // into Management per Arshak's menu cleanup (was Directory > People chips).
+  customers: { labelKey: "tabCustomers", subtitleKey: "subCustomers", icon: "ti-users" },
+  unverified: { labelKey: "tabUnverified", subtitleKey: "subUnverified", icon: "ti-user-question" },
 };
 
 // Enum → dictionary key maps (resolved via mgmtStrings() at render).
@@ -391,6 +407,26 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
   const [logsSearch, setLogsSearch] = useState("");
   const [integrity, setIntegrity] = useState<IntegrityResult | null>(null);
 
+  // B2C customers (2026-06-04 — folded in from Directory deletion)
+  const [customers, setCustomers] = useState<PlatformAdminUserRow[]>([]);
+  const [customersMeta, setCustomersMeta] = useState<ApiListMeta | null>(null);
+  const [customersLoading, setCustomersLoading] = useState(false);
+  const [customersPage, setCustomersPage] = useState(1);
+  const [customersSearch, setCustomersSearch] = useState("");
+  const [customersFilterStatus, setCustomersFilterStatus] = useState("");
+
+  // Unverified accounts (2026-06-04 — folded in from Directory deletion)
+  const [unverified, setUnverified] = useState<PlatformAdminUserRow[]>([]);
+  const [unverifiedMeta, setUnverifiedMeta] = useState<ApiListMeta | null>(null);
+  const [unverifiedLoading, setUnverifiedLoading] = useState(false);
+  const [unverifiedPage, setUnverifiedPage] = useState(1);
+  const [unverifiedSearch, setUnverifiedSearch] = useState("");
+  const [unverifiedSelectedIds, setUnverifiedSelectedIds] = useState<Set<number>>(new Set());
+  const [unverifiedBulkBusy, setUnverifiedBulkBusy] = useState(false);
+
+  // Shared stats card data for customers + unverified panes.
+  const [usersStats, setUsersStats] = useState<PlatformUsersStats | null>(null);
+
   // Drawers / modals
   const [appDrawer, setAppDrawer] = useState<SellerApplicationDetail | null>(null);
   const [appDrawerLoading, setAppDrawerLoading] = useState(false);
@@ -651,6 +687,65 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
     if (tab === "logs") void loadLogs();
   }, [tab, loadLogs]);
 
+  // ───────────────── B2C customers LIST loader (2026-06-04) ─────────────────
+  const loadCustomers = useCallback(async () => {
+    if (!token || !allowed) return;
+    setCustomersLoading(true);
+    try {
+      const res = await apiPlatformUsers(token, {
+        page: customersPage,
+        per_page: 20,
+        search: customersSearch || undefined,
+        type: "customers",
+        status: customersFilterStatus || undefined,
+      });
+      setCustomers(res.data);
+      setCustomersMeta(res.meta);
+    } catch (e) {
+      console.error("customers load failed", e);
+    } finally {
+      setCustomersLoading(false);
+    }
+  }, [token, allowed, customersPage, customersSearch, customersFilterStatus]);
+  useEffect(() => {
+    if (tab === "customers") void loadCustomers();
+  }, [tab, loadCustomers]);
+
+  // ───────────────── Unverified LIST loader (2026-06-04) ─────────────────
+  const loadUnverified = useCallback(async () => {
+    if (!token || !allowed) return;
+    setUnverifiedLoading(true);
+    try {
+      const res = await apiPlatformUsers(token, {
+        page: unverifiedPage,
+        per_page: 20,
+        search: unverifiedSearch || undefined,
+        type: "unverified",
+      });
+      setUnverified(res.data);
+      setUnverifiedMeta(res.meta);
+      setUnverifiedSelectedIds(new Set());
+    } catch (e) {
+      console.error("unverified load failed", e);
+    } finally {
+      setUnverifiedLoading(false);
+    }
+  }, [token, allowed, unverifiedPage, unverifiedSearch]);
+  useEffect(() => {
+    if (tab === "unverified") void loadUnverified();
+  }, [tab, loadUnverified]);
+
+  // Shared platform-users stats — fetched once when the user lands on the
+  // customers or unverified tab (the two panes that show user-count cards).
+  useEffect(() => {
+    if (!token || !allowed) return;
+    if (tab !== "customers" && tab !== "unverified") return;
+    if (usersStats !== null) return;
+    void apiPlatformUsersStats(token)
+      .then((r) => setUsersStats(r.data))
+      .catch(() => setUsersStats(null));
+  }, [token, allowed, tab, usersStats]);
+
   // ───────────────── Actions ─────────────────
   async function openAppDrawer(id: number) {
     if (!token) return;
@@ -756,6 +851,66 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
     }
   }
 
+  // ───────────────── Unverified bulk actions (2026-06-04) ─────────────────
+  function toggleUnverifiedSelected(id: number) {
+    setUnverifiedSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function bulkRemindUnverified() {
+    if (!token || unverifiedSelectedIds.size === 0) return;
+    const ids = Array.from(unverifiedSelectedIds);
+    setUnverifiedBulkBusy(true);
+    try {
+      await apiBulkRemindUsers(token, ids);
+      setUnverifiedSelectedIds(new Set());
+      await loadUnverified();
+    } catch (e) {
+      console.error("bulk remind failed", e);
+    } finally {
+      setUnverifiedBulkBusy(false);
+    }
+  }
+
+  async function bulkDeleteUnverified() {
+    if (!token || unverifiedSelectedIds.size === 0) return;
+    if (typeof window !== "undefined" && !window.confirm(s.uvConfirmDeleteBody)) return;
+    const ids = Array.from(unverifiedSelectedIds);
+    setUnverifiedBulkBusy(true);
+    try {
+      await apiBulkDeleteUsers(token, ids);
+      setUnverifiedSelectedIds(new Set());
+      await loadUnverified();
+    } catch (e) {
+      console.error("bulk delete failed", e);
+    } finally {
+      setUnverifiedBulkBusy(false);
+    }
+  }
+
+  async function anonymizeCustomer(row: PlatformAdminUserRow) {
+    if (!token) return;
+    const typed =
+      typeof window !== "undefined"
+        ? window.prompt(`Type "${row.name}" to confirm deletion.`)
+        : null;
+    if (typed === null) return;
+    if (typed.trim() !== row.name.trim()) {
+      if (typeof window !== "undefined") window.alert(s.errGeneric);
+      return;
+    }
+    try {
+      await apiAnonymizePlatformUser(token, row.id, null);
+      await loadCustomers();
+    } catch (e) {
+      console.error("anonymize failed", e);
+    }
+  }
+
   function switchTab(next: MgmtTab) {
     setTab(next);
     setDetailCompanyId(null);
@@ -766,6 +921,8 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
       contracts: "/platform/contracts",
       templates: "/platform/contract-templates",
       logs: "/platform/audit-logs",
+      customers: "/platform/b2c-customers",
+      unverified: "/platform/unverified",
     };
     // 2026-06-04 — switch the tab PURELY client-side, exactly like the HTML
     // mock (which just toggles `.page-pane.active` with no navigation). We
@@ -849,6 +1006,12 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                     {s.actionNewTemplate}
                   </button>
                 )}
+                {(tab === "customers" || tab === "unverified") && (
+                  <button className="btn">
+                    <i className="ti ti-download" />
+                    {s.actionExport}
+                  </button>
+                )}
               </div>
             </div>
 
@@ -862,6 +1025,8 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                 if (k === "companies") count = companiesMeta?.total ?? tabCounts.companies ?? null;
                 else if (k === "applications") count = tabCounts.applications ?? (apps.length || null);
                 else if (k === "contracts") count = tabCounts.contracts ?? (contracts.length || null);
+                else if (k === "customers") count = customersMeta?.total ?? null;
+                else if (k === "unverified") count = unverifiedMeta?.total ?? usersStats?.pending_verification ?? null;
                 return (
                   <button
                     key={k}
@@ -1061,6 +1226,48 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                 onFilterTo={setLogsFilterTo}
                 onApply={loadLogs}
                 onOpenDrawer={openAuditDrawer}
+              />
+            </div>
+
+            {/* ───────── B2C CUSTOMERS pane (2026-06-04) ───────── */}
+            <div className={`page-pane ${tab === "customers" ? "active" : ""}`}>
+              <B2cCustomersPane
+                loading={customersLoading}
+                rows={customers}
+                meta={customersMeta}
+                page={customersPage}
+                onPage={setCustomersPage}
+                search={customersSearch}
+                onSearch={setCustomersSearch}
+                filterStatus={customersFilterStatus}
+                onFilterStatus={setCustomersFilterStatus}
+                stats={usersStats}
+                onApply={loadCustomers}
+                onOpenRow={(id) => router.push(`/platform/users/${id}`)}
+                onAnonymize={(row) => void anonymizeCustomer(row)}
+              />
+            </div>
+
+            {/* ───────── UNVERIFIED pane (2026-06-04) ───────── */}
+            <div className={`page-pane ${tab === "unverified" ? "active" : ""}`}>
+              <UnverifiedPane
+                loading={unverifiedLoading}
+                rows={unverified}
+                meta={unverifiedMeta}
+                page={unverifiedPage}
+                onPage={setUnverifiedPage}
+                search={unverifiedSearch}
+                onSearch={setUnverifiedSearch}
+                stats={usersStats}
+                onApply={loadUnverified}
+                onOpenRow={(id) => router.push(`/platform/users/${id}`)}
+                selectedIds={unverifiedSelectedIds}
+                onToggleSelected={toggleUnverifiedSelected}
+                onSelectAll={(ids) => setUnverifiedSelectedIds(new Set(ids))}
+                onClearSelection={() => setUnverifiedSelectedIds(new Set())}
+                bulkBusy={unverifiedBulkBusy}
+                onBulkRemind={() => void bulkRemindUnverified()}
+                onBulkDelete={() => void bulkDeleteUnverified()}
               />
             </div>
           </div>
@@ -3324,6 +3531,461 @@ function LogsPane(props: {
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// B2C CUSTOMERS pane (2026-06-04 — folded in from Directory)
+// ═══════════════════════════════════════════════════════════════
+
+function B2cCustomersPane(props: {
+  loading: boolean;
+  rows: PlatformAdminUserRow[];
+  meta: ApiListMeta | null;
+  page: number;
+  onPage: (p: number) => void;
+  search: string;
+  onSearch: (s: string) => void;
+  filterStatus: string;
+  onFilterStatus: (s: string) => void;
+  stats: PlatformUsersStats | null;
+  onApply: () => void;
+  onOpenRow: (id: number) => void;
+  onAnonymize: (row: PlatformAdminUserRow) => void;
+}) {
+  const { lang } = useLanguage();
+  const s = mgmtStrings(lang);
+  return (
+    <div>
+      <div className="stat-grid">
+        <Stat
+          icon="ti-users"
+          tone="primary"
+          value={props.stats ? String(props.stats.total) : "—"}
+          label={s.bcStatTotal}
+        />
+        <Stat
+          icon="ti-circle-check"
+          tone="success"
+          value={props.stats ? String(props.stats.active_today) : "—"}
+          label={s.bcStatActiveToday}
+        />
+        <Stat
+          icon="ti-user-plus"
+          tone="info"
+          value={props.stats ? String(props.stats.new_7d) : "—"}
+          label={s.bcStatNew7d}
+        />
+        <Stat
+          icon="ti-clock"
+          tone="warning"
+          value={props.stats ? String(props.stats.pending_verification) : "—"}
+          label={s.bcStatPending}
+        />
+      </div>
+      <div className="filter-card">
+        <div className="filter-field" style={{ flex: 2 }}>
+          <span className="filter-label">{s.filterSearch}</span>
+          <input
+            type="text"
+            placeholder={s.bcSearchPh}
+            value={props.search}
+            onChange={(e) => props.onSearch(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && props.onApply()}
+          />
+        </div>
+        <div className="filter-field">
+          <span className="filter-label">{s.filterStatus}</span>
+          <select
+            value={props.filterStatus}
+            onChange={(e) => props.onFilterStatus(e.target.value)}
+          >
+            <option value="">{s.optAllStatuses}</option>
+            <option value="active">{s.optActive}</option>
+            <option value="inactive">{s.optInactive}</option>
+            <option value="pending">{s.optPending}</option>
+          </select>
+        </div>
+        <button className="btn" onClick={props.onApply}>
+          <i className="ti ti-filter" />
+          {s.actionApply}
+        </button>
+      </div>
+      <div className="card" style={{ marginBottom: 0 }}>
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>{s.bcColUser}</th>
+                <th>{s.bcColEmail}</th>
+                <th>{s.bcColStatus}</th>
+                <th style={{ textAlign: "right" }}>{s.bcColBookings}</th>
+                <th>{s.bcColJoined}</th>
+                <th>{s.bcColLastSeen}</th>
+                <th style={{ textAlign: "right" }}>{s.bcColActions}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {props.loading && props.rows.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>
+                    {s.loading}
+                  </td>
+                </tr>
+              ) : props.rows.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>
+                    {s.bcEmpty}
+                  </td>
+                </tr>
+              ) : (
+                props.rows.map((r) => {
+                  const statusKey =
+                    r.status === "active"
+                      ? "cstatusActive"
+                      : r.status === "pending"
+                      ? "optPending"
+                      : r.status === "inactive"
+                      ? "optInactive"
+                      : "optActive";
+                  const statusTone =
+                    r.status === "active"
+                      ? "badge-success"
+                      : r.status === "pending"
+                      ? "badge-warning"
+                      : "badge-gray";
+                  return (
+                    <tr key={r.id} onClick={() => props.onOpenRow(r.id)}>
+                      <td>
+                        <div className="flex items-center gap-2">
+                          <span className={`avatar sm ${avatarToneFor(r.id)}`}>{initialsFor(r.name)}</span>
+                          <div>
+                            <div className="font-semibold">{r.name}</div>
+                            <div className="text-sm cell-muted font-mono">#{r.id}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="cell-muted">{r.email}</td>
+                      <td>
+                        <span className={`badge ${statusTone}`}>{s[statusKey as MgmtKey]}</span>
+                      </td>
+                      <td style={{ textAlign: "right" }}>{r.bookings_count ?? 0}</td>
+                      <td className="cell-muted">{fmtDate(r.created_at ?? null)}</td>
+                      <td className="cell-muted">{fmtDateTime(r.last_login_at ?? null)}</td>
+                      <td onClick={(e) => e.stopPropagation()} style={{ textAlign: "right" }}>
+                        <div className="row-actions" style={{ justifyContent: "flex-end" }}>
+                          <button
+                            className="icon-btn"
+                            title={s.actionView}
+                            onClick={() => props.onOpenRow(r.id)}
+                          >
+                            <i className="ti ti-eye" />
+                          </button>
+                          <button
+                            className="icon-btn"
+                            title={s.uvActionDelete}
+                            onClick={() => props.onAnonymize(r)}
+                          >
+                            <i className="ti ti-trash" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+        {props.meta && props.meta.last_page > 1 ? (
+          <div
+            className="pagination-bar"
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "12px 16px",
+              borderTop: "1px solid var(--border)",
+              fontSize: 12,
+              color: "var(--text-muted)",
+            }}
+          >
+            <span>
+              {s.showing} {(props.meta.current_page - 1) * props.meta.per_page + 1}–
+              {Math.min(props.meta.current_page * props.meta.per_page, props.meta.total)} {s.of}{" "}
+              {props.meta.total}
+            </span>
+            <div style={{ display: "flex", gap: 4 }}>
+              {pageWindow(props.meta.current_page, props.meta.last_page).map((p) => (
+                <button
+                  key={p}
+                  className={`btn btn-sm ${p === props.meta!.current_page ? "btn-primary" : ""}`}
+                  onClick={() => props.onPage(p)}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UNVERIFIED ACCOUNTS pane (2026-06-04 — folded in from Directory)
+// ═══════════════════════════════════════════════════════════════
+
+function intendedRoleLabel(row: PlatformAdminUserRow, s: Record<MgmtKey, string>): string {
+  const r = (row as { intended_role?: string | null }).intended_role;
+  if (r === "operator") return s.uvIntendedOperator;
+  if (r === "agent") return s.uvIntendedAgent;
+  if (r === "admin" || r === "super_admin") return s.uvIntendedAdmin;
+  return s.uvIntendedB2c;
+}
+
+function UnverifiedPane(props: {
+  loading: boolean;
+  rows: PlatformAdminUserRow[];
+  meta: ApiListMeta | null;
+  page: number;
+  onPage: (p: number) => void;
+  search: string;
+  onSearch: (s: string) => void;
+  stats: PlatformUsersStats | null;
+  onApply: () => void;
+  onOpenRow: (id: number) => void;
+  selectedIds: Set<number>;
+  onToggleSelected: (id: number) => void;
+  onSelectAll: (ids: number[]) => void;
+  onClearSelection: () => void;
+  bulkBusy: boolean;
+  onBulkRemind: () => void;
+  onBulkDelete: () => void;
+}) {
+  const { lang } = useLanguage();
+  const s = mgmtStrings(lang);
+  // Page-scoped stat snapshots — the API returns one aggregate number; the
+  // other three cards approximate from the page (older-than-30d / new-7d /
+  // intended-staff). Mirrors the LogsPane "honest current-page scoped" pattern.
+  const localStats = useMemo(() => {
+    const now = Date.now();
+    const day = 24 * 3600 * 1000;
+    let old30 = 0;
+    let new7 = 0;
+    let staff = 0;
+    for (const r of props.rows) {
+      const created = r.created_at ? Date.parse(r.created_at) : NaN;
+      if (Number.isFinite(created)) {
+        if (now - created > 30 * day) old30++;
+        if (now - created < 7 * day) new7++;
+      }
+      const ir = (r as { intended_role?: string | null }).intended_role;
+      if (ir && ir !== "customer") staff++;
+    }
+    return { old30, new7, staff };
+  }, [props.rows]);
+  const allSelectedOnPage =
+    props.rows.length > 0 && props.rows.every((r) => props.selectedIds.has(r.id));
+  return (
+    <div>
+      <div className="stat-grid">
+        <Stat
+          icon="ti-user-question"
+          tone="warning"
+          value={props.stats ? String(props.stats.pending_verification) : "—"}
+          label={s.uvStatTotal}
+        />
+        <Stat
+          icon="ti-clock-x"
+          tone="danger"
+          value={String(localStats.old30)}
+          label={s.uvStatOver30d}
+        />
+        <Stat
+          icon="ti-user-plus"
+          tone="info"
+          value={String(localStats.new7)}
+          label={s.uvStatNew7d}
+        />
+        <Stat
+          icon="ti-shield-lock"
+          tone="primary"
+          value={String(localStats.staff)}
+          label={s.uvStatStaff}
+        />
+      </div>
+      <div className="filter-card">
+        <div className="filter-field" style={{ flex: 2 }}>
+          <span className="filter-label">{s.filterSearch}</span>
+          <input
+            type="text"
+            placeholder={s.uvSearchPh}
+            value={props.search}
+            onChange={(e) => props.onSearch(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && props.onApply()}
+          />
+        </div>
+        <button className="btn" onClick={props.onApply}>
+          <i className="ti ti-filter" />
+          {s.actionApply}
+        </button>
+      </div>
+      <div className="card" style={{ marginBottom: 0 }}>
+        {props.selectedIds.size > 0 ? (
+          <div
+            className="bulk-bar"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              padding: "10px 16px",
+              borderBottom: "1px solid var(--border)",
+              background: "var(--primary-50, #f5ecf3)",
+              fontSize: 13,
+            }}
+          >
+            <span className="font-semibold">
+              {props.selectedIds.size} {s.uvBulkSelected}
+            </span>
+            <button
+              className="btn btn-sm"
+              disabled={props.bulkBusy}
+              onClick={props.onBulkRemind}
+            >
+              <i className="ti ti-mail-fast" />
+              {s.uvActionRemind}
+            </button>
+            <button
+              className="btn btn-sm"
+              disabled={props.bulkBusy}
+              onClick={props.onBulkDelete}
+              style={{ color: "var(--danger, #c62828)" }}
+            >
+              <i className="ti ti-trash" />
+              {s.uvActionDelete}
+            </button>
+            <button
+              className="btn btn-sm"
+              onClick={props.onClearSelection}
+              style={{ marginLeft: "auto" }}
+            >
+              {s.actionClose}
+            </button>
+          </div>
+        ) : null}
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th style={{ width: 36 }}>
+                  <input
+                    type="checkbox"
+                    aria-label="Select all"
+                    checked={allSelectedOnPage}
+                    onChange={(e) =>
+                      e.target.checked
+                        ? props.onSelectAll(props.rows.map((r) => r.id))
+                        : props.onClearSelection()
+                    }
+                  />
+                </th>
+                <th>{s.uvColUser}</th>
+                <th>{s.uvColEmail}</th>
+                <th>{s.uvColIntendedRole}</th>
+                <th>{s.uvColRegistered}</th>
+                <th style={{ textAlign: "right" }}>{s.uvColActions}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {props.loading && props.rows.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>
+                    {s.loading}
+                  </td>
+                </tr>
+              ) : props.rows.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>
+                    {s.uvEmpty}
+                  </td>
+                </tr>
+              ) : (
+                props.rows.map((r) => (
+                  <tr key={r.id} onClick={() => props.onOpenRow(r.id)}>
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${r.name}`}
+                        checked={props.selectedIds.has(r.id)}
+                        onChange={() => props.onToggleSelected(r.id)}
+                      />
+                    </td>
+                    <td>
+                      <div className="flex items-center gap-2">
+                        <span className={`avatar sm ${avatarToneFor(r.id)}`}>{initialsFor(r.name)}</span>
+                        <div>
+                          <div className="font-semibold">{r.name}</div>
+                          <div className="text-sm cell-muted font-mono">#{r.id}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="cell-muted">{r.email}</td>
+                    <td>
+                      <span className="badge badge-gray">{intendedRoleLabel(r, s)}</span>
+                    </td>
+                    <td className="cell-muted">{fmtDate(r.created_at ?? null)}</td>
+                    <td onClick={(e) => e.stopPropagation()} style={{ textAlign: "right" }}>
+                      <div className="row-actions" style={{ justifyContent: "flex-end" }}>
+                        <button
+                          className="icon-btn"
+                          title={s.actionView}
+                          onClick={() => props.onOpenRow(r.id)}
+                        >
+                          <i className="ti ti-eye" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        {props.meta && props.meta.last_page > 1 ? (
+          <div
+            className="pagination-bar"
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "12px 16px",
+              borderTop: "1px solid var(--border)",
+              fontSize: 12,
+              color: "var(--text-muted)",
+            }}
+          >
+            <span>
+              {s.showing} {(props.meta.current_page - 1) * props.meta.per_page + 1}–
+              {Math.min(props.meta.current_page * props.meta.per_page, props.meta.total)} {s.of}{" "}
+              {props.meta.total}
+            </span>
+            <div style={{ display: "flex", gap: 4 }}>
+              {pageWindow(props.meta.current_page, props.meta.last_page).map((p) => (
+                <button
+                  key={p}
+                  className={`btn btn-sm ${p === props.meta!.current_page ? "btn-primary" : ""}`}
+                  onClick={() => props.onPage(p)}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

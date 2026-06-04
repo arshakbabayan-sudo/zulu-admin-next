@@ -198,6 +198,11 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/crm/activities", labelKey: "admin.nav.tab.crm.activities" },
       { href: "/crm/segments", labelKey: "admin.nav.tab.crm.segments" },
       { href: "/crm/team", labelKey: "admin.nav.tab.crm.team" },
+      // 2026-06-04 (Arshak) — Directory deletion: Staff (operator/agent/admin
+      // employees) view folds into CRM as a dedicated tab. Was Directory >
+      // People > Staff(operator/agent/admin) chip. Rename: parentheses dropped
+      // ("Staff" only — the role mix is filterable inside the page).
+      { href: "/crm/staff", labelKey: "admin.nav.tab.crm.staff" },
       { href: "/crm/options", labelKey: "admin.nav.tab.crm.options" },
     ],
     visibility: "section_crm",
@@ -312,8 +317,13 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     tabs: [
       { href: "/platform/companies", labelKey: "admin.nav.tab.companies_access" },
       { href: "/platform/seller-applications", labelKey: "admin.nav.tab.seller_applications" },
-      // Phase 2C (2026-05-31) — /platform/users tab removed from Management;
-      // the Directory sidebar group is its canonical home now.
+      // 2026-06-04 (Arshak) — Directory group DELETED. Its B2C customers +
+      // Unverified accounts views fold into Management here so super-admin's
+      // governance section owns every cross-tenant people lookup. Staff
+      // (operator/agent/admin employees) moved to CRM → Staff. People
+      // detail page stays at /platform/users/{id} (linked from both tabs).
+      { href: "/platform/b2c-customers", labelKey: "admin.nav.tab.b2c_customers" },
+      { href: "/platform/unverified", labelKey: "admin.nav.tab.unverified_accounts" },
       { href: "/platform/contracts", labelKey: "admin.nav.tab.partnership_agreements", moduleKey: "ops.contracts" },
       { href: "/platform/contract-templates", labelKey: "admin.nav.tab.contract_templates", moduleKey: "ops.contracts" },
       { href: "/platform/audit-logs", labelKey: "admin.nav.tab.audit_logs" },
@@ -325,36 +335,15 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     visibility: "section_marketplace_ops",
   },
 
-  // Phase 4A (2026-05-31) — Directory (People + Companies tabs)
+  // 2026-06-04 (Arshak) — Directory sidebar group DELETED.
   //
-  // New top-level group that consolidates the people-and-companies lookup
-  // surfaces. Replaces three previously-separate sidebar entries:
-  //   - Customers (/bucket3/customers)
-  //   - Employees subset of My company
-  //   - Users (under Management)
-  //
-  // Currently lands on the existing /platform/users page (which already
-  // supports the type filter for All / Customers / Staff / Unverified).
-  // The page-level chip strip lands as part of the same Phase 4A patch.
-  // Companies tab (/platform/companies) is part of the same Directory in
-  // the spec — kept under Management for the moment because its page is
-  // still wired with the Management section tabs; Phase 4B will move it.
-  {
-    key: "directory",
-    labelKey: "admin.nav.section.directory",
-    labelFallback: "Directory",
-    defaultHref: "/platform/users",
-    tabs: [
-      // 2026-06-02 (Arshak) — Companies tab REMOVED from Directory. The
-      // /platform/companies page is owned by the Management group (its
-      // page-level section strip says "Management"), so listing it under
-      // Directory made the breadcrumb/section jump to Management on click —
-      // confusing. Companies now lives only under Management; Directory is
-      // purely the People (users) lookup.
-      { href: "/platform/users", labelKey: "admin.nav.tab.directory.people" },
-    ],
-    visibility: "platform_admin",
-  },
+  // Was: People (B2C customers / Staff / Unverified chips on /platform/users).
+  // Reason: the chips were really three separate views with different audiences
+  // and actions, hidden behind one page. Arshak's reorganisation:
+  //   • B2C customers + Unverified → Management (super-admin governance).
+  //   • Staff (operator/agent/admin employees) → CRM → Staff (workspace).
+  // The detail route /platform/users/{id} still exists; the list route
+  // /platform/users redirects to /platform/b2c-customers by default.
 
   // ── 8–12 ── v2 redesign new groups (2026-05-24, ordered per zulu-admin-v2.html) ──
   // Users / Roles / Files / Profile come AFTER Marketplace ops and BEFORE Settings
@@ -485,7 +474,7 @@ export const SIDEBAR_TABLER_ICON: Record<string, string> = {
   my_company: "ti-building",
   hr: "ti-clipboard-list",
   marketplace_ops: "ti-shield-check",
-  directory: "ti-id-badge-2",
+  // 2026-06-04 — `directory` group deleted; its icon is no longer referenced.
   file_manager: "ti-folder",
   my_profile: "ti-user",
   notifications_v2: "ti-inbox",

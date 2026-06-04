@@ -21,6 +21,7 @@ export type CrmCounts = Partial<{
   deals: number;
   customers: number;
   activities: number;
+  staff: number;
 }>;
 
 type Props = {
@@ -40,6 +41,10 @@ export function CrmSectionTabs({ activeHref, counts }: Props) {
         { href: "/crm/activities", label: "Activities", count: counts?.activities },
         { href: "/crm/segments", label: "Segments" },
         { href: "/crm/team", label: "Team" },
+        // 2026-06-04 (Arshak) — Directory deletion: Staff (operator/agent/admin
+        // employees) view folds into CRM. Page lists all staff across the
+        // company hierarchy via the platform-users `type=staff` filter.
+        { href: "/crm/staff", label: "Staff", count: counts?.staff },
         { href: "/crm/options", label: "Options" },
       ]}
     />
