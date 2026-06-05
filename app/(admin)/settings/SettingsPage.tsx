@@ -77,6 +77,19 @@ import {
   type NewsletterStats,
   type PlatformNotificationRow,
   type PlatformNotificationStats,
+  apiAdminHeaderMenu,
+  apiSyncHeaderMenu,
+  apiAdminFooter,
+  apiSyncFooter,
+  apiBrandSettings,
+  apiPatchBrandSettings,
+  BRAND_SOCIAL_PLATFORMS,
+  type HeaderMenuAdminRow,
+  type FooterColumnAdminRow,
+  type FooterLinkAdminRow,
+  type FooterSyncColumnPayload,
+  type BrandSettings,
+  type BrandCustomField,
 } from "@/lib/platform-admin-api";
 import {
   apiAdminPages,
@@ -85,6 +98,7 @@ import {
   apiDeleteAdminPage,
   type AdminPageRow,
 } from "@/lib/pages-api";
+import { ImageUploadField } from "@/components/ImageUploadField";
 import { getApiPublicOrigin, getApiBaseUrl } from "@/lib/api-base";
 import { exportRowsAsCsv } from "@/lib/export-csv";
 import {
@@ -168,9 +182,9 @@ const PAGES: Record<SettingsPageKey, PageMeta> = {
   "banners":           { cluster: "content", labelKey: "pgBanners", super: true, inPage: true, href: "/platform/banners" },
   "sys-notif":         { cluster: "content", labelKey: "pgSysNotif", super: true, inPage: true, href: "/platform/notifications" },
   "newsletter":        { cluster: "content", labelKey: "pgNewsletter", super: false, inPage: true, href: "/platform/newsletter" },
-  "header-menu":       { cluster: "layout", labelKey: "pgHeaderMenu", super: true, href: "/platform/settings/header-menu" },
-  "footer":            { cluster: "layout", labelKey: "pgFooter", super: true, href: "/platform/settings/footer" },
-  "brand":             { cluster: "layout", labelKey: "pgBrand", super: true, href: "/platform/settings/brand" },
+  "header-menu":       { cluster: "layout", labelKey: "pgHeaderMenu", super: true, inPage: true, href: "/platform/settings/header-menu" },
+  "footer":            { cluster: "layout", labelKey: "pgFooter", super: true, inPage: true, href: "/platform/settings/footer" },
+  "brand":             { cluster: "layout", labelKey: "pgBrand", super: true, inPage: true, href: "/platform/settings/brand" },
   "loyalty":           { cluster: "marketing", labelKey: "pgLoyalty", super: false, href: "/platform/loyalty" },
   "security":          { cluster: "system", labelKey: "pgSecurity", super: true, href: "/platform/security" },
   "webhooks":          { cluster: "system", labelKey: "pgWebhooks", super: true, href: "/platform/webhooks" },
@@ -360,6 +374,9 @@ export function SettingsPage({ initialPage = "exchange-rates" }: { initialPage?:
             {page === "banners" && <BannersPane token={token} lang={lang} />}
             {page === "sys-notif" && <SysNotifPane token={token} lang={lang} />}
             {page === "newsletter" && <NewsletterPane token={token} lang={lang} />}
+            {page === "header-menu" && <HeaderMenuPane token={token} lang={lang} />}
+            {page === "footer" && <FooterPane token={token} lang={lang} />}
+            {page === "brand" && <BrandPane token={token} lang={lang} />}
           </div>
         </div>
       </div>
@@ -3368,6 +3385,482 @@ function NewsletterPane({ token, lang }: { token: string | null; lang: string })
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// Layout cluster — header menu / footer builders + brand form
+// ════════════════════════════════════════════════════════════════
+
+function builderTempId(): string {
+  return `new-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+type HmEditRow = HeaderMenuAdminRow & { _tempId?: string };
+
+function HeaderMenuPane({ token, lang }: { token: string | null; lang: string }) {
+  const s = settingsStrings(lang);
+  const [items, setItems] = useState<HmEditRow[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await apiAdminHeaderMenu(token);
+      setItems(res.data.items.map((it) => ({ ...it })));
+    } catch (e) {
+      console.error("header menu load failed", e);
+    }
+  }, [token]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const rowKeyOf = (r: HmEditRow): number | string => r.id || r._tempId || 0;
+  const topLevel = items.filter((i) => i.parent_id == null).sort((a, b) => a.position - b.position);
+
+  function updateRow(rowKey: number | string, patch: Partial<HmEditRow>) {
+    setItems((prev) => prev.map((r) => (rowKeyOf(r) === rowKey ? { ...r, ...patch } : r)));
+  }
+  function addRootItem() {
+    setItems((prev) => [
+      ...prev,
+      { id: 0, _tempId: builderTempId(), parent_id: null, label_en: "", label_ru: null, label_hy: null, url: "/", position: prev.filter((i) => i.parent_id == null).length + 1, is_visible: true, icon: null, open_in_new_tab: false },
+    ]);
+    setSaved(false);
+  }
+  function addChild(parentKey: number | string) {
+    setItems((prev) => {
+      const parent = prev.find((p) => rowKeyOf(p) === parentKey);
+      if (!parent) return prev;
+      const siblingCount = prev.filter((i) => i.parent_id === parent.id).length;
+      return [
+        ...prev,
+        { id: 0, _tempId: builderTempId(), parent_id: parent.id || -999, label_en: "", label_ru: null, label_hy: null, url: "/", position: siblingCount + 1, is_visible: true, icon: null, open_in_new_tab: false },
+      ];
+    });
+    setSaved(false);
+  }
+  function removeRow(rowKey: number | string) {
+    setItems((prev) => prev.filter((r) => rowKeyOf(r) !== rowKey));
+    setSaved(false);
+  }
+  function moveRow(rowKey: number | string, delta: -1 | 1) {
+    setItems((prev) => {
+      const target = prev.find((r) => rowKeyOf(r) === rowKey);
+      if (!target) return prev;
+      const siblings = prev.filter((r) => r.parent_id === target.parent_id).sort((a, b) => a.position - b.position);
+      const idx = siblings.findIndex((r) => rowKeyOf(r) === rowKey);
+      const swapIdx = idx + delta;
+      if (swapIdx < 0 || swapIdx >= siblings.length) return prev;
+      const a = siblings[idx];
+      const b = siblings[swapIdx];
+      if (!a || !b) return prev;
+      const tmp = a.position;
+      return prev.map((r) => {
+        const k = rowKeyOf(r);
+        if (k === rowKeyOf(a)) return { ...r, position: b.position };
+        if (k === rowKeyOf(b)) return { ...r, position: tmp };
+        return r;
+      });
+    });
+  }
+  async function handleSave() {
+    if (!token) return;
+    setSaving(true);
+    setSaved(false);
+    try {
+      const tempToNeg = new Map<string, number>();
+      let counter = -1;
+      for (const r of items) if (r._tempId && !tempToNeg.has(r._tempId)) tempToNeg.set(r._tempId, counter--);
+      const payload = items.map((r) => ({
+        id: r.id && r.id > 0 ? r.id : r._tempId ? tempToNeg.get(r._tempId)! : null,
+        parent_id: r.parent_id,
+        label_en: r.label_en, label_ru: r.label_ru, label_hy: r.label_hy,
+        url: r.url, position: r.position, is_visible: r.is_visible, icon: r.icon, open_in_new_tab: r.open_in_new_tab,
+      }));
+      const res = await apiSyncHeaderMenu(token, payload);
+      setItems(res.data.items.map((it) => ({ ...it })));
+      setSaved(true);
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div>
+      <div className="filter-card">
+        <div style={{ flex: 1 }} />
+        {saved && <span className="badge badge-success">{s.lySaved}</span>}
+        <button className="btn" onClick={addRootItem}><i className="ti ti-plus" />{s.hmAddItem}</button>
+        <button className="btn btn-primary" disabled={saving} onClick={() => void handleSave()}><i className="ti ti-device-floppy" />{saving ? s.loading : s.lySaveAll}</button>
+      </div>
+      {topLevel.length === 0 ? (
+        <div className="card"><div className="empty-state"><i className="ti ti-menu-2" />{s.hmEmpty}</div></div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {topLevel.map((parent, parentIdx) => {
+            const pKey = rowKeyOf(parent);
+            const children = items.filter((c) => c.parent_id === parent.id || c.parent_id === -999).sort((a, b) => a.position - b.position);
+            return (
+              <div key={pKey} className="card" style={{ marginBottom: 0 }}>
+                <div className="card-body">
+                  <HmItemFields row={parent} rowKey={pKey} isFirst={parentIdx === 0} isLast={parentIdx === topLevel.length - 1} s={s} onChange={updateRow} onMove={moveRow} onRemove={removeRow} />
+                  {children.length > 0 && (
+                    <div style={{ marginTop: 12, marginLeft: 16, borderLeft: "2px solid var(--primary)", paddingLeft: 12 }}>
+                      <div className="text-sm cell-muted" style={{ marginBottom: 8 }}>{s.hmChildren}</div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                        {children.map((child, childIdx) => (
+                          <HmItemFields key={rowKeyOf(child)} row={child} rowKey={rowKeyOf(child)} isFirst={childIdx === 0} isLast={childIdx === children.length - 1} s={s} onChange={updateRow} onMove={moveRow} onRemove={removeRow} isChild />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div style={{ marginTop: 10, textAlign: "right" }}>
+                    <button className="btn btn-sm" onClick={() => addChild(pKey)}><i className="ti ti-plus" />{s.hmAddChild}</button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HmItemFields({
+  row, rowKey, isFirst, isLast, s, onChange, onMove, onRemove, isChild,
+}: {
+  row: HmEditRow;
+  rowKey: number | string;
+  isFirst: boolean;
+  isLast: boolean;
+  s: Record<SettingsKey, string>;
+  onChange: (rowKey: number | string, patch: Partial<HmEditRow>) => void;
+  onMove: (rowKey: number | string, delta: -1 | 1) => void;
+  onRemove: (rowKey: number | string) => void;
+  isChild?: boolean;
+}) {
+  return (
+    <div style={isChild ? { background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "var(--radius-md)", padding: 10 } : undefined}>
+      <div className="form-grid">
+        <div className="fld"><label className="fld-label">{s.lyLabelEn}</label><input value={row.label_en} onChange={(e) => onChange(rowKey, { label_en: e.target.value })} /></div>
+        <div className="fld"><label className="fld-label">{s.lyLabelRu}</label><input value={row.label_ru ?? ""} onChange={(e) => onChange(rowKey, { label_ru: e.target.value === "" ? null : e.target.value })} /></div>
+        <div className="fld"><label className="fld-label">{s.lyLabelHy}</label><input value={row.label_hy ?? ""} onChange={(e) => onChange(rowKey, { label_hy: e.target.value === "" ? null : e.target.value })} /></div>
+        <div className="fld span-2"><label className="fld-label">{s.lyUrl}</label><input className="font-mono" value={row.url} onChange={(e) => onChange(rowKey, { url: e.target.value })} placeholder="/path" /></div>
+        <div className="fld"><label className="fld-label">{s.hmIcon}</label><input className="font-mono" value={row.icon ?? ""} onChange={(e) => onChange(rowKey, { icon: e.target.value === "" ? null : e.target.value })} placeholder="ti-home" /></div>
+      </div>
+      <div style={{ marginTop: 8, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+        <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+          <label className="switch-row" style={{ cursor: "pointer" }}><input type="checkbox" checked={row.is_visible} onChange={(e) => onChange(rowKey, { is_visible: e.target.checked })} />{s.lyVisible}</label>
+          <label className="switch-row" style={{ cursor: "pointer" }}><input type="checkbox" checked={row.open_in_new_tab} onChange={(e) => onChange(rowKey, { open_in_new_tab: e.target.checked })} />{s.lyNewTab}</label>
+        </div>
+        <div className="row-actions">
+          <button className="icon-btn" title={s.bnMoveUp} disabled={isFirst} onClick={() => onMove(rowKey, -1)}><i className="ti ti-chevron-up" /></button>
+          <button className="icon-btn" title={s.bnMoveDown} disabled={isLast} onClick={() => onMove(rowKey, 1)}><i className="ti ti-chevron-down" /></button>
+          <button className="icon-btn danger" title={s.lyRemove} onClick={() => onRemove(rowKey)}><i className="ti ti-trash" /></button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type FtEditLink = FooterLinkAdminRow & { _tempId?: string };
+type FtEditCol = Omit<FooterColumnAdminRow, "links"> & { links: FtEditLink[]; _tempId?: string };
+
+function FooterPane({ token, lang }: { token: string | null; lang: string }) {
+  const s = settingsStrings(lang);
+  const [columns, setColumns] = useState<FtEditCol[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await apiAdminFooter(token);
+      setColumns(res.data.columns.map((c) => ({ ...c, links: c.links.map((l) => ({ ...l })) })));
+    } catch (e) {
+      console.error("footer load failed", e);
+    }
+  }, [token]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  function updateColumn(idx: number, patch: Partial<FtEditCol>) {
+    setColumns((prev) => prev.map((c, i) => (i === idx ? { ...c, ...patch } : c)));
+    setSaved(false);
+  }
+  function updateLink(colIdx: number, linkIdx: number, patch: Partial<FtEditLink>) {
+    setColumns((prev) => prev.map((c, i) => (i === colIdx ? { ...c, links: c.links.map((l, j) => (j === linkIdx ? { ...l, ...patch } : l)) } : c)));
+    setSaved(false);
+  }
+  function addColumn() {
+    setColumns((prev) => [...prev, { id: 0, _tempId: builderTempId(), slug: "", title_en: "", title_ru: null, title_hy: null, position: prev.length + 1, is_visible: true, links: [] }]);
+    setSaved(false);
+  }
+  function removeColumn(idx: number) {
+    setColumns((prev) => prev.filter((_, i) => i !== idx));
+    setSaved(false);
+  }
+  function moveColumn(idx: number, delta: -1 | 1) {
+    setColumns((prev) => {
+      const newIdx = idx + delta;
+      if (newIdx < 0 || newIdx >= prev.length) return prev;
+      const copy = [...prev];
+      const tmp = copy[idx]!;
+      copy[idx] = copy[newIdx]!;
+      copy[newIdx] = tmp;
+      return copy.map((c, i) => ({ ...c, position: i + 1 }));
+    });
+  }
+  function addLink(colIdx: number) {
+    setColumns((prev) => prev.map((c, i) => (i === colIdx ? { ...c, links: [...c.links, { id: 0, _tempId: builderTempId(), column_id: c.id, label_en: "", label_ru: null, label_hy: null, url: "/", position: c.links.length + 1, is_visible: true, open_in_new_tab: false }] } : c)));
+    setSaved(false);
+  }
+  function removeLink(colIdx: number, linkIdx: number) {
+    setColumns((prev) => prev.map((c, i) => (i === colIdx ? { ...c, links: c.links.filter((_, j) => j !== linkIdx) } : c)));
+    setSaved(false);
+  }
+  function moveLink(colIdx: number, linkIdx: number, delta: -1 | 1) {
+    setColumns((prev) => prev.map((c, i) => {
+      if (i !== colIdx) return c;
+      const newIdx = linkIdx + delta;
+      if (newIdx < 0 || newIdx >= c.links.length) return c;
+      const copy = [...c.links];
+      const tmp = copy[linkIdx]!;
+      copy[linkIdx] = copy[newIdx]!;
+      copy[newIdx] = tmp;
+      return { ...c, links: copy.map((l, k) => ({ ...l, position: k + 1 })) };
+    }));
+  }
+  async function handleSave() {
+    if (!token) return;
+    setSaving(true);
+    setSaved(false);
+    try {
+      const payload: FooterSyncColumnPayload[] = columns.map((c) => ({
+        id: c.id && c.id > 0 ? c.id : null,
+        slug: c.slug || null,
+        title_en: c.title_en, title_ru: c.title_ru, title_hy: c.title_hy,
+        position: c.position, is_visible: c.is_visible,
+        links: c.links.map((l) => ({
+          id: l.id && l.id > 0 ? l.id : null,
+          label_en: l.label_en, label_ru: l.label_ru, label_hy: l.label_hy,
+          url: l.url, position: l.position, is_visible: l.is_visible, open_in_new_tab: l.open_in_new_tab,
+        })),
+      }));
+      const res = await apiSyncFooter(token, payload);
+      setColumns(res.data.columns.map((c) => ({ ...c, links: c.links.map((l) => ({ ...l })) })));
+      setSaved(true);
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div>
+      <div className="filter-card">
+        <div style={{ flex: 1 }} />
+        {saved && <span className="badge badge-success">{s.lySaved}</span>}
+        <button className="btn" onClick={addColumn}><i className="ti ti-plus" />{s.ftAddColumn}</button>
+        <button className="btn btn-primary" disabled={saving} onClick={() => void handleSave()}><i className="ti ti-device-floppy" />{saving ? s.loading : s.lySaveAll}</button>
+      </div>
+      {columns.length === 0 ? (
+        <div className="card"><div className="empty-state"><i className="ti ti-columns" />{s.ftEmpty}</div></div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {columns.map((col, colIdx) => (
+            <div key={col.id || col._tempId} className="card" style={{ marginBottom: 0 }}>
+              <div className="card-body">
+                <div className="form-grid">
+                  <div className="fld"><label className="fld-label">{s.ftColTitleEn}</label><input value={col.title_en} onChange={(e) => updateColumn(colIdx, { title_en: e.target.value })} /></div>
+                  <div className="fld"><label className="fld-label">{s.ftColTitleRu}</label><input value={col.title_ru ?? ""} onChange={(e) => updateColumn(colIdx, { title_ru: e.target.value === "" ? null : e.target.value })} /></div>
+                  <div className="fld"><label className="fld-label">{s.ftColTitleHy}</label><input value={col.title_hy ?? ""} onChange={(e) => updateColumn(colIdx, { title_hy: e.target.value === "" ? null : e.target.value })} /></div>
+                  <div className="fld"><label className="fld-label">{s.ftSlug}</label><input className="font-mono" value={col.slug ?? ""} onChange={(e) => updateColumn(colIdx, { slug: e.target.value })} /></div>
+                </div>
+                <div style={{ marginTop: 8, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                  <label className="switch-row" style={{ cursor: "pointer" }}><input type="checkbox" checked={col.is_visible} onChange={(e) => updateColumn(colIdx, { is_visible: e.target.checked })} />{s.lyVisible}</label>
+                  <div className="row-actions">
+                    <button className="icon-btn" title={s.bnMoveUp} disabled={colIdx === 0} onClick={() => moveColumn(colIdx, -1)}><i className="ti ti-chevron-up" /></button>
+                    <button className="icon-btn" title={s.bnMoveDown} disabled={colIdx === columns.length - 1} onClick={() => moveColumn(colIdx, 1)}><i className="ti ti-chevron-down" /></button>
+                    <button className="icon-btn danger" title={s.ftRemoveColumn} onClick={() => removeColumn(colIdx)}><i className="ti ti-trash" /></button>
+                  </div>
+                </div>
+                <div style={{ marginTop: 12, borderTop: "1px solid var(--border-color)", paddingTop: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                    <div className="text-sm" style={{ fontWeight: 600 }}>{s.ftLinks}</div>
+                    <button className="btn btn-sm" onClick={() => addLink(colIdx)}><i className="ti ti-plus" />{s.ftAddLink}</button>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {col.links.map((link, linkIdx) => (
+                      <div key={link.id || link._tempId} style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "var(--radius-md)", padding: 10 }}>
+                        <div className="form-grid">
+                          <div className="fld"><label className="fld-label">{s.lyLabelEn}</label><input value={link.label_en} onChange={(e) => updateLink(colIdx, linkIdx, { label_en: e.target.value })} /></div>
+                          <div className="fld"><label className="fld-label">{s.lyLabelRu}</label><input value={link.label_ru ?? ""} onChange={(e) => updateLink(colIdx, linkIdx, { label_ru: e.target.value === "" ? null : e.target.value })} /></div>
+                          <div className="fld"><label className="fld-label">{s.lyLabelHy}</label><input value={link.label_hy ?? ""} onChange={(e) => updateLink(colIdx, linkIdx, { label_hy: e.target.value === "" ? null : e.target.value })} /></div>
+                          <div className="fld span-2"><label className="fld-label">{s.lyUrl}</label><input className="font-mono" value={link.url} onChange={(e) => updateLink(colIdx, linkIdx, { url: e.target.value })} placeholder="/path" /></div>
+                        </div>
+                        <div style={{ marginTop: 8, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                          <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+                            <label className="switch-row" style={{ cursor: "pointer" }}><input type="checkbox" checked={link.is_visible} onChange={(e) => updateLink(colIdx, linkIdx, { is_visible: e.target.checked })} />{s.lyVisible}</label>
+                            <label className="switch-row" style={{ cursor: "pointer" }}><input type="checkbox" checked={link.open_in_new_tab} onChange={(e) => updateLink(colIdx, linkIdx, { open_in_new_tab: e.target.checked })} />{s.lyNewTab}</label>
+                          </div>
+                          <div className="row-actions">
+                            <button className="icon-btn" title={s.bnMoveUp} disabled={linkIdx === 0} onClick={() => moveLink(colIdx, linkIdx, -1)}><i className="ti ti-chevron-up" /></button>
+                            <button className="icon-btn" title={s.bnMoveDown} disabled={linkIdx === col.links.length - 1} onClick={() => moveLink(colIdx, linkIdx, 1)}><i className="ti ti-chevron-down" /></button>
+                            <button className="icon-btn danger" title={s.lyRemove} onClick={() => removeLink(colIdx, linkIdx)}><i className="ti ti-trash" /></button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const BRAND_CF_TYPES: BrandCustomField["type"][] = ["text", "url", "email", "phone", "image", "tel"];
+
+function BrandPane({ token, lang }: { token: string | null; lang: string }) {
+  const s = settingsStrings(lang);
+  const [data, setData] = useState<BrandSettings | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const res = await apiBrandSettings();
+      setData(res.data);
+    } catch (e) {
+      console.error("brand settings load failed", e);
+    }
+  }, []);
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  function updateField<K extends keyof BrandSettings>(key: K, value: BrandSettings[K]) {
+    setData((prev) => (prev ? { ...prev, [key]: value } : prev));
+    setSaved(false);
+  }
+  function updateSocial(k: string, value: string) {
+    setData((prev) => (prev ? { ...prev, social_links: { ...prev.social_links, [k]: value === "" ? null : value } } : prev));
+    setSaved(false);
+  }
+  function updateCustom(i: number, patch: Partial<BrandCustomField>) {
+    setData((prev) => (prev ? { ...prev, custom_fields: prev.custom_fields.map((f, j) => (j === i ? { ...f, ...patch } : f)) } : prev));
+    setSaved(false);
+  }
+  function addCustom() {
+    setData((prev) => (prev ? { ...prev, custom_fields: [...prev.custom_fields, { key: "", label: "", type: "text", value: "" }] } : prev));
+    setSaved(false);
+  }
+  function removeCustom(i: number) {
+    setData((prev) => (prev ? { ...prev, custom_fields: prev.custom_fields.filter((_, j) => j !== i) } : prev));
+    setSaved(false);
+  }
+  async function handleSave() {
+    if (!token || !data) return;
+    setSaving(true);
+    setSaved(false);
+    try {
+      const res = await apiPatchBrandSettings(token, data);
+      setData(res.data);
+      setSaved(true);
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!data) {
+    return <div className="card"><div className="empty-state"><i className="ti ti-palette" />{s.brLoadPrompt}</div></div>;
+  }
+
+  return (
+    <div>
+      <div className="filter-card">
+        <div style={{ flex: 1 }} />
+        {saved && <span className="badge badge-success">{s.lySaved}</span>}
+        <button className="btn btn-primary" disabled={saving} onClick={() => void handleSave()}><i className="ti ti-device-floppy" />{saving ? s.loading : s.save}</button>
+      </div>
+
+      <div className="card">
+        <div className="card-header"><div><div className="card-title">{s.brImagery}</div><div className="card-subtitle">{s.brImageryHint}</div></div></div>
+        <div className="card-body">
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
+            <ImageUploadField value={data.logo_url ?? ""} onChange={(v) => updateField("logo_url", v === "" ? null : v)} section="banners" label={s.brLogo} altText="ZULU logo" />
+            <ImageUploadField value={data.emblem_url ?? ""} onChange={(v) => updateField("emblem_url", v === "" ? null : v)} section="banners" label={s.brEmblem} altText="ZULU emblem" />
+            <ImageUploadField value={data.favicon_url ?? ""} onChange={(v) => updateField("favicon_url", v === "" ? null : v)} section="banners" label={s.brFavicon} altText="Favicon" />
+          </div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header"><div className="card-title">{s.brContact}</div></div>
+        <div className="card-body">
+          <div className="form-grid">
+            <div className="fld"><label className="fld-label">{s.brPhone}</label><input value={data.phone ?? ""} onChange={(e) => updateField("phone", e.target.value === "" ? null : e.target.value)} placeholder="+374 11 123 456" /></div>
+            <div className="fld"><label className="fld-label">{s.brEmail}</label><input type="email" value={data.email ?? ""} onChange={(e) => updateField("email", e.target.value === "" ? null : e.target.value)} placeholder="info@zulu.am" /></div>
+            <div className="fld span-2"><label className="fld-label">{s.brAddress}</label><input value={data.address ?? ""} onChange={(e) => updateField("address", e.target.value === "" ? null : e.target.value)} /></div>
+            <div className="fld"><label className="fld-label">{s.brCity}</label><input value={data.address_city ?? ""} onChange={(e) => updateField("address_city", e.target.value === "" ? null : e.target.value)} /></div>
+            <div className="fld"><label className="fld-label">{s.brCountry}</label><input value={data.address_country ?? ""} onChange={(e) => updateField("address_country", e.target.value === "" ? null : e.target.value)} /></div>
+          </div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header"><div><div className="card-title">{s.brSocial}</div><div className="card-subtitle">{s.brSocialHint}</div></div></div>
+        <div className="card-body">
+          <div className="form-grid">
+            {BRAND_SOCIAL_PLATFORMS.map((p) => (
+              <div key={p.key} className="fld"><label className="fld-label">{p.label}</label><input type="url" value={data.social_links?.[p.key] ?? ""} onChange={(e) => updateSocial(p.key, e.target.value)} placeholder="https://…" /></div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 0 }}>
+        <div className="card-header">
+          <div><div className="card-title">{s.brCustom}</div><div className="card-subtitle">{s.brCustomHint}</div></div>
+          <button className="btn btn-sm" onClick={addCustom}><i className="ti ti-plus" />{s.brAddField}</button>
+        </div>
+        <div className="card-body">
+          {data.custom_fields.length === 0 ? (
+            <div className="cell-muted text-sm">{s.brEmptyCustom}</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {data.custom_fields.map((f, i) => (
+                <div key={i} style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "var(--radius-md)", padding: 10 }}>
+                  <div className="form-grid">
+                    <div className="fld"><label className="fld-label">{s.brCfKey}</label><input className="font-mono" value={f.key} onChange={(e) => updateCustom(i, { key: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_") })} placeholder="office_hours" /></div>
+                    <div className="fld"><label className="fld-label">{s.brCfLabel}</label><input value={f.label} onChange={(e) => updateCustom(i, { label: e.target.value })} /></div>
+                    <div className="fld"><label className="fld-label">{s.brCfType}</label><select value={f.type} onChange={(e) => updateCustom(i, { type: e.target.value as BrandCustomField["type"] })}>{BRAND_CF_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
+                    <div className="fld"><label className="fld-label">{s.brCfValue}</label><input value={f.value ?? ""} onChange={(e) => updateCustom(i, { value: e.target.value })} /></div>
+                  </div>
+                  <div style={{ marginTop: 8, textAlign: "right" }}>
+                    <button className="icon-btn danger" title={s.lyRemove} onClick={() => removeCustom(i)}><i className="ti ti-trash" /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

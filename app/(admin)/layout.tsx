@@ -43,6 +43,12 @@ const MGMT_PREFIXES = [
   "/platform/banners",
   "/platform/notifications",
   "/platform/newsletter",
+  // 2026-06-05 pt3 — Layout cluster migration (header-menu / footer / brand).
+  // Exact sub-paths under /platform/settings/*; they have no deeper routes and
+  // do NOT collide with the (still-unmigrated) /platform/settings page itself.
+  "/platform/settings/header-menu",
+  "/platform/settings/footer",
+  "/platform/settings/brand",
 ];
 
 /** Routes that render the unified chrome ONLY on an exact path match (their
