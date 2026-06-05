@@ -5029,6 +5029,20 @@ function rbPretty(name: string): string {
   return name.replace(/[_-]/g, " ").replace(/\s+/g, " ").trim().replace(/^./, (c) => c.toUpperCase());
 }
 
+/** Clear, translated display name for the known roles (Arshak's 3-concept model);
+ *  falls back to the prettified raw name for any other role. Internal role names
+ *  are unchanged — this is display only. */
+function rbRoleLabel(name: string, s: ReturnType<typeof settingsStrings>): string {
+  switch (name.toLowerCase()) {
+    case "super_admin": return s.rbRoleSuper;
+    case "platform_admin": return s.rbRoleStaff;
+    case "company_admin": return s.rbRoleOwner;
+    case "operator_admin": return s.rbRoleManager;
+    case "agent": return s.rbRoleAgent;
+    default: return rbPretty(name);
+  }
+}
+
 type RbForm = { name: string; description: string; scope: RbacRoleScope };
 
 function RbacPane({ token, lang }: { token: string | null; lang: string }) {
@@ -5151,7 +5165,7 @@ function RbacPane({ token, lang }: { token: string | null; lang: string }) {
               ) : (
                 visibleRoles.map((r) => (
                   <tr key={r.id} onClick={() => setSelectedRoleId(r.id)} style={{ cursor: "pointer", background: selectedRoleId === r.id ? "var(--bg-secondary)" : undefined }}>
-                    <td><span className={`badge ${rbBadgeTone(r.name)}`}>{rbPretty(r.name)}</span></td>
+                    <td><span className={`badge ${rbBadgeTone(r.name)}`}>{rbRoleLabel(r.name, s)}</span></td>
                     <td className="cell-muted text-sm">{r.description || "—"}</td>
                     <td className="num-cell">{r.memberships_count}</td>
                     <td className="num-cell cell-muted">{r.permissions.length} / {permTotal}</td>
@@ -5176,7 +5190,7 @@ function RbacPane({ token, lang }: { token: string | null; lang: string }) {
           <RbacMenuTree
             token={token}
             roleId={selectedRoleId}
-            roleName={selectedRole ? rbPretty(selectedRole.name) : undefined}
+            roleName={selectedRole ? rbRoleLabel(selectedRole.name, s) : undefined}
             canEdit={isSuper}
           />
         ) : null}
@@ -5199,7 +5213,7 @@ function RbacPane({ token, lang }: { token: string | null; lang: string }) {
         description={
           pinRole ? (
             <>
-              {s.rbPinGate} <strong>{rbPretty(pinRole.name)}</strong>.
+              {s.rbPinGate} <strong>{rbRoleLabel(pinRole.name, s)}</strong>.
               {pinRole.memberships_count > 0 ? (
                 <span style={{ display: "block", marginTop: 8 }}>{s.rbDeleteBlocked}</span>
               ) : null}

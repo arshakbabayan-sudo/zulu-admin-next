@@ -606,6 +606,12 @@ const EN = {
   rbToastUpdated: "Role updated.",
   rbToastDeleted: "Role deleted.",
   rbSelectRoleHint: "Select a role above to edit its permissions.",
+  // Clear role display names (Arshak 2026-06-05 — 3 concepts: Operator / Agent / ZULU staff)
+  rbRoleSuper: "Super admin",
+  rbRoleStaff: "ZULU staff",
+  rbRoleOwner: "Operator / Agent (owner)",
+  rbRoleManager: "Company manager",
+  rbRoleAgent: "Agent",
 
   // ── system cluster: API docs ──────────────────────────────────
   adNote: "The API spec is generated from storage/app/openapi.json (scheduled command api:generate-openapi). Regenerate manually with: php artisan api:generate-openapi",
@@ -1180,6 +1186,11 @@ const HY: Partial<Record<SettingsKey, string>> = {
   rbToastUpdated: "Դերը թարմացվեց։",
   rbToastDeleted: "Դերը ջնջվեց։",
   rbSelectRoleHint: "Վերևից ընտրիր դեր՝ դրա թույլտվությունները խմբագրելու համար։",
+  rbRoleSuper: "Գլխավոր ադմին",
+  rbRoleStaff: "ZULU-ի աշխատակից",
+  rbRoleOwner: "Օպերատոր/Ագենտ (սեփականատեր)",
+  rbRoleManager: "Ընկերության ղեկավար",
+  rbRoleAgent: "Ագենտ",
 
   // ── system cluster: API docs ──────────────────────────────────
   adNote: "API-ի նկարագիրը գեներացվում է storage/app/openapi.json-ից (api:generate-openapi հրաման՝ ժամանակացույցով)։ Ձեռքով նորից գեներացնելու համար՝ php artisan api:generate-openapi",
@@ -1752,6 +1763,11 @@ const RU: Partial<Record<SettingsKey, string>> = {
   rbToastUpdated: "Роль обновлена.",
   rbToastDeleted: "Роль удалена.",
   rbSelectRoleHint: "Выберите роль выше, чтобы изменить её права.",
+  rbRoleSuper: "Супер-админ",
+  rbRoleStaff: "Сотрудник ZULU",
+  rbRoleOwner: "Оператор/Агент (владелец)",
+  rbRoleManager: "Менеджер компании",
+  rbRoleAgent: "Агент",
 
   // ── system cluster: API docs ──────────────────────────────────
   adNote: "Спецификация API генерируется из storage/app/openapi.json (команда api:generate-openapi, по расписанию). Ручная регенерация: php artisan api:generate-openapi",
