@@ -224,6 +224,26 @@ const EN = {
   stReply: "Send reply",
   stSupport: "Support",
   stCustomer: "Customer",
+
+  // ── locations (System cluster) ────────────────────────────────
+  locCountries: "Countries",
+  locRegions: "Regions",
+  locCities: "Cities",
+  locAddCountry: "Add country",
+  locAddRegion: "Add region",
+  locAddCity: "Add city",
+  locEditCountry: "Edit country",
+  locEditRegion: "Edit region",
+  locEditCity: "Edit city",
+  locFldName: "Name",
+  locFldCode: "Code",
+  locFldFlag: "Flag emoji",
+  locFldLat: "Latitude",
+  locFldLng: "Longitude",
+  locPickCountry: "Select a country to see its regions.",
+  locPickRegion: "Select a region to see its cities.",
+  locNoRegions: "No regions yet.",
+  locNoCities: "No cities yet.",
 } as const;
 
 export type SettingsKey = keyof typeof EN;
@@ -430,6 +450,25 @@ const HY: Partial<Record<SettingsKey, string>> = {
   stReply: "Ուղարկել պատասխանը",
   stSupport: "Աջակցություն",
   stCustomer: "Հաճախորդ",
+
+  locCountries: "Երկրներ",
+  locRegions: "Մարզեր",
+  locCities: "Քաղաքներ",
+  locAddCountry: "Ավելացնել երկիր",
+  locAddRegion: "Ավելացնել մարզ",
+  locAddCity: "Ավելացնել քաղաք",
+  locEditCountry: "Խմբագրել երկիրը",
+  locEditRegion: "Խմբագրել մարզը",
+  locEditCity: "Խմբագրել քաղաքը",
+  locFldName: "Անուն",
+  locFldCode: "Կոդ",
+  locFldFlag: "Դրոշի էմոջի",
+  locFldLat: "Լայնություն",
+  locFldLng: "Երկայնություն",
+  locPickCountry: "Ընտրիր երկիր՝ մարզերը տեսնելու համար։",
+  locPickRegion: "Ընտրիր մարզ՝ քաղաքները տեսնելու համար։",
+  locNoRegions: "Մարզեր չկան։",
+  locNoCities: "Քաղաքներ չկան։",
 };
 
 const RU: Partial<Record<SettingsKey, string>> = {
@@ -634,6 +673,25 @@ const RU: Partial<Record<SettingsKey, string>> = {
   stReply: "Отправить ответ",
   stSupport: "Поддержка",
   stCustomer: "Клиент",
+
+  locCountries: "Страны",
+  locRegions: "Регионы",
+  locCities: "Города",
+  locAddCountry: "Добавить страну",
+  locAddRegion: "Добавить регион",
+  locAddCity: "Добавить город",
+  locEditCountry: "Изменить страну",
+  locEditRegion: "Изменить регион",
+  locEditCity: "Изменить город",
+  locFldName: "Название",
+  locFldCode: "Код",
+  locFldFlag: "Эмодзи флага",
+  locFldLat: "Широта",
+  locFldLng: "Долгота",
+  locPickCountry: "Выберите страну, чтобы увидеть регионы.",
+  locPickRegion: "Выберите регион, чтобы увидеть города.",
+  locNoRegions: "Регионов пока нет.",
+  locNoCities: "Городов пока нет.",
 };
 
 export function settingsStrings(lang: string): Record<SettingsKey, string> {

@@ -69,6 +69,23 @@ import {
   type SupportTicketListRow,
   type SupportTicketDetail,
 } from "@/lib/support-api";
+import {
+  apiLocationCountries,
+  apiLocationCountryCreate,
+  apiLocationCountryUpdate,
+  apiLocationCountryDelete,
+  apiLocationRegions,
+  apiLocationRegionCreate,
+  apiLocationRegionUpdate,
+  apiLocationRegionDelete,
+  apiLocationCities,
+  apiLocationCityCreate,
+  apiLocationCityUpdate,
+  apiLocationCityDelete,
+  type LocationCountryRow,
+  type LocationRegionRow,
+  type LocationCityRow,
+} from "@/lib/locations-api";
 
 // ── Page catalogue ──────────────────────────────────────────────
 export type SettingsPageKey =
@@ -113,7 +130,7 @@ const PAGES: Record<SettingsPageKey, PageMeta> = {
   "loyalty":           { cluster: "marketing", labelKey: "pgLoyalty", super: false, href: "/platform/loyalty" },
   "security":          { cluster: "system", labelKey: "pgSecurity", super: true, href: "/platform/security" },
   "webhooks":          { cluster: "system", labelKey: "pgWebhooks", super: true, href: "/platform/webhooks" },
-  "locations":         { cluster: "system", labelKey: "pgLocations", super: true, href: "/platform/locations" },
+  "locations":         { cluster: "system", labelKey: "pgLocations", super: true, inPage: true, href: "/platform/locations" },
   "api-docs":          { cluster: "system", labelKey: "pgApiDocs", super: true, href: "/platform/api-docs" },
   "connections":       { cluster: "system", labelKey: "pgConnections", super: false, href: "/connections" },
   "platform-settings": { cluster: "system", labelKey: "pgPlatformSettings", super: true, href: "/platform/settings" },
@@ -290,6 +307,7 @@ export function SettingsPage({ initialPage = "exchange-rates" }: { initialPage?:
             {page === "exchange-rates" && <ExchangeRatesPane token={token} lang={lang} />}
             {page === "reviews" && <ReviewsPane token={token} lang={lang} />}
             {page === "support-tickets" && <SupportTicketsPane token={token} lang={lang} />}
+            {page === "locations" && <LocationsPane token={token} lang={lang} />}
           </div>
         </div>
       </div>
@@ -1652,5 +1670,289 @@ function TicketDrawer({
         </div>
       </div>
     </>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// Locations pane (System cluster) — countries → regions → cities cascade
+// ════════════════════════════════════════════════════════════════
+
+type LocModalState =
+  | { kind: "country"; mode: "create" }
+  | { kind: "country"; mode: "edit"; row: LocationCountryRow }
+  | { kind: "region"; mode: "create"; countryId: number }
+  | { kind: "region"; mode: "edit"; row: LocationRegionRow }
+  | { kind: "city"; mode: "create"; regionId: number; countryId: number }
+  | { kind: "city"; mode: "edit"; row: LocationCityRow }
+  | null;
+
+function LocationsPane({ token, lang }: { token: string | null; lang: string }) {
+  const s = settingsStrings(lang);
+  const [countries, setCountries] = useState<LocationCountryRow[]>([]);
+  const [regions, setRegions] = useState<LocationRegionRow[]>([]);
+  const [cities, setCities] = useState<LocationCityRow[]>([]);
+  const [selCountry, setSelCountry] = useState<number | null>(null);
+  const [selRegion, setSelRegion] = useState<number | null>(null);
+  const [modal, setModal] = useState<LocModalState>(null);
+  const [busy, setBusy] = useState(false);
+
+  const loadCountries = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await apiLocationCountries(token);
+      setCountries(res.data ?? []);
+    } catch (e) {
+      console.error("countries load failed", e);
+    }
+  }, [token]);
+  useEffect(() => {
+    void loadCountries();
+  }, [loadCountries]);
+
+  const loadRegions = useCallback(async (countryId: number) => {
+    if (!token) return;
+    try {
+      const res = await apiLocationRegions(token, countryId);
+      setRegions(res.data ?? []);
+    } catch {
+      setRegions([]);
+    }
+  }, [token]);
+
+  const loadCities = useCallback(async (regionId: number) => {
+    if (!token) return;
+    try {
+      const res = await apiLocationCities(token, regionId);
+      setCities(res.data ?? []);
+    } catch {
+      setCities([]);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (selCountry == null) {
+      setRegions([]);
+      setSelRegion(null);
+      setCities([]);
+      return;
+    }
+    setSelRegion(null);
+    setCities([]);
+    void loadRegions(selCountry);
+  }, [selCountry, loadRegions]);
+
+  useEffect(() => {
+    if (selRegion == null) {
+      setCities([]);
+      return;
+    }
+    void loadCities(selRegion);
+  }, [selRegion, loadCities]);
+
+  async function del(kind: "country" | "region" | "city", id: number) {
+    if (!token) return;
+    if (typeof window !== "undefined" && !window.confirm(s.confirmDelete)) return;
+    try {
+      if (kind === "country") {
+        await apiLocationCountryDelete(token, id);
+        if (selCountry === id) setSelCountry(null);
+        await loadCountries();
+      } else if (kind === "region") {
+        await apiLocationRegionDelete(token, id);
+        if (selRegion === id) setSelRegion(null);
+        if (selCountry != null) await loadRegions(selCountry);
+      } else {
+        await apiLocationCityDelete(token, id);
+        if (selRegion != null) await loadCities(selRegion);
+      }
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    }
+  }
+
+  async function save(input: { name: string; code: string; flag: string; lat: string; lng: string; is_active: boolean }) {
+    if (!token || !modal) return;
+    setBusy(true);
+    try {
+      if (modal.kind === "country") {
+        if (modal.mode === "create") await apiLocationCountryCreate(token, { name: input.name, code: input.code.toUpperCase(), flag_emoji: input.flag || null, is_active: input.is_active });
+        else await apiLocationCountryUpdate(token, { id: modal.row.id, name: input.name, code: input.code.toUpperCase(), flag_emoji: input.flag || null, is_active: input.is_active });
+        await loadCountries();
+      } else if (modal.kind === "region") {
+        const countryId = modal.mode === "create" ? modal.countryId : modal.row.country_id;
+        if (modal.mode === "create") await apiLocationRegionCreate(token, { country_id: countryId, name: input.name, code: input.code || null, is_active: input.is_active });
+        else await apiLocationRegionUpdate(token, { id: modal.row.id, name: input.name, code: input.code || null, is_active: input.is_active });
+        await loadRegions(countryId);
+      } else {
+        if (modal.mode === "create") await apiLocationCityCreate(token, { region_id: modal.regionId, country_id: modal.countryId, name: input.name, latitude: input.lat ? Number(input.lat) : null, longitude: input.lng ? Number(input.lng) : null, is_active: input.is_active });
+        else await apiLocationCityUpdate(token, { id: modal.row.id, name: input.name, latitude: input.lat ? Number(input.lat) : null, longitude: input.lng ? Number(input.lng) : null, is_active: input.is_active });
+        if (selRegion != null) await loadCities(selRegion);
+      }
+      setModal(null);
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const selCountryName = countries.find((c) => c.id === selCountry)?.name ?? "";
+  const selRegionName = regions.find((r) => r.id === selRegion)?.name ?? "";
+
+  return (
+    <div>
+      <div className="tri-col">
+        {/* Countries */}
+        <div className="tri-pane">
+          <div className="tri-head">
+            <span>{s.locCountries}</span>
+            <button className="icon-btn" title={s.locAddCountry} onClick={() => setModal({ kind: "country", mode: "create" })}><i className="ti ti-plus" /></button>
+          </div>
+          <div className="tri-list">
+            {countries.length === 0 ? <div className="tri-empty">—</div> : countries.map((c) => (
+              <div key={c.id} className={`tri-row ${selCountry === c.id ? "sel" : ""}`} onClick={() => setSelCountry(c.id)}>
+                <span>{c.flag_emoji ? `${c.flag_emoji} ` : ""}{c.name}<span className="tri-sub">{c.code}</span></span>
+                <div className="row-actions" onClick={(e) => e.stopPropagation()}>
+                  <button className="icon-btn" onClick={() => setModal({ kind: "country", mode: "edit", row: c })}><i className="ti ti-edit" /></button>
+                  <button className="icon-btn danger" onClick={() => void del("country", c.id)}><i className="ti ti-trash" /></button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Regions */}
+        <div className="tri-pane">
+          <div className="tri-head">
+            <span>{s.locRegions}{selCountryName ? <span className="cell-muted" style={{ fontWeight: 400 }}> · {selCountryName}</span> : null}</span>
+            {selCountry != null && <button className="icon-btn" title={s.locAddRegion} onClick={() => setModal({ kind: "region", mode: "create", countryId: selCountry })}><i className="ti ti-plus" /></button>}
+          </div>
+          <div className="tri-list">
+            {selCountry == null ? <div className="tri-empty">{s.locPickCountry}</div> : regions.length === 0 ? <div className="tri-empty">{s.locNoRegions}</div> : regions.map((r) => (
+              <div key={r.id} className={`tri-row ${selRegion === r.id ? "sel" : ""}`} onClick={() => setSelRegion(r.id)}>
+                <span>{r.name}{r.code ? <span className="tri-sub">{r.code}</span> : null}</span>
+                <div className="row-actions" onClick={(e) => e.stopPropagation()}>
+                  <button className="icon-btn" onClick={() => setModal({ kind: "region", mode: "edit", row: r })}><i className="ti ti-edit" /></button>
+                  <button className="icon-btn danger" onClick={() => void del("region", r.id)}><i className="ti ti-trash" /></button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Cities */}
+        <div className="tri-pane">
+          <div className="tri-head">
+            <span>{s.locCities}{selRegionName ? <span className="cell-muted" style={{ fontWeight: 400 }}> · {selRegionName}</span> : null}</span>
+            {selRegion != null && selCountry != null && <button className="icon-btn" title={s.locAddCity} onClick={() => setModal({ kind: "city", mode: "create", regionId: selRegion, countryId: selCountry })}><i className="ti ti-plus" /></button>}
+          </div>
+          <div className="tri-list">
+            {selRegion == null ? <div className="tri-empty">{s.locPickRegion}</div> : cities.length === 0 ? <div className="tri-empty">{s.locNoCities}</div> : cities.map((c) => (
+              <div key={c.id} className="tri-row">
+                <span>{c.name}{c.latitude != null && c.longitude != null ? <span className="tri-sub">{c.latitude}, {c.longitude}</span> : null}</span>
+                <div className="row-actions" onClick={(e) => e.stopPropagation()}>
+                  <button className="icon-btn" onClick={() => setModal({ kind: "city", mode: "edit", row: c })}><i className="ti ti-edit" /></button>
+                  <button className="icon-btn danger" onClick={() => void del("city", c.id)}><i className="ti ti-trash" /></button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <LocationModal state={modal} busy={busy} lang={lang} onClose={() => setModal(null)} onSave={(input) => void save(input)} />
+    </div>
+  );
+}
+
+function LocationModal({
+  state,
+  busy,
+  lang,
+  onClose,
+  onSave,
+}: {
+  state: LocModalState;
+  busy: boolean;
+  lang: string;
+  onClose: () => void;
+  onSave: (input: { name: string; code: string; flag: string; lat: string; lng: string; is_active: boolean }) => void;
+}) {
+  const s = settingsStrings(lang);
+  const [name, setName] = useState("");
+  const [code, setCode] = useState("");
+  const [flag, setFlag] = useState("");
+  const [lat, setLat] = useState("");
+  const [lng, setLng] = useState("");
+  const [active, setActive] = useState(true);
+  useEffect(() => {
+    if (!state) return;
+    if (state.mode === "edit") {
+      setName(state.row.name);
+      setActive(state.row.is_active !== false);
+      if (state.kind === "country") {
+        setCode(state.row.code);
+        setFlag(state.row.flag_emoji ?? "");
+        setLat("");
+        setLng("");
+      } else if (state.kind === "region") {
+        setCode(state.row.code ?? "");
+        setFlag("");
+        setLat("");
+        setLng("");
+      } else {
+        setCode("");
+        setFlag("");
+        setLat(state.row.latitude != null ? String(state.row.latitude) : "");
+        setLng(state.row.longitude != null ? String(state.row.longitude) : "");
+      }
+    } else {
+      setName("");
+      setCode("");
+      setFlag("");
+      setLat("");
+      setLng("");
+      setActive(true);
+    }
+  }, [state]);
+
+  const kind = state?.kind;
+  const title = !state
+    ? ""
+    : state.mode === "create"
+    ? (kind === "country" ? s.locAddCountry : kind === "region" ? s.locAddRegion : s.locAddCity)
+    : (kind === "country" ? s.locEditCountry : kind === "region" ? s.locEditRegion : s.locEditCity);
+  const valid = name.trim() !== "" && (kind !== "country" || code.trim().length >= 2);
+
+  return (
+    <div className={`modal-overlay ${state ? "open" : ""}`} onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <div className="modal-title">{title}</div>
+          <button className="icon-btn" onClick={onClose}><i className="ti ti-x" /></button>
+        </div>
+        <div className="modal-body">
+          <div className="form-grid">
+            <div className="fld span-2"><label className="fld-label">{s.locFldName}</label><input value={name} onChange={(e) => setName(e.target.value)} /></div>
+            {(kind === "country" || kind === "region") && (
+              <div className="fld"><label className="fld-label">{s.locFldCode}</label><input value={code} onChange={(e) => setCode(e.target.value)} style={kind === "country" ? { textTransform: "uppercase" } : undefined} /></div>
+            )}
+            {kind === "country" && (
+              <div className="fld"><label className="fld-label">{s.locFldFlag}</label><input value={flag} onChange={(e) => setFlag(e.target.value)} placeholder="🇦🇲" /></div>
+            )}
+            {kind === "city" && (
+              <>
+                <div className="fld"><label className="fld-label">{s.locFldLat}</label><input type="number" step="0.000001" value={lat} onChange={(e) => setLat(e.target.value)} /></div>
+                <div className="fld"><label className="fld-label">{s.locFldLng}</label><input type="number" step="0.000001" value={lng} onChange={(e) => setLng(e.target.value)} /></div>
+              </>
+            )}
+            <div className="fld" style={{ justifyContent: "flex-end" }}>
+              <label className="switch-row" style={{ cursor: "pointer" }}><input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />{s.active}</label>
+            </div>
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn" onClick={onClose}>{s.cancel}</button>
+          <button className="btn btn-primary" disabled={busy || !valid} onClick={() => onSave({ name, code, flag, lat, lng, is_active: active })}><i className="ti ti-device-floppy" />{state?.mode === "edit" ? s.save : s.create}</button>
+        </div>
+      </div>
+    </div>
   );
 }

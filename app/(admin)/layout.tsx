@@ -31,6 +31,7 @@ const MGMT_PREFIXES = [
   "/settings/money-flow",
   "/platform/reviews",
   "/support/tickets",
+  "/platform/locations",
 ];
 
 /**
