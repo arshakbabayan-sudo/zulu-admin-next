@@ -60,8 +60,33 @@ import {
 import {
   apiPlatformReviews,
   apiModerateReview,
+  apiPlatformBanners,
+  apiCreatePlatformBanner,
+  apiUpdatePlatformBanner,
+  apiDeletePlatformBanner,
+  apiReorderBanners,
+  apiBulkDeleteBanners,
+  apiNewsletterSubscriptions,
+  apiNewsletterStats,
+  apiDeleteNewsletterSubscription,
+  apiPlatformNotifications,
+  apiPlatformNotificationStats,
   type PlatformReviewRow,
+  type PlatformBannerRow,
+  type NewsletterSubscriptionRow,
+  type NewsletterStats,
+  type PlatformNotificationRow,
+  type PlatformNotificationStats,
 } from "@/lib/platform-admin-api";
+import {
+  apiAdminPages,
+  apiCreateAdminPage,
+  apiPatchAdminPageStatus,
+  apiDeleteAdminPage,
+  type AdminPageRow,
+} from "@/lib/pages-api";
+import { getApiPublicOrigin, getApiBaseUrl } from "@/lib/api-base";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import {
   apiSupportTickets,
   apiSupportTicket,
@@ -139,10 +164,10 @@ const PAGES: Record<SettingsPageKey, PageMeta> = {
   "ui-strings":        { cluster: "localization", labelKey: "pgUiStrings", super: true, inPage: true, href: "/localization/ui-translations" },
   "content-tr":        { cluster: "localization", labelKey: "pgContentTr", super: false, inPage: true, href: "/localization/translations" },
   "email-tpl":         { cluster: "localization", labelKey: "pgEmailTpl", super: false, inPage: true, href: "/localization/templates" },
-  "cms-pages":         { cluster: "content", labelKey: "pgCmsPages", super: true, href: "/pages" },
-  "banners":           { cluster: "content", labelKey: "pgBanners", super: true, href: "/platform/banners" },
-  "sys-notif":         { cluster: "content", labelKey: "pgSysNotif", super: true, href: "/platform/notifications" },
-  "newsletter":        { cluster: "content", labelKey: "pgNewsletter", super: false, href: "/platform/newsletter" },
+  "cms-pages":         { cluster: "content", labelKey: "pgCmsPages", super: true, inPage: true, href: "/pages" },
+  "banners":           { cluster: "content", labelKey: "pgBanners", super: true, inPage: true, href: "/platform/banners" },
+  "sys-notif":         { cluster: "content", labelKey: "pgSysNotif", super: true, inPage: true, href: "/platform/notifications" },
+  "newsletter":        { cluster: "content", labelKey: "pgNewsletter", super: false, inPage: true, href: "/platform/newsletter" },
   "header-menu":       { cluster: "layout", labelKey: "pgHeaderMenu", super: true, href: "/platform/settings/header-menu" },
   "footer":            { cluster: "layout", labelKey: "pgFooter", super: true, href: "/platform/settings/footer" },
   "brand":             { cluster: "layout", labelKey: "pgBrand", super: true, href: "/platform/settings/brand" },
@@ -331,6 +356,10 @@ export function SettingsPage({ initialPage = "exchange-rates" }: { initialPage?:
             {page === "ui-strings" && <UiStringsPane token={token} lang={lang} />}
             {page === "content-tr" && <ContentTrPane token={token} lang={lang} />}
             {page === "email-tpl" && <EmailTplPane token={token} lang={lang} />}
+            {page === "cms-pages" && <CmsPagesPane token={token} lang={lang} />}
+            {page === "banners" && <BannersPane token={token} lang={lang} />}
+            {page === "sys-notif" && <SysNotifPane token={token} lang={lang} />}
+            {page === "newsletter" && <NewsletterPane token={token} lang={lang} />}
           </div>
         </div>
       </div>
@@ -2495,6 +2524,851 @@ function EmailTplPane({ token, lang }: { token: string | null; lang: string }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// CMS pages pane (Content cluster) — list + create modal + status toggle
+// ════════════════════════════════════════════════════════════════
+
+function slugifyPage(input: string): string {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function CmsPagesPane({ token, lang }: { token: string | null; lang: string }) {
+  const s = settingsStrings(lang);
+  const router = useRouter();
+  const [rows, setRows] = useState<AdminPageRow[]>([]);
+  const [meta, setMeta] = useState<{ current_page: number; per_page: number; total: number; last_page: number } | null>(null);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const [modal, setModal] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const res = await apiAdminPages(token, { page });
+      setRows(res.data);
+      setMeta(res.meta);
+    } catch (e) {
+      console.error("cms pages load failed", e);
+    } finally {
+      setLoading(false);
+    }
+  }, [token, page]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function toggleStatus(row: AdminPageRow) {
+    if (!token) return;
+    setBusyId(row.id);
+    try {
+      await apiPatchAdminPageStatus(token, { page_id: row.id, status: row.status === 1 ? 0 : 1 });
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setBusyId(null);
+    }
+  }
+  async function del(row: AdminPageRow) {
+    if (!token) return;
+    if (typeof window !== "undefined" && !window.confirm(s.confirmDelete)) return;
+    setBusyId(row.id);
+    try {
+      await apiDeleteAdminPage(token, row.id);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <div>
+      <div className="filter-card">
+        <div style={{ flex: 1 }} />
+        <button className="btn" disabled={rows.length === 0} onClick={() => exportRowsAsCsv("cms-pages", rows, [
+          ["id", (r) => r.id],
+          ["page_name", (r) => r.page_name],
+          ["page_slug", (r) => r.page_slug],
+          ["status", (r) => r.status],
+          ["created_at", (r) => r.created_at ?? ""],
+        ])}><i className="ti ti-download" />{s.exportBtn}</button>
+        <button className="btn btn-primary" onClick={() => setModal(true)}><i className="ti ti-plus" />{s.cmNewPage}</button>
+      </div>
+      <div className="card" style={{ marginBottom: 0 }}>
+        <div className="card-header"><div className="card-title">{s.cmCardTitle}</div></div>
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>{s.cmColName}</th>
+                <th>{s.cmColSlug}</th>
+                <th>{s.status}</th>
+                <th>{s.cmColCreated}</th>
+                <th style={{ textAlign: "right" }}>{s.colActions}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading && rows.length === 0 ? (
+                <tr><td colSpan={5} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.loading}</td></tr>
+              ) : rows.length === 0 ? (
+                <tr><td colSpan={5} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.cmEmpty}</td></tr>
+              ) : (
+                rows.map((r) => (
+                  <tr key={r.id}>
+                    <td>{r.page_name}</td>
+                    <td className="font-mono cell-muted">/{r.page_slug}</td>
+                    <td>
+                      <label className="switch" style={{ cursor: "pointer" }}>
+                        <input type="checkbox" checked={r.status === 1} disabled={busyId === r.id} onChange={() => void toggleStatus(r)} />
+                        <span className="switch-slider" />
+                      </label>
+                    </td>
+                    <td className="cell-muted">{fmtDateTime(r.created_at).slice(0, 10)}</td>
+                    <td style={{ textAlign: "right" }}>
+                      <div className="row-actions">
+                        <button className="icon-btn" title={s.cmView} onClick={() => router.push(`/pages/${r.id}/edit?mode=view`)}><i className="ti ti-eye" /></button>
+                        <button className="icon-btn" title={s.edit} onClick={() => router.push(`/pages/${r.id}/edit`)}><i className="ti ti-edit" /></button>
+                        <button className="icon-btn danger" title={s.delete} disabled={busyId === r.id} onClick={() => void del(r)}><i className="ti ti-trash" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        {meta && meta.last_page > 1 && (
+          <div className="pagination">
+            <div className="pagination-info">{(meta.current_page - 1) * meta.per_page + 1}–{Math.min(meta.current_page * meta.per_page, meta.total)} / {meta.total}</div>
+            <div className="pagination-controls">
+              <button className="icon-btn" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}><i className="ti ti-chevron-left" /></button>
+              <button className="icon-btn" disabled={page >= meta.last_page} onClick={() => setPage((p) => p + 1)}><i className="ti ti-chevron-right" /></button>
+            </div>
+          </div>
+        )}
+      </div>
+      <CmsPageModal open={modal} token={token} lang={lang} onClose={() => setModal(false)} onCreated={() => { setModal(false); setPage(1); void load(); }} />
+    </div>
+  );
+}
+
+function CmsPageModal({
+  open,
+  token,
+  lang,
+  onClose,
+  onCreated,
+}: {
+  open: boolean;
+  token: string | null;
+  lang: string;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const s = settingsStrings(lang);
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [slugTouched, setSlugTouched] = useState(false);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (!open) {
+      setName("");
+      setSlug("");
+      setSlugTouched(false);
+      setBusy(false);
+    }
+  }, [open]);
+  useEffect(() => {
+    if (!slugTouched) setSlug(slugifyPage(name));
+  }, [name, slugTouched]);
+
+  async function submit() {
+    if (!token || !name.trim() || !slug.trim()) return;
+    setBusy(true);
+    try {
+      await apiCreateAdminPage(token, { page_name: name.trim(), page_slug: slug.trim() });
+      onCreated();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className={`modal-overlay ${open ? "open" : ""}`} onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <div className="modal-title">{s.cmAddTitle}</div>
+          <button className="icon-btn" onClick={onClose}><i className="ti ti-x" /></button>
+        </div>
+        <div className="modal-body">
+          <div className="form-grid">
+            <div className="fld span-2"><label className="fld-label">{s.cmFldName}</label><input value={name} onChange={(e) => setName(e.target.value)} placeholder="Home Page" /></div>
+            <div className="fld span-2"><label className="fld-label">{s.cmFldSlug}</label><input className="font-mono" value={slug} onChange={(e) => { setSlugTouched(true); setSlug(slugifyPage(e.target.value)); }} placeholder="home-page" /></div>
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn" onClick={onClose}>{s.cancel}</button>
+          <button className="btn btn-primary" disabled={busy || !name.trim() || !slug.trim()} onClick={() => void submit()}><i className="ti ti-device-floppy" />{s.create}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// Banners pane (Content cluster) — list + image CRUD + reorder + bulk delete
+// ════════════════════════════════════════════════════════════════
+
+function resolveBannerSrc(u?: string | null): string | null {
+  if (!u) return null;
+  if (u.startsWith("http://") || u.startsWith("https://")) return u;
+  const origin = getApiPublicOrigin().replace(/\/$/, "");
+  return u.startsWith("/") ? `${origin}${u}` : `${origin}/${u}`;
+}
+
+type BannerModalState = { mode: "create" } | { mode: "edit"; row: PlatformBannerRow } | null;
+
+function BannersPane({ token, lang }: { token: string | null; lang: string }) {
+  const s = settingsStrings(lang);
+  const [rows, setRows] = useState<PlatformBannerRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const [modal, setModal] = useState<BannerModalState>(null);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const res = await apiPlatformBanners(token);
+      setRows(res.data ?? []);
+    } catch (e) {
+      console.error("banners load failed", e);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function save(input: { file: File | null; title_en: string; title_ru: string; title_hy: string; link: string; sort: string }) {
+    if (!token) return;
+    const fd = new FormData();
+    if (input.file) fd.append("image", input.file);
+    fd.append("title_en", input.title_en);
+    fd.append("title_ru", input.title_ru);
+    fd.append("title_hy", input.title_hy);
+    if (input.link.trim()) fd.append("link_url", input.link.trim());
+    fd.append("sort_order", String(parseInt(input.sort, 10) || 0));
+    try {
+      if (modal?.mode === "edit") await apiUpdatePlatformBanner(token, modal.row.id, fd);
+      else await apiCreatePlatformBanner(token, fd);
+      setModal(null);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    }
+  }
+  async function del(id: number) {
+    if (!token) return;
+    if (typeof window !== "undefined" && !window.confirm(s.confirmDelete)) return;
+    setBusyId(id);
+    try {
+      await apiDeletePlatformBanner(token, id);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setBusyId(null);
+    }
+  }
+  async function move(id: number, dir: "up" | "down") {
+    if (!token) return;
+    const idx = rows.findIndex((r) => r.id === id);
+    if (idx < 0) return;
+    const swap = dir === "up" ? idx - 1 : idx + 1;
+    if (swap < 0 || swap >= rows.length) return;
+    const next = rows.slice();
+    const a = next[idx];
+    const b = next[swap];
+    if (!a || !b) return;
+    next[idx] = b;
+    next[swap] = a;
+    setRows(next);
+    try {
+      await apiReorderBanners(token, next.map((r) => r.id));
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+      await load();
+    }
+  }
+  function toggleSel(id: number) {
+    setSelected((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  }
+  function toggleAll() {
+    setSelected((prev) => {
+      const all = rows.map((r) => r.id);
+      return all.every((id) => prev.has(id)) ? new Set<number>() : new Set(all);
+    });
+  }
+  async function bulkDelete() {
+    if (!token || selected.size === 0) return;
+    if (typeof window !== "undefined" && !window.confirm(s.bnConfirmBulk)) return;
+    setBulkBusy(true);
+    try {
+      await apiBulkDeleteBanners(token, Array.from(selected));
+      setSelected(new Set());
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
+  return (
+    <div>
+      <div className="filter-card">
+        <div style={{ flex: 1 }} />
+        <button className="btn" disabled={rows.length === 0} onClick={() => exportRowsAsCsv("banners", rows, [
+          ["id", (r) => r.id],
+          ["sort_order", (r) => r.sort_order],
+          ["is_active", (r) => (r.is_active ? "1" : "0")],
+          ["title_en", (r) => r.title_en ?? ""],
+          ["title_ru", (r) => r.title_ru ?? ""],
+          ["title_hy", (r) => r.title_hy ?? ""],
+          ["link_url", (r) => r.link_url ?? ""],
+        ])}><i className="ti ti-download" />{s.exportBtn}</button>
+        {selected.size > 0 && (
+          <button className="btn btn-danger" disabled={bulkBusy} onClick={() => void bulkDelete()}>
+            <i className="ti ti-trash" />{s.bnBulkDelete.replace("{n}", String(selected.size))}
+          </button>
+        )}
+        <button className="btn btn-primary" onClick={() => setModal({ mode: "create" })}><i className="ti ti-plus" />{s.bnNewBanner}</button>
+      </div>
+      <div className="card" style={{ marginBottom: 0 }}>
+        <div className="card-header"><div className="card-title">{s.bnCardTitle}</div></div>
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th style={{ width: 32 }}><input type="checkbox" aria-label={s.all} checked={rows.length > 0 && rows.every((r) => selected.has(r.id))} onChange={toggleAll} /></th>
+                <th>{s.bnColPreview}</th>
+                <th>{s.bnColTitles}</th>
+                <th>{s.bnColLink}</th>
+                <th>{s.bnColSort}</th>
+                <th>{s.status}</th>
+                <th style={{ textAlign: "right" }}>{s.colActions}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading && rows.length === 0 ? (
+                <tr><td colSpan={7} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.loading}</td></tr>
+              ) : rows.length === 0 ? (
+                <tr><td colSpan={7} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.bnEmpty}</td></tr>
+              ) : (
+                rows.map((r, idx) => {
+                  const src = resolveBannerSrc(r.image_url);
+                  return (
+                    <tr key={r.id}>
+                      <td><input type="checkbox" aria-label={`#${r.id}`} checked={selected.has(r.id)} onChange={() => toggleSel(r.id)} /></td>
+                      <td>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                            <button className="icon-btn" title={s.bnMoveUp} disabled={idx === 0} onClick={() => void move(r.id, "up")} style={{ height: 18, width: 18 }}><i className="ti ti-chevron-up" style={{ fontSize: 13 }} /></button>
+                            <button className="icon-btn" title={s.bnMoveDown} disabled={idx === rows.length - 1} onClick={() => void move(r.id, "down")} style={{ height: 18, width: 18 }}><i className="ti ti-chevron-down" style={{ fontSize: 13 }} /></button>
+                          </div>
+                          {src ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={src} alt={r.title_en ?? `#${r.id}`} style={{ height: 40, width: 72, objectFit: "cover", borderRadius: 6, border: "1px solid var(--border-color)" }} />
+                          ) : (
+                            <span className="cell-muted">—</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="text-sm">
+                        <div>EN: {r.title_en ?? "—"}</div>
+                        <div className="cell-muted">RU: {r.title_ru ?? "—"} · HY: {r.title_hy ?? "—"}</div>
+                      </td>
+                      <td className="cell-muted text-sm" style={{ maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.link_url ?? "—"}</td>
+                      <td className="num-cell">{r.sort_order}</td>
+                      <td><span className={`badge ${r.is_active ? "badge-success" : "badge-gray"}`}>{r.is_active ? s.statusActive : s.statusInactive}</span></td>
+                      <td style={{ textAlign: "right" }}>
+                        <div className="row-actions">
+                          <button className="icon-btn" title={s.edit} onClick={() => setModal({ mode: "edit", row: r })}><i className="ti ti-edit" /></button>
+                          <button className="icon-btn danger" title={s.delete} disabled={busyId === r.id} onClick={() => void del(r.id)}><i className="ti ti-trash" /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <BannerModal state={modal} lang={lang} onClose={() => setModal(null)} onSave={(input) => void save(input)} />
+    </div>
+  );
+}
+
+function BannerModal({
+  state,
+  lang,
+  onClose,
+  onSave,
+}: {
+  state: BannerModalState;
+  lang: string;
+  onClose: () => void;
+  onSave: (input: { file: File | null; title_en: string; title_ru: string; title_hy: string; link: string; sort: string }) => void;
+}) {
+  const s = settingsStrings(lang);
+  const isEdit = state?.mode === "edit";
+  const [file, setFile] = useState<File | null>(null);
+  const [en, setEn] = useState("");
+  const [ru, setRu] = useState("");
+  const [hy, setHy] = useState("");
+  const [link, setLink] = useState("");
+  const [sort, setSort] = useState("0");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (!state) return;
+    setFile(null);
+    setBusy(false);
+    if (state.mode === "edit") {
+      setEn(state.row.title_en ?? "");
+      setRu(state.row.title_ru ?? "");
+      setHy(state.row.title_hy ?? "");
+      setLink(state.row.link_url ?? "");
+      setSort(String(state.row.sort_order ?? 0));
+    } else {
+      setEn("");
+      setRu("");
+      setHy("");
+      setLink("");
+      setSort("0");
+    }
+  }, [state]);
+
+  const valid = isEdit || file != null;
+  const previewSrc = isEdit && state?.mode === "edit" ? resolveBannerSrc(state.row.image_url) : null;
+  async function submit() {
+    setBusy(true);
+    await onSave({ file, title_en: en, title_ru: ru, title_hy: hy, link, sort });
+    setBusy(false);
+  }
+
+  return (
+    <div className={`modal-overlay ${state ? "open" : ""}`} onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <div className="modal-title">{isEdit ? s.bnEditTitle : s.bnCreateTitle}</div>
+          <button className="icon-btn" onClick={onClose}><i className="ti ti-x" /></button>
+        </div>
+        <div className="modal-body">
+          <div className="form-grid">
+            <div className="fld span-2">
+              <label className="fld-label">{isEdit ? s.bnFldImageOpt : s.bnFldImageReq}</label>
+              <input type="file" accept="image/jpeg,image/png,image/jpg,image/webp" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+              {previewSrc && !file ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={previewSrc} alt="" style={{ marginTop: 8, height: 56, borderRadius: 6, border: "1px solid var(--border-color)" }} />
+              ) : null}
+            </div>
+            <div className="fld"><label className="fld-label">{s.bnFldTitleEn}</label><input value={en} onChange={(e) => setEn(e.target.value)} /></div>
+            <div className="fld"><label className="fld-label">{s.bnFldTitleRu}</label><input value={ru} onChange={(e) => setRu(e.target.value)} /></div>
+            <div className="fld"><label className="fld-label">{s.bnFldTitleHy}</label><input value={hy} onChange={(e) => setHy(e.target.value)} /></div>
+            <div className="fld"><label className="fld-label">{s.bnFldSort}</label><input type="number" value={sort} onChange={(e) => setSort(e.target.value)} /></div>
+            <div className="fld span-2"><label className="fld-label">{s.bnFldLink}</label><input value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://…" /></div>
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn" onClick={onClose}>{s.cancel}</button>
+          <button className="btn btn-primary" disabled={busy || !valid} onClick={() => void submit()}><i className="ti ti-device-floppy" />{isEdit ? s.save : s.create}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// System notifications pane (Content cluster) — read-only registry
+// ════════════════════════════════════════════════════════════════
+
+const NOTIF_EVENT_TYPES = [
+  "package_order.created", "package_order.paid", "package_order.confirmed",
+  "package_order.partially_confirmed", "package_order.partially_failed", "package_order.cancelled",
+  "order.confirmed", "order.cancelled", "order.paid", "order.fulfilled",
+  "payment.succeeded", "payment.failed", "voucher.issued", "voucher.voided", "voucher.reissued",
+  "account.welcome", "account.password_reset",
+];
+const NOTIF_PRIORITIES = ["low", "normal", "high", "critical"];
+const NOTIF_STATUSES = ["unread", "read"];
+
+function SysNotifPane({ token, lang }: { token: string | null; lang: string }) {
+  const s = settingsStrings(lang);
+  const [rows, setRows] = useState<PlatformNotificationRow[]>([]);
+  const [stats, setStats] = useState<PlatformNotificationStats | null>(null);
+  const [meta, setMeta] = useState<{ current_page: number; per_page: number; total: number; last_page: number } | null>(null);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [fUser, setFUser] = useState("");
+  const [fEvent, setFEvent] = useState("");
+  const [fStatus, setFStatus] = useState("");
+  const [fPriority, setFPriority] = useState("");
+  const [q, setQ] = useState("");
+  const [selected, setSelected] = useState<PlatformNotificationRow | null>(null);
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const [list, st] = await Promise.all([
+        apiPlatformNotifications(token, {
+          page,
+          per_page: 50,
+          user_id: fUser.trim() || undefined,
+          event_type: fEvent || undefined,
+          status: fStatus || undefined,
+          priority: fPriority || undefined,
+          q: q.trim() || undefined,
+        }),
+        apiPlatformNotificationStats(token).catch(() => null),
+      ]);
+      setRows(list.data ?? []);
+      setMeta(list.meta);
+      if (st) setStats(st.data);
+    } catch (e) {
+      console.error("notifications load failed", e);
+    } finally {
+      setLoading(false);
+    }
+  }, [token, page, fUser, fEvent, fStatus, fPriority, q]);
+  useEffect(() => {
+    void load();
+  }, [token, page]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const priTone = (p: string): string => (p === "critical" ? "badge-danger" : p === "high" ? "badge-warning" : p === "normal" ? "badge-info" : "badge-gray");
+  const priLabel = (p: string): string => (p === "critical" ? s.snPriCritical : p === "high" ? s.snPriHigh : p === "normal" ? s.snPriNormal : p === "low" ? s.snPriLow : p);
+  const stTone = (st: string): string => (st === "read" ? "badge-success" : st === "unread" ? "badge-warning" : "badge-gray");
+  const stLabel = (st: string): string => (st === "read" ? s.snStRead : st === "unread" ? s.snStUnread : st);
+
+  return (
+    <div>
+      {stats && (
+        <div className="stat-grid">
+          <div className="stat-card c-primary"><div className="stat-header"><i className="ti ti-bell" /></div><div className="stat-value">{stats.total}</div><div className="stat-label">{s.snStatTotal}</div></div>
+          <div className="stat-card c-warning"><div className="stat-header"><i className="ti ti-mail-opened" /></div><div className="stat-value">{stats.unread}</div><div className="stat-label">{s.snStatUnread}</div></div>
+          <div className="stat-card c-success"><div className="stat-header"><i className="ti ti-checks" /></div><div className="stat-value">{stats.read}</div><div className="stat-label">{s.snStatRead}</div></div>
+          <div className="stat-card c-danger"><div className="stat-header"><i className="ti ti-alert-triangle" /></div><div className="stat-value">{stats.by_priority?.critical ?? 0}</div><div className="stat-label">{s.snStatCritical}</div></div>
+        </div>
+      )}
+      <div className="filter-card">
+        <div className="filter-field">
+          <span className="filter-label">{s.snFilterUser}</span>
+          <input value={fUser} onChange={(e) => setFUser(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { setPage(1); void load(); } }} />
+        </div>
+        <div className="filter-field">
+          <span className="filter-label">{s.snFilterEvent}</span>
+          <select value={fEvent} onChange={(e) => setFEvent(e.target.value)}>
+            <option value="">{s.snAllEvents}</option>
+            {NOTIF_EVENT_TYPES.map((ev) => <option key={ev} value={ev}>{ev}</option>)}
+          </select>
+        </div>
+        <div className="filter-field">
+          <span className="filter-label">{s.status}</span>
+          <select value={fStatus} onChange={(e) => setFStatus(e.target.value)}>
+            <option value="">{s.all}</option>
+            {NOTIF_STATUSES.map((st) => <option key={st} value={st}>{stLabel(st)}</option>)}
+          </select>
+        </div>
+        <div className="filter-field">
+          <span className="filter-label">{s.snColPriority}</span>
+          <select value={fPriority} onChange={(e) => setFPriority(e.target.value)}>
+            <option value="">{s.all}</option>
+            {NOTIF_PRIORITIES.map((p) => <option key={p} value={p}>{priLabel(p)}</option>)}
+          </select>
+        </div>
+        <div className="filter-field" style={{ flex: 2 }}>
+          <span className="filter-label">{s.search}</span>
+          <input type="search" placeholder={s.snSearchPh} value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { setPage(1); void load(); } }} />
+        </div>
+        <button className="btn" onClick={() => { setPage(1); void load(); }}><i className="ti ti-filter" />{s.apply}</button>
+      </div>
+      <div className="card" style={{ marginBottom: 0 }}>
+        <div className="card-header"><div className="card-title">{s.snCardTitle}</div></div>
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>{s.snColWhen}</th>
+                <th>{s.snColUser}</th>
+                <th>{s.snColEvent}</th>
+                <th>{s.snColTitle}</th>
+                <th>{s.snColPriority}</th>
+                <th>{s.status}</th>
+                <th style={{ textAlign: "right" }}>{s.colActions}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading && rows.length === 0 ? (
+                <tr><td colSpan={7} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.loading}</td></tr>
+              ) : rows.length === 0 ? (
+                <tr><td colSpan={7} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.snEmpty}</td></tr>
+              ) : (
+                rows.map((r) => (
+                  <tr key={r.id} onClick={() => setSelected(r)} style={{ cursor: "pointer" }}>
+                    <td className="cell-muted text-sm" title={r.created_at}>{fmtDateTime(r.created_at)}</td>
+                    <td>{r.user?.name ?? `#${r.user_id}`}{r.user?.email ? <div className="cell-muted text-sm">{r.user.email}</div> : null}</td>
+                    <td>{r.event_type ? <span className="type-badge">{r.event_type}</span> : <span className="cell-muted">—</span>}</td>
+                    <td className="text-sm" style={{ maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.title}</td>
+                    <td><span className={`badge ${priTone(r.priority)}`}>{priLabel(r.priority)}</span></td>
+                    <td><span className={`badge ${stTone(r.status)}`}>{stLabel(r.status)}</span></td>
+                    <td onClick={(e) => e.stopPropagation()} style={{ textAlign: "right" }}>
+                      <button className="icon-btn" title={s.cmView} onClick={() => setSelected(r)}><i className="ti ti-eye" /></button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        {meta && meta.last_page > 1 && (
+          <div className="pagination">
+            <div className="pagination-info">{(meta.current_page - 1) * meta.per_page + 1}–{Math.min(meta.current_page * meta.per_page, meta.total)} / {meta.total}</div>
+            <div className="pagination-controls">
+              <button className="icon-btn" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}><i className="ti ti-chevron-left" /></button>
+              <button className="icon-btn" disabled={page >= meta.last_page} onClick={() => setPage((p) => p + 1)}><i className="ti ti-chevron-right" /></button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className={`drawer-overlay ${selected ? "open" : ""}`} onClick={() => setSelected(null)} />
+      <div className={`drawer ${selected ? "open" : ""}`}>
+        <div className="drawer-header">
+          <div style={{ fontSize: 16, fontWeight: 600 }}>{selected?.title ?? ""}</div>
+          <button className="icon-btn" onClick={() => setSelected(null)}><i className="ti ti-x" /></button>
+        </div>
+        <div className="drawer-body">
+          {selected && (
+            <>
+              <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+                <span className={`badge ${priTone(selected.priority)}`}>{priLabel(selected.priority)}</span>
+                <span className={`badge ${stTone(selected.status)}`}>{stLabel(selected.status)}</span>
+              </div>
+              <div className="alert" style={{ whiteSpace: "pre-wrap" }}><i className="ti ti-message" /><div>{selected.message}</div></div>
+              <div className="info-grid" style={{ marginTop: 14 }}>
+                <div className="info-row"><span className="info-label">{s.snColUser}</span><span className="info-value">{selected.user ? `${selected.user.name} · ${selected.user.email}` : `#${selected.user_id}`}</span></div>
+                <div className="info-row"><span className="info-label">{s.snColWhen}</span><span className="info-value">{fmtDateTime(selected.created_at)}</span></div>
+                <div className="info-row"><span className="info-label">{s.snDrawerType}</span><span className="info-value">{selected.type}</span></div>
+                <div className="info-row"><span className="info-label">{s.snColEvent}</span><span className="info-value">{selected.event_type ?? "—"}</span></div>
+                <div className="info-row"><span className="info-label">{s.snDrawerSubject}</span><span className="info-value">{selected.subject_type ? `${selected.subject_type}${selected.subject_id ? ` #${selected.subject_id}` : ""}` : "—"}</span></div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// Newsletter pane (Content cluster) — subscribers + stats + unsubscribe
+// ════════════════════════════════════════════════════════════════
+
+const NL_SOURCES = ["", "home", "footer", "newsletter-block", "other"];
+const NL_LANGS = ["", "en", "ru", "hy"];
+
+function NewsletterPane({ token, lang }: { token: string | null; lang: string }) {
+  const s = settingsStrings(lang);
+  const [rows, setRows] = useState<NewsletterSubscriptionRow[]>([]);
+  const [stats, setStats] = useState<NewsletterStats | null>(null);
+  const [meta, setMeta] = useState<{ current_page: number; per_page: number; total: number; last_page: number } | null>(null);
+  const [page, setPage] = useState(1);
+  const [source, setSource] = useState("");
+  const [flang, setFlang] = useState("");
+  const [search, setSearch] = useState("");
+  const [activeOnly, setActiveOnly] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [busyId, setBusyId] = useState<number | null>(null);
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const [list, st] = await Promise.all([
+        apiNewsletterSubscriptions(token, {
+          page,
+          per_page: 25,
+          source: source || undefined,
+          lang: flang || undefined,
+          search: search.trim() || undefined,
+          active_only: activeOnly,
+        }),
+        apiNewsletterStats(token).catch(() => null),
+      ]);
+      setRows(list.data ?? []);
+      setMeta(list.meta);
+      if (st) setStats(st.data);
+    } catch (e) {
+      console.error("newsletter load failed", e);
+    } finally {
+      setLoading(false);
+    }
+  }, [token, page, source, flang, search, activeOnly]);
+  useEffect(() => {
+    void load();
+  }, [token, page, source, flang, activeOnly]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function unsubscribe(id: number) {
+    if (!token) return;
+    if (typeof window !== "undefined" && !window.confirm(s.nlConfirmUnsub)) return;
+    setBusyId(id);
+    try {
+      await apiDeleteNewsletterSubscription(token, id);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function exportCsv() {
+    if (!token) return;
+    const p = new URLSearchParams();
+    if (source) p.set("source", source);
+    if (flang) p.set("lang", flang);
+    p.set("active_only", activeOnly ? "1" : "0");
+    const base = getApiBaseUrl().replace(/\/$/, "");
+    try {
+      const res = await fetch(`${base}/platform-admin/newsletter/subscriptions/export.csv?${p.toString()}`, {
+        headers: { Authorization: `Bearer ${token}`, Accept: "text/csv" },
+      });
+      const blob = await res.blob();
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `newsletter-${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch {
+      alert(s.errGeneric);
+    }
+  }
+
+  return (
+    <div>
+      {stats && (
+        <div className="stat-grid" style={{ gridTemplateColumns: "repeat(3,1fr)" }}>
+          <div className="stat-card c-success"><div className="stat-header"><i className="ti ti-users" /></div><div className="stat-value">{stats.total_active}</div><div className="stat-label">{s.nlStatActive}</div></div>
+          <div className="stat-card c-info"><div className="stat-header"><i className="ti ti-language" /></div><div className="stat-value text-sm" style={{ fontSize: 13, fontWeight: 500 }}>{Object.entries(stats.by_lang).map(([k, v]) => `${k}: ${v}`).join("  ·  ") || "—"}</div><div className="stat-label">{s.nlStatByLang}</div></div>
+          <div className="stat-card c-primary"><div className="stat-header"><i className="ti ti-tag" /></div><div className="stat-value text-sm" style={{ fontSize: 13, fontWeight: 500 }}>{Object.entries(stats.by_source).map(([k, v]) => `${k || "—"}: ${v}`).join("  ·  ") || "—"}</div><div className="stat-label">{s.nlStatBySource}</div></div>
+        </div>
+      )}
+      <div className="filter-card">
+        <div className="filter-field">
+          <span className="filter-label">{s.nlFilterSource}</span>
+          <select value={source} onChange={(e) => { setPage(1); setSource(e.target.value); }}>
+            {NL_SOURCES.map((x) => <option key={x} value={x}>{x || s.nlAllSources}</option>)}
+          </select>
+        </div>
+        <div className="filter-field">
+          <span className="filter-label">{s.nlFilterLang}</span>
+          <select value={flang} onChange={(e) => { setPage(1); setFlang(e.target.value); }}>
+            {NL_LANGS.map((x) => <option key={x} value={x}>{x || s.all}</option>)}
+          </select>
+        </div>
+        <div className="filter-field" style={{ flex: 2 }}>
+          <span className="filter-label">{s.search}</span>
+          <input type="search" placeholder={s.nlSearchPh} value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { setPage(1); void load(); } }} />
+        </div>
+        <label className="switch-row" style={{ cursor: "pointer" }}>
+          <input type="checkbox" checked={activeOnly} onChange={(e) => { setPage(1); setActiveOnly(e.target.checked); }} />
+          {s.nlActiveOnly}
+        </label>
+        <button className="btn" onClick={() => { setPage(1); void load(); }}><i className="ti ti-filter" />{s.apply}</button>
+        <button className="btn" onClick={() => void exportCsv()}><i className="ti ti-download" />{s.nlExportCsv}</button>
+      </div>
+      <div className="card" style={{ marginBottom: 0 }}>
+        <div className="card-header"><div className="card-title">{s.nlCardTitle}</div></div>
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>{s.nlColEmail}</th>
+                <th>{s.nlColLang}</th>
+                <th>{s.nlColSource}</th>
+                <th>{s.nlColSubscribed}</th>
+                <th>{s.status}</th>
+                <th style={{ textAlign: "right" }}>{s.colActions}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading && rows.length === 0 ? (
+                <tr><td colSpan={6} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.loading}</td></tr>
+              ) : rows.length === 0 ? (
+                <tr><td colSpan={6} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.nlEmpty}</td></tr>
+              ) : (
+                rows.map((r) => (
+                  <tr key={r.id}>
+                    <td>{r.email}</td>
+                    <td>{r.lang ? <span className="type-badge">{r.lang}</span> : <span className="cell-muted">—</span>}</td>
+                    <td>{r.source ? <span className="type-badge">{r.source}</span> : <span className="cell-muted">—</span>}</td>
+                    <td className="cell-muted text-sm">{fmtDateTime(r.subscribed_at).slice(0, 10)}</td>
+                    <td>
+                      {r.unsubscribed_at ? (
+                        <span className="badge badge-danger">{s.nlStatusUnsub}</span>
+                      ) : (
+                        <span className="badge badge-success">{s.nlStatusActive}</span>
+                      )}
+                    </td>
+                    <td style={{ textAlign: "right" }}>
+                      {!r.unsubscribed_at && (
+                        <button className="icon-btn danger" title={s.nlUnsubscribe} disabled={busyId === r.id} onClick={() => void unsubscribe(r.id)}><i className="ti ti-trash" /></button>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        {meta && meta.last_page > 1 && (
+          <div className="pagination">
+            <div className="pagination-info">{(meta.current_page - 1) * meta.per_page + 1}–{Math.min(meta.current_page * meta.per_page, meta.total)} / {meta.total}</div>
+            <div className="pagination-controls">
+              <button className="icon-btn" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}><i className="ti ti-chevron-left" /></button>
+              <button className="icon-btn" disabled={page >= meta.last_page} onClick={() => setPage((p) => p + 1)}><i className="ti ti-chevron-right" /></button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

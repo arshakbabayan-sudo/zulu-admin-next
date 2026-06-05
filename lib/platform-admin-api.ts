@@ -1224,6 +1224,68 @@ export async function apiDeleteNewsletterSubscription(
   return apiFetchJson(`${PA}/newsletter/subscriptions/${id}`, { method: "DELETE", token });
 }
 
+// ─── System notifications (read-only admin registry) ──────────────────────
+export type PlatformNotificationRow = {
+  id: number;
+  user_id: number;
+  type: string;
+  title: string;
+  message: string;
+  status: string;
+  event_type: string | null;
+  subject_type: string | null;
+  subject_id: string | null;
+  priority: string;
+  created_at: string;
+  user?: { id: number; name: string; email: string };
+};
+
+export type PlatformNotificationStats = {
+  total: number;
+  unread: number;
+  read: number;
+  by_event_type: Record<string, number>;
+  by_priority: Record<string, number>;
+};
+
+export async function apiPlatformNotifications(
+  token: string,
+  params: {
+    page?: number;
+    per_page?: number;
+    user_id?: string;
+    event_type?: string;
+    status?: string;
+    priority?: string;
+    from?: string;
+    to?: string;
+    q?: string;
+  }
+): Promise<
+  ApiSuccessEnvelope<PlatformNotificationRow[]> & {
+    meta: { current_page: number; per_page: number; total: number; last_page: number };
+  }
+> {
+  const p = new URLSearchParams();
+  if (params.page != null) p.set("page", String(params.page));
+  if (params.per_page != null) p.set("per_page", String(params.per_page));
+  if (params.user_id) p.set("user_id", params.user_id);
+  if (params.event_type) p.set("event_type", params.event_type);
+  if (params.status) p.set("status", params.status);
+  if (params.priority) p.set("priority", params.priority);
+  if (params.from) p.set("from", params.from);
+  if (params.to) p.set("to", params.to);
+  if (params.q) p.set("q", params.q);
+  const qs = p.toString();
+  return apiFetchJson(`${PA}/notifications${qs ? `?${qs}` : ""}`, { method: "GET", token });
+}
+
+export async function apiPlatformNotificationStats(
+  token: string
+): Promise<ApiSuccessEnvelope<PlatformNotificationStats>> {
+  return apiFetchJson(`${PA}/notifications/stats`, { method: "GET", token });
+}
+
 export type PlatformBannerRow = {
   id: number;
   image_path?: string | null;

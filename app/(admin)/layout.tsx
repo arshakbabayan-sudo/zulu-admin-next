@@ -36,7 +36,18 @@ const MGMT_PREFIXES = [
   "/localization/ui-translations",
   "/localization/translations",
   "/localization/templates",
+  // 2026-06-05 pt3 — Content cluster migration. Banners / system notifications /
+  // newsletter have NO sub-routes, so they are safe as startsWith prefixes.
+  // CMS pages (/pages) is handled by MGMT_EXACT instead: a bare "/pages" prefix
+  // would also swallow the /pages/[id]/edit editor, which must keep AdminShell.
+  "/platform/banners",
+  "/platform/notifications",
+  "/platform/newsletter",
 ];
+
+/** Routes that render the unified chrome ONLY on an exact path match (their
+ *  sub-routes must keep AdminShell). */
+const MGMT_EXACT = ["/pages"];
 
 /**
  * v2 admin-redesign (2026-05-24) — AdminGroupTabs removed.
@@ -78,7 +89,9 @@ export default function AdminSectionLayout({
   }
 
   // Management routes render their own 1:1 chrome; bypass AdminShell.
-  const skipShell = !!pathname && MGMT_PREFIXES.some((p) => pathname.startsWith(p));
+  const skipShell =
+    !!pathname &&
+    (MGMT_EXACT.includes(pathname) || MGMT_PREFIXES.some((p) => pathname.startsWith(p)));
   if (skipShell) {
     return (
       <>
