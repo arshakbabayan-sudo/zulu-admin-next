@@ -62,9 +62,11 @@ const MGMT_PREFIXES = [
   // service connections). Operator/agent-visible (super:false), so it renders
   // the unified Settings chrome for non-super users too.
   "/connections",
-  // 2026-06-05 pt4 — Permissions cluster: RBAC (role overview + permission
-  // tree). The LAST in-page Settings migration (api-docs stays navigate-out).
+  // 2026-06-05 pt4 — Permissions cluster: RBAC (role overview + permission tree).
   "/platform/rbac",
+  // 2026-06-05 pt4 — System cluster: API docs (Swagger UI viewer wrapped in the
+  // unified chrome). With this, all 24 Settings sub-pages render in-page.
+  "/platform/api-docs",
 ];
 
 /** Routes that render the unified chrome ONLY on an exact path match (their

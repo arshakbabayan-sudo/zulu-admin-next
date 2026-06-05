@@ -236,7 +236,7 @@ const PAGES: Record<SettingsPageKey, PageMeta> = {
   "security":          { cluster: "system", labelKey: "pgSecurity", super: true, inPage: true, href: "/platform/security" },
   "webhooks":          { cluster: "system", labelKey: "pgWebhooks", super: true, inPage: true, href: "/platform/webhooks" },
   "locations":         { cluster: "system", labelKey: "pgLocations", super: true, inPage: true, href: "/platform/locations" },
-  "api-docs":          { cluster: "system", labelKey: "pgApiDocs", super: true, href: "/platform/api-docs" },
+  "api-docs":          { cluster: "system", labelKey: "pgApiDocs", super: true, inPage: true, href: "/platform/api-docs" },
   "connections":       { cluster: "system", labelKey: "pgConnections", super: false, inPage: true, href: "/connections" },
   "platform-settings": { cluster: "system", labelKey: "pgPlatformSettings", super: true, inPage: true, href: "/platform/settings" },
   "support-tickets":   { cluster: "support", labelKey: "pgSupportTickets", super: false, inPage: true, href: "/support/tickets" },
@@ -430,6 +430,7 @@ export function SettingsPage({ initialPage = "exchange-rates" }: { initialPage?:
             {page === "webhooks" && <WebhooksPane token={token} lang={lang} />}
             {page === "connections" && <ConnectionsPane token={token} lang={lang} />}
             {page === "rbac" && <RbacPane token={token} lang={lang} />}
+            {page === "api-docs" && <ApiDocsPane token={token} lang={lang} />}
           </div>
         </div>
       </div>
@@ -5280,6 +5281,71 @@ function RbacRoleModal({
             <i className="ti ti-device-floppy" />{busy ? "…" : isEdit ? s.save : s.create}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// API docs pane (System cluster) — Swagger UI viewer in the unified
+// chrome. Injects the swagger-ui-dist CDN bundle once and mounts it
+// to #swagger-ui-root, auth'ing each request with the admin bearer
+// token (same behaviour as the retired standalone page).
+// ════════════════════════════════════════════════════════════════
+
+type SwaggerBundle = ((cfg: Record<string, unknown>) => void) & { presets: { apis: unknown } };
+
+function ApiDocsPane({ token, lang }: { token: string | null; lang: string }) {
+  const s = settingsStrings(lang);
+  const baseURL = process.env.NEXT_PUBLIC_API_URL || "https://api.zulu.am";
+
+  useEffect(() => {
+    if (!token) return;
+    const cssId = "swagger-ui-css";
+    if (!document.getElementById(cssId)) {
+      const cssEl = document.createElement("link");
+      cssEl.id = cssId;
+      cssEl.rel = "stylesheet";
+      cssEl.href = "https://unpkg.com/swagger-ui-dist@5.10.5/swagger-ui.css";
+      document.head.appendChild(cssEl);
+    }
+
+    const initSwagger = () => {
+      const SwaggerUIBundle = (window as unknown as { SwaggerUIBundle?: SwaggerBundle }).SwaggerUIBundle;
+      if (!SwaggerUIBundle) return;
+      SwaggerUIBundle({
+        url: `${baseURL}/platform-admin/openapi.json`,
+        dom_id: "#swagger-ui-root",
+        deepLinking: true,
+        presets: [SwaggerUIBundle.presets.apis],
+        layout: "BaseLayout",
+        requestInterceptor: (req: { headers: Record<string, string> }) => {
+          req.headers["Authorization"] = `Bearer ${token}`;
+          req.headers["Accept"] = "application/json";
+          return req;
+        },
+      });
+    };
+
+    const jsId = "swagger-ui-js";
+    const jsEl = document.getElementById(jsId) as HTMLScriptElement | null;
+    if (!jsEl) {
+      const el = document.createElement("script");
+      el.id = jsId;
+      el.src = "https://unpkg.com/swagger-ui-dist@5.10.5/swagger-ui-bundle.js";
+      el.async = true;
+      el.onload = initSwagger;
+      document.body.appendChild(el);
+    } else {
+      initSwagger();
+    }
+  }, [token, baseURL]);
+
+  return (
+    <div>
+      <div className="alert"><i className="ti ti-info-circle" /><div>{s.adNote}</div></div>
+      <div className="card" style={{ marginBottom: 0, padding: 0, overflow: "hidden" }}>
+        <div id="swagger-ui-root" style={{ background: "#fff" }} />
       </div>
     </div>
   );

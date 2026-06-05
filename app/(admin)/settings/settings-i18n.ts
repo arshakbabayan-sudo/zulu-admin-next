@@ -606,6 +606,9 @@ const EN = {
   rbToastUpdated: "Role updated.",
   rbToastDeleted: "Role deleted.",
   rbSelectRoleHint: "Select a role above to edit its permissions.",
+
+  // ── system cluster: API docs ──────────────────────────────────
+  adNote: "The API spec is generated from storage/app/openapi.json (scheduled command api:generate-openapi). Regenerate manually with: php artisan api:generate-openapi",
 } as const;
 
 export type SettingsKey = keyof typeof EN;
@@ -1177,6 +1180,9 @@ const HY: Partial<Record<SettingsKey, string>> = {
   rbToastUpdated: "Դերը թարմացվեց։",
   rbToastDeleted: "Դերը ջնջվեց։",
   rbSelectRoleHint: "Վերևից ընտրիր դեր՝ դրա թույլտվությունները խմբագրելու համար։",
+
+  // ── system cluster: API docs ──────────────────────────────────
+  adNote: "API-ի նկարագիրը գեներացվում է storage/app/openapi.json-ից (api:generate-openapi հրաման՝ ժամանակացույցով)։ Ձեռքով նորից գեներացնելու համար՝ php artisan api:generate-openapi",
 };
 
 const RU: Partial<Record<SettingsKey, string>> = {
@@ -1746,6 +1752,9 @@ const RU: Partial<Record<SettingsKey, string>> = {
   rbToastUpdated: "Роль обновлена.",
   rbToastDeleted: "Роль удалена.",
   rbSelectRoleHint: "Выберите роль выше, чтобы изменить её права.",
+
+  // ── system cluster: API docs ──────────────────────────────────
+  adNote: "Спецификация API генерируется из storage/app/openapi.json (команда api:generate-openapi, по расписанию). Ручная регенерация: php artisan api:generate-openapi",
 };
 
 export function settingsStrings(lang: string): Record<SettingsKey, string> {
