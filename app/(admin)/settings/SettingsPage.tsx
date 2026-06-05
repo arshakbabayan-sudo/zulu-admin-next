@@ -78,6 +78,13 @@ import {
   apiLocalizationScan,
   apiUiTranslationsGetAdmin,
   apiUiTranslationsSave,
+  apiLocalizationTranslationsGet,
+  apiLocalizationTranslationsSet,
+  apiLocalizationTemplateGet,
+  apiLocalizationTemplatePatch,
+  LOCALIZATION_ENTITY_TYPES,
+  LOCALIZATION_TRANSLATABLE_FIELDS,
+  NOTIFICATION_TEMPLATE_EVENTS,
   type LocalizationLanguageRow,
   type UiTranslationRow,
 } from "@/lib/localization-api";
@@ -130,8 +137,8 @@ const PAGES: Record<SettingsPageKey, PageMeta> = {
   "rbac":              { cluster: "permissions", labelKey: "pgRbac", super: true, href: "/platform/rbac" },
   "languages":         { cluster: "localization", labelKey: "pgLanguages", super: true, inPage: true, href: "/localization/languages" },
   "ui-strings":        { cluster: "localization", labelKey: "pgUiStrings", super: true, inPage: true, href: "/localization/ui-translations" },
-  "content-tr":        { cluster: "localization", labelKey: "pgContentTr", super: false, href: "/localization/translations" },
-  "email-tpl":         { cluster: "localization", labelKey: "pgEmailTpl", super: false, href: "/localization/templates" },
+  "content-tr":        { cluster: "localization", labelKey: "pgContentTr", super: false, inPage: true, href: "/localization/translations" },
+  "email-tpl":         { cluster: "localization", labelKey: "pgEmailTpl", super: false, inPage: true, href: "/localization/templates" },
   "cms-pages":         { cluster: "content", labelKey: "pgCmsPages", super: true, href: "/pages" },
   "banners":           { cluster: "content", labelKey: "pgBanners", super: true, href: "/platform/banners" },
   "sys-notif":         { cluster: "content", labelKey: "pgSysNotif", super: true, href: "/platform/notifications" },
@@ -322,6 +329,8 @@ export function SettingsPage({ initialPage = "exchange-rates" }: { initialPage?:
             {page === "locations" && <LocationsPane token={token} lang={lang} />}
             {page === "languages" && <LanguagesPane token={token} lang={lang} />}
             {page === "ui-strings" && <UiStringsPane token={token} lang={lang} />}
+            {page === "content-tr" && <ContentTrPane token={token} lang={lang} />}
+            {page === "email-tpl" && <EmailTplPane token={token} lang={lang} />}
           </div>
         </div>
       </div>
@@ -2288,6 +2297,202 @@ function UiStringsPane({ token, lang }: { token: string | null; lang: string }) 
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// Content translations pane (Localization cluster) — load entity → edit fields
+// ════════════════════════════════════════════════════════════════
+
+function ContentTrPane({ token, lang }: { token: string | null; lang: string }) {
+  const s = settingsStrings(lang);
+  const [langs, setLangs] = useState<LocalizationLanguageRow[]>([]);
+  const [entityType, setEntityType] = useState<string>("package");
+  const [entityId, setEntityId] = useState("");
+  const [selLang, setSelLang] = useState("hy");
+  const [fields, setFields] = useState<Record<string, string> | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!token) return;
+    void apiAdminLanguages(token).then((r) => setLangs((r.data ?? []).slice().sort((a, b) => a.sort_order - b.sort_order))).catch(() => {});
+  }, [token]);
+
+  const entLabel = (t: string): string => {
+    const map: Record<string, SettingsKey> = { hotel: "svcHotel", flight: "svcFlight", transfer: "svcTransfer", car: "svcCar", excursion: "svcExcursion", visa: "svcVisa", package: "svcPackage", offer: "ctEntOffer", company: "ctEntCompany" };
+    return map[t] ? s[map[t]] : t;
+  };
+
+  async function load() {
+    if (!token || !entityId.trim()) return;
+    setLoading(true);
+    try {
+      const res = await apiLocalizationTranslationsGet(token, { entity_type: entityType, entity_id: Number(entityId), lang: selLang, fields: LOCALIZATION_TRANSLATABLE_FIELDS });
+      const t: Record<string, string> = {};
+      for (const [k, v] of Object.entries(res.data.translations ?? {})) t[k] = v ?? "";
+      setFields(t);
+    } catch (e) {
+      console.error("content-tr load failed", e);
+      setFields({});
+    } finally {
+      setLoading(false);
+    }
+  }
+  async function save() {
+    if (!token || !fields) return;
+    setSaving(true);
+    try {
+      await apiLocalizationTranslationsSet(token, { entity_type: entityType, entity_id: Number(entityId), language_code: selLang, translations: fields });
+      alert(s.ctSaved);
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div>
+      <div className="filter-card">
+        <div className="filter-field">
+          <span className="filter-label">{s.ctEntityType}</span>
+          <select value={entityType} onChange={(e) => setEntityType(e.target.value)}>
+            {LOCALIZATION_ENTITY_TYPES.map((t) => <option key={t} value={t}>{entLabel(t)}</option>)}
+          </select>
+        </div>
+        <div className="filter-field"><span className="filter-label">{s.ctEntityId}</span><input type="number" value={entityId} onChange={(e) => setEntityId(e.target.value)} placeholder="10482" /></div>
+        <div className="filter-field">
+          <span className="filter-label">{s.uiLanguage}</span>
+          <select value={selLang} onChange={(e) => setSelLang(e.target.value)}>
+            {langs.length === 0 ? <option value="hy">Հայերեն (hy)</option> : langs.map((l) => <option key={l.id} value={l.code}>{l.name} ({l.code})</option>)}
+          </select>
+        </div>
+        <button className="btn btn-primary" disabled={!entityId.trim() || loading} onClick={() => void load()}><i className="ti ti-arrow-down-circle" />{s.loadBtn}</button>
+      </div>
+      {fields === null ? (
+        <div className="card"><div className="empty-state"><i className="ti ti-language" />{s.ctLoadPrompt}</div></div>
+      ) : (
+        <div className="card" style={{ marginBottom: 0 }}>
+          <div className="card-header"><div className="card-title">{entLabel(entityType)} #{entityId} · {selLang}</div></div>
+          <div className="card-body">
+            <div className="form-grid">
+              {Object.keys(fields).length === 0 ? (
+                <div className="cell-muted" style={{ gridColumn: "1 / -1" }}>—</div>
+              ) : Object.entries(fields).map(([k, v]) => (
+                <div key={k} className="fld span-2">
+                  <label className="fld-label">{k}</label>
+                  {k.includes("description") || k.includes("highlights") || k.includes("summary") || k.includes("notes") ? (
+                    <textarea value={v} onChange={(e) => setFields((p) => ({ ...(p ?? {}), [k]: e.target.value }))} />
+                  ) : (
+                    <input value={v} onChange={(e) => setFields((p) => ({ ...(p ?? {}), [k]: e.target.value }))} />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="card-foot">
+            <button className="btn btn-primary" disabled={saving} onClick={() => void save()}><i className="ti ti-device-floppy" />{s.save}</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// Email templates pane (Localization cluster) — event/channel/lang → title/body
+// ════════════════════════════════════════════════════════════════
+
+const EMAIL_CHANNELS = ["email", "in_app", "sms"];
+
+function EmailTplPane({ token, lang }: { token: string | null; lang: string }) {
+  const s = settingsStrings(lang);
+  const [langs, setLangs] = useState<LocalizationLanguageRow[]>([]);
+  const [event, setEvent] = useState<string>(NOTIFICATION_TEMPLATE_EVENTS[0]);
+  const [channel, setChannel] = useState("email");
+  const [selLang, setSelLang] = useState("en");
+  const [loaded, setLoaded] = useState(false);
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [active, setActive] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!token) return;
+    void apiAdminLanguages(token).then((r) => setLangs((r.data ?? []).slice().sort((a, b) => a.sort_order - b.sort_order))).catch(() => {});
+  }, [token]);
+
+  const chLabel = (c: string): string => (c === "email" ? s.etChEmail : c === "in_app" ? s.etChInApp : c === "sms" ? s.etChSms : c);
+
+  async function load() {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const res = await apiLocalizationTemplateGet(token, event, { lang: selLang, channel });
+      setTitle(res.data.title_template ?? "");
+      setBody(res.data.body_template ?? "");
+      setActive(res.data.is_active !== false);
+      setLoaded(true);
+    } catch (e) {
+      console.error("template load failed", e);
+      setTitle("");
+      setBody("");
+      setActive(true);
+      setLoaded(true);
+    } finally {
+      setLoading(false);
+    }
+  }
+  async function save() {
+    if (!token) return;
+    setSaving(true);
+    try {
+      await apiLocalizationTemplatePatch(token, event, { lang: selLang, channel, title_template: title, body_template: body, is_active: active });
+      alert(s.etSaved);
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div>
+      <div className="filter-card">
+        <div className="filter-field" style={{ flex: 2 }}>
+          <span className="filter-label">{s.etEvent}</span>
+          <select value={event} onChange={(e) => setEvent(e.target.value)}>{NOTIFICATION_TEMPLATE_EVENTS.map((ev) => <option key={ev} value={ev}>{ev}</option>)}</select>
+        </div>
+        <div className="filter-field">
+          <span className="filter-label">{s.etChannel}</span>
+          <select value={channel} onChange={(e) => setChannel(e.target.value)}>{EMAIL_CHANNELS.map((c) => <option key={c} value={c}>{chLabel(c)}</option>)}</select>
+        </div>
+        <div className="filter-field">
+          <span className="filter-label">{s.uiLanguage}</span>
+          <select value={selLang} onChange={(e) => setSelLang(e.target.value)}>{langs.length === 0 ? <option value="en">English (en)</option> : langs.map((l) => <option key={l.id} value={l.code}>{l.name} ({l.code})</option>)}</select>
+        </div>
+        <button className="btn btn-primary" disabled={loading} onClick={() => void load()}><i className="ti ti-arrow-down-circle" />{s.loadBtn}</button>
+      </div>
+      {!loaded ? (
+        <div className="card"><div className="empty-state"><i className="ti ti-mail" />{s.etLoadPrompt}</div></div>
+      ) : (
+        <div className="card" style={{ marginBottom: 0 }}>
+          <div className="card-header"><div className="card-title">{event} · {chLabel(channel)} · {selLang}</div></div>
+          <div className="card-body">
+            <div className="form-grid">
+              <div className="fld span-2"><label className="fld-label">{s.etFldTitle}</label><input value={title} onChange={(e) => setTitle(e.target.value)} /></div>
+              <div className="fld span-2"><label className="fld-label">{s.etFldBody}</label><textarea value={body} onChange={(e) => setBody(e.target.value)} style={{ minHeight: 140 }} /></div>
+              <div className="fld span-2"><label className="switch-row" style={{ cursor: "pointer" }}><input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />{s.etFldActive}</label></div>
+            </div>
+          </div>
+          <div className="card-foot">
+            <button className="btn btn-primary" disabled={saving} onClick={() => void save()}><i className="ti ti-device-floppy" />{s.save}</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

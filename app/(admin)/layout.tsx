@@ -34,6 +34,8 @@ const MGMT_PREFIXES = [
   "/platform/locations",
   "/localization/languages",
   "/localization/ui-translations",
+  "/localization/translations",
+  "/localization/templates",
 ];
 
 /**

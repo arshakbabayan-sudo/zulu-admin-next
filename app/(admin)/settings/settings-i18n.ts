@@ -271,6 +271,25 @@ const EN = {
   uiSearchPh: "Search key or value…",
   uiEmpty: "No interface strings.",
   uiSaved: "Translations saved.",
+
+  // ── content translations + email templates (Localization cluster) ──
+  loadBtn: "Load",
+  ctEntityType: "Entity type",
+  ctEntityId: "Entity ID",
+  ctLoadPrompt: "Pick an entity type, ID and language, then Load.",
+  ctSaved: "Translation saved.",
+  ctEntOffer: "Offer",
+  ctEntCompany: "Company",
+  etEvent: "Event",
+  etChannel: "Channel",
+  etLoadPrompt: "Pick an event, channel and language, then Load.",
+  etFldTitle: "Title template",
+  etFldBody: "Body template",
+  etFldActive: "Active",
+  etSaved: "Template saved.",
+  etChEmail: "Email",
+  etChInApp: "In-app",
+  etChSms: "SMS",
 } as const;
 
 export type SettingsKey = keyof typeof EN;
@@ -521,6 +540,24 @@ const HY: Partial<Record<SettingsKey, string>> = {
   uiSearchPh: "Որոնել բանալի կամ արժեք…",
   uiEmpty: "Միջերեսի տեքստեր չկան։",
   uiSaved: "Թարգմանությունները պահվեցին։",
+
+  loadBtn: "Բեռնել",
+  ctEntityType: "Միավորի տեսակ",
+  ctEntityId: "Միավորի ID",
+  ctLoadPrompt: "Ընտրիր միավորի տեսակ, ID և լեզու, ապա սեղմիր Բեռնել։",
+  ctSaved: "Թարգմանությունը պահվեց։",
+  ctEntOffer: "Առաջարկ",
+  ctEntCompany: "Ընկերություն",
+  etEvent: "Իրադարձություն",
+  etChannel: "Ալիք",
+  etLoadPrompt: "Ընտրիր իրադարձություն, ալիք և լեզու, ապա սեղմիր Բեռնել։",
+  etFldTitle: "Վերնագրի ձևանմուշ",
+  etFldBody: "Մարմնի ձևանմուշ",
+  etFldActive: "Ակտիվ",
+  etSaved: "Ձևանմուշը պահվեց։",
+  etChEmail: "Էլ. փոստ",
+  etChInApp: "Հավելվածում",
+  etChSms: "SMS",
 };
 
 const RU: Partial<Record<SettingsKey, string>> = {
@@ -769,6 +806,24 @@ const RU: Partial<Record<SettingsKey, string>> = {
   uiSearchPh: "Поиск ключа или значения…",
   uiEmpty: "Строк интерфейса нет.",
   uiSaved: "Переводы сохранены.",
+
+  loadBtn: "Загрузить",
+  ctEntityType: "Тип объекта",
+  ctEntityId: "ID объекта",
+  ctLoadPrompt: "Выберите тип объекта, ID и язык, затем Загрузить.",
+  ctSaved: "Перевод сохранён.",
+  ctEntOffer: "Предложение",
+  ctEntCompany: "Компания",
+  etEvent: "Событие",
+  etChannel: "Канал",
+  etLoadPrompt: "Выберите событие, канал и язык, затем Загрузить.",
+  etFldTitle: "Шаблон заголовка",
+  etFldBody: "Шаблон тела",
+  etFldActive: "Активно",
+  etSaved: "Шаблон сохранён.",
+  etChEmail: "Email",
+  etChInApp: "В приложении",
+  etChSms: "SMS",
 };
 
 export function settingsStrings(lang: string): Record<SettingsKey, string> {
