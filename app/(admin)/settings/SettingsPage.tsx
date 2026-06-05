@@ -97,6 +97,15 @@ import {
   type LoyaltyAccountRow,
   type LoyaltyAccountDetail,
   type LoyaltyStats,
+  apiPlatformSettings,
+  apiPatchPlatformSetting,
+  apiSecurityTwoFactor,
+  apiSecurityStats,
+  apiSecurityForceDisable2fa,
+  apiSecurityForceLogout,
+  type PlatformSettingRow,
+  type SecurityTwoFactorRow,
+  type SecurityStats,
 } from "@/lib/platform-admin-api";
 import {
   apiAdminPages,
@@ -193,12 +202,12 @@ const PAGES: Record<SettingsPageKey, PageMeta> = {
   "footer":            { cluster: "layout", labelKey: "pgFooter", super: true, inPage: true, href: "/platform/settings/footer" },
   "brand":             { cluster: "layout", labelKey: "pgBrand", super: true, inPage: true, href: "/platform/settings/brand" },
   "loyalty":           { cluster: "marketing", labelKey: "pgLoyalty", super: false, inPage: true, href: "/platform/loyalty" },
-  "security":          { cluster: "system", labelKey: "pgSecurity", super: true, href: "/platform/security" },
+  "security":          { cluster: "system", labelKey: "pgSecurity", super: true, inPage: true, href: "/platform/security" },
   "webhooks":          { cluster: "system", labelKey: "pgWebhooks", super: true, href: "/platform/webhooks" },
   "locations":         { cluster: "system", labelKey: "pgLocations", super: true, inPage: true, href: "/platform/locations" },
   "api-docs":          { cluster: "system", labelKey: "pgApiDocs", super: true, href: "/platform/api-docs" },
   "connections":       { cluster: "system", labelKey: "pgConnections", super: false, href: "/connections" },
-  "platform-settings": { cluster: "system", labelKey: "pgPlatformSettings", super: true, href: "/platform/settings" },
+  "platform-settings": { cluster: "system", labelKey: "pgPlatformSettings", super: true, inPage: true, href: "/platform/settings" },
   "support-tickets":   { cluster: "support", labelKey: "pgSupportTickets", super: false, inPage: true, href: "/support/tickets" },
   "reviews":           { cluster: "support", labelKey: "pgReviews", super: true, inPage: true, href: "/platform/reviews" },
 };
@@ -385,6 +394,8 @@ export function SettingsPage({ initialPage = "exchange-rates" }: { initialPage?:
             {page === "footer" && <FooterPane token={token} lang={lang} />}
             {page === "brand" && <BrandPane token={token} lang={lang} />}
             {page === "loyalty" && <LoyaltyPane token={token} lang={lang} />}
+            {page === "security" && <SecurityPane token={token} lang={lang} />}
+            {page === "platform-settings" && <PlatformSettingsPane token={token} lang={lang} />}
           </div>
         </div>
       </div>
@@ -4083,6 +4094,270 @@ function LoyaltyPane({ token, lang }: { token: string | null; lang: string }) {
             </>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// Security pane (System cluster) — 2FA coverage + incident actions
+// ════════════════════════════════════════════════════════════════
+
+function SecurityPane({ token, lang }: { token: string | null; lang: string }) {
+  const s = settingsStrings(lang);
+  const [rows, setRows] = useState<SecurityTwoFactorRow[]>([]);
+  const [stats, setStats] = useState<SecurityStats | null>(null);
+  const [meta, setMeta] = useState<{ current_page: number; per_page: number; total: number; last_page: number } | null>(null);
+  const [page, setPage] = useState(1);
+  const [q, setQ] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [forceId, setForceId] = useState("");
+  const [actionBusy, setActionBusy] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const [list, st] = await Promise.all([
+        apiSecurityTwoFactor(token, { page, per_page: 50, q: q.trim() || undefined }),
+        apiSecurityStats(token).catch(() => null),
+      ]);
+      setRows(list.data ?? []);
+      setMeta(list.meta);
+      if (st) setStats(st.data);
+    } catch (e) {
+      console.error("security load failed", e);
+    } finally {
+      setLoading(false);
+    }
+  }, [token, page, q]);
+  useEffect(() => {
+    void load();
+  }, [token, page]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function forceLogout(userId: number, name?: string) {
+    if (!token) return;
+    const target = name ?? `#${userId}`;
+    if (typeof window !== "undefined" && !window.confirm(s.scConfirmLogout.replace("{target}", target))) return;
+    setActionBusy(`logout-${userId}`);
+    try {
+      const res = await apiSecurityForceLogout(token, userId);
+      alert(s.scDoneLogout.replace("{count}", String(res.data?.tokens_revoked ?? 0)).replace("{id}", String(userId)));
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setActionBusy(null);
+    }
+  }
+  async function forceDisable(row: SecurityTwoFactorRow) {
+    if (!token) return;
+    const target = row.user?.name ?? `#${row.user_id}`;
+    if (typeof window !== "undefined" && !window.confirm(s.scConfirmDisable.replace("{target}", target))) return;
+    setActionBusy(`disable-${row.user_id}`);
+    try {
+      await apiSecurityForceDisable2fa(token, row.user_id);
+      alert(s.scDone2faOff.replace("{id}", String(row.user_id)));
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setActionBusy(null);
+    }
+  }
+  async function submitForceLogout() {
+    const id = parseInt(forceId.trim(), 10);
+    if (Number.isNaN(id) || id <= 0) {
+      alert(s.scErrUserId);
+      return;
+    }
+    await forceLogout(id);
+    setForceId("");
+  }
+
+  return (
+    <div>
+      {stats && (
+        <div className="stat-grid">
+          <div className="stat-card c-primary"><div className="stat-header"><i className="ti ti-users" /></div><div className="stat-value">{stats.total_users.toLocaleString()}</div><div className="stat-label">{s.scStatUsers}</div></div>
+          <div className="stat-card c-success"><div className="stat-header"><i className="ti ti-shield-check" /></div><div className="stat-value">{stats.two_factor_confirmed.toLocaleString()}</div><div className="stat-label">{s.scStat2faOn}</div></div>
+          <div className="stat-card c-warning"><div className="stat-header"><i className="ti ti-shield-x" /></div><div className="stat-value">{stats.two_factor_pending.toLocaleString()}</div><div className="stat-label">{s.scStat2faPending}</div></div>
+          <div className="stat-card c-info"><div className="stat-header"><i className="ti ti-percentage" /></div><div className="stat-value">{stats.two_factor_coverage_pct}%</div><div className="stat-label">{s.scStatCoverage}</div></div>
+        </div>
+      )}
+      <div className="card">
+        <div className="card-header"><div><div className="card-title" style={{ color: "var(--danger)" }}><i className="ti ti-alert-triangle" style={{ fontSize: 15 }} /> {s.scIncidentTitle}</div><div className="card-subtitle">{s.scIncidentHelp}</div></div></div>
+        <div className="card-body">
+          <div style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap" }}>
+            <div className="fld" style={{ maxWidth: 220 }}><label className="fld-label">{s.scUserIdPh}</label><input type="number" value={forceId} onChange={(e) => setForceId(e.target.value)} /></div>
+            <button className="btn btn-danger" disabled={!forceId.trim() || actionBusy !== null} onClick={() => void submitForceLogout()}><i className="ti ti-logout" />{s.scForceLogout}</button>
+          </div>
+        </div>
+      </div>
+      <div className="filter-card">
+        <div className="filter-field" style={{ flex: 2 }}><span className="filter-label">{s.search}</span><input type="search" placeholder={s.scSearchPh} value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { setPage(1); void load(); } }} /></div>
+        <button className="btn" onClick={() => { setPage(1); void load(); }}><i className="ti ti-filter" />{s.apply}</button>
+      </div>
+      <div className="card" style={{ marginBottom: 0 }}>
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>{s.scColUser}</th>
+                <th>{s.scColRole}</th>
+                <th>{s.scColConfirmed}</th>
+                <th>{s.scColLastVerified}</th>
+                <th style={{ textAlign: "right" }}>{s.colActions}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading && rows.length === 0 ? (
+                <tr><td colSpan={5} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.loading}</td></tr>
+              ) : rows.length === 0 ? (
+                <tr><td colSpan={5} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.scEmpty}</td></tr>
+              ) : (
+                rows.map((r) => (
+                  <tr key={r.id}>
+                    <td>{r.user?.name ?? `#${r.user_id}`}{r.user?.email ? <div className="cell-muted text-sm">{r.user.email}</div> : null}</td>
+                    <td>{r.user?.is_super_admin ? <span className="badge badge-warning">{s.scRoleSuper}</span> : r.user?.role ? <span className="type-badge">{r.user.role}</span> : <span className="cell-muted">—</span>}</td>
+                    <td className="cell-muted text-sm">{fmtDateTime(r.confirmed_at)}</td>
+                    <td className="cell-muted text-sm">{r.last_verified_at ? fmtDateTime(r.last_verified_at) : s.scNever}</td>
+                    <td style={{ textAlign: "right" }}>
+                      <div className="row-actions" style={{ justifyContent: "flex-end" }}>
+                        <button className="btn btn-sm" disabled={actionBusy !== null} onClick={() => void forceLogout(r.user_id, r.user?.name)}><i className="ti ti-logout" />{s.scForceLogout}</button>
+                        <button className="btn btn-sm btn-danger" disabled={actionBusy !== null} onClick={() => void forceDisable(r)}><i className="ti ti-shield-off" />{s.scDisable2fa}</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        {meta && meta.last_page > 1 && (
+          <div className="pagination">
+            <div className="pagination-info">{(meta.current_page - 1) * meta.per_page + 1}–{Math.min(meta.current_page * meta.per_page, meta.total)} / {meta.total}</div>
+            <div className="pagination-controls">
+              <button className="icon-btn" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}><i className="ti ti-chevron-left" /></button>
+              <button className="icon-btn" disabled={page >= meta.last_page} onClick={() => setPage((p) => p + 1)}><i className="ti ti-chevron-right" /></button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// Platform settings pane (System cluster) — grouped key/value editor
+// ════════════════════════════════════════════════════════════════
+
+function categoryOfSetting(key: string): string {
+  return key.split(/[._-]/)[0]?.toLowerCase() ?? "general";
+}
+function humanizeKey(str: string): string {
+  return str.replace(/[._-]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+function isShortSetting(value: string, type: string): boolean {
+  if (type === "boolean" || type === "bool" || type === "number" || type === "integer") return true;
+  return value.length <= 80 && !value.includes("\n");
+}
+
+function PlatformSettingsPane({ token, lang }: { token: string | null; lang: string }) {
+  const s = settingsStrings(lang);
+  const [rows, setRows] = useState<PlatformSettingRow[]>([]);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [activeCat, setActiveCat] = useState("");
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await apiPlatformSettings(token);
+      setRows(res.data ?? []);
+      const d: Record<string, string> = {};
+      for (const r of res.data ?? []) d[r.key] = r.value;
+      setDrafts(d);
+    } catch (e) {
+      console.error("platform settings load failed", e);
+    }
+  }, [token]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const grouped = (() => {
+    const map = new Map<string, PlatformSettingRow[]>();
+    for (const r of rows) {
+      const cat = categoryOfSetting(r.key);
+      if (!map.has(cat)) map.set(cat, []);
+      map.get(cat)!.push(r);
+    }
+    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  })();
+  const categories = grouped.map(([c]) => c);
+  const effectiveCat = activeCat || categories[0] || "";
+  const visibleRows = grouped.find(([c]) => c === effectiveCat)?.[1] ?? [];
+
+  async function save(key: string) {
+    if (!token) return;
+    const value = drafts[key];
+    if (value === undefined) return;
+    setBusyKey(key);
+    try {
+      await apiPatchPlatformSetting(token, key, value);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
+  if (rows.length === 0) {
+    return <div className="card"><div className="empty-state"><i className="ti ti-server-cog" />{s.psEmpty}</div></div>;
+  }
+
+  return (
+    <div>
+      <div className="alert" style={{ marginBottom: 14 }}><i className="ti ti-info-circle" /><div>{s.psSubtitle}</div></div>
+      <div className="pills-row">
+        {categories.map((c) => (
+          <button key={c} className={`sub-tab ${c === effectiveCat ? "active" : ""}`} onClick={() => setActiveCat(c)}>
+            {humanizeKey(c)} ({grouped.find(([k]) => k === c)?.[1].length ?? 0})
+          </button>
+        ))}
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {visibleRows.map((r) => {
+          const draft = drafts[r.key] ?? r.value;
+          const dirty = draft !== r.value;
+          const useShort = isShortSetting(draft, r.type);
+          return (
+            <div key={r.id} className="card" style={{ marginBottom: 0 }}>
+              <div className="card-body">
+                <div style={{ minWidth: 0 }}>
+                  <div className="font-mono text-sm" style={{ fontWeight: 600 }}>{r.key}</div>
+                  {r.description ? <div className="cell-muted text-sm" style={{ marginTop: 2 }}>{r.description}</div> : null}
+                  <div style={{ marginTop: 4, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                    <span className="type-badge">{s.psType}: {r.type}</span>
+                    {dirty && <span className="badge badge-warning">{s.psUnsaved}</span>}
+                  </div>
+                </div>
+                <div className="fld" style={{ marginTop: 10 }}>
+                  {useShort ? (
+                    <input className="font-mono" value={draft} onChange={(e) => setDrafts((p) => ({ ...p, [r.key]: e.target.value }))} />
+                  ) : (
+                    <textarea className="font-mono" value={draft} rows={Math.min(8, Math.max(3, draft.split("\n").length))} onChange={(e) => setDrafts((p) => ({ ...p, [r.key]: e.target.value }))} />
+                  )}
+                </div>
+                <div style={{ marginTop: 10, display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                  {dirty && <button className="btn btn-sm" onClick={() => setDrafts((p) => ({ ...p, [r.key]: r.value }))}>{s.psReset}</button>}
+                  <button className="btn btn-sm btn-primary" disabled={busyKey === r.key || !dirty} onClick={() => void save(r.key)}><i className="ti ti-device-floppy" />{busyKey === r.key ? s.loading : s.save}</button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

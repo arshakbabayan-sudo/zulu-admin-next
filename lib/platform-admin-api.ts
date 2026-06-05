@@ -1344,6 +1344,57 @@ export async function apiLoyaltyAdjust(
   return apiFetchJson(`${PA}/loyalty/accounts/${userId}/adjust`, { method: "POST", token, body });
 }
 
+// ─── Security oversight (2FA coverage + incident actions) ──────────────────
+export type SecurityTwoFactorRow = {
+  id: number;
+  user_id: number;
+  enabled_at: string | null;
+  confirmed_at: string | null;
+  last_verified_at: string | null;
+  user?: { id: number; name: string; email: string; role: string; is_super_admin: boolean };
+};
+
+export type SecurityStats = {
+  total_users: number;
+  two_factor_confirmed: number;
+  two_factor_pending: number;
+  two_factor_coverage_pct: number;
+};
+
+export async function apiSecurityTwoFactor(
+  token: string,
+  params: { page?: number; per_page?: number; q?: string }
+): Promise<
+  ApiSuccessEnvelope<SecurityTwoFactorRow[]> & {
+    meta: { current_page: number; per_page: number; total: number; last_page: number };
+  }
+> {
+  const p = new URLSearchParams();
+  if (params.page != null) p.set("page", String(params.page));
+  if (params.per_page != null) p.set("per_page", String(params.per_page));
+  if (params.q) p.set("q", params.q);
+  const qs = p.toString();
+  return apiFetchJson(`${PA}/security/two-factor${qs ? `?${qs}` : ""}`, { method: "GET", token });
+}
+
+export async function apiSecurityStats(token: string): Promise<ApiSuccessEnvelope<SecurityStats>> {
+  return apiFetchJson(`${PA}/security/stats`, { method: "GET", token });
+}
+
+export async function apiSecurityForceDisable2fa(
+  token: string,
+  userId: number
+): Promise<ApiSuccessEnvelope<unknown>> {
+  return apiFetchJson(`${PA}/security/users/${userId}/force-disable-2fa`, { method: "POST", token });
+}
+
+export async function apiSecurityForceLogout(
+  token: string,
+  userId: number
+): Promise<ApiSuccessEnvelope<{ tokens_revoked: number }>> {
+  return apiFetchJson(`${PA}/security/users/${userId}/force-logout`, { method: "POST", token });
+}
+
 export type PlatformBannerRow = {
   id: number;
   image_path?: string | null;
