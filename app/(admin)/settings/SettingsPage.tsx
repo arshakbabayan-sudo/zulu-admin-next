@@ -70,6 +70,15 @@ import {
   type SupportTicketDetail,
 } from "@/lib/support-api";
 import {
+  apiAdminLanguages,
+  apiLocalizationCreateLanguage,
+  apiLocalizationDeleteLanguage,
+  apiSetDefaultLanguage,
+  apiEditLanguage,
+  apiLocalizationScan,
+  type LocalizationLanguageRow,
+} from "@/lib/localization-api";
+import {
   apiLocationCountries,
   apiLocationCountryCreate,
   apiLocationCountryUpdate,
@@ -116,7 +125,7 @@ const PAGES: Record<SettingsPageKey, PageMeta> = {
   "money-flow":        { cluster: "money", labelKey: "pgMoneyFlow", subKey: "subMoneyFlow", super: true, inPage: true, href: "/settings/money-flow" },
   "exchange-rates":    { cluster: "money", labelKey: "pgExchangeRates", subKey: "subExchangeRates", super: true, inPage: true, href: "/settings/exchange-rates" },
   "rbac":              { cluster: "permissions", labelKey: "pgRbac", super: true, href: "/platform/rbac" },
-  "languages":         { cluster: "localization", labelKey: "pgLanguages", super: true, href: "/localization/languages" },
+  "languages":         { cluster: "localization", labelKey: "pgLanguages", super: true, inPage: true, href: "/localization/languages" },
   "ui-strings":        { cluster: "localization", labelKey: "pgUiStrings", super: true, href: "/localization/ui-translations" },
   "content-tr":        { cluster: "localization", labelKey: "pgContentTr", super: false, href: "/localization/translations" },
   "email-tpl":         { cluster: "localization", labelKey: "pgEmailTpl", super: false, href: "/localization/templates" },
@@ -308,6 +317,7 @@ export function SettingsPage({ initialPage = "exchange-rates" }: { initialPage?:
             {page === "reviews" && <ReviewsPane token={token} lang={lang} />}
             {page === "support-tickets" && <SupportTicketsPane token={token} lang={lang} />}
             {page === "locations" && <LocationsPane token={token} lang={lang} />}
+            {page === "languages" && <LanguagesPane token={token} lang={lang} />}
           </div>
         </div>
       </div>
@@ -1951,6 +1961,203 @@ function LocationModal({
         <div className="modal-footer">
           <button className="btn" onClick={onClose}>{s.cancel}</button>
           <button className="btn btn-primary" disabled={busy || !valid} onClick={() => onSave({ name, code, flag, lat, lng, is_active: active })}><i className="ti ti-device-floppy" />{state?.mode === "edit" ? s.save : s.create}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// Languages pane (Localization cluster) — list + CRUD + set-default + scan
+// ════════════════════════════════════════════════════════════════
+
+const LANG_FLAG: Record<string, string> = {
+  en: "🇬🇧", hy: "🇦🇲", ru: "🇷🇺", fr: "🇫🇷", de: "🇩🇪", es: "🇪🇸", it: "🇮🇹",
+  ar: "🇸🇦", zh: "🇨🇳", ka: "🇬🇪", tr: "🇹🇷", fa: "🇮🇷", uk: "🇺🇦", pt: "🇵🇹", pl: "🇵🇱",
+};
+
+function LanguagesPane({ token, lang }: { token: string | null; lang: string }) {
+  const s = settingsStrings(lang);
+  const [rows, setRows] = useState<LocalizationLanguageRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [modal, setModal] = useState<{ mode: "create" } | { mode: "edit"; row: LocalizationLanguageRow } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [scanning, setScanning] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const res = await apiAdminLanguages(token);
+      setRows((res.data ?? []).slice().sort((a, b) => a.sort_order - b.sort_order));
+    } catch (e) {
+      console.error("languages load failed", e);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function setDefault(row: LocalizationLanguageRow) {
+    if (!token || row.is_default) return;
+    try {
+      await apiSetDefaultLanguage(token, row.id);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    }
+  }
+  async function del(row: LocalizationLanguageRow) {
+    if (!token) return;
+    if (typeof window !== "undefined" && !window.confirm(s.confirmDelete)) return;
+    try {
+      await apiLocalizationDeleteLanguage(token, row.id);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    }
+  }
+  async function scan() {
+    if (!token) return;
+    setScanning(true);
+    try {
+      await apiLocalizationScan(token, {});
+      alert(s.lgScanDone);
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setScanning(false);
+    }
+  }
+  async function save(input: { code: string; name: string; name_en: string; rtl: boolean }) {
+    if (!token || !modal) return;
+    setBusy(true);
+    try {
+      if (modal.mode === "create") await apiLocalizationCreateLanguage(token, { code: input.code.toLowerCase(), name: input.name, name_en: input.name_en });
+      else await apiEditLanguage(token, modal.row.id, { name: input.name, name_en: input.name_en, rtl: input.rtl });
+      setModal(null);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div>
+      <div className="card" style={{ marginBottom: 0 }}>
+        <div className="card-header">
+          <div className="card-title">{s.lgCardTitle}</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn btn-sm" disabled={scanning} onClick={() => void scan()}><i className="ti ti-radar-2" />{s.lgScan}</button>
+            <button className="btn btn-sm btn-primary" onClick={() => setModal({ mode: "create" })}><i className="ti ti-plus" />{s.lgNewLang}</button>
+          </div>
+        </div>
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>{s.lgColFlag}</th>
+                <th>{s.lgColCode}</th>
+                <th>{s.lgColName}</th>
+                <th>{s.lgColDefault}</th>
+                <th>{s.status}</th>
+                <th style={{ textAlign: "right" }}>{s.colActions}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading && rows.length === 0 ? (
+                <tr><td colSpan={6} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.loading}</td></tr>
+              ) : rows.length === 0 ? (
+                <tr><td colSpan={6} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.lgEmpty}</td></tr>
+              ) : (
+                rows.map((r) => (
+                  <tr key={r.id}>
+                    <td style={{ fontSize: 18 }}>{LANG_FLAG[r.code] ?? "🌐"}</td>
+                    <td className="font-mono">{r.code}</td>
+                    <td>{r.name}{r.name_en && r.name_en !== r.name ? <span className="cell-muted"> · {r.name_en}</span> : null}</td>
+                    <td>
+                      <label className="switch" style={{ cursor: r.is_default ? "default" : "pointer" }}>
+                        <input type="checkbox" checked={r.is_default} disabled={r.is_default} onChange={() => void setDefault(r)} />
+                        <span className="switch-slider" />
+                      </label>
+                    </td>
+                    <td><span className={`badge ${r.is_enabled !== false ? "badge-success" : "badge-gray"}`}>{r.is_enabled !== false ? s.statusActive : s.statusInactive}</span></td>
+                    <td style={{ textAlign: "right" }}>
+                      <div className="row-actions">
+                        <button className="icon-btn" title={s.edit} onClick={() => setModal({ mode: "edit", row: r })}><i className="ti ti-edit" /></button>
+                        <button className="icon-btn danger" title={s.delete} disabled={r.is_default} onClick={() => void del(r)}><i className="ti ti-trash" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <LanguageModal state={modal} busy={busy} lang={lang} onClose={() => setModal(null)} onSave={(input) => void save(input)} />
+    </div>
+  );
+}
+
+function LanguageModal({
+  state,
+  busy,
+  lang,
+  onClose,
+  onSave,
+}: {
+  state: { mode: "create" } | { mode: "edit"; row: LocalizationLanguageRow } | null;
+  busy: boolean;
+  lang: string;
+  onClose: () => void;
+  onSave: (input: { code: string; name: string; name_en: string; rtl: boolean }) => void;
+}) {
+  const s = settingsStrings(lang);
+  const isEdit = state?.mode === "edit";
+  const [code, setCode] = useState("");
+  const [name, setName] = useState("");
+  const [nameEn, setNameEn] = useState("");
+  const [rtl, setRtl] = useState(false);
+  useEffect(() => {
+    if (!state) return;
+    if (state.mode === "edit") {
+      setCode(state.row.code);
+      setName(state.row.name);
+      setNameEn(state.row.name_en ?? "");
+      setRtl(state.row.rtl === true);
+    } else {
+      setCode("");
+      setName("");
+      setNameEn("");
+      setRtl(false);
+    }
+  }, [state]);
+  const valid = name.trim() !== "" && nameEn.trim() !== "" && (isEdit || code.trim().length >= 2);
+  return (
+    <div className={`modal-overlay ${state ? "open" : ""}`} onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <div className="modal-title">{isEdit ? s.lgEditTitle : s.lgAddTitle}</div>
+          <button className="icon-btn" onClick={onClose}><i className="ti ti-x" /></button>
+        </div>
+        <div className="modal-body">
+          <div className="form-grid">
+            <div className="fld"><label className="fld-label">{s.lgFldCode}</label><input value={code} maxLength={5} disabled={isEdit} onChange={(e) => setCode(e.target.value)} style={{ textTransform: "lowercase" }} /></div>
+            <div className="fld"><label className="fld-label">{s.lgFldName}</label><input value={name} onChange={(e) => setName(e.target.value)} /></div>
+            <div className="fld"><label className="fld-label">{s.lgFldNameEn}</label><input value={nameEn} onChange={(e) => setNameEn(e.target.value)} /></div>
+            <div className="fld" style={{ justifyContent: "flex-end" }}>
+              <label className="switch-row" style={{ cursor: "pointer" }}><input type="checkbox" checked={rtl} onChange={(e) => setRtl(e.target.checked)} />{s.lgFldRtl}</label>
+            </div>
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn" onClick={onClose}>{s.cancel}</button>
+          <button className="btn btn-primary" disabled={busy || !valid} onClick={() => onSave({ code, name, name_en: nameEn, rtl })}><i className="ti ti-device-floppy" />{isEdit ? s.save : s.create}</button>
         </div>
       </div>
     </div>

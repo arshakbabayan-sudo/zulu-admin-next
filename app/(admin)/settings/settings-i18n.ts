@@ -244,6 +244,23 @@ const EN = {
   locPickRegion: "Select a region to see its cities.",
   locNoRegions: "No regions yet.",
   locNoCities: "No cities yet.",
+
+  // ── languages (Localization cluster) ──────────────────────────
+  lgCardTitle: "Platform languages",
+  lgScan: "Bulk scan",
+  lgNewLang: "New language",
+  lgColFlag: "Flag",
+  lgColCode: "Code",
+  lgColName: "Name",
+  lgColDefault: "Default",
+  lgEmpty: "No languages.",
+  lgFldCode: "Code (ISO, e.g. en)",
+  lgFldName: "Name (native)",
+  lgFldNameEn: "Name (English)",
+  lgFldRtl: "Right-to-left (RTL)",
+  lgAddTitle: "New language",
+  lgEditTitle: "Edit language",
+  lgScanDone: "Scan complete.",
 } as const;
 
 export type SettingsKey = keyof typeof EN;
@@ -469,6 +486,22 @@ const HY: Partial<Record<SettingsKey, string>> = {
   locPickRegion: "Ընտրիր մարզ՝ քաղաքները տեսնելու համար։",
   locNoRegions: "Մարզեր չկան։",
   locNoCities: "Քաղաքներ չկան։",
+
+  lgCardTitle: "Հարթակի լեզուներ",
+  lgScan: "Զանգվածային սկան",
+  lgNewLang: "Նոր լեզու",
+  lgColFlag: "Դրոշ",
+  lgColCode: "Կոդ",
+  lgColName: "Անուն",
+  lgColDefault: "Լռելյայն",
+  lgEmpty: "Լեզուներ չկան։",
+  lgFldCode: "Կոդ (ISO, օր․ en)",
+  lgFldName: "Անուն (բնիկ)",
+  lgFldNameEn: "Անուն (անգլերեն)",
+  lgFldRtl: "Աջից-ձախ (RTL)",
+  lgAddTitle: "Նոր լեզու",
+  lgEditTitle: "Խմբագրել լեզուն",
+  lgScanDone: "Սկանն ավարտվեց։",
 };
 
 const RU: Partial<Record<SettingsKey, string>> = {
@@ -692,6 +725,22 @@ const RU: Partial<Record<SettingsKey, string>> = {
   locPickRegion: "Выберите регион, чтобы увидеть города.",
   locNoRegions: "Регионов пока нет.",
   locNoCities: "Городов пока нет.",
+
+  lgCardTitle: "Языки платформы",
+  lgScan: "Массовое сканирование",
+  lgNewLang: "Новый язык",
+  lgColFlag: "Флаг",
+  lgColCode: "Код",
+  lgColName: "Название",
+  lgColDefault: "По умолчанию",
+  lgEmpty: "Языков нет.",
+  lgFldCode: "Код (ISO, напр. en)",
+  lgFldName: "Название (родное)",
+  lgFldNameEn: "Название (английское)",
+  lgFldRtl: "Справа налево (RTL)",
+  lgAddTitle: "Новый язык",
+  lgEditTitle: "Изменить язык",
+  lgScanDone: "Сканирование завершено.",
 };
 
 export function settingsStrings(lang: string): Record<SettingsKey, string> {

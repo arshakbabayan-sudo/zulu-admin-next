@@ -32,6 +32,7 @@ const MGMT_PREFIXES = [
   "/platform/reviews",
   "/support/tickets",
   "/platform/locations",
+  "/localization/languages",
 ];
 
 /**
