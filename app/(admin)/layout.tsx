@@ -62,6 +62,9 @@ const MGMT_PREFIXES = [
   // service connections). Operator/agent-visible (super:false), so it renders
   // the unified Settings chrome for non-super users too.
   "/connections",
+  // 2026-06-05 pt4 — Permissions cluster: RBAC (role overview + permission
+  // tree). The LAST in-page Settings migration (api-docs stays navigate-out).
+  "/platform/rbac",
 ];
 
 /** Routes that render the unified chrome ONLY on an exact path match (their

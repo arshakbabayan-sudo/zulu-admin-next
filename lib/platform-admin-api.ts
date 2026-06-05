@@ -1596,3 +1596,54 @@ export async function apiSubmitOfferForReview(
 ): Promise<ApiSuccessEnvelope<{ id: number; status: string }>> {
   return apiFetchJson(`/offers/${offerId}/submit-for-review`, { method: "POST", token, body: {} });
 }
+
+// ─── RBAC (roles + permissions) ────────────────────────────────────────────
+// Role overview + CRUD. The per-role permission editing is done by the
+// self-contained RbacMenuTree component (rbac-tree-api), reused as-is.
+export type RbacPermission = { id: number; name: string };
+export type RbacRoleScope = "platform" | "company";
+export type RbacRoleRow = {
+  id: number;
+  name: string;
+  description: string | null;
+  scope: RbacRoleScope;
+  memberships_count: number;
+  permissions: RbacPermission[];
+};
+export type RbacStatsData = {
+  total_roles: number;
+  total_permissions: number;
+  total_memberships: number;
+  super_admins: number;
+};
+
+export async function apiRbacStats(token: string): Promise<ApiSuccessEnvelope<RbacStatsData>> {
+  return apiFetchJson(`${PA}/rbac/stats`, { method: "GET", token });
+}
+export async function apiRbacRoles(token: string): Promise<ApiSuccessEnvelope<RbacRoleRow[]>> {
+  return apiFetchJson(`${PA}/rbac/roles`, { method: "GET", token });
+}
+export async function apiRbacPermissions(
+  token: string
+): Promise<ApiSuccessEnvelope<RbacPermission[]>> {
+  return apiFetchJson(`${PA}/rbac/permissions`, { method: "GET", token });
+}
+export async function apiRbacCreateRole(
+  token: string,
+  body: { name: string; description?: string; scope: RbacRoleScope }
+): Promise<ApiSuccessEnvelope<RbacRoleRow>> {
+  return apiFetchJson(`${PA}/rbac/roles`, { method: "POST", token, body });
+}
+export async function apiRbacUpdateRole(
+  token: string,
+  id: number,
+  body: { description?: string; scope: RbacRoleScope }
+): Promise<ApiSuccessEnvelope<RbacRoleRow>> {
+  return apiFetchJson(`${PA}/rbac/roles/${id}`, { method: "PATCH", token, body });
+}
+export async function apiRbacDeleteRole(
+  token: string,
+  id: number
+): Promise<ApiSuccessEnvelope<unknown>> {
+  return apiFetchJson(`${PA}/rbac/roles/${id}`, { method: "DELETE", token });
+}

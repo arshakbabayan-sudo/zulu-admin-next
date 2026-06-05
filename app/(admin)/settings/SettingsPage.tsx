@@ -113,6 +113,15 @@ import {
   type WebhookStats,
   type WebhookSubscriptionRow,
   type WebhookDeliveryRow,
+  apiRbacStats,
+  apiRbacRoles,
+  apiRbacPermissions,
+  apiRbacCreateRole,
+  apiRbacUpdateRole,
+  apiRbacDeleteRole,
+  type RbacStatsData,
+  type RbacRoleRow,
+  type RbacRoleScope,
 } from "@/lib/platform-admin-api";
 import {
   apiAdminPages,
@@ -180,6 +189,8 @@ import {
   type ConnectionCreateBody,
   type CompanyClientOption,
 } from "@/lib/connections-api";
+import { RbacMenuTree } from "@/components/rbac/RbacMenuTree";
+import { PinPromptDialog } from "@/components/PinPromptDialog";
 
 // ── Page catalogue ──────────────────────────────────────────────
 export type SettingsPageKey =
@@ -209,7 +220,7 @@ const PAGES: Record<SettingsPageKey, PageMeta> = {
   "pricing-rules":     { cluster: "money", labelKey: "pgPricingRules", subKey: "subPricingRules", super: true, inPage: true, href: "/settings/pricing-rules" },
   "money-flow":        { cluster: "money", labelKey: "pgMoneyFlow", subKey: "subMoneyFlow", super: true, inPage: true, href: "/settings/money-flow" },
   "exchange-rates":    { cluster: "money", labelKey: "pgExchangeRates", subKey: "subExchangeRates", super: true, inPage: true, href: "/settings/exchange-rates" },
-  "rbac":              { cluster: "permissions", labelKey: "pgRbac", super: true, href: "/platform/rbac" },
+  "rbac":              { cluster: "permissions", labelKey: "pgRbac", super: true, inPage: true, href: "/platform/rbac" },
   "languages":         { cluster: "localization", labelKey: "pgLanguages", super: true, inPage: true, href: "/localization/languages" },
   "ui-strings":        { cluster: "localization", labelKey: "pgUiStrings", super: true, inPage: true, href: "/localization/ui-translations" },
   "content-tr":        { cluster: "localization", labelKey: "pgContentTr", super: false, inPage: true, href: "/localization/translations" },
@@ -418,6 +429,7 @@ export function SettingsPage({ initialPage = "exchange-rates" }: { initialPage?:
             {page === "platform-settings" && <PlatformSettingsPane token={token} lang={lang} />}
             {page === "webhooks" && <WebhooksPane token={token} lang={lang} />}
             {page === "connections" && <ConnectionsPane token={token} lang={lang} />}
+            {page === "rbac" && <RbacPane token={token} lang={lang} />}
           </div>
         </div>
       </div>
@@ -4988,6 +5000,284 @@ function ConnectionCreateModal({
           <button className="btn" onClick={onClose}>{s.cancel}</button>
           <button className="btn btn-primary" disabled={busy} onClick={() => void submit()}>
             <i className="ti ti-device-floppy" />{busy ? s.cnCreating : s.cnSubmit}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// RBAC pane (Permissions cluster) — role overview (stats + table +
+// create/edit modal + PIN-gated delete) above the embedded
+// RbacMenuTree permission editor for the selected role. Reuses the
+// self-contained RbacMenuTree + PinPromptDialog exactly as the
+// standalone /platform/rbac page did (Card 2 was always that tree).
+// ════════════════════════════════════════════════════════════════
+
+function rbBadgeTone(name: string): string {
+  const n = name.toLowerCase();
+  if (n === "super_admin" || n === "super admin") return "badge-danger";
+  if (n === "platform_admin" || n === "platform admin") return "badge-primary";
+  if (n === "operator_admin" || n === "operator" || n === "operator admin") return "badge-info";
+  if (n === "company_admin" || n === "company admin" || n === "admin" || n === "owner") return "badge-primary";
+  if (n === "agent" || n === "booker") return "badge-success";
+  return "badge-gray";
+}
+function rbPretty(name: string): string {
+  return name.replace(/[_-]/g, " ").replace(/\s+/g, " ").trim().replace(/^./, (c) => c.toUpperCase());
+}
+
+type RbForm = { name: string; description: string; scope: RbacRoleScope };
+
+function RbacPane({ token, lang }: { token: string | null; lang: string }) {
+  const s = settingsStrings(lang);
+  const { user } = useAdminAuth();
+  const isSuper = user?.is_super_admin === true;
+
+  const [stats, setStats] = useState<RbacStatsData | null>(null);
+  const [roles, setRoles] = useState<RbacRoleRow[]>([]);
+  const [permTotal, setPermTotal] = useState(0);
+  const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [modal, setModal] = useState<{ mode: "create" } | { mode: "edit"; role: RbacRoleRow } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [pinRole, setPinRole] = useState<RbacRoleRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const [st, rl, pm] = await Promise.all([
+        apiRbacStats(token).catch(() => null),
+        apiRbacRoles(token),
+        apiRbacPermissions(token).catch(() => null),
+      ]);
+      if (st) setStats(st.data);
+      if (pm) setPermTotal(pm.data?.length ?? 0);
+      const list = rl.data ?? [];
+      setRoles(list);
+      setSelectedRoleId((curr) => (curr != null && list.some((r) => r.id === curr) ? curr : list[0]?.id ?? null));
+    } catch (e) {
+      console.error("rbac load failed", e);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const visibleRoles = isSuper ? roles : roles.filter((r) => r.scope === "company");
+  const selectedRole = roles.find((r) => r.id === selectedRoleId) ?? null;
+  const canEditRole = (r: RbacRoleRow) => !(r.scope === "platform" && !isSuper);
+  const canDeleteRole = (r: RbacRoleRow) =>
+    r.name.toLowerCase() !== "super_admin" && !(r.scope === "platform" && !isSuper);
+
+  async function save(form: RbForm) {
+    if (!token || !modal) return;
+    setBusy(true);
+    try {
+      if (modal.mode === "edit") {
+        await apiRbacUpdateRole(token, modal.role.id, { description: form.description.trim(), scope: form.scope });
+      } else {
+        const created = await apiRbacCreateRole(token, {
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          scope: form.scope,
+        });
+        if (created.data) setSelectedRoleId(created.data.id);
+      }
+      setModal(null);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function doDelete() {
+    if (!token || !pinRole) return;
+    setDeleting(true);
+    try {
+      await apiRbacDeleteRole(token, pinRole.id);
+      if (selectedRoleId === pinRole.id) setSelectedRoleId(null);
+      setPinRole(null);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <div>
+      {stats && (
+        <div className="stat-grid">
+          <div className="stat-card c-primary"><div className="stat-header"><i className="ti ti-shield-lock" /></div><div className="stat-value">{stats.total_roles}</div><div className="stat-label">{s.rbStatRoles}</div></div>
+          <div className="stat-card c-info"><div className="stat-header"><i className="ti ti-key" /></div><div className="stat-value">{stats.total_permissions}</div><div className="stat-label">{s.rbStatPermissions}</div></div>
+          <div className="stat-card c-success"><div className="stat-header"><i className="ti ti-users" /></div><div className="stat-value">{stats.total_memberships}</div><div className="stat-label">{s.rbStatMemberships}</div></div>
+          <div className="stat-card c-warning"><div className="stat-header"><i className="ti ti-shield-star" /></div><div className="stat-value">{stats.super_admins}</div><div className="stat-label">{s.rbStatSuperAdmins}</div></div>
+        </div>
+      )}
+
+      <div className="filter-card">
+        <div className="cell-muted text-sm">{s.rbRoleOverview}</div>
+        <div style={{ flex: 1 }} />
+        <button className="btn btn-primary" onClick={() => setModal({ mode: "create" })}><i className="ti ti-plus" />{s.rbNewRole}</button>
+      </div>
+
+      <div className="card" style={{ marginBottom: 0 }}>
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>{s.rbColRole}</th>
+                <th>{s.rbColDescription}</th>
+                <th className="num-cell">{s.rbColMembers}</th>
+                <th className="num-cell">{s.rbColPermissions}</th>
+                <th style={{ textAlign: "right" }}>{s.colActions}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading && visibleRoles.length === 0 ? (
+                <tr><td colSpan={5} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.loading}</td></tr>
+              ) : visibleRoles.length === 0 ? (
+                <tr><td colSpan={5} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.rbEmpty}</td></tr>
+              ) : (
+                visibleRoles.map((r) => (
+                  <tr key={r.id} onClick={() => setSelectedRoleId(r.id)} style={{ cursor: "pointer", background: selectedRoleId === r.id ? "var(--bg-secondary)" : undefined }}>
+                    <td><span className={`badge ${rbBadgeTone(r.name)}`}>{rbPretty(r.name)}</span></td>
+                    <td className="cell-muted text-sm">{r.description || "—"}</td>
+                    <td className="num-cell">{r.memberships_count}</td>
+                    <td className="num-cell cell-muted">{r.permissions.length} / {permTotal}</td>
+                    <td onClick={(e) => e.stopPropagation()} style={{ textAlign: "right" }}>
+                      <div className="row-actions" style={{ justifyContent: "flex-end" }}>
+                        {canEditRole(r) && <button className="icon-btn" title={s.edit} onClick={() => setModal({ mode: "edit", role: r })}><i className="ti ti-edit" /></button>}
+                        {canDeleteRole(r) && <button className="icon-btn danger" title={s.delete} onClick={() => setPinRole(r)}><i className="ti ti-trash" /></button>}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Card 2 — the menu-mirror permission tree for the selected role
+          (self-contained component, reused as-is). */}
+      <div style={{ marginTop: 16 }}>
+        {token ? (
+          <RbacMenuTree
+            token={token}
+            roleId={selectedRoleId}
+            roleName={selectedRole ? rbPretty(selectedRole.name) : undefined}
+            canEdit={isSuper}
+          />
+        ) : null}
+      </div>
+
+      {modal && (
+        <RbacRoleModal
+          state={modal}
+          busy={busy}
+          lang={lang}
+          isSuper={isSuper}
+          onClose={() => setModal(null)}
+          onSave={(f) => void save(f)}
+        />
+      )}
+
+      <PinPromptDialog
+        isOpen={pinRole !== null}
+        title={s.rbDeleteTitle}
+        description={
+          pinRole ? (
+            <>
+              {s.rbPinGate} <strong>{rbPretty(pinRole.name)}</strong>.
+              {pinRole.memberships_count > 0 ? (
+                <span style={{ display: "block", marginTop: 8 }}>{s.rbDeleteBlocked}</span>
+              ) : null}
+            </>
+          ) : undefined
+        }
+        onCancel={() => (deleting ? undefined : setPinRole(null))}
+        onConfirm={async () => {
+          await doDelete();
+        }}
+      />
+    </div>
+  );
+}
+
+function RbacRoleModal({
+  state,
+  busy,
+  lang,
+  isSuper,
+  onClose,
+  onSave,
+}: {
+  state: { mode: "create" } | { mode: "edit"; role: RbacRoleRow };
+  busy: boolean;
+  lang: string;
+  isSuper: boolean;
+  onClose: () => void;
+  onSave: (f: RbForm) => void;
+}) {
+  const s = settingsStrings(lang);
+  const isEdit = state.mode === "edit";
+  const [f, setF] = useState<RbForm>(
+    isEdit
+      ? { name: state.role.name, description: state.role.description ?? "", scope: state.role.scope }
+      : { name: "", description: "", scope: "company" }
+  );
+  useEffect(() => {
+    if (state.mode === "edit") {
+      setF({ name: state.role.name, description: state.role.description ?? "", scope: state.role.scope });
+    } else {
+      setF({ name: "", description: "", scope: "company" });
+    }
+  }, [state]);
+  const set = (patch: Partial<RbForm>) => setF((p) => ({ ...p, ...patch }));
+  const valid = isEdit || f.name.trim() !== "";
+
+  return (
+    <div className="modal-overlay open" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <div className="modal-title">{isEdit ? s.rbEditTitle : s.rbCreateTitle}</div>
+          <button className="icon-btn" onClick={onClose}><i className="ti ti-x" /></button>
+        </div>
+        <div className="modal-body">
+          <div className="form-grid">
+            <div className="fld" style={{ gridColumn: "1 / -1" }}>
+              <label className="fld-label">{s.rbFldName}</label>
+              <input value={f.name} disabled={isEdit} placeholder="operator_admin" onChange={(e) => set({ name: e.target.value })} />
+              <span className="cell-muted text-sm" style={{ marginTop: 4 }}>{isEdit ? s.rbFldNameLocked : s.rbFldNameHelp}</span>
+            </div>
+            <div className="fld" style={{ gridColumn: "1 / -1" }}>
+              <label className="fld-label">{s.rbFldDescription}</label>
+              <input value={f.description} placeholder={s.rbFldDescriptionPh} onChange={(e) => set({ description: e.target.value })} />
+            </div>
+            <div className="fld" style={{ gridColumn: "1 / -1" }}>
+              <label className="fld-label">{s.rbFldScope}</label>
+              <select value={f.scope} disabled={!isSuper} onChange={(e) => set({ scope: e.target.value as RbacRoleScope })}>
+                <option value="company">{s.rbScopeCompany}</option>
+                <option value="platform">{s.rbScopePlatform}</option>
+              </select>
+              <span className="cell-muted text-sm" style={{ marginTop: 4 }}>{s.rbFldScopeHelp}</span>
+            </div>
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn" onClick={onClose}>{s.cancel}</button>
+          <button className="btn btn-primary" disabled={busy || !valid} onClick={() => onSave(f)}>
+            <i className="ti ti-device-floppy" />{busy ? "…" : isEdit ? s.save : s.create}
           </button>
         </div>
       </div>
