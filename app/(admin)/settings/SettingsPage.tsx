@@ -5120,7 +5120,7 @@ function RbacPane({ token, lang }: { token: string | null; lang: string }) {
           <div className="stat-card c-primary"><div className="stat-header"><i className="ti ti-shield-lock" /></div><div className="stat-value">{stats.total_roles}</div><div className="stat-label">{s.rbStatRoles}</div></div>
           <div className="stat-card c-info"><div className="stat-header"><i className="ti ti-key" /></div><div className="stat-value">{stats.total_permissions}</div><div className="stat-label">{s.rbStatPermissions}</div></div>
           <div className="stat-card c-success"><div className="stat-header"><i className="ti ti-users" /></div><div className="stat-value">{stats.total_memberships}</div><div className="stat-label">{s.rbStatMemberships}</div></div>
-          <div className="stat-card c-warning"><div className="stat-header"><i className="ti ti-shield-star" /></div><div className="stat-value">{stats.super_admins}</div><div className="stat-label">{s.rbStatSuperAdmins}</div></div>
+          <div className="stat-card c-warning"><div className="stat-header"><i className="ti ti-lock-access" /></div><div className="stat-value">{stats.super_admins}</div><div className="stat-label">{s.rbStatSuperAdmins}</div></div>
         </div>
       )}
 
