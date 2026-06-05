@@ -90,6 +90,13 @@ import {
   type FooterSyncColumnPayload,
   type BrandSettings,
   type BrandCustomField,
+  apiLoyaltyAccounts,
+  apiLoyaltyStats,
+  apiLoyaltyTransactions,
+  apiLoyaltyAdjust,
+  type LoyaltyAccountRow,
+  type LoyaltyAccountDetail,
+  type LoyaltyStats,
 } from "@/lib/platform-admin-api";
 import {
   apiAdminPages,
@@ -185,7 +192,7 @@ const PAGES: Record<SettingsPageKey, PageMeta> = {
   "header-menu":       { cluster: "layout", labelKey: "pgHeaderMenu", super: true, inPage: true, href: "/platform/settings/header-menu" },
   "footer":            { cluster: "layout", labelKey: "pgFooter", super: true, inPage: true, href: "/platform/settings/footer" },
   "brand":             { cluster: "layout", labelKey: "pgBrand", super: true, inPage: true, href: "/platform/settings/brand" },
-  "loyalty":           { cluster: "marketing", labelKey: "pgLoyalty", super: false, href: "/platform/loyalty" },
+  "loyalty":           { cluster: "marketing", labelKey: "pgLoyalty", super: false, inPage: true, href: "/platform/loyalty" },
   "security":          { cluster: "system", labelKey: "pgSecurity", super: true, href: "/platform/security" },
   "webhooks":          { cluster: "system", labelKey: "pgWebhooks", super: true, href: "/platform/webhooks" },
   "locations":         { cluster: "system", labelKey: "pgLocations", super: true, inPage: true, href: "/platform/locations" },
@@ -377,6 +384,7 @@ export function SettingsPage({ initialPage = "exchange-rates" }: { initialPage?:
             {page === "header-menu" && <HeaderMenuPane token={token} lang={lang} />}
             {page === "footer" && <FooterPane token={token} lang={lang} />}
             {page === "brand" && <BrandPane token={token} lang={lang} />}
+            {page === "loyalty" && <LoyaltyPane token={token} lang={lang} />}
           </div>
         </div>
       </div>
@@ -3859,6 +3867,220 @@ function BrandPane({ token, lang }: { token: string | null; lang: string }) {
                 </div>
               ))}
             </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// Loyalty pane (Marketing cluster) — accounts + stats + manual adjust
+// ════════════════════════════════════════════════════════════════
+
+const LOYALTY_TIERS = ["bronze", "silver", "gold", "platinum"];
+
+function LoyaltyPane({ token, lang }: { token: string | null; lang: string }) {
+  const s = settingsStrings(lang);
+  const [accounts, setAccounts] = useState<LoyaltyAccountRow[]>([]);
+  const [stats, setStats] = useState<LoyaltyStats | null>(null);
+  const [page, setPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [tier, setTier] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [detail, setDetail] = useState<LoyaltyAccountDetail | null>(null);
+  const [adjPoints, setAdjPoints] = useState("");
+  const [adjReason, setAdjReason] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const [list, st] = await Promise.all([
+        apiLoyaltyAccounts(token, { page, per_page: 25, tier: tier || undefined }),
+        apiLoyaltyStats(token).catch(() => null),
+      ]);
+      setAccounts(list.data ?? []);
+      setLastPage(list.last_page ?? 1);
+      setTotal(list.total ?? 0);
+      if (st) setStats(st.data);
+    } catch (e) {
+      console.error("loyalty load failed", e);
+    } finally {
+      setLoading(false);
+    }
+  }, [token, page, tier]);
+  useEffect(() => {
+    void load();
+  }, [token, page]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function openDetail(acct: LoyaltyAccountRow) {
+    if (!token) return;
+    setDetail({ ...acct });
+    setAdjPoints("");
+    setAdjReason("");
+    try {
+      const res = await apiLoyaltyTransactions(token, acct.user_id);
+      setDetail({ ...res.data, user: acct.user });
+    } catch (e) {
+      console.error("loyalty detail failed", e);
+    }
+  }
+
+  async function submitAdjust() {
+    if (!token || !detail) return;
+    const points = parseInt(adjPoints, 10);
+    if (Number.isNaN(points) || points === 0) {
+      alert(s.loAdjustErrZero);
+      return;
+    }
+    if (!adjReason.trim()) {
+      alert(s.loAdjustErrReason);
+      return;
+    }
+    const confirmMsg = s.loAdjustConfirm
+      .replace("{points}", `${points > 0 ? "+" : ""}${points}`)
+      .replace("{user}", detail.user?.name ?? `#${detail.user_id}`);
+    if (typeof window !== "undefined" && !window.confirm(confirmMsg)) return;
+    setBusy(true);
+    try {
+      await apiLoyaltyAdjust(token, detail.user_id, { points, reason: adjReason.trim() });
+      const res = await apiLoyaltyTransactions(token, detail.user_id);
+      setDetail({ ...res.data, user: detail.user });
+      setAdjPoints("");
+      setAdjReason("");
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const tierLabel = (tn: string): string =>
+    tn === "bronze" ? s.loTierBronze : tn === "silver" ? s.loTierSilver : tn === "gold" ? s.loTierGold : tn === "platinum" ? s.loTierPlatinum : tn;
+  const tierTone = (tn: string): string => (tn === "platinum" ? "badge-info" : tn === "gold" ? "badge-warning" : "badge-gray");
+
+  return (
+    <div>
+      {stats && (
+        <>
+          <div className="stat-grid">
+            <div className="stat-card c-primary"><div className="stat-header"><i className="ti ti-users" /></div><div className="stat-value">{stats.total_accounts.toLocaleString()}</div><div className="stat-label">{s.loStatAccounts}</div></div>
+            <div className="stat-card c-info"><div className="stat-header"><i className="ti ti-coins" /></div><div className="stat-value">{stats.total_points_outstanding.toLocaleString()}</div><div className="stat-label">{s.loStatOutstanding}</div></div>
+            <div className="stat-card c-warning"><div className="stat-header"><i className="ti ti-trophy" /></div><div className="stat-value">{stats.total_lifetime_points.toLocaleString()}</div><div className="stat-label">{s.loStatLifetime}</div></div>
+            <div className="stat-card c-success"><div className="stat-header"><i className="ti ti-crown" /></div><div className="stat-value">{(stats.by_tier?.gold ?? 0) + (stats.by_tier?.platinum ?? 0)}</div><div className="stat-label">{s.loStatGoldPlat}</div></div>
+          </div>
+          <div className="stat-grid">
+            {LOYALTY_TIERS.map((tn) => (
+              <div key={tn} className="stat-card"><div className="stat-label" style={{ textTransform: "uppercase", marginTop: 0 }}>{tierLabel(tn)}</div><div className="stat-value" style={{ fontSize: 18 }}>{(stats.by_tier?.[tn] ?? 0).toLocaleString()}</div></div>
+            ))}
+          </div>
+        </>
+      )}
+      <div className="filter-card">
+        <div className="filter-field">
+          <span className="filter-label">{s.loTier}</span>
+          <select value={tier} onChange={(e) => setTier(e.target.value)}>
+            <option value="">{s.all}</option>
+            {LOYALTY_TIERS.map((tn) => <option key={tn} value={tn}>{tierLabel(tn)}</option>)}
+          </select>
+        </div>
+        <div style={{ flex: 1 }} />
+        <button className="btn" onClick={() => { setPage(1); void load(); }}><i className="ti ti-filter" />{s.apply}</button>
+      </div>
+      <div className="card" style={{ marginBottom: 0 }}>
+        <div className="card-header"><div className="card-title">{s.loCardTitle}</div></div>
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>{s.loColUser}</th>
+                <th>{s.loTier}</th>
+                <th className="num-cell">{s.loColBalance}</th>
+                <th className="num-cell">{s.loColLifetime}</th>
+                <th style={{ textAlign: "right" }}>{s.colActions}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading && accounts.length === 0 ? (
+                <tr><td colSpan={5} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.loading}</td></tr>
+              ) : accounts.length === 0 ? (
+                <tr><td colSpan={5} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.loEmpty}</td></tr>
+              ) : (
+                accounts.map((a) => (
+                  <tr key={a.id} onClick={() => void openDetail(a)} style={{ cursor: "pointer" }}>
+                    <td>{a.user?.name ?? `#${a.user_id}`}{a.user?.email ? <div className="cell-muted text-sm">{a.user.email}</div> : null}</td>
+                    <td><span className={`badge ${tierTone(a.tier)}`}>{tierLabel(a.tier)}</span></td>
+                    <td className="num-cell font-mono">{a.points_balance.toLocaleString()}</td>
+                    <td className="num-cell cell-muted">{a.lifetime_points.toLocaleString()}</td>
+                    <td onClick={(e) => e.stopPropagation()} style={{ textAlign: "right" }}>
+                      <button className="icon-btn" title={s.loManage} onClick={() => void openDetail(a)}><i className="ti ti-eye" /></button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        {lastPage > 1 && (
+          <div className="pagination">
+            <div className="pagination-info">{page} / {lastPage} · {total.toLocaleString()}</div>
+            <div className="pagination-controls">
+              <button className="icon-btn" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}><i className="ti ti-chevron-left" /></button>
+              <button className="icon-btn" disabled={page >= lastPage} onClick={() => setPage((p) => p + 1)}><i className="ti ti-chevron-right" /></button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className={`drawer-overlay ${detail ? "open" : ""}`} onClick={() => setDetail(null)} />
+      <div className={`drawer ${detail ? "open" : ""}`}>
+        <div className="drawer-header">
+          <div style={{ fontSize: 16, fontWeight: 600 }}>{detail?.user?.name ?? (detail ? `#${detail.user_id}` : "")}</div>
+          <button className="icon-btn" onClick={() => setDetail(null)}><i className="ti ti-x" /></button>
+        </div>
+        <div className="drawer-body">
+          {detail && (
+            <>
+              {detail.user?.email ? <div className="cell-muted text-sm" style={{ marginBottom: 12 }}>{detail.user.email}</div> : null}
+              <div className="info-grid">
+                <div className="info-row"><span className="info-label">{s.loTier}</span><span className="info-value"><span className={`badge ${tierTone(detail.tier)}`}>{tierLabel(detail.tier)}</span></span></div>
+                <div className="info-row"><span className="info-label">{s.loDrawerBalance}</span><span className="info-value font-mono">{detail.points_balance.toLocaleString()}</span></div>
+                <div className="info-row"><span className="info-label">{s.loDrawerLifetime}</span><span className="info-value font-mono">{detail.lifetime_points.toLocaleString()}</span></div>
+              </div>
+              <div className="drawer-section">{s.loAdjustTitle}</div>
+              <div className="cell-muted text-sm" style={{ marginBottom: 10 }}>{s.loAdjustHelp}</div>
+              <div className="form-grid">
+                <div className="fld"><label className="fld-label">{s.loAdjustPoints}</label><input type="number" value={adjPoints} onChange={(e) => setAdjPoints(e.target.value)} /></div>
+                <div className="fld span-2"><label className="fld-label">{s.loAdjustReason}</label><input value={adjReason} onChange={(e) => setAdjReason(e.target.value)} /></div>
+              </div>
+              <div style={{ marginTop: 10, textAlign: "right" }}>
+                <button className="btn btn-primary" disabled={busy || !adjPoints || !adjReason.trim()} onClick={() => void submitAdjust()}><i className="ti ti-adjustments" />{s.loAdjustApply}</button>
+              </div>
+              <div className="drawer-section">{s.loTransactions}{detail.transactions ? ` (${detail.transactions.length})` : ""}</div>
+              {!detail.transactions || detail.transactions.length === 0 ? (
+                <div className="cell-muted text-sm">{s.loNoTransactions}</div>
+              ) : (
+                <div className="table-wrap">
+                  <table className="table">
+                    <thead><tr><th>{s.loTxWhen}</th><th>{s.loTxType}</th><th className="num-cell">{s.loTxPoints}</th><th>{s.loTxReason}</th></tr></thead>
+                    <tbody>
+                      {detail.transactions.map((tx) => (
+                        <tr key={tx.id}>
+                          <td className="cell-muted text-sm">{fmtDateTime(tx.created_at)}</td>
+                          <td className="text-sm">{tx.type}</td>
+                          <td className="num-cell font-mono" style={{ color: tx.points > 0 ? "var(--success)" : "var(--danger)" }}>{tx.points > 0 ? "+" : ""}{tx.points.toLocaleString()}</td>
+                          <td className="text-sm">{tx.reason ?? "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

@@ -49,6 +49,8 @@ const MGMT_PREFIXES = [
   "/platform/settings/header-menu",
   "/platform/settings/footer",
   "/platform/settings/brand",
+  // 2026-06-05 pt3 — Marketing cluster migration (loyalty).
+  "/platform/loyalty",
 ];
 
 /** Routes that render the unified chrome ONLY on an exact path match (their

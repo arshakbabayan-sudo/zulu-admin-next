@@ -1286,6 +1286,64 @@ export async function apiPlatformNotificationStats(
   return apiFetchJson(`${PA}/notifications/stats`, { method: "GET", token });
 }
 
+// ─── Loyalty oversight (platform-admin) ───────────────────────────────────
+export type LoyaltyAccountRow = {
+  id: number;
+  user_id: number;
+  tier: string;
+  points_balance: number;
+  lifetime_points: number;
+  user?: { id: number; name: string; email: string };
+};
+
+export type LoyaltyTransactionRow = {
+  id: number;
+  type: string;
+  points: number;
+  reason: string | null;
+  created_at: string;
+};
+
+export type LoyaltyAccountDetail = LoyaltyAccountRow & { transactions?: LoyaltyTransactionRow[] };
+
+export type LoyaltyStats = {
+  total_accounts: number;
+  by_tier: Record<string, number>;
+  total_points_outstanding: number;
+  total_lifetime_points: number;
+};
+
+export async function apiLoyaltyAccounts(
+  token: string,
+  params: { page?: number; per_page?: number; tier?: string }
+): Promise<ApiSuccessEnvelope<LoyaltyAccountRow[]> & { last_page?: number; total?: number; current_page?: number }> {
+  const p = new URLSearchParams();
+  if (params.page != null) p.set("page", String(params.page));
+  if (params.per_page != null) p.set("per_page", String(params.per_page));
+  if (params.tier) p.set("tier", params.tier);
+  const qs = p.toString();
+  return apiFetchJson(`${PA}/loyalty/accounts${qs ? `?${qs}` : ""}`, { method: "GET", token });
+}
+
+export async function apiLoyaltyStats(token: string): Promise<ApiSuccessEnvelope<LoyaltyStats>> {
+  return apiFetchJson(`${PA}/loyalty/stats`, { method: "GET", token });
+}
+
+export async function apiLoyaltyTransactions(
+  token: string,
+  userId: number
+): Promise<ApiSuccessEnvelope<LoyaltyAccountDetail>> {
+  return apiFetchJson(`${PA}/loyalty/accounts/${userId}/transactions`, { method: "GET", token });
+}
+
+export async function apiLoyaltyAdjust(
+  token: string,
+  userId: number,
+  body: { points: number; reason: string }
+): Promise<ApiSuccessEnvelope<LoyaltyAccountDetail>> {
+  return apiFetchJson(`${PA}/loyalty/accounts/${userId}/adjust`, { method: "POST", token, body });
+}
+
 export type PlatformBannerRow = {
   id: number;
   image_path?: string | null;
