@@ -56,6 +56,8 @@ const MGMT_PREFIXES = [
   // sub-routes (all in-page), so they stay consistent.
   "/platform/security",
   "/platform/settings",
+  // 2026-06-05 pt3 — System cluster (part 2): webhooks.
+  "/platform/webhooks",
 ];
 
 /** Routes that render the unified chrome ONLY on an exact path match (their

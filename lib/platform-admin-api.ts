@@ -1395,6 +1395,64 @@ export async function apiSecurityForceLogout(
   return apiFetchJson(`${PA}/security/users/${userId}/force-logout`, { method: "POST", token });
 }
 
+// ─── Webhooks oversight (subscriptions + delivery attempts) ────────────────
+export type WebhookStats = {
+  total_subscriptions: number;
+  active_subscriptions: number;
+  deliveries_total: number;
+  deliveries_success: number;
+  deliveries_failed: number;
+  deliveries_pending: number;
+  success_rate: number | null;
+};
+
+export type WebhookSubscriptionRow = {
+  id: number;
+  company_id: number;
+  url: string;
+  events: string[];
+  status: string;
+  created_at: string;
+  company?: { id: number; name: string };
+};
+
+export type WebhookDeliveryRow = {
+  id: number;
+  subscription_id: number;
+  event: string;
+  status: "pending" | "success" | "failed";
+  attempt_count: number;
+  last_response_status: number | null;
+  last_attempt_at: string | null;
+  created_at: string;
+  subscription?: { id: number; company_id: number; url: string };
+};
+
+export async function apiWebhookStats(token: string): Promise<ApiSuccessEnvelope<WebhookStats>> {
+  return apiFetchJson(`${PA}/webhooks/stats`, { method: "GET", token });
+}
+
+export async function apiWebhookSubscriptions(
+  token: string
+): Promise<ApiSuccessEnvelope<WebhookSubscriptionRow[]>> {
+  return apiFetchJson(`${PA}/webhooks/subscriptions`, { method: "GET", token });
+}
+
+export async function apiWebhookDeliveries(
+  token: string,
+  params: { status?: string }
+): Promise<ApiSuccessEnvelope<WebhookDeliveryRow[]>> {
+  const qs = params.status ? `?status=${encodeURIComponent(params.status)}` : "";
+  return apiFetchJson(`${PA}/webhooks/deliveries${qs}`, { method: "GET", token });
+}
+
+export async function apiWebhookReplay(
+  token: string,
+  deliveryId: number
+): Promise<ApiSuccessEnvelope<unknown>> {
+  return apiFetchJson(`${PA}/webhooks/deliveries/${deliveryId}/replay`, { method: "POST", token });
+}
+
 export type PlatformBannerRow = {
   id: number;
   image_path?: string | null;

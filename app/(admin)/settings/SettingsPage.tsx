@@ -106,6 +106,13 @@ import {
   type PlatformSettingRow,
   type SecurityTwoFactorRow,
   type SecurityStats,
+  apiWebhookStats,
+  apiWebhookSubscriptions,
+  apiWebhookDeliveries,
+  apiWebhookReplay,
+  type WebhookStats,
+  type WebhookSubscriptionRow,
+  type WebhookDeliveryRow,
 } from "@/lib/platform-admin-api";
 import {
   apiAdminPages,
@@ -203,7 +210,7 @@ const PAGES: Record<SettingsPageKey, PageMeta> = {
   "brand":             { cluster: "layout", labelKey: "pgBrand", super: true, inPage: true, href: "/platform/settings/brand" },
   "loyalty":           { cluster: "marketing", labelKey: "pgLoyalty", super: false, inPage: true, href: "/platform/loyalty" },
   "security":          { cluster: "system", labelKey: "pgSecurity", super: true, inPage: true, href: "/platform/security" },
-  "webhooks":          { cluster: "system", labelKey: "pgWebhooks", super: true, href: "/platform/webhooks" },
+  "webhooks":          { cluster: "system", labelKey: "pgWebhooks", super: true, inPage: true, href: "/platform/webhooks" },
   "locations":         { cluster: "system", labelKey: "pgLocations", super: true, inPage: true, href: "/platform/locations" },
   "api-docs":          { cluster: "system", labelKey: "pgApiDocs", super: true, href: "/platform/api-docs" },
   "connections":       { cluster: "system", labelKey: "pgConnections", super: false, href: "/connections" },
@@ -396,6 +403,7 @@ export function SettingsPage({ initialPage = "exchange-rates" }: { initialPage?:
             {page === "loyalty" && <LoyaltyPane token={token} lang={lang} />}
             {page === "security" && <SecurityPane token={token} lang={lang} />}
             {page === "platform-settings" && <PlatformSettingsPane token={token} lang={lang} />}
+            {page === "webhooks" && <WebhooksPane token={token} lang={lang} />}
           </div>
         </div>
       </div>
@@ -4359,6 +4367,175 @@ function PlatformSettingsPane({ token, lang }: { token: string | null; lang: str
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// Webhooks pane (System cluster) — subscriptions + delivery attempts
+// ════════════════════════════════════════════════════════════════
+
+function WebhooksPane({ token, lang }: { token: string | null; lang: string }) {
+  const s = settingsStrings(lang);
+  const [stats, setStats] = useState<WebhookStats | null>(null);
+  const [subs, setSubs] = useState<WebhookSubscriptionRow[]>([]);
+  const [deliveries, setDeliveries] = useState<WebhookDeliveryRow[]>([]);
+  const [tab, setTab] = useState<"deliveries" | "subscriptions">("deliveries");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [replayBusy, setReplayBusy] = useState<number | null>(null);
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const [st, sub, del] = await Promise.all([
+        apiWebhookStats(token).catch(() => null),
+        apiWebhookSubscriptions(token).catch(() => null),
+        apiWebhookDeliveries(token, { status: statusFilter || undefined }),
+      ]);
+      if (st) setStats(st.data);
+      if (sub) setSubs(sub.data ?? []);
+      setDeliveries(del.data ?? []);
+    } catch (e) {
+      console.error("webhooks load failed", e);
+    } finally {
+      setLoading(false);
+    }
+  }, [token, statusFilter]);
+  useEffect(() => {
+    void load();
+  }, [token, statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function replay(deliveryId: number) {
+    if (!token) return;
+    if (typeof window !== "undefined" && !window.confirm(s.whConfirmReplay)) return;
+    setReplayBusy(deliveryId);
+    try {
+      await apiWebhookReplay(token, deliveryId);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setReplayBusy(null);
+    }
+  }
+
+  const delTone = (st: string): string => (st === "success" ? "badge-success" : st === "pending" ? "badge-warning" : st === "failed" ? "badge-danger" : "badge-gray");
+  const delLabel = (st: string): string => (st === "success" ? s.whStSuccess : st === "pending" ? s.whStPending : st === "failed" ? s.whStFailed : st);
+  const subTone = (st: string): string => (st === "active" ? "badge-success" : st === "disabled" || st === "paused" ? "badge-warning" : st === "error" ? "badge-danger" : "badge-gray");
+  const subLabel = (st: string): string => (st === "active" ? s.whSubActive : st === "disabled" ? s.whSubDisabled : st === "paused" ? s.whSubPaused : st === "error" ? s.whSubError : st);
+  const httpTone = (code: number): string => (code >= 200 && code < 300 ? "badge-success" : code >= 300 && code < 400 ? "badge-info" : code >= 400 && code < 500 ? "badge-warning" : code >= 500 ? "badge-danger" : "badge-gray");
+
+  return (
+    <div>
+      {stats && (
+        <div className="stat-grid">
+          <div className="stat-card c-primary"><div className="stat-header"><i className="ti ti-webhook" /></div><div className="stat-value">{stats.active_subscriptions} / {stats.total_subscriptions}</div><div className="stat-label">{s.whStatSubs} · {s.whActiveTotal}</div></div>
+          <div className="stat-card c-info"><div className="stat-header"><i className="ti ti-send" /></div><div className="stat-value">{stats.deliveries_total.toLocaleString()}</div><div className="stat-label">{s.whStatDeliveries}</div></div>
+          <div className="stat-card c-success"><div className="stat-header"><i className="ti ti-circle-check" /></div><div className="stat-value">{stats.success_rate !== null ? `${stats.success_rate}%` : "—"}</div><div className="stat-label">{s.whStatSuccessRate}</div></div>
+          <div className="stat-card c-danger"><div className="stat-header"><i className="ti ti-alert-circle" /></div><div className="stat-value">{stats.deliveries_failed.toLocaleString()}</div><div className="stat-label">{s.whStatFailed}</div></div>
+        </div>
+      )}
+      <div className="pills-row">
+        <button className={`sub-tab ${tab === "deliveries" ? "active" : ""}`} onClick={() => setTab("deliveries")}>{s.whTabDeliveries}</button>
+        <button className={`sub-tab ${tab === "subscriptions" ? "active" : ""}`} onClick={() => setTab("subscriptions")}>{s.whTabSubscriptions}</button>
+      </div>
+
+      {tab === "deliveries" ? (
+        <>
+          <div className="filter-card">
+            <div className="filter-field">
+              <span className="filter-label">{s.status}</span>
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                <option value="">{s.all}</option>
+                <option value="pending">{s.whStPending}</option>
+                <option value="success">{s.whStSuccess}</option>
+                <option value="failed">{s.whStFailed}</option>
+              </select>
+            </div>
+            <div style={{ flex: 1 }} />
+            <button className="btn" onClick={() => void load()}><i className="ti ti-refresh" />{s.whRefresh}</button>
+          </div>
+          <div className="card" style={{ marginBottom: 0 }}>
+            <div className="table-wrap">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>{s.stColId}</th>
+                    <th>{s.whColEvent}</th>
+                    <th>{s.status}</th>
+                    <th>{s.whColUrl}</th>
+                    <th className="num-cell">{s.whColAttempts}</th>
+                    <th>{s.whColHttp}</th>
+                    <th>{s.whColLastAttempt}</th>
+                    <th style={{ textAlign: "right" }}>{s.colActions}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading && deliveries.length === 0 ? (
+                    <tr><td colSpan={8} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.loading}</td></tr>
+                  ) : deliveries.length === 0 ? (
+                    <tr><td colSpan={8} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.whEmptyDeliveries}</td></tr>
+                  ) : (
+                    deliveries.map((d) => (
+                      <tr key={d.id}>
+                        <td className="font-mono cell-muted">#{d.id}</td>
+                        <td><span className="type-badge">{d.event}</span></td>
+                        <td><span className={`badge ${delTone(d.status)}`}>{delLabel(d.status)}</span></td>
+                        <td className="cell-muted text-sm" style={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={d.subscription?.url ?? ""}>{d.subscription?.url ?? "—"}</td>
+                        <td className="num-cell">{d.attempt_count}</td>
+                        <td>{d.last_response_status != null ? <span className={`badge ${httpTone(d.last_response_status)} font-mono`}>{d.last_response_status}</span> : <span className="cell-muted">—</span>}</td>
+                        <td className="cell-muted text-sm">{fmtDateTime(d.last_attempt_at)}</td>
+                        <td style={{ textAlign: "right" }}>
+                          {d.status === "failed" && (
+                            <button className="btn btn-sm" disabled={replayBusy === d.id} onClick={() => void replay(d.id)}><i className="ti ti-refresh-dot" />{replayBusy === d.id ? "…" : s.whReplay}</button>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="card" style={{ marginBottom: 0 }}>
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>{s.stColId}</th>
+                  <th>{s.whColCompany}</th>
+                  <th>{s.whColUrl}</th>
+                  <th>{s.whColEvents}</th>
+                  <th>{s.status}</th>
+                  <th>{s.whColCreated}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading && subs.length === 0 ? (
+                  <tr><td colSpan={6} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.loading}</td></tr>
+                ) : subs.length === 0 ? (
+                  <tr><td colSpan={6} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.whEmptySubscriptions}</td></tr>
+                ) : (
+                  subs.map((sub) => (
+                    <tr key={sub.id}>
+                      <td className="font-mono cell-muted">#{sub.id}</td>
+                      <td>{sub.company?.name ?? `#${sub.company_id}`}</td>
+                      <td className="cell-muted text-sm" style={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={sub.url}>{sub.url}</td>
+                      <td className="cell-muted text-sm">{sub.events.join(", ")}</td>
+                      <td><span className={`badge ${subTone(sub.status)}`}>{subLabel(sub.status)}</span></td>
+                      <td className="cell-muted text-sm">{fmtDateTime(sub.created_at)}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
