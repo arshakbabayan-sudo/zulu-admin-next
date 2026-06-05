@@ -57,6 +57,11 @@ import {
   type CollectionModel,
   type InvoicingPeriod,
 } from "@/lib/money-flow-terms-api";
+import {
+  apiPlatformReviews,
+  apiModerateReview,
+  type PlatformReviewRow,
+} from "@/lib/platform-admin-api";
 
 // ── Page catalogue ──────────────────────────────────────────────
 export type SettingsPageKey =
@@ -106,7 +111,7 @@ const PAGES: Record<SettingsPageKey, PageMeta> = {
   "connections":       { cluster: "system", labelKey: "pgConnections", super: false, href: "/connections" },
   "platform-settings": { cluster: "system", labelKey: "pgPlatformSettings", super: true, href: "/platform/settings" },
   "support-tickets":   { cluster: "support", labelKey: "pgSupportTickets", super: false, href: "/support/tickets" },
-  "reviews":           { cluster: "support", labelKey: "pgReviews", super: true, href: "/platform/reviews" },
+  "reviews":           { cluster: "support", labelKey: "pgReviews", super: true, inPage: true, href: "/platform/reviews" },
 };
 
 const CLUSTERS: Array<{ key: ClusterKey; labelKey: SettingsKey; icon: string }> = [
@@ -276,6 +281,7 @@ export function SettingsPage({ initialPage = "exchange-rates" }: { initialPage?:
             {page === "pricing-rules" && <PricingRulesPane token={token} lang={lang} />}
             {page === "money-flow" && <MoneyFlowPane token={token} lang={lang} />}
             {page === "exchange-rates" && <ExchangeRatesPane token={token} lang={lang} />}
+            {page === "reviews" && <ReviewsPane token={token} lang={lang} />}
           </div>
         </div>
       </div>
@@ -1220,6 +1226,185 @@ function MoneyFlowModal({
         <div className="modal-footer">
           <button className="btn" onClick={onClose}>{s.cancel}</button>
           <button className="btn btn-primary" disabled={busy || !valid} onClick={() => onSave(f)}><i className="ti ti-device-floppy" />{isEdit ? s.save : s.create}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// Reviews pane (Support cluster) — list + filters + moderate
+// ════════════════════════════════════════════════════════════════
+
+function ReviewsPane({ token, lang }: { token: string | null; lang: string }) {
+  const s = settingsStrings(lang);
+  const [rows, setRows] = useState<PlatformReviewRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [fStatus, setFStatus] = useState("");
+  const [search, setSearch] = useState("");
+  const [moderate, setModerate] = useState<PlatformReviewRow | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const res = await apiPlatformReviews(token, { per_page: 100, status: fStatus || undefined });
+      setRows(res.data ?? []);
+    } catch (e) {
+      console.error("reviews load failed", e);
+    } finally {
+      setLoading(false);
+    }
+  }, [token, fStatus]);
+  useEffect(() => {
+    void load();
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function submitModeration(status: "published" | "hidden" | "rejected", notes: string) {
+    if (!token || !moderate) return;
+    setBusy(true);
+    try {
+      await apiModerateReview(token, moderate.id, { status, notes: notes.trim() || null });
+      setModerate(null);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const statusTone = (st: string): string =>
+    st === "published" ? "badge-success" : st === "hidden" ? "badge-warning" : st === "rejected" ? "badge-danger" : "badge-gray";
+  const statusLabel = (st: string): string =>
+    st === "published" ? s.rvStatusPublished : st === "hidden" ? s.rvStatusHidden : st === "rejected" ? s.rvStatusRejected : st;
+
+  const visible = rows.filter((r) => {
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      if (!`${r.user?.name ?? ""} ${r.review_text ?? ""} ${r.target_entity_type} ${r.target_entity_id}`.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+
+  return (
+    <div>
+      <div className="filter-card">
+        <div className="filter-field">
+          <span className="filter-label">{s.status}</span>
+          <select value={fStatus} onChange={(e) => setFStatus(e.target.value)}>
+            <option value="">{s.all}</option>
+            <option value="published">{s.rvStatusPublished}</option>
+            <option value="hidden">{s.rvStatusHidden}</option>
+            <option value="rejected">{s.rvStatusRejected}</option>
+          </select>
+        </div>
+        <div className="filter-field" style={{ flex: 2 }}>
+          <span className="filter-label">{s.search}</span>
+          <input type="search" placeholder={s.rvSearchPh} value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void load()} />
+        </div>
+        <button className="btn" onClick={() => void load()}><i className="ti ti-filter" />{s.apply}</button>
+      </div>
+      <div className="card" style={{ marginBottom: 0 }}>
+        <div className="card-header"><div className="card-title">{s.rvCardTitle}</div></div>
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>{s.rvColRating}</th>
+                <th>{s.rvColUser}</th>
+                <th>{s.rvColEntity}</th>
+                <th>{s.rvColText}</th>
+                <th>{s.status}</th>
+                <th>{s.rvColCreated}</th>
+                <th style={{ textAlign: "right" }}>{s.colActions}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading && rows.length === 0 ? (
+                <tr><td colSpan={7} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.loading}</td></tr>
+              ) : visible.length === 0 ? (
+                <tr><td colSpan={7} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.rvEmpty}</td></tr>
+              ) : (
+                visible.map((r) => {
+                  const rating = Math.max(0, Math.min(5, Math.round(r.rating)));
+                  return (
+                    <tr key={r.id}>
+                      <td><span className="stars">{"★".repeat(rating)}<span className="off">{"★".repeat(5 - rating)}</span></span></td>
+                      <td>{r.user?.name ?? "—"}</td>
+                      <td className="cell-muted">{r.target_entity_type} #{r.target_entity_id}</td>
+                      <td className="text-sm" style={{ maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.review_text ?? "—"}</td>
+                      <td><span className={`badge ${statusTone(r.status)}`}>{statusLabel(r.status)}</span></td>
+                      <td className="cell-muted">{fmtDateTime(r.created_at).slice(0, 10)}</td>
+                      <td style={{ textAlign: "right" }}>
+                        <button className="btn btn-sm" onClick={() => setModerate(r)}><i className="ti ti-gavel" />{s.rvModerate}</button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <ModerateModal review={moderate} busy={busy} lang={lang} onClose={() => setModerate(null)} onSave={(st, notes) => void submitModeration(st, notes)} />
+    </div>
+  );
+}
+
+function ModerateModal({
+  review,
+  busy,
+  lang,
+  onClose,
+  onSave,
+}: {
+  review: PlatformReviewRow | null;
+  busy: boolean;
+  lang: string;
+  onClose: () => void;
+  onSave: (status: "published" | "hidden" | "rejected", notes: string) => void;
+}) {
+  const s = settingsStrings(lang);
+  const [status, setStatus] = useState<"published" | "hidden" | "rejected">("published");
+  const [notes, setNotes] = useState("");
+  useEffect(() => {
+    if (review) {
+      setStatus(review.status === "hidden" || review.status === "rejected" ? review.status : "published");
+      setNotes(review.moderation_notes ?? "");
+    }
+  }, [review]);
+  return (
+    <div className={`modal-overlay ${review ? "open" : ""}`} onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <div className="modal-title">{s.rvModerateTitle}</div>
+          <button className="icon-btn" onClick={onClose}><i className="ti ti-x" /></button>
+        </div>
+        <div className="modal-body">
+          {review && (
+            <div className="info-grid" style={{ marginBottom: 14 }}>
+              <div className="info-row"><span className="info-label">{s.rvColRating}</span><span className="info-value">{review.rating} / 5</span></div>
+              <div className="info-row"><span className="info-label">{s.rvColText}</span><span className="info-value">{review.review_text ?? "—"}</span></div>
+            </div>
+          )}
+          <div className="fld" style={{ marginBottom: 12 }}>
+            <label className="fld-label">{s.rvModerateStatus}</label>
+            <select value={status} onChange={(e) => setStatus(e.target.value as "published" | "hidden" | "rejected")}>
+              <option value="published">{s.rvStatusPublished}</option>
+              <option value="hidden">{s.rvStatusHidden}</option>
+              <option value="rejected">{s.rvStatusRejected}</option>
+            </select>
+          </div>
+          <div className="fld">
+            <label className="fld-label">{s.rvModerateNotes}</label>
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn" onClick={onClose}>{s.cancel}</button>
+          <button className="btn btn-primary" disabled={busy} onClick={() => onSave(status, notes)}><i className="ti ti-gavel" />{s.rvModerate}</button>
         </div>
       </div>
     </div>

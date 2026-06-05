@@ -415,6 +415,8 @@
 /* ── Settings consolidation (2026-06-05) — pill rows + pricing test panel ── */
 .mgmt-page .pills-row { display:flex; gap:4px; margin-bottom:16px; flex-wrap:wrap; }
 .mgmt-page .test-out { background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:2px 14px; margin-top:14px; }
+.mgmt-page .stars { color:#f5b50a; letter-spacing:1px; white-space:nowrap; }
+.mgmt-page .stars .off { color:var(--border-hover); }
 /* Dark-mode loyalty badge — keep gradient readable */
 html.dark .mgmt-page .loyalty-badge { background:linear-gradient(135deg,#3a2e10,#4a3a18); color:#f3c969; }
 html.dark .mgmt-page .pill-warn { background:#3a2e10; color:#f3c969; }

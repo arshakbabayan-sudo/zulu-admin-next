@@ -182,6 +182,23 @@ const EN = {
   prTestPriceOverride: "Price override (optional)",
   mfFldOperatorId: "Operator company ID",
   mfFldAgentId: "Agent company ID",
+
+  // ── reviews (Support cluster) ─────────────────────────────────
+  rvColRating: "Rating",
+  rvColUser: "User",
+  rvColEntity: "Offer / Entity",
+  rvColText: "Review",
+  rvColCreated: "Created",
+  rvSearchPh: "User, offer, text…",
+  rvEmpty: "No reviews.",
+  rvModerate: "Moderate",
+  rvCardTitle: "Reviews",
+  rvStatusPublished: "Published",
+  rvStatusHidden: "Hidden",
+  rvStatusRejected: "Rejected",
+  rvModerateTitle: "Moderate review",
+  rvModerateStatus: "Status",
+  rvModerateNotes: "Moderation notes (optional)",
 } as const;
 
 export type SettingsKey = keyof typeof EN;
@@ -348,6 +365,22 @@ const HY: Partial<Record<SettingsKey, string>> = {
   prTestPriceOverride: "Գնի վերագրում (ըստ ցանկության)",
   mfFldOperatorId: "Օպերատոր ընկերության ID",
   mfFldAgentId: "Գործակալ ընկերության ID",
+
+  rvColRating: "Գնահատական",
+  rvColUser: "Օգտատեր",
+  rvColEntity: "Առաջարկ / Միավոր",
+  rvColText: "Կարծիք",
+  rvColCreated: "Ստեղծված",
+  rvSearchPh: "Օգտատեր, առաջարկ, տեքստ…",
+  rvEmpty: "Կարծիքներ չկան։",
+  rvModerate: "Մոդերացիա",
+  rvCardTitle: "Կարծիքներ",
+  rvStatusPublished: "Հրապարակված",
+  rvStatusHidden: "Թաքցված",
+  rvStatusRejected: "Մերժված",
+  rvModerateTitle: "Կարծիքի մոդերացիա",
+  rvModerateStatus: "Կարգավիճակ",
+  rvModerateNotes: "Մոդերացիայի նշումներ (ըստ ցանկության)",
 };
 
 const RU: Partial<Record<SettingsKey, string>> = {
@@ -512,6 +545,22 @@ const RU: Partial<Record<SettingsKey, string>> = {
   prTestPriceOverride: "Переопределение цены (необязательно)",
   mfFldOperatorId: "ID компании-оператора",
   mfFldAgentId: "ID компании-агента",
+
+  rvColRating: "Оценка",
+  rvColUser: "Пользователь",
+  rvColEntity: "Предложение / Объект",
+  rvColText: "Отзыв",
+  rvColCreated: "Создан",
+  rvSearchPh: "Пользователь, предложение, текст…",
+  rvEmpty: "Отзывов нет.",
+  rvModerate: "Модерация",
+  rvCardTitle: "Отзывы",
+  rvStatusPublished: "Опубликован",
+  rvStatusHidden: "Скрыт",
+  rvStatusRejected: "Отклонён",
+  rvModerateTitle: "Модерация отзыва",
+  rvModerateStatus: "Статус",
+  rvModerateNotes: "Заметки модерации (необязательно)",
 };
 
 export function settingsStrings(lang: string): Record<SettingsKey, string> {

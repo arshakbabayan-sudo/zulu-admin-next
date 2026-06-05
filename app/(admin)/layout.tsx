@@ -29,6 +29,7 @@ const MGMT_PREFIXES = [
   "/settings/exchange-rates",
   "/settings/pricing-rules",
   "/settings/money-flow",
+  "/platform/reviews",
 ];
 
 /**
