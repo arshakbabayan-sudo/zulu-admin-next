@@ -411,6 +411,10 @@
 .mgmt-page .file-chip i { font-size:15px; }
 .mgmt-page .approve-note { background:var(--success-light); border:1px solid var(--success); color:var(--success-dark); border-radius:var(--radius-md); padding:12px 14px; font-size:12px; line-height:1.5; display:flex; gap:10px; align-items:flex-start; margin-bottom:14px; }
 .mgmt-page .approve-note i { font-size:18px; flex-shrink:0; }
+
+/* ── Settings consolidation (2026-06-05) — pill rows + pricing test panel ── */
+.mgmt-page .pills-row { display:flex; gap:4px; margin-bottom:16px; flex-wrap:wrap; }
+.mgmt-page .test-out { background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:2px 14px; margin-top:14px; }
 /* Dark-mode loyalty badge — keep gradient readable */
 html.dark .mgmt-page .loyalty-badge { background:linear-gradient(135deg,#3a2e10,#4a3a18); color:#f3c969; }
 html.dark .mgmt-page .pill-warn { background:#3a2e10; color:#f3c969; }

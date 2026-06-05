@@ -23,6 +23,10 @@ const MGMT_PREFIXES = [
   // under Management and reuse its self-contained 1:1 chrome.
   "/platform/b2c-customers",
   "/platform/unverified",
+  // 2026-06-05 — Settings consolidation (11_settings.html). Migrated settings
+  // pages render the unified SettingsPage chrome; add each route here as it is
+  // moved in-page (un-migrated settings pages keep AdminShell).
+  "/settings/exchange-rates",
 ];
 
 /**

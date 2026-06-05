@@ -2017,7 +2017,7 @@ function isMgmtTabVisible(
   return true;
 }
 
-function Sidebar({ collapsed: _c, unreadCount }: { collapsed: boolean; unreadCount: number }) {
+export function Sidebar({ collapsed: _c, unreadCount }: { collapsed: boolean; unreadCount: number }) {
   const pathname = usePathname();
   const { user } = useAdminAuth();
   const { t } = useLanguage();
@@ -2078,7 +2078,7 @@ const APPS_QUICKLINKS: Array<{ href: string; icon: string; labelKey: MgmtKey }> 
   { href: "/platform/settings", icon: "ti-settings", labelKey: "navSettings" },
 ];
 
-function Header({
+export function Header({
   collapsed: _c,
   onHamburger,
   title,
