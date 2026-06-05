@@ -27,6 +27,8 @@ const MGMT_PREFIXES = [
   // pages render the unified SettingsPage chrome; add each route here as it is
   // moved in-page (un-migrated settings pages keep AdminShell).
   "/settings/exchange-rates",
+  "/settings/pricing-rules",
+  "/settings/money-flow",
 ];
 
 /**

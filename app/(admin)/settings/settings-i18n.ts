@@ -162,6 +162,26 @@ const EN = {
   scopeOperatorPrefix: "Operator",
   scopePartnershipPrefix: "Partnership",
   colActions: "Actions",
+
+  // ── service categories (pricing rule form) ────────────────────
+  svcAny: "Any category",
+  svcHotel: "Hotel",
+  svcFlight: "Flight",
+  svcTransfer: "Transfer",
+  svcCar: "Car",
+  svcExcursion: "Excursion",
+  svcPackage: "Package",
+  svcVisa: "Visa",
+  prFldOperatorId: "Operator company ID",
+  prFldAgentId: "Agent company ID",
+  prFldReason: "Reason (optional)",
+  prMarkupTypePercent: "Percentage",
+  prMarkupTypeFixed: "Fixed amount",
+  prTestAgent: "Agent ID (optional)",
+  prTestDestination: "Destination ID (optional)",
+  prTestPriceOverride: "Price override (optional)",
+  mfFldOperatorId: "Operator company ID",
+  mfFldAgentId: "Agent company ID",
 } as const;
 
 export type SettingsKey = keyof typeof EN;
@@ -309,6 +329,25 @@ const HY: Partial<Record<SettingsKey, string>> = {
   scopeOperatorPrefix: "Օպերատոր",
   scopePartnershipPrefix: "Գործընկերություն",
   colActions: "Գործողություններ",
+
+  svcAny: "Ցանկացած կատեգորիա",
+  svcHotel: "Հյուրանոց",
+  svcFlight: "Թռիչք",
+  svcTransfer: "Փոխադրում",
+  svcCar: "Մեքենա",
+  svcExcursion: "Էքսկուրսիա",
+  svcPackage: "Փաթեթ",
+  svcVisa: "Վիզա",
+  prFldOperatorId: "Օպերատոր ընկերության ID",
+  prFldAgentId: "Գործակալ ընկերության ID",
+  prFldReason: "Պատճառ (ըստ ցանկության)",
+  prMarkupTypePercent: "Տոկոս",
+  prMarkupTypeFixed: "Հաստատուն գումար",
+  prTestAgent: "Գործակալի ID (ըստ ցանկության)",
+  prTestDestination: "Ուղղության ID (ըստ ցանկության)",
+  prTestPriceOverride: "Գնի վերագրում (ըստ ցանկության)",
+  mfFldOperatorId: "Օպերատոր ընկերության ID",
+  mfFldAgentId: "Գործակալ ընկերության ID",
 };
 
 const RU: Partial<Record<SettingsKey, string>> = {
@@ -454,6 +493,25 @@ const RU: Partial<Record<SettingsKey, string>> = {
   scopeOperatorPrefix: "Оператор",
   scopePartnershipPrefix: "Партнёрство",
   colActions: "Действия",
+
+  svcAny: "Любая категория",
+  svcHotel: "Отель",
+  svcFlight: "Авиабилет",
+  svcTransfer: "Трансфер",
+  svcCar: "Авто",
+  svcExcursion: "Экскурсия",
+  svcPackage: "Пакет",
+  svcVisa: "Виза",
+  prFldOperatorId: "ID компании-оператора",
+  prFldAgentId: "ID компании-агента",
+  prFldReason: "Причина (необязательно)",
+  prMarkupTypePercent: "Процент",
+  prMarkupTypeFixed: "Фикс. сумма",
+  prTestAgent: "ID агента (необязательно)",
+  prTestDestination: "ID направления (необязательно)",
+  prTestPriceOverride: "Переопределение цены (необязательно)",
+  mfFldOperatorId: "ID компании-оператора",
+  mfFldAgentId: "ID компании-агента",
 };
 
 export function settingsStrings(lang: string): Record<SettingsKey, string> {
