@@ -167,6 +167,19 @@ import {
   type LocationRegionRow,
   type LocationCityRow,
 } from "@/lib/locations-api";
+import {
+  apiConnectionsList,
+  apiConnectionCreate,
+  apiConnectionAccept,
+  apiConnectionReject,
+  apiConnectionCancel,
+  apiCompanyClients,
+  CONNECTION_SOURCE_TYPES,
+  CONNECTION_TARGET_TYPES,
+  type ConnectionRow,
+  type ConnectionCreateBody,
+  type CompanyClientOption,
+} from "@/lib/connections-api";
 
 // ── Page catalogue ──────────────────────────────────────────────
 export type SettingsPageKey =
@@ -213,7 +226,7 @@ const PAGES: Record<SettingsPageKey, PageMeta> = {
   "webhooks":          { cluster: "system", labelKey: "pgWebhooks", super: true, inPage: true, href: "/platform/webhooks" },
   "locations":         { cluster: "system", labelKey: "pgLocations", super: true, inPage: true, href: "/platform/locations" },
   "api-docs":          { cluster: "system", labelKey: "pgApiDocs", super: true, href: "/platform/api-docs" },
-  "connections":       { cluster: "system", labelKey: "pgConnections", super: false, href: "/connections" },
+  "connections":       { cluster: "system", labelKey: "pgConnections", super: false, inPage: true, href: "/connections" },
   "platform-settings": { cluster: "system", labelKey: "pgPlatformSettings", super: true, inPage: true, href: "/platform/settings" },
   "support-tickets":   { cluster: "support", labelKey: "pgSupportTickets", super: false, inPage: true, href: "/support/tickets" },
   "reviews":           { cluster: "support", labelKey: "pgReviews", super: true, inPage: true, href: "/platform/reviews" },
@@ -404,6 +417,7 @@ export function SettingsPage({ initialPage = "exchange-rates" }: { initialPage?:
             {page === "security" && <SecurityPane token={token} lang={lang} />}
             {page === "platform-settings" && <PlatformSettingsPane token={token} lang={lang} />}
             {page === "webhooks" && <WebhooksPane token={token} lang={lang} />}
+            {page === "connections" && <ConnectionsPane token={token} lang={lang} />}
           </div>
         </div>
       </div>
@@ -4536,6 +4550,447 @@ function WebhooksPane({ token, lang }: { token: string | null; lang: string }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// Connections pane (System cluster) — service connections between
+// inventory items (flight/hotel/transfer) + per-client targeting;
+// operators/agents propose, the counterparty accepts / rejects.
+// ════════════════════════════════════════════════════════════════
+
+const CONN_STATUS_TONE: Record<string, string> = {
+  accepted: "badge-success",
+  pending: "badge-warning",
+  rejected: "badge-danger",
+  canceled: "badge-danger",
+};
+
+function ConnectionsPane({ token, lang }: { token: string | null; lang: string }) {
+  const s = settingsStrings(lang);
+  const { user } = useAdminAuth();
+  const isSuper = user?.is_super_admin === true;
+  const canCreate = (user?.companies?.length ?? 0) > 0;
+  const actorCompanyId = user?.companies?.[0]?.id ?? null;
+
+  const [rows, setRows] = useState<ConnectionRow[]>([]);
+  const [meta, setMeta] = useState<{ current_page: number; per_page: number; total: number; last_page: number } | null>(null);
+  const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [sourceTypeFilter, setSourceTypeFilter] = useState("");
+  const [targetTypeFilter, setTargetTypeFilter] = useState("");
+  const [companyIdFilter, setCompanyIdFilter] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+
+  const companyIdNum = companyIdFilter.trim() === "" ? undefined : Number(companyIdFilter);
+  const companyIdParam =
+    isSuper && companyIdNum !== undefined && Number.isFinite(companyIdNum) && companyIdNum > 0
+      ? companyIdNum
+      : undefined;
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const res = await apiConnectionsList(token, {
+        page,
+        per_page: 20,
+        status: statusFilter || undefined,
+        source_type: sourceTypeFilter || undefined,
+        target_type: targetTypeFilter || undefined,
+        company_id: companyIdParam,
+      });
+      setRows(res.data ?? []);
+      setMeta(res.meta);
+    } catch (e) {
+      console.error("connections load failed", e);
+    } finally {
+      setLoading(false);
+    }
+  }, [token, page, statusFilter, sourceTypeFilter, targetTypeFilter, companyIdParam]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function act(id: number, action: "accept" | "reject" | "cancel") {
+    if (!token) return;
+    setBusyId(id);
+    try {
+      if (action === "accept") {
+        await apiConnectionAccept(token, id);
+      } else if (action === "reject") {
+        const notes = typeof window !== "undefined" ? window.prompt(s.cnRejectReason) : null;
+        if (notes === null) {
+          setBusyId(null);
+          return;
+        }
+        if (notes.trim().length < 3) {
+          alert(s.cnRejectReason);
+          setBusyId(null);
+          return;
+        }
+        await apiConnectionReject(token, id, notes.trim());
+      } else {
+        const notes = typeof window !== "undefined" ? window.prompt(s.cnCancelReasonOptional) : null;
+        if (notes === null) {
+          setBusyId(null);
+          return;
+        }
+        try {
+          await apiConnectionCancel(token, id, notes.trim() || undefined);
+        } catch (e) {
+          if (e instanceof ApiRequestError && e.status === 422 && e.message.toLowerCase().includes("notes")) {
+            const retry = typeof window !== "undefined" ? window.prompt(s.cnCancelReasonRequired) : null;
+            if (retry === null || retry.trim().length < 3) {
+              setBusyId(null);
+              return;
+            }
+            await apiConnectionCancel(token, id, retry.trim());
+          } else {
+            throw e;
+          }
+        }
+      }
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  const entityLabel = (type?: string, id?: number) => (!type || id == null ? "—" : `${type} #${id}`);
+  const companyName = (c: ConnectionRow) => c.company?.name ?? (c.company_id != null ? `#${c.company_id}` : "—");
+  const stLabel = (st: string) =>
+    st === "pending" ? s.cnStPending : st === "accepted" ? s.cnStAccepted : st === "rejected" ? s.cnStRejected : st === "canceled" ? s.cnStCanceled : st;
+  const connTypeLabel = (ct: string) => (ct === "both" ? s.cnConnBoth : ct === "only" ? s.cnConnOnly : ct);
+
+  return (
+    <div>
+      <div className="filter-card">
+        <div className="filter-field">
+          <span className="filter-label">{s.status}</span>
+          <select value={statusFilter} onChange={(e) => { setPage(1); setStatusFilter(e.target.value); }}>
+            <option value="">{s.all}</option>
+            <option value="pending">{s.cnStPending}</option>
+            <option value="accepted">{s.cnStAccepted}</option>
+            <option value="rejected">{s.cnStRejected}</option>
+            <option value="canceled">{s.cnStCanceled}</option>
+          </select>
+        </div>
+        <div className="filter-field">
+          <span className="filter-label">{s.cnSourceType}</span>
+          <select value={sourceTypeFilter} onChange={(e) => { setPage(1); setSourceTypeFilter(e.target.value); }}>
+            <option value="">{s.all}</option>
+            {CONNECTION_SOURCE_TYPES.map((tt) => <option key={tt} value={tt}>{tt}</option>)}
+          </select>
+        </div>
+        <div className="filter-field">
+          <span className="filter-label">{s.cnTargetType}</span>
+          <select value={targetTypeFilter} onChange={(e) => { setPage(1); setTargetTypeFilter(e.target.value); }}>
+            <option value="">{s.all}</option>
+            {CONNECTION_TARGET_TYPES.map((tt) => <option key={tt} value={tt}>{tt}</option>)}
+          </select>
+        </div>
+        {isSuper && (
+          <div className="filter-field">
+            <span className="filter-label">{s.cnCompanyId}</span>
+            <input
+              type="number"
+              min={1}
+              placeholder={s.cnOptional}
+              value={companyIdFilter}
+              onChange={(e) => { setPage(1); setCompanyIdFilter(e.target.value); }}
+              style={{ width: 120 }}
+            />
+          </div>
+        )}
+        <button
+          className="btn"
+          onClick={() => { setPage(1); setStatusFilter(""); setSourceTypeFilter(""); setTargetTypeFilter(""); setCompanyIdFilter(""); }}
+        >
+          <i className="ti ti-rotate" />{s.cnReset}
+        </button>
+        <div style={{ flex: 1 }} />
+        <button
+          className="btn"
+          disabled={rows.length === 0}
+          onClick={() =>
+            exportRowsAsCsv("connections", rows, [
+              ["id", (r) => r.id],
+              ["source_type", (r) => r.source_type],
+              ["source_id", (r) => r.source_id],
+              ["target_type", (r) => r.target_type],
+              ["target_id", (r) => r.target_id],
+              ["connection_type", (r) => r.connection_type],
+              ["status", (r) => r.status],
+              ["client_targeting", (r) => r.client_targeting ?? ""],
+            ])
+          }
+        >
+          <i className="ti ti-download" />{s.cnExport}
+        </button>
+        {canCreate && (
+          <button className="btn btn-primary" onClick={() => setCreateOpen(true)}>
+            <i className="ti ti-plus" />{s.cnNew}
+          </button>
+        )}
+      </div>
+
+      <div className="card" style={{ marginBottom: 0 }}>
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>{s.stColId}</th>
+                <th>{s.cnSource}</th>
+                <th>{s.cnTarget}</th>
+                <th>{s.cnColType}</th>
+                <th>{s.status}</th>
+                <th>{s.cnCompany}</th>
+                <th>{s.cnTargeting}</th>
+                <th>{s.cnCreated}</th>
+                <th style={{ textAlign: "right" }}>{s.colActions}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading && rows.length === 0 ? (
+                <tr><td colSpan={9} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.loading}</td></tr>
+              ) : rows.length === 0 ? (
+                <tr><td colSpan={9} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.cnEmpty}</td></tr>
+              ) : (
+                rows.map((c) => (
+                  <tr key={c.id}>
+                    <td className="font-mono cell-muted">#{c.id}</td>
+                    <td className="font-mono text-sm">{entityLabel(c.source_type, c.source_id)}</td>
+                    <td className="font-mono text-sm">{entityLabel(c.target_type, c.target_id)}</td>
+                    <td>{c.connection_type ? <span className="type-badge">{connTypeLabel(c.connection_type)}</span> : <span className="cell-muted">—</span>}</td>
+                    <td>{c.status ? <span className={`badge ${CONN_STATUS_TONE[c.status] ?? "badge-gray"}`}>{stLabel(c.status)}</span> : <span className="cell-muted">—</span>}</td>
+                    <td className="cell-muted text-sm">{companyName(c)}</td>
+                    <td className="cell-muted text-sm">{c.client_targeting === "selected" ? s.cnTargetingSelected : s.cnTargetingAll}</td>
+                    <td className="cell-muted text-sm">{fmtDateTime(c.created_at).slice(0, 10)}</td>
+                    <td style={{ textAlign: "right" }}>
+                      <div className="row-actions" style={{ justifyContent: "flex-end" }}>
+                        {c.status === "pending" && (
+                          <>
+                            <button className="btn btn-sm" disabled={busyId === c.id} onClick={() => void act(c.id, "accept")}>{s.cnAccept}</button>
+                            <button className="btn btn-sm btn-danger" disabled={busyId === c.id} onClick={() => void act(c.id, "reject")}>{s.cnReject}</button>
+                          </>
+                        )}
+                        {(c.status === "pending" || c.status === "accepted") && (
+                          <button className="btn btn-sm" disabled={busyId === c.id} onClick={() => void act(c.id, "cancel")}>{s.cnCancel}</button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        {meta && meta.last_page > 1 && (
+          <div className="pagination">
+            <div className="pagination-info">{(meta.current_page - 1) * meta.per_page + 1}–{Math.min(meta.current_page * meta.per_page, meta.total)} / {meta.total}</div>
+            <div className="pagination-controls">
+              <button className="icon-btn" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}><i className="ti ti-chevron-left" /></button>
+              <button className="icon-btn" disabled={page >= meta.last_page} onClick={() => setPage((p) => p + 1)}><i className="ti ti-chevron-right" /></button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <p className="cell-muted text-sm" style={{ marginTop: 12 }}>{s.cnHelp}</p>
+
+      {createOpen && actorCompanyId != null && (
+        <ConnectionCreateModal
+          token={token}
+          lang={lang}
+          companyId={actorCompanyId}
+          onClose={() => setCreateOpen(false)}
+          onCreated={() => { setCreateOpen(false); setPage(1); void load(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+function ConnectionCreateModal({
+  token,
+  lang,
+  companyId,
+  onClose,
+  onCreated,
+}: {
+  token: string | null;
+  lang: string;
+  companyId: number;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const s = settingsStrings(lang);
+  const [f, setF] = useState<ConnectionCreateBody>({
+    source_type: "flight",
+    source_id: 0,
+    target_type: "hotel",
+    target_id: 0,
+    connection_type: "only",
+    client_targeting: "all",
+    selected_client_ids: [],
+    notes: "",
+  });
+  const [clients, setClients] = useState<CompanyClientOption[]>([]);
+  const [clientsBusy, setClientsBusy] = useState(false);
+  const [clientQuery, setClientQuery] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!token) return;
+    setClientsBusy(true);
+    apiCompanyClients(token, companyId)
+      .then((res) => setClients(res.data ?? []))
+      .catch(() => setClients([]))
+      .finally(() => setClientsBusy(false));
+  }, [token, companyId]);
+
+  const set = (patch: Partial<ConnectionCreateBody>) => setF((p) => ({ ...p, ...patch }));
+  const toggleClient = (id: number, checked: boolean) =>
+    setF((p) => {
+      const prev = new Set(p.selected_client_ids ?? []);
+      if (checked) prev.add(id);
+      else prev.delete(id);
+      return { ...p, selected_client_ids: Array.from(prev) };
+    });
+
+  async function submit() {
+    if (!token) return;
+    const body: ConnectionCreateBody = {
+      source_type: f.source_type,
+      source_id: Number(f.source_id),
+      target_type: f.target_type,
+      target_id: Number(f.target_id),
+      connection_type: f.connection_type,
+      targeting: {
+        mode: f.client_targeting ?? "all",
+        client_ids:
+          f.client_targeting === "selected"
+            ? Array.from(new Set((f.selected_client_ids ?? []).filter((id) => id > 0)))
+            : undefined,
+      },
+      notes: f.notes?.trim() ? f.notes.trim() : undefined,
+    };
+    if (!body.source_id || !body.target_id) {
+      alert(s.errGeneric);
+      return;
+    }
+    if (body.targeting?.mode === "selected" && (body.targeting.client_ids?.length ?? 0) === 0) {
+      alert(s.cnSelectClientRequired);
+      return;
+    }
+    setBusy(true);
+    try {
+      await apiConnectionCreate(token, body);
+      onCreated();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="modal-overlay open" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <div className="modal-title">{s.cnNew}</div>
+          <button className="icon-btn" onClick={onClose}><i className="ti ti-x" /></button>
+        </div>
+        <div className="modal-body">
+          <div className="form-grid">
+            <div className="fld">
+              <label className="fld-label">{s.cnSourceType}</label>
+              <select value={f.source_type} onChange={(e) => set({ source_type: e.target.value })}>
+                {CONNECTION_SOURCE_TYPES.map((tt) => <option key={tt} value={tt}>{tt}</option>)}
+              </select>
+            </div>
+            <div className="fld">
+              <label className="fld-label">{s.cnSourceId}</label>
+              <input type="number" min={1} value={f.source_id || ""} onChange={(e) => set({ source_id: Number(e.target.value) })} />
+            </div>
+            <div className="fld">
+              <label className="fld-label">{s.cnTargetType}</label>
+              <select value={f.target_type} onChange={(e) => set({ target_type: e.target.value })}>
+                {CONNECTION_TARGET_TYPES.map((tt) => <option key={tt} value={tt}>{tt}</option>)}
+              </select>
+            </div>
+            <div className="fld">
+              <label className="fld-label">{s.cnTargetId}</label>
+              <input type="number" min={1} value={f.target_id || ""} onChange={(e) => set({ target_id: Number(e.target.value) })} />
+            </div>
+            <div className="fld">
+              <label className="fld-label">{s.cnConnType}</label>
+              <select value={f.connection_type} onChange={(e) => set({ connection_type: e.target.value as ConnectionCreateBody["connection_type"] })}>
+                <option value="only">{s.cnConnOnly}</option>
+                <option value="both">{s.cnConnBoth}</option>
+              </select>
+            </div>
+            <div className="fld">
+              <label className="fld-label">{s.cnTargeting}</label>
+              <select
+                value={f.client_targeting ?? "all"}
+                onChange={(e) =>
+                  set({
+                    client_targeting: e.target.value as "all" | "selected",
+                    selected_client_ids: e.target.value === "selected" ? f.selected_client_ids ?? [] : [],
+                  })
+                }
+              >
+                <option value="all">{s.cnTargetingAll}</option>
+                <option value="selected">{s.cnTargetingSelected}</option>
+              </select>
+            </div>
+          </div>
+
+          {f.client_targeting === "selected" && (
+            <div className="fld" style={{ marginTop: 12 }}>
+              <label className="fld-label">{s.cnSelectedClients}</label>
+              <input type="search" placeholder={s.cnSearchClients} value={clientQuery} onChange={(e) => setClientQuery(e.target.value)} style={{ marginBottom: 8 }} />
+              {clientsBusy ? (
+                <p className="cell-muted text-sm">{s.cnLoadingClients}</p>
+              ) : clients.length === 0 ? (
+                <p className="cell-muted text-sm">{s.cnEmptyClients}</p>
+              ) : (
+                <div style={{ maxHeight: 200, overflowY: "auto", border: "1px solid var(--border-color)", borderRadius: "var(--radius-md)", padding: 8 }}>
+                  {clients
+                    .filter((c) => {
+                      const q = clientQuery.trim().toLowerCase();
+                      return !q || c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q);
+                    })
+                    .map((c) => (
+                      <label key={c.id} className="switch-row" style={{ cursor: "pointer", justifyContent: "space-between", padding: "4px 0" }}>
+                        <span className="text-sm">{c.name} <span className="cell-muted">({c.email})</span></span>
+                        <input type="checkbox" checked={(f.selected_client_ids ?? []).includes(c.id)} onChange={(e) => toggleClient(c.id, e.target.checked)} />
+                      </label>
+                    ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="fld" style={{ marginTop: 12 }}>
+            <label className="fld-label">{s.cnNotes}</label>
+            <input value={f.notes ?? ""} onChange={(e) => set({ notes: e.target.value })} />
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn" onClick={onClose}>{s.cancel}</button>
+          <button className="btn btn-primary" disabled={busy} onClick={() => void submit()}>
+            <i className="ti ti-device-floppy" />{busy ? s.cnCreating : s.cnSubmit}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -58,6 +58,10 @@ const MGMT_PREFIXES = [
   "/platform/settings",
   // 2026-06-05 pt3 — System cluster (part 2): webhooks.
   "/platform/webhooks",
+  // 2026-06-05 pt3 — System cluster (part 3): connections (agent↔operator
+  // service connections). Operator/agent-visible (super:false), so it renders
+  // the unified Settings chrome for non-super users too.
+  "/connections",
 ];
 
 /** Routes that render the unified chrome ONLY on an exact path match (their
