@@ -2334,7 +2334,8 @@ function ContentTrPane({ token, lang }: { token: string | null; lang: string }) 
       for (const [k, v] of Object.entries(res.data.translations ?? {})) t[k] = v ?? "";
       setFields(t);
     } catch (e) {
-      console.error("content-tr load failed", e);
+      // 404 = no translations saved yet for this entity/lang → start blank (create-new).
+      if (!(e instanceof ApiRequestError && e.status === 404)) console.error("content-tr load failed", e);
       setFields({});
     } finally {
       setLoading(false);
@@ -2437,7 +2438,8 @@ function EmailTplPane({ token, lang }: { token: string | null; lang: string }) {
       setActive(res.data.is_active !== false);
       setLoaded(true);
     } catch (e) {
-      console.error("template load failed", e);
+      // 404 = no template saved yet for this event/channel/lang → start blank (create-new).
+      if (!(e instanceof ApiRequestError && e.status === 404)) console.error("template load failed", e);
       setTitle("");
       setBody("");
       setActive(true);
