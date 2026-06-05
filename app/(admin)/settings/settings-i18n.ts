@@ -261,6 +261,16 @@ const EN = {
   lgAddTitle: "New language",
   lgEditTitle: "Edit language",
   lgScanDone: "Scan complete.",
+
+  // ── UI strings (Localization cluster) ─────────────────────────
+  uiCardTitle: "Interface strings",
+  uiSaveAll: "Save all",
+  uiLanguage: "Language",
+  uiColKey: "Key",
+  uiColTranslation: "Translation",
+  uiSearchPh: "Search key or value…",
+  uiEmpty: "No interface strings.",
+  uiSaved: "Translations saved.",
 } as const;
 
 export type SettingsKey = keyof typeof EN;
@@ -502,6 +512,15 @@ const HY: Partial<Record<SettingsKey, string>> = {
   lgAddTitle: "Նոր լեզու",
   lgEditTitle: "Խմբագրել լեզուն",
   lgScanDone: "Սկանն ավարտվեց։",
+
+  uiCardTitle: "Միջերեսի տեքստեր",
+  uiSaveAll: "Պահել բոլորը",
+  uiLanguage: "Լեզու",
+  uiColKey: "Բանալի",
+  uiColTranslation: "Թարգմանություն",
+  uiSearchPh: "Որոնել բանալի կամ արժեք…",
+  uiEmpty: "Միջերեսի տեքստեր չկան։",
+  uiSaved: "Թարգմանությունները պահվեցին։",
 };
 
 const RU: Partial<Record<SettingsKey, string>> = {
@@ -741,6 +760,15 @@ const RU: Partial<Record<SettingsKey, string>> = {
   lgAddTitle: "Новый язык",
   lgEditTitle: "Изменить язык",
   lgScanDone: "Сканирование завершено.",
+
+  uiCardTitle: "Строки интерфейса",
+  uiSaveAll: "Сохранить всё",
+  uiLanguage: "Язык",
+  uiColKey: "Ключ",
+  uiColTranslation: "Перевод",
+  uiSearchPh: "Поиск ключа или значения…",
+  uiEmpty: "Строк интерфейса нет.",
+  uiSaved: "Переводы сохранены.",
 };
 
 export function settingsStrings(lang: string): Record<SettingsKey, string> {

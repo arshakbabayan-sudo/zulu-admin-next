@@ -33,6 +33,7 @@ const MGMT_PREFIXES = [
   "/support/tickets",
   "/platform/locations",
   "/localization/languages",
+  "/localization/ui-translations",
 ];
 
 /**

@@ -76,7 +76,10 @@ import {
   apiSetDefaultLanguage,
   apiEditLanguage,
   apiLocalizationScan,
+  apiUiTranslationsGetAdmin,
+  apiUiTranslationsSave,
   type LocalizationLanguageRow,
+  type UiTranslationRow,
 } from "@/lib/localization-api";
 import {
   apiLocationCountries,
@@ -126,7 +129,7 @@ const PAGES: Record<SettingsPageKey, PageMeta> = {
   "exchange-rates":    { cluster: "money", labelKey: "pgExchangeRates", subKey: "subExchangeRates", super: true, inPage: true, href: "/settings/exchange-rates" },
   "rbac":              { cluster: "permissions", labelKey: "pgRbac", super: true, href: "/platform/rbac" },
   "languages":         { cluster: "localization", labelKey: "pgLanguages", super: true, inPage: true, href: "/localization/languages" },
-  "ui-strings":        { cluster: "localization", labelKey: "pgUiStrings", super: true, href: "/localization/ui-translations" },
+  "ui-strings":        { cluster: "localization", labelKey: "pgUiStrings", super: true, inPage: true, href: "/localization/ui-translations" },
   "content-tr":        { cluster: "localization", labelKey: "pgContentTr", super: false, href: "/localization/translations" },
   "email-tpl":         { cluster: "localization", labelKey: "pgEmailTpl", super: false, href: "/localization/templates" },
   "cms-pages":         { cluster: "content", labelKey: "pgCmsPages", super: true, href: "/pages" },
@@ -318,6 +321,7 @@ export function SettingsPage({ initialPage = "exchange-rates" }: { initialPage?:
             {page === "support-tickets" && <SupportTicketsPane token={token} lang={lang} />}
             {page === "locations" && <LocationsPane token={token} lang={lang} />}
             {page === "languages" && <LanguagesPane token={token} lang={lang} />}
+            {page === "ui-strings" && <UiStringsPane token={token} lang={lang} />}
           </div>
         </div>
       </div>
@@ -2159,6 +2163,130 @@ function LanguageModal({
           <button className="btn" onClick={onClose}>{s.cancel}</button>
           <button className="btn btn-primary" disabled={busy || !valid} onClick={() => onSave({ code, name, name_en: nameEn, rtl })}><i className="ti ti-device-floppy" />{isEdit ? s.save : s.create}</button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// UI strings pane (Localization cluster) — paginated key/value editor
+// ════════════════════════════════════════════════════════════════
+
+function UiStringsPane({ token, lang }: { token: string | null; lang: string }) {
+  const s = settingsStrings(lang);
+  const [langs, setLangs] = useState<LocalizationLanguageRow[]>([]);
+  const [selLang, setSelLang] = useState("en");
+  const [rows, setRows] = useState<UiTranslationRow[]>([]);
+  const [edited, setEdited] = useState<Record<string, string>>({});
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState<{ total: number; per_page: number; current_page: number; last_page: number } | null>(null);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!token) return;
+    void apiAdminLanguages(token)
+      .then((r) => setLangs((r.data ?? []).slice().sort((a, b) => a.sort_order - b.sort_order)))
+      .catch(() => {});
+  }, [token]);
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const res = await apiUiTranslationsGetAdmin(token, { lang: selLang, page, per_page: 50, search: search.trim() || undefined });
+      setRows(res.data.data);
+      setMeta({ total: res.data.total, per_page: res.data.per_page, current_page: res.data.current_page, last_page: res.data.last_page });
+    } catch (e) {
+      console.error("ui strings load failed", e);
+    } finally {
+      setLoading(false);
+    }
+  }, [token, selLang, page, search]);
+  useEffect(() => {
+    setEdited({});
+  }, [selLang]);
+  useEffect(() => {
+    void load();
+  }, [token, selLang, page]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function saveAll() {
+    if (!token || Object.keys(edited).length === 0) return;
+    setSaving(true);
+    try {
+      await apiUiTranslationsSave(token, { language_code: selLang, translations: edited });
+      setEdited({});
+      alert(s.uiSaved);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const dirty = Object.keys(edited).length;
+
+  return (
+    <div>
+      <div className="filter-card">
+        <div className="filter-field">
+          <span className="filter-label">{s.uiLanguage}</span>
+          <select value={selLang} onChange={(e) => { setPage(1); setSelLang(e.target.value); }}>
+            {langs.length === 0 ? <option value="en">English (en)</option> : langs.map((l) => <option key={l.id} value={l.code}>{l.name} ({l.code})</option>)}
+          </select>
+        </div>
+        <div className="filter-field" style={{ flex: 2 }}>
+          <span className="filter-label">{s.search}</span>
+          <input type="search" placeholder={s.uiSearchPh} value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { setPage(1); void load(); } }} />
+        </div>
+        <button className="btn" onClick={() => { setPage(1); void load(); }}><i className="ti ti-filter" />{s.apply}</button>
+      </div>
+      <div className="card" style={{ marginBottom: 0 }}>
+        <div className="card-header">
+          <div className="card-title">{s.uiCardTitle}</div>
+          <button className="btn btn-sm btn-primary" disabled={saving || dirty === 0} onClick={() => void saveAll()}><i className="ti ti-device-floppy" />{s.uiSaveAll}{dirty > 0 ? ` (${dirty})` : ""}</button>
+        </div>
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th style={{ width: "40%" }}>{s.uiColKey}</th>
+                <th>{s.uiColTranslation}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading && rows.length === 0 ? (
+                <tr><td colSpan={2} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.loading}</td></tr>
+              ) : rows.length === 0 ? (
+                <tr><td colSpan={2} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.uiEmpty}</td></tr>
+              ) : (
+                rows.map((r) => (
+                  <tr key={r.key}>
+                    <td className="font-mono text-sm">{r.key}</td>
+                    <td>
+                      <input
+                        value={edited[r.key] ?? r.value}
+                        onChange={(e) => setEdited((prev) => ({ ...prev, [r.key]: e.target.value }))}
+                        style={{ width: "100%", height: 32, padding: "0 10px", border: "1px solid var(--border-color)", borderRadius: "var(--radius-md)", fontFamily: "inherit", fontSize: 13, outline: "none", color: "var(--text-primary)", background: "var(--bg-primary)" }}
+                      />
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        {meta && meta.last_page > 1 && (
+          <div className="pagination">
+            <div className="pagination-info">{(meta.current_page - 1) * meta.per_page + 1}–{Math.min(meta.current_page * meta.per_page, meta.total)} / {meta.total}</div>
+            <div className="pagination-controls">
+              <button className="icon-btn" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}><i className="ti ti-chevron-left" /></button>
+              <button className="icon-btn" disabled={page >= meta.last_page} onClick={() => setPage((p) => p + 1)}><i className="ti ti-chevron-right" /></button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
