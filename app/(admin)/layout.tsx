@@ -30,6 +30,7 @@ const MGMT_PREFIXES = [
   "/settings/pricing-rules",
   "/settings/money-flow",
   "/platform/reviews",
+  "/support/tickets",
 ];
 
 /**

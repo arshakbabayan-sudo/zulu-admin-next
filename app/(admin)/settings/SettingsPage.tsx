@@ -62,6 +62,13 @@ import {
   apiModerateReview,
   type PlatformReviewRow,
 } from "@/lib/platform-admin-api";
+import {
+  apiSupportTickets,
+  apiSupportTicket,
+  apiSupportTicketReply,
+  type SupportTicketListRow,
+  type SupportTicketDetail,
+} from "@/lib/support-api";
 
 // ── Page catalogue ──────────────────────────────────────────────
 export type SettingsPageKey =
@@ -110,7 +117,7 @@ const PAGES: Record<SettingsPageKey, PageMeta> = {
   "api-docs":          { cluster: "system", labelKey: "pgApiDocs", super: true, href: "/platform/api-docs" },
   "connections":       { cluster: "system", labelKey: "pgConnections", super: false, href: "/connections" },
   "platform-settings": { cluster: "system", labelKey: "pgPlatformSettings", super: true, href: "/platform/settings" },
-  "support-tickets":   { cluster: "support", labelKey: "pgSupportTickets", super: false, href: "/support/tickets" },
+  "support-tickets":   { cluster: "support", labelKey: "pgSupportTickets", super: false, inPage: true, href: "/support/tickets" },
   "reviews":           { cluster: "support", labelKey: "pgReviews", super: true, inPage: true, href: "/platform/reviews" },
 };
 
@@ -282,6 +289,7 @@ export function SettingsPage({ initialPage = "exchange-rates" }: { initialPage?:
             {page === "money-flow" && <MoneyFlowPane token={token} lang={lang} />}
             {page === "exchange-rates" && <ExchangeRatesPane token={token} lang={lang} />}
             {page === "reviews" && <ReviewsPane token={token} lang={lang} />}
+            {page === "support-tickets" && <SupportTicketsPane token={token} lang={lang} />}
           </div>
         </div>
       </div>
@@ -1408,5 +1416,241 @@ function ModerateModal({
         </div>
       </div>
     </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// Support tickets pane (Support cluster) — list + read drawer + reply
+// ════════════════════════════════════════════════════════════════
+
+function SupportTicketsPane({ token, lang }: { token: string | null; lang: string }) {
+  const s = settingsStrings(lang);
+  const [rows, setRows] = useState<SupportTicketListRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [fStatus, setFStatus] = useState("");
+  const [fPriority, setFPriority] = useState("");
+  const [search, setSearch] = useState("");
+  const [drawerId, setDrawerId] = useState<number | null>(null);
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const res = await apiSupportTickets(token, {
+        per_page: 100,
+        status: fStatus || undefined,
+        priority: fPriority || undefined,
+        search: search.trim() || undefined,
+      });
+      setRows(res.data ?? []);
+    } catch (e) {
+      console.error("support tickets load failed", e);
+    } finally {
+      setLoading(false);
+    }
+  }, [token, fStatus, fPriority, search]);
+  useEffect(() => {
+    void load();
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const prTone = (p: string): string => (p === "high" ? "badge-danger" : p === "medium" ? "badge-info" : "badge-gray");
+  const prLabel = (p: string): string => (p === "high" ? s.stPriorityHigh : p === "medium" ? s.stPriorityMedium : p === "low" ? s.stPriorityLow : p);
+  const stTone = (st: string): string => (st === "open" ? "badge-warning" : st === "pending" ? "badge-info" : st === "resolved" ? "badge-success" : "badge-gray");
+  const stLabel = (st: string): string => (st === "open" ? s.stStatusOpen : st === "pending" ? s.stStatusPending : st === "resolved" ? s.stStatusResolved : st === "closed" ? s.stStatusClosed : st);
+
+  return (
+    <div>
+      <div className="filter-card">
+        <div className="filter-field">
+          <span className="filter-label">{s.status}</span>
+          <select value={fStatus} onChange={(e) => setFStatus(e.target.value)}>
+            <option value="">{s.all}</option>
+            <option value="open">{s.stStatusOpen}</option>
+            <option value="pending">{s.stStatusPending}</option>
+            <option value="resolved">{s.stStatusResolved}</option>
+            <option value="closed">{s.stStatusClosed}</option>
+          </select>
+        </div>
+        <div className="filter-field">
+          <span className="filter-label">{s.stFilterPriority}</span>
+          <select value={fPriority} onChange={(e) => setFPriority(e.target.value)}>
+            <option value="">{s.all}</option>
+            <option value="low">{s.stPriorityLow}</option>
+            <option value="medium">{s.stPriorityMedium}</option>
+            <option value="high">{s.stPriorityHigh}</option>
+          </select>
+        </div>
+        <div className="filter-field" style={{ flex: 2 }}>
+          <span className="filter-label">{s.search}</span>
+          <input type="search" placeholder={s.stSearchPh} value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void load()} />
+        </div>
+        <button className="btn" onClick={() => void load()}><i className="ti ti-filter" />{s.apply}</button>
+      </div>
+      <div className="card" style={{ marginBottom: 0 }}>
+        <div className="card-header"><div className="card-title">{s.stCardTitle}</div></div>
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>{s.stColId}</th>
+                <th>{s.stColTitle}</th>
+                <th>{s.stColUser}</th>
+                <th>{s.stColPriority}</th>
+                <th>{s.status}</th>
+                <th>{s.stColCreated}</th>
+                <th style={{ textAlign: "right" }}>{s.colActions}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading && rows.length === 0 ? (
+                <tr><td colSpan={7} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.loading}</td></tr>
+              ) : rows.length === 0 ? (
+                <tr><td colSpan={7} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.stEmpty}</td></tr>
+              ) : (
+                rows.map((r) => (
+                  <tr key={r.id} onClick={() => setDrawerId(r.id)} style={{ cursor: "pointer" }}>
+                    <td className="font-mono">TK-{String(r.id).padStart(4, "0")}</td>
+                    <td>{r.subject}</td>
+                    <td className="cell-muted">{r.user?.name ?? "—"}</td>
+                    <td><span className={`badge ${prTone(r.priority)}`}>{prLabel(r.priority)}</span></td>
+                    <td><span className={`badge ${stTone(r.status)}`}>{stLabel(r.status)}</span></td>
+                    <td className="cell-muted">{fmtDateTime(r.created_at).slice(0, 10)}</td>
+                    <td onClick={(e) => e.stopPropagation()} style={{ textAlign: "right" }}>
+                      <button className="icon-btn" onClick={() => setDrawerId(r.id)}><i className="ti ti-eye" /></button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <TicketDrawer token={token} ticketId={drawerId} lang={lang} onClose={() => setDrawerId(null)} prTone={prTone} prLabel={prLabel} stTone={stTone} stLabel={stLabel} />
+    </div>
+  );
+}
+
+function TicketDrawer({
+  token,
+  ticketId,
+  lang,
+  onClose,
+  prTone,
+  prLabel,
+  stTone,
+  stLabel,
+}: {
+  token: string | null;
+  ticketId: number | null;
+  lang: string;
+  onClose: () => void;
+  prTone: (p: string) => string;
+  prLabel: (p: string) => string;
+  stTone: (st: string) => string;
+  stLabel: (st: string) => string;
+}) {
+  const s = settingsStrings(lang);
+  const [detail, setDetail] = useState<SupportTicketDetail | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [reply, setReply] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const fetchDetail = useCallback(async () => {
+    if (!token || ticketId == null) return;
+    setLoading(true);
+    try {
+      const res = await apiSupportTicket(token, ticketId);
+      setDetail(res.data);
+    } catch (e) {
+      console.error("ticket detail failed", e);
+    } finally {
+      setLoading(false);
+    }
+  }, [token, ticketId]);
+  useEffect(() => {
+    if (ticketId == null) {
+      setDetail(null);
+      setReply("");
+      return;
+    }
+    void fetchDetail();
+  }, [ticketId, fetchDetail]);
+
+  async function sendReply() {
+    if (!token || ticketId == null || !reply.trim()) return;
+    setSending(true);
+    try {
+      await apiSupportTicketReply(token, ticketId, reply.trim());
+      setReply("");
+      await fetchDetail();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  const open = ticketId != null;
+  return (
+    <>
+      <div className={`drawer-overlay ${open ? "open" : ""}`} onClick={onClose} />
+      <div className={`drawer ${open ? "open" : ""}`}>
+        <div className="drawer-header">
+          <div style={{ fontSize: 16, fontWeight: 600 }}>
+            {s.stDrawerTitle} {ticketId != null ? `TK-${String(ticketId).padStart(4, "0")}` : ""}
+          </div>
+          <button className="icon-btn" onClick={onClose}><i className="ti ti-x" /></button>
+        </div>
+        <div className="drawer-body">
+          {loading && !detail ? (
+            <p className="cell-muted">{s.loading}</p>
+          ) : detail ? (
+            <>
+              <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 12 }}>{detail.subject}</div>
+              <div className="info-grid">
+                <div className="info-row"><span className="info-label">{s.stColUser}</span><span className="info-value">{detail.user?.name ?? "—"}{detail.user?.email ? ` · ${detail.user.email}` : ""}</span></div>
+                <div className="info-row"><span className="info-label">{s.stColPriority}</span><span className="info-value"><span className={`badge ${prTone(detail.priority)}`}>{prLabel(detail.priority)}</span></span></div>
+                <div className="info-row"><span className="info-label">{s.status}</span><span className="info-value"><span className={`badge ${stTone(detail.status)}`}>{stLabel(detail.status)}</span></span></div>
+                <div className="info-row"><span className="info-label">{s.stColCreated}</span><span className="info-value">{fmtDateTime(detail.created_at)}</span></div>
+              </div>
+              <div className="drawer-section">{s.stMessages}</div>
+              {detail.messages.length === 0 ? (
+                <p className="cell-muted text-sm">{s.stNoMessages}</p>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {detail.messages.map((m) => (
+                    <div
+                      key={m.id}
+                      style={{
+                        background: m.is_admin_reply ? "var(--primary-soft)" : "var(--bg-secondary)",
+                        border: "1px solid var(--border-color)",
+                        borderRadius: "var(--radius-md)",
+                        padding: "10px 12px",
+                      }}
+                    >
+                      <div className="text-sm" style={{ fontWeight: 600, marginBottom: 3 }}>{m.is_admin_reply ? s.stSupport : (m.user?.name ?? s.stCustomer)}</div>
+                      <div className="text-sm" style={{ whiteSpace: "pre-wrap" }}>{m.message}</div>
+                      <div className="text-sm" style={{ color: "var(--text-tertiary)", marginTop: 4 }}>{fmtDateTime(m.created_at)}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : null}
+        </div>
+        <div className="drawer-footer" style={{ flexDirection: "column", alignItems: "stretch", gap: 8 }}>
+          <textarea
+            placeholder={s.stReplyPh}
+            value={reply}
+            onChange={(e) => setReply(e.target.value)}
+            style={{ width: "100%", minHeight: 56, padding: "9px 12px", border: "1px solid var(--border-color)", borderRadius: "var(--radius-md)", fontFamily: "inherit", fontSize: 13, resize: "vertical", outline: "none", color: "var(--text-primary)", background: "var(--bg-primary)" }}
+          />
+          <button className="btn btn-primary" disabled={sending || !reply.trim()} onClick={() => void sendReply()} style={{ alignSelf: "flex-end" }}>
+            <i className="ti ti-send" />
+            {s.stReply}
+          </button>
+        </div>
+      </div>
+    </>
   );
 }
