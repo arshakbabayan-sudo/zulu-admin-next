@@ -80,6 +80,9 @@ import {
   apiAnonymizePlatformUser,
   apiAddPlatformUserNote,
   apiCompanyApplications,
+  apiCompanyApplication,
+  apiApproveCompanyApplication,
+  apiRejectCompanyApplication,
   apiCompanySellerPermissions,
   apiPatchCompanySellerPermissions,
   apiCompanyCountryPermissions,
@@ -129,6 +132,7 @@ import {
 
 export type MgmtTab =
   | "companies"
+  | "companyApplications"
   | "applications"
   | "contracts"
   | "templates"
@@ -144,6 +148,9 @@ const TAB_META: Record<
   { labelKey: MgmtKey; subtitleKey: MgmtKey; icon: string }
 > = {
   companies: { labelKey: "tabCompanies", subtitleKey: "subCompanies", icon: "ti-building-community" },
+  // 2026-06-05 — Company registration applications (B2B join requests) promoted
+  // to a first-class Management tab (was a navigate-out to the old V2 page).
+  companyApplications: { labelKey: "tabCompanyApplications", subtitleKey: "subCompanyApplications", icon: "ti-id-badge-2" },
   applications: { labelKey: "tabApplications", subtitleKey: "subApplications", icon: "ti-user-check" },
   contracts: { labelKey: "tabContracts", subtitleKey: "subContracts", icon: "ti-file-text" },
   templates: { labelKey: "tabTemplates", subtitleKey: "subTemplates", icon: "ti-template" },
@@ -388,12 +395,34 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
   const [addEmployeeOpen, setAddEmployeeOpen] = useState(false);
   const [partnerModalOpen, setPartnerModalOpen] = useState(false);
 
-  // Applications
+  // Applications (Seller applications — service requests)
   const [apps, setApps] = useState<SellerApplicationRow[]>([]);
   const [appsLoading, setAppsLoading] = useState(false);
   const [appsFilterStatus, setAppsFilterStatus] = useState("");
   const [appsFilterService, setAppsFilterService] = useState("");
   const [appsSearch, setAppsSearch] = useState("");
+
+  // Company applications (2026-06-05 — B2B company registration requests)
+  const [companyApps, setCompanyApps] = useState<CompanyApplicationRow[]>([]);
+  const [companyAppsMeta, setCompanyAppsMeta] = useState<ApiListMeta | null>(null);
+  const [companyAppsLoading, setCompanyAppsLoading] = useState(false);
+  const [companyAppsPage, setCompanyAppsPage] = useState(1);
+  const [companyAppsSearch, setCompanyAppsSearch] = useState("");
+  const [companyAppsFilterStatus, setCompanyAppsFilterStatus] = useState("");
+  const [companyAppsFilterType, setCompanyAppsFilterType] = useState("");
+  const [companyAppDrawer, setCompanyAppDrawer] = useState<CompanyApplicationRow | null>(null);
+  const [companyAppDrawerOpen, setCompanyAppDrawerOpen] = useState(false);
+  const [companyAppDrawerLoading, setCompanyAppDrawerLoading] = useState(false);
+  const [companyAppApproveOpen, setCompanyAppApproveOpen] = useState(false);
+  const [companyAppRejectOpen, setCompanyAppRejectOpen] = useState(false);
+  const [companyAppBusy, setCompanyAppBusy] = useState(false);
+  // Lightweight success toast (approve/reject confirmation), auto-dismissed.
+  const [toast, setToast] = useState<string | null>(null);
+  useEffect(() => {
+    if (!toast) return;
+    const id = setTimeout(() => setToast(null), 2800);
+    return () => clearTimeout(id);
+  }, [toast]);
 
   // Contracts
   const [contracts, setContracts] = useState<ContractRow[]>([]);
@@ -474,6 +503,7 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
     companies?: number;
     applications?: number;
     contracts?: number;
+    companyApplications?: number;
   }>({});
 
   const baseURL = useMemo(
@@ -486,16 +516,18 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
     let cancelled = false;
     (async () => {
       try {
-        const [c, a, ct] = await Promise.all([
+        const [c, a, ct, ca] = await Promise.all([
           apiPlatformCompanies(token, { page: 1, per_page: 1, archive_filter: "active" }),
           apiSellerApplications(token, { page: 1, per_page: 1 }),
           apiAdminContracts(token, { page: 1, per_page: 1, status: "", type: "" }),
+          apiCompanyApplications(token, { page: 1 }),
         ]);
         if (cancelled) return;
         setTabCounts({
           companies: c.meta?.total,
           applications: a.meta?.total,
           contracts: ct.meta?.total,
+          companyApplications: ca.meta?.total,
         });
       } catch {
         /* counts are non-critical chrome */
@@ -649,6 +681,27 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
   useEffect(() => {
     if (tab === "applications") void loadApps();
   }, [tab, loadApps]);
+
+  // ───────────────── Company applications LIST loader (2026-06-05) ─────────────────
+  const loadCompanyApps = useCallback(async () => {
+    if (!token || !allowed) return;
+    setCompanyAppsLoading(true);
+    try {
+      const res = await apiCompanyApplications(token, {
+        page: companyAppsPage,
+        status: companyAppsFilterStatus || undefined,
+      });
+      setCompanyApps(res.data);
+      setCompanyAppsMeta(res.meta);
+    } catch (e) {
+      console.error("company applications load failed", e);
+    } finally {
+      setCompanyAppsLoading(false);
+    }
+  }, [token, allowed, companyAppsPage, companyAppsFilterStatus]);
+  useEffect(() => {
+    if (tab === "companyApplications") void loadCompanyApps();
+  }, [tab, loadCompanyApps]);
 
   // ───────────────── Contracts LIST loader ─────────────────
   const loadContracts = useCallback(async () => {
@@ -858,6 +911,60 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
       void loadApps();
     } catch (e) {
       alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    }
+  }
+
+  // ── Company applications (2026-06-05) — open drawer, approve, reject ──
+  async function openCompanyAppDrawer(row: CompanyApplicationRow) {
+    setCompanyAppDrawer(row);
+    setCompanyAppDrawerOpen(true);
+    if (!token) return;
+    setCompanyAppDrawerLoading(true);
+    try {
+      const res = await apiCompanyApplication(token, row.id);
+      setCompanyAppDrawer(res.data);
+    } catch (e) {
+      console.error("company application detail failed", e);
+    } finally {
+      setCompanyAppDrawerLoading(false);
+    }
+  }
+
+  async function approveCompanyApp() {
+    if (!token || !companyAppDrawer) return;
+    setCompanyAppBusy(true);
+    try {
+      await apiApproveCompanyApplication(token, companyAppDrawer.id);
+      setCompanyAppApproveOpen(false);
+      setCompanyAppDrawerOpen(false);
+      setCompanyAppDrawer(null);
+      setToast(s.caToastApproved);
+      await loadCompanyApps();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setCompanyAppBusy(false);
+    }
+  }
+
+  async function rejectCompanyApp(reason: string) {
+    if (!token || !companyAppDrawer) return;
+    if (!reason.trim()) {
+      alert(s.caRejectReasonRequired);
+      return;
+    }
+    setCompanyAppBusy(true);
+    try {
+      await apiRejectCompanyApplication(token, companyAppDrawer.id, reason.trim());
+      setCompanyAppRejectOpen(false);
+      setCompanyAppDrawerOpen(false);
+      setCompanyAppDrawer(null);
+      setToast(s.caToastRejected);
+      await loadCompanyApps();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setCompanyAppBusy(false);
     }
   }
 
@@ -1122,9 +1229,11 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
     setDetailCompanyId(null);
     setDetailCustomerId(null);
     setDetailUnverifiedId(null);
+    setCompanyAppDrawerOpen(false);
     // Update URL so deep-links / refresh land on the right route
     const map: Record<MgmtTab, string> = {
       companies: "/platform/companies",
+      companyApplications: "/platform/company-applications",
       applications: "/platform/seller-applications",
       contracts: "/platform/contracts",
       templates: "/platform/contract-templates",
@@ -1209,6 +1318,29 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                     {s.actionExport}
                   </button>
                 )}
+                {tab === "companyApplications" && (
+                  <button
+                    className="btn"
+                    onClick={() =>
+                      exportRowsAsCsv("company-applications", companyApps, [
+                        ["id", (r) => r.id],
+                        ["company_name", (r) => r.company_name],
+                        ["type", (r) => r.user?.intended_role ?? r.company_type ?? ""],
+                        ["business_email", (r) => r.business_email],
+                        ["country", (r) => r.country ?? ""],
+                        ["city", (r) => r.city ?? ""],
+                        ["phone", (r) => r.phone ?? ""],
+                        ["tax_id", (r) => r.tax_id ?? ""],
+                        ["contact_person", (r) => r.contact_person ?? ""],
+                        ["status", (r) => r.status],
+                        ["submitted_at", (r) => r.submitted_at ?? ""],
+                      ])
+                    }
+                  >
+                    <i className="ti ti-download" />
+                    {s.actionExport}
+                  </button>
+                )}
                 {tab === "applications" && (
                   <button className="btn">
                     <i className="ti ti-download" />
@@ -1273,6 +1405,7 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                 // fetch so all three show immediately. Templates + Logs: none.
                 let count: number | null = null;
                 if (k === "companies") count = companiesMeta?.total ?? tabCounts.companies ?? null;
+                else if (k === "companyApplications") count = companyAppsMeta?.total ?? tabCounts.companyApplications ?? null;
                 else if (k === "applications") count = tabCounts.applications ?? (apps.length || null);
                 else if (k === "contracts") count = tabCounts.contracts ?? (contracts.length || null);
                 else if (k === "customers") count = customersMeta?.total ?? null;
@@ -1289,17 +1422,6 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                   </button>
                 );
               })}
-              {/* 2026-06-04 — Company REGISTRATION applications (B2B join
-                  requests) live on a separate pre-v3 page; surface them here as
-                  a navigate-tab so super-admin can reach pending applications to
-                  approve. Distinct from "Seller applications" (service requests). */}
-              <button
-                className="section-tab"
-                onClick={() => router.push("/platform/company-applications")}
-              >
-                <i className="ti ti-file-invoice" />
-                {s.tabCompanyApplications}
-              </button>
             </div>
 
             {/* ───────── COMPANIES pane ───────── */}
@@ -1413,6 +1535,33 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                   }}
                 />
               )}
+            </div>
+
+            {/* ───────── COMPANY APPLICATIONS pane (2026-06-05) ───────── */}
+            <div className={`page-pane ${tab === "companyApplications" ? "active" : ""}`}>
+              <CompanyApplicationsPane
+                loading={companyAppsLoading}
+                rows={companyApps}
+                meta={companyAppsMeta}
+                page={companyAppsPage}
+                onPage={setCompanyAppsPage}
+                search={companyAppsSearch}
+                onSearch={setCompanyAppsSearch}
+                filterStatus={companyAppsFilterStatus}
+                onFilterStatus={setCompanyAppsFilterStatus}
+                filterType={companyAppsFilterType}
+                onFilterType={setCompanyAppsFilterType}
+                onApply={loadCompanyApps}
+                onOpen={(row) => void openCompanyAppDrawer(row)}
+                onApprove={(row) => {
+                  setCompanyAppDrawer(row);
+                  setCompanyAppApproveOpen(true);
+                }}
+                onReject={(row) => {
+                  setCompanyAppDrawer(row);
+                  setCompanyAppRejectOpen(true);
+                }}
+              />
             </div>
 
             {/* ───────── APPLICATIONS pane ───────── */}
@@ -1643,6 +1792,16 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
       />
       <AuditDrawer open={auditDrawer !== null} row={auditDrawer} onClose={() => setAuditDrawer(null)} />
 
+      {/* Company-application detail drawer (2026-06-05) */}
+      <CompanyApplicationDrawer
+        open={companyAppDrawerOpen}
+        loading={companyAppDrawerLoading}
+        detail={companyAppDrawer}
+        onClose={() => setCompanyAppDrawerOpen(false)}
+        onApprove={() => setCompanyAppApproveOpen(true)}
+        onReject={() => setCompanyAppRejectOpen(true)}
+      />
+
       {/* Company-detail add-employee modal */}
       {detailCompany && (
         <AddEmployeeModal
@@ -1763,6 +1922,30 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
         onClose={() => setAddNoteOpen(false)}
         onSave={(body) => void addDetailCustomerNote(body)}
       />
+
+      {/* Company-application approve / reject modals (2026-06-05) */}
+      <CompanyAppApproveModal
+        open={companyAppApproveOpen}
+        busy={companyAppBusy}
+        onClose={() => setCompanyAppApproveOpen(false)}
+        onConfirm={() => void approveCompanyApp()}
+      />
+      <CompanyAppRejectModal
+        open={companyAppRejectOpen}
+        busy={companyAppBusy}
+        onClose={() => setCompanyAppRejectOpen(false)}
+        onConfirm={(reason) => void rejectCompanyApp(reason)}
+      />
+
+      {/* Toast host (approve/reject confirmation) */}
+      {toast && (
+        <div className="toast-wrap">
+          <div className="toast">
+            <i className="ti ti-circle-check" />
+            {toast}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -3472,6 +3655,421 @@ function ApplicationsPane(props: {
               )}
             </tbody>
           </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// COMPANY APPLICATIONS pane + drawer + modals (2026-06-05)
+// 1:1 port of docs/admin_designe/company-applications.html — B2B company
+// registration requests (distinct from the Seller-applications service tab).
+// ═══════════════════════════════════════════════════════════════
+
+function CompanyApplicationsPane(props: {
+  loading: boolean;
+  rows: CompanyApplicationRow[];
+  meta: ApiListMeta | null;
+  page: number;
+  onPage: (p: number) => void;
+  search: string;
+  onSearch: (s: string) => void;
+  filterStatus: string;
+  onFilterStatus: (s: string) => void;
+  filterType: string;
+  onFilterType: (s: string) => void;
+  onApply: () => void;
+  onOpen: (row: CompanyApplicationRow) => void;
+  onApprove: (row: CompanyApplicationRow) => void;
+  onReject: (row: CompanyApplicationRow) => void;
+}) {
+  const { lang } = useLanguage();
+  const s = mgmtStrings(lang);
+  // Stats computed from the loaded page (consistent with the Seller-apps pane).
+  const stats = useMemo(() => {
+    const by = (st: string) => props.rows.filter((r) => r.status === st).length;
+    return { pending: by("pending"), underReview: by("under_review"), approved: by("approved"), rejected: by("rejected") };
+  }, [props.rows]);
+  // Type + search are client-side (the list API only filters by status).
+  const visible = props.rows.filter((r) => {
+    const role = r.user?.intended_role ?? r.company_type ?? null;
+    if (props.filterType && role !== props.filterType) return false;
+    if (props.search.trim()) {
+      const q = props.search.toLowerCase();
+      if (!`${r.company_name ?? ""} ${r.business_email ?? ""}`.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+  return (
+    <div>
+      <div className="stat-grid">
+        <Stat icon="ti-clock" tone="warning" value={String(stats.pending)} label={s.caStatPending} />
+        <Stat icon="ti-eye-search" tone="info" value={String(stats.underReview)} label={s.caStatUnderReview} />
+        <Stat icon="ti-circle-check" tone="success" value={String(stats.approved)} label={s.caStatApproved} />
+        <Stat icon="ti-circle-x" tone="danger" value={String(stats.rejected)} label={s.caStatRejected} />
+      </div>
+      <div className="filter-card">
+        <div className="filter-field" style={{ flex: 2 }}>
+          <span className="filter-label">{s.filterSearch}</span>
+          <input
+            type="text"
+            placeholder={s.caSearchPh}
+            value={props.search}
+            onChange={(e) => props.onSearch(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && props.onApply()}
+          />
+        </div>
+        <div className="filter-field">
+          <span className="filter-label">{s.filterStatus}</span>
+          <select value={props.filterStatus} onChange={(e) => props.onFilterStatus(e.target.value)}>
+            <option value="">{s.optAllStatuses}</option>
+            <option value="pending">{s.optPending}</option>
+            <option value="under_review">{s.optUnderReview}</option>
+            <option value="approved">{s.optApproved}</option>
+            <option value="rejected">{s.optRejected}</option>
+          </select>
+        </div>
+        <div className="filter-field">
+          <span className="filter-label">{s.filterType}</span>
+          <select value={props.filterType} onChange={(e) => props.onFilterType(e.target.value)}>
+            <option value="">{s.optAllTypes}</option>
+            <option value="operator">{s.caTypeOperator}</option>
+            <option value="agent">{s.caTypeAgent}</option>
+          </select>
+        </div>
+        <button className="btn" onClick={props.onApply}>
+          <i className="ti ti-filter" />
+          {s.actionApply}
+        </button>
+      </div>
+      <div className="card" style={{ marginBottom: 0 }}>
+        <div className="card-header">
+          <div>
+            <div className="card-title">{s.caCardTitle}</div>
+            <div className="card-subtitle">{s.caCardSub}</div>
+          </div>
+        </div>
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>{s.caColId}</th>
+                <th>{s.caColCompany}</th>
+                <th>{s.caColType}</th>
+                <th>{s.caColEmail}</th>
+                <th>{s.caColStatus}</th>
+                <th>{s.caColSubmitted}</th>
+                <th style={{ textAlign: "right" }}>{s.caColActions}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {props.loading && props.rows.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>
+                    {s.loading}
+                  </td>
+                </tr>
+              ) : visible.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>
+                    {s.caEmpty}
+                  </td>
+                </tr>
+              ) : (
+                visible.map((r) => {
+                  const role = r.user?.intended_role ?? r.company_type ?? null;
+                  const roleLabel = role === "agent" ? s.caTypeAgent : role === "operator" ? s.caTypeOperator : "—";
+                  const tone = APP_STATUS_TONE[r.status] ?? "badge-gray";
+                  const canAct = r.status === "pending" || r.status === "under_review";
+                  return (
+                    <tr key={r.id} onClick={() => props.onOpen(r)}>
+                      <td className="font-mono">APP-{String(r.id).padStart(3, "0")}</td>
+                      <td>
+                        <div className="flex items-center gap-2">
+                          <span className={`avatar sm ${avatarToneFor(r.id)}`}>{initialsFor(r.company_name)}</span>
+                          <span className="font-semibold">{r.company_name}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="type-badge">{roleLabel}</span>
+                      </td>
+                      <td className="cell-muted">{r.business_email}</td>
+                      <td>
+                        <span className={`badge ${tone}`}>{s[APP_STATUS_KEY[r.status] ?? "optPending"]}</span>
+                      </td>
+                      <td className="cell-muted">{fmtDate(r.submitted_at ?? null)}</td>
+                      <td onClick={(e) => e.stopPropagation()} style={{ textAlign: "right" }}>
+                        <div className="row-actions">
+                          {canAct ? (
+                            <>
+                              <button className="btn btn-sm btn-primary" onClick={() => props.onApprove(r)}>
+                                <i className="ti ti-check" />
+                                {s.actionApprove}
+                              </button>
+                              <button className="btn btn-sm btn-danger" onClick={() => props.onReject(r)}>
+                                <i className="ti ti-x" />
+                                {s.actionReject}
+                              </button>
+                            </>
+                          ) : null}
+                          <button className="icon-btn" title={s.actionView} onClick={() => props.onOpen(r)}>
+                            <i className="ti ti-eye" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+        {props.meta && props.meta.last_page > 1 && (
+          <div className="pagination">
+            <div className="pagination-info">
+              {s.showing} {(props.meta.current_page - 1) * props.meta.per_page + 1}–
+              {Math.min(props.meta.current_page * props.meta.per_page, props.meta.total)} {s.of} {props.meta.total}
+            </div>
+            <div className="pagination-controls">
+              <button className="icon-btn" disabled={props.page <= 1} onClick={() => props.onPage(props.page - 1)}>
+                <i className="ti ti-chevron-left" />
+              </button>
+              <button
+                className="icon-btn"
+                disabled={props.page >= props.meta.last_page}
+                onClick={() => props.onPage(props.page + 1)}
+              >
+                <i className="ti ti-chevron-right" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Small label/value row used in the company-application drawer.
+function CaRow({ label, value, mono }: { label: string; value: string | null | undefined; mono?: boolean }) {
+  return (
+    <div className="info-row">
+      <span className="info-label">{label}</span>
+      <span className={`info-value ${mono ? "font-mono" : ""}`}>
+        {value ? value : <span className="muted-dash">—</span>}
+      </span>
+    </div>
+  );
+}
+
+function CompanyApplicationDrawer(props: {
+  open: boolean;
+  loading: boolean;
+  detail: CompanyApplicationRow | null;
+  onClose: () => void;
+  onApprove: () => void;
+  onReject: () => void;
+}) {
+  const { lang } = useLanguage();
+  const s = mgmtStrings(lang);
+  const d = props.detail;
+  const role = d ? (d.user?.intended_role ?? d.company_type ?? null) : null;
+  const roleLabel = role === "agent" ? s.caTypeAgent : role === "operator" ? s.caTypeOperator : "—";
+  const tone = d ? (APP_STATUS_TONE[d.status] ?? "badge-gray") : "badge-gray";
+  const canAct = !!d && (d.status === "pending" || d.status === "under_review");
+  const decided = !!d && (d.status === "approved" || d.status === "rejected");
+  return (
+    <>
+      <div className={`drawer-overlay ${props.open ? "open" : ""}`} onClick={props.onClose} />
+      <div className={`drawer ${props.open ? "open" : ""}`}>
+        <div className="drawer-header">
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 600 }}>{d?.company_name ?? "—"}</div>
+            <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+              <span className="type-badge">{roleLabel}</span>
+              {d && <span className={`badge ${tone}`}>{s[APP_STATUS_KEY[d.status] ?? "optPending"]}</span>}
+            </div>
+          </div>
+          <button className="icon-btn" onClick={props.onClose}>
+            <i className="ti ti-x" />
+          </button>
+        </div>
+        <div className="drawer-body">
+          {props.loading && !d ? (
+            <p className="cell-muted">{s.loading}</p>
+          ) : d ? (
+            <>
+              <div className="drawer-section">{s.caSecCompany}</div>
+              <div className="info-grid">
+                <CaRow label={s.caLblCompanyName} value={d.company_name} />
+                <CaRow label={s.caLblType} value={roleLabel} />
+                <CaRow label={s.caLblTaxId} value={d.tax_id} mono />
+                <CaRow label={s.caLblCountry} value={d.country} />
+                <CaRow label={s.caLblCity} value={d.city} />
+                <CaRow label={s.caLblLegalAddress} value={d.legal_address} />
+                <CaRow label={s.caLblActualAddress} value={d.actual_address} />
+                <CaRow label={s.caLblPhone} value={d.phone} />
+              </div>
+
+              <div className="drawer-section">{s.caSecContact}</div>
+              <div className="info-grid">
+                <CaRow label={s.caLblContactPerson} value={d.contact_person} />
+                <CaRow label={s.caLblPosition} value={d.position} />
+                <CaRow label={s.caLblBusinessEmail} value={d.business_email} />
+              </div>
+
+              <div className="drawer-section">{s.caSecDocuments}</div>
+              {d.license_path || d.state_certificate_path ? (
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {d.license_path && (
+                    <span className="file-chip">
+                      <i className="ti ti-paperclip" />
+                      {s.caDocLicense}
+                    </span>
+                  )}
+                  {d.state_certificate_path && (
+                    <span className="file-chip">
+                      <i className="ti ti-paperclip" />
+                      {s.caDocStateCert}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <p className="cell-muted text-sm">{s.caDocNone}</p>
+              )}
+
+              <div className="drawer-section">{s.caSecReview}</div>
+              <div className="info-grid">
+                <CaRow label={s.caLblSubmittedAt} value={fmtDateTime(d.submitted_at ?? null)} />
+                <CaRow label={s.caLblReviewedAt} value={d.reviewed_at ? fmtDateTime(d.reviewed_at) : null} />
+                <CaRow label={s.caLblReviewedBy} value={d.reviewer?.name ?? null} />
+                {d.rejection_reason ? <CaRow label={s.caLblRejectionReason} value={d.rejection_reason} /> : null}
+                {d.notes ? <CaRow label={s.caLblNotes} value={d.notes} /> : null}
+              </div>
+            </>
+          ) : null}
+        </div>
+        <div className="drawer-footer">
+          {canAct ? (
+            <>
+              <button className="btn btn-danger" onClick={props.onReject}>
+                <i className="ti ti-x" />
+                {s.actionReject}
+              </button>
+              <button className="btn btn-primary" onClick={props.onApprove}>
+                <i className="ti ti-check" />
+                {s.actionApprove}
+              </button>
+            </>
+          ) : decided ? (
+            <div className="text-sm text-secondary" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <i className="ti ti-info-circle" style={{ fontSize: 16 }} />
+              {[
+                d?.status === "approved" ? s.optApproved : s.optRejected,
+                d?.reviewer?.name,
+                d?.reviewed_at ? fmtDateTime(d.reviewed_at) : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </div>
+          ) : null}
+          <button className="btn btn-ghost" style={{ marginLeft: "auto" }} onClick={props.onClose}>
+            {s.actionClose}
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function CompanyAppApproveModal(props: {
+  open: boolean;
+  busy: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const { lang } = useLanguage();
+  const s = mgmtStrings(lang);
+  return (
+    <div
+      className={`modal-overlay ${props.open ? "open" : ""}`}
+      onClick={(e) => e.target === e.currentTarget && props.onClose()}
+    >
+      <div className="modal">
+        <div className="modal-header">
+          <div className="modal-title">{s.caApproveTitle}</div>
+          <button className="icon-btn" onClick={props.onClose}>
+            <i className="ti ti-x" />
+          </button>
+        </div>
+        <div className="modal-body">
+          <div className="approve-note">
+            <i className="ti ti-bulb" />
+            <div>{s.caApproveNote}</div>
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn" onClick={props.onClose}>
+            {s.actionCancel}
+          </button>
+          <button className="btn btn-primary" disabled={props.busy} onClick={props.onConfirm}>
+            <i className="ti ti-check" />
+            {s.caApproveBtn}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CompanyAppRejectModal(props: {
+  open: boolean;
+  busy: boolean;
+  onClose: () => void;
+  onConfirm: (reason: string) => void;
+}) {
+  const { lang } = useLanguage();
+  const s = mgmtStrings(lang);
+  const [reason, setReason] = useState("");
+  useEffect(() => {
+    if (props.open) setReason("");
+  }, [props.open]);
+  return (
+    <div
+      className={`modal-overlay ${props.open ? "open" : ""}`}
+      onClick={(e) => e.target === e.currentTarget && props.onClose()}
+    >
+      <div className="modal">
+        <div className="modal-header">
+          <div className="modal-title">{s.caRejectTitle}</div>
+          <button className="icon-btn" onClick={props.onClose}>
+            <i className="ti ti-x" />
+          </button>
+        </div>
+        <div className="modal-body">
+          <div className="fld">
+            <label className="fld-label">
+              {s.caRejectReasonLabel} <span style={{ color: "var(--danger)" }}>*</span>
+            </label>
+            <textarea
+              placeholder={s.caRejectReasonPh}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn" onClick={props.onClose}>
+            {s.actionCancel}
+          </button>
+          <button
+            className="btn btn-danger"
+            disabled={props.busy || !reason.trim()}
+            onClick={() => props.onConfirm(reason)}
+          >
+            <i className="ti ti-x" />
+            {s.caRejectBtn}
+          </button>
         </div>
       </div>
     </div>

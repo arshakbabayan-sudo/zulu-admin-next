@@ -402,6 +402,15 @@
 /* empty-state block used inside ud-panes (Communication tab) */
 .mgmt-page .empty-state { text-align:center; padding:40px 20px; color:var(--text-secondary); }
 .mgmt-page .empty-state i { font-size:34px; color:var(--text-tertiary); }
+
+/* ── Company applications pane (2026-06-05) — toast, file chip, approve note ── */
+.mgmt-page .toast-wrap { position:fixed; bottom:22px; left:50%; transform:translateX(-50%); z-index:80; display:flex; flex-direction:column; gap:8px; align-items:center; }
+.mgmt-page .toast { background:var(--primary-dark); color:#fff; padding:10px 16px; border-radius:var(--radius-md); font-size:13px; box-shadow:0 10px 30px rgba(0,0,0,.25); display:flex; align-items:center; gap:8px; }
+.mgmt-page .toast i { font-size:16px; color:#9be6ad; }
+.mgmt-page .file-chip { display:inline-flex; align-items:center; gap:7px; padding:6px 12px; border:1px solid var(--border-color); border-radius:999px; background:var(--bg-secondary); font-size:12px; color:var(--text-primary); }
+.mgmt-page .file-chip i { font-size:15px; }
+.mgmt-page .approve-note { background:var(--success-light); border:1px solid var(--success); color:var(--success-dark); border-radius:var(--radius-md); padding:12px 14px; font-size:12px; line-height:1.5; display:flex; gap:10px; align-items:flex-start; margin-bottom:14px; }
+.mgmt-page .approve-note i { font-size:18px; flex-shrink:0; }
 /* Dark-mode loyalty badge — keep gradient readable */
 html.dark .mgmt-page .loyalty-badge { background:linear-gradient(135deg,#3a2e10,#4a3a18); color:#f3c969; }
 html.dark .mgmt-page .pill-warn { background:#3a2e10; color:#f3c969; }
