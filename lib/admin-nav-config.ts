@@ -284,27 +284,11 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     visibility: "section_own_company",
   },
 
-  // 6b ── HR (Phase 4E, 2026-05-31) ─────────────────────────────────────
-  //
-  // Top-level HR group hosting the two time-and-pay pages that used to be
-  // My-company tabs:
-  //   • Non-service hours  /bucket3/non-service-hours  (shifts + time off)
-  //   • Payroll            /bucket3/payroll            (monthly ledger,
-  //                                                     finalize, bank batch)
-  // Operator HR / company-admin / accountant is the audience. The page
-  // bodies are unchanged — only the parent group and the per-page strip
-  // are new (same pattern as the Inbox group in Phase 4F).
-  {
-    key: "hr",
-    labelKey: "admin.nav.section.hr",
-    labelFallback: "HR",
-    defaultHref: "/bucket3/non-service-hours",
-    tabs: [
-      { href: "/bucket3/non-service-hours", labelKey: "admin.nav.tab.bucket3.non_service_hours" },
-      { href: "/bucket3/payroll", labelKey: "admin.nav.tab.bucket3.payroll" },
-    ],
-    visibility: "section_my_company",
-  },
+  // 6b ── HR — REMOVED as a separate group 2026-06-06 (#4 CRM consolidation).
+  // Work hours (/bucket3/non-service-hours) + Payroll (/bucket3/payroll) now
+  // live UNDER CRM (Work cluster) — they're part of the company workspace.
+  // Reached via the CRM section-tab strip; sidebar highlights CRM via the
+  // SECTION_ALIAS_PREFIXES entries below.
 
   // 7 ── Management (super_admin only) — renamed from "Marketplace ops" ──
   // Phase 1 of new menu architecture (2026-05-31):
@@ -336,7 +320,9 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       // detail page stays at /platform/users/{id} (linked from both tabs).
       { href: "/platform/b2c-customers", labelKey: "admin.nav.tab.b2c_customers", labelFallback: "B2C customers" },
       { href: "/platform/unverified", labelKey: "admin.nav.tab.unverified_accounts", labelFallback: "Unverified accounts" },
-      { href: "/platform/contracts", labelKey: "admin.nav.tab.partnership_agreements", moduleKey: "ops.contracts" },
+      // 2026-06-06 (#4) — Contracts (instances) MOVED to CRM → Work. Only the
+      // contract TEMPLATES stay here (super governs templates; instances are the
+      // operators'/agents' own, shown role-scoped under CRM).
       { href: "/platform/contract-templates", labelKey: "admin.nav.tab.contract_templates", moduleKey: "ops.contracts" },
       { href: "/platform/audit-logs", labelKey: "admin.nav.tab.audit_logs" },
       // 2026-06-04 admin v3 — `/bucket3/service-logs` page + tab removed.
@@ -372,14 +358,10 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   // (already listed in Settings tabs below). Having a separate top-level
   // sidebar entry was a duplicate. Page itself remains at the same URL.
 
-  {
-    key: "file_manager",
-    labelKey: "admin.nav.section.file_manager",
-    labelFallback: "File manager",
-    defaultHref: "/admin-redesign/files",
-    tabs: [],
-    visibility: "always",
-  },
+  // File manager — REMOVED as a separate group 2026-06-06 (#4 CRM consolidation).
+  // Files (/admin-redesign/files) now lives UNDER CRM (Work cluster) — operators/
+  // agents store their contracts + customer payment receipts there. Reached via
+  // the CRM section-tab strip; sidebar highlights CRM via SECTION_ALIAS_PREFIXES.
   {
     key: "my_profile",
     labelKey: "admin.nav.section.my_profile",
@@ -511,9 +493,9 @@ export const GROUP_MENU_PERMISSION: Record<string, string> = {
   chat: "chat.view",
   finance: "finance.view",
   my_company: "my_company.view",
-  hr: "hr.view",
+  // 2026-06-06 (#4) — `hr` + `file_manager` groups removed (folded into CRM).
+  // Their pages now gate on crm.view (see access.ts + SECTION_ALIAS_PREFIXES).
   marketplace_ops: "management.view",
-  file_manager: "files.view",
   my_profile: "profile.view",
   notifications_v2: "inbox.view",
   settings: "settings.view",
@@ -716,6 +698,15 @@ const SECTION_ALIAS_PREFIXES: Array<{ prefix: string; groupKey: string }> = [
   // CRM (2026-05-31) — bare /crm + any /crm/* sub-page maps to the crm group
   // (defaultHref is /crm/pipeline, so the literal /crm needs an alias too).
   { prefix: "/crm", groupKey: "crm" },
+  // 2026-06-06 (#4) — Contracts (role-scoped) + HR + Files moved INTO CRM, so
+  // the sidebar highlights CRM when on those pages. NOTE: /platform/contracts
+  // does NOT match /platform/contract-templates (templates stay in Management).
+  { prefix: "/platform/contracts", groupKey: "crm" },
+  { prefix: "/operator/contracts", groupKey: "crm" },
+  { prefix: "/agent/contracts", groupKey: "crm" },
+  { prefix: "/bucket3/non-service-hours", groupKey: "crm" },
+  { prefix: "/bucket3/payroll", groupKey: "crm" },
+  { prefix: "/admin-redesign/files", groupKey: "crm" },
   // Chat (2026-06-01)
   { prefix: "/chat", groupKey: "chat" },
 ];
