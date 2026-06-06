@@ -67,6 +67,13 @@ const MGMT_PREFIXES = [
   // 2026-06-05 pt4 — System cluster: API docs (Swagger UI viewer wrapped in the
   // unified chrome). With this, all 24 Settings sub-pages render in-page.
   "/platform/api-docs",
+  // 2026-06-07 — CRM consolidation Stage Բ: the unified CrmPage (7-crm mock).
+  // Migrated in-page so far: Pipeline / Leads / Segments. The remaining wired CRM
+  // panes keep AdminShell + their own routes until ported (then add them here).
+  // These three have no sub-routes, so they are safe as startsWith prefixes.
+  "/crm/pipeline",
+  "/crm/leads",
+  "/crm/segments",
 ];
 
 /** Routes that render the unified chrome ONLY on an exact path match (their

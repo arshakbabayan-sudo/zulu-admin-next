@@ -1,15 +1,7 @@
 "use client";
 
-import { CrmComingSoon } from "@/components/crm/CrmComingSoon";
-import { Filter } from "lucide-react";
+import { CrmPage } from "../CrmPage";
 
 export default function CrmSegmentsPage() {
-  return (
-    <CrmComingSoon
-      activeHref="/crm/segments"
-      title="Segments"
-      subtitle="Saved contact segments for campaigns"
-      icon={<Filter className="h-10 w-10" />}
-    />
-  );
+  return <CrmPage initialPage="segments" />;
 }
