@@ -92,7 +92,6 @@ import {
 import { exportRowsAsCsv } from "@/lib/export-csv";
 import { apiCompaniesList, type CompanyListRow } from "@/lib/inventory-crud-api";
 import CompanyCommissionTab from "@/components/CompanyCommissionTab";
-import { AddEmployeeModal } from "@/components/employees/AddEmployeeModal";
 import { EmployeePermissionsDrawer } from "@/components/employees/EmployeePermissionsDrawer";
 import { PartnerSettingsModal } from "@/components/PartnerSettingsModal";
 import {
@@ -378,7 +377,6 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
   const [detailLang, setDetailLang] = useState<"EN" | "RU" | "HY">("EN");
   const [detailPerms, setDetailPerms] = useState<CompanySellerPermissionApiRow[] | null>(null);
   const [detailCountries, setDetailCountries] = useState<CompanyCountryPermissionApiRow[] | null>(null);
-  const [addEmployeeOpen, setAddEmployeeOpen] = useState(false);
   const [partnerModalOpen, setPartnerModalOpen] = useState(false);
 
   // Applications (Seller applications — service requests)
@@ -1444,7 +1442,6 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                   apps={detailApps}
                   perms={detailPerms}
                   countries={detailCountries}
-                  onAddEmployee={() => setAddEmployeeOpen(true)}
                   onEditPermissions={(u) => setPermDrawerUser(u)}
                   onOpenLogo={() => setPartnerModalOpen(true)}
                   onBack={() => {
@@ -1788,20 +1785,9 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
         onReject={() => setCompanyAppRejectOpen(true)}
       />
 
-      {/* Company-detail add-employee modal */}
-      {detailCompany && (
-        <AddEmployeeModal
-          open={addEmployeeOpen}
-          onClose={() => setAddEmployeeOpen(false)}
-          token={token}
-          companyId={detailCompany.id}
-          companyName={detailCompany.name}
-          onSuccess={() => {
-            setAddEmployeeOpen(false);
-            setDetailStaff(null);
-          }}
-        />
-      )}
+      {/* Company-detail add-employee modal REMOVED 2026-06-06 (Arshak) — super
+          doesn't add employees to an operator's company; the owner adds their own
+          from CRM → Team. The Staff sub-tab here is view-only governance. */}
 
       {/* Company-detail Staff → per-employee permissions drawer (Ե.2). Reuses
           the existing per-employee override editor (richer than the mock's
@@ -2586,7 +2572,6 @@ function CompaniesDetail(props: {
   apps: CompanyApplicationRow[] | null;
   perms: CompanySellerPermissionApiRow[] | null;
   countries: CompanyCountryPermissionApiRow[] | null;
-  onAddEmployee: () => void;
   onEditPermissions: (u: PlatformAdminUserRow) => void;
   onOpenLogo: () => void;
   onBack: () => void;
@@ -2914,10 +2899,9 @@ function CompaniesDetail(props: {
               <div className="card-title">{s.stTitle}</div>
               <div className="card-subtitle">{s.stSubtitle}</div>
             </div>
-            <button className="btn btn-primary btn-sm" onClick={props.onAddEmployee}>
-              <i className="ti ti-plus" />
-              {s.actionAddEmployee}
-            </button>
+            {/* 2026-06-06 (Arshak) — super does NOT add employees to an operator's
+                company. The owner adds their own staff from CRM → Team. Here the
+                super-admin only VIEWS the company's employees (governance). */}
           </div>
           <div className="table-wrap">
             <table className="table">

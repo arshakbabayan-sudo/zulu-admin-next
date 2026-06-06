@@ -206,11 +206,9 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/crm/activities", labelKey: "admin.nav.tab.crm.activities" },
       { href: "/crm/segments", labelKey: "admin.nav.tab.crm.segments" },
       { href: "/crm/team", labelKey: "admin.nav.tab.crm.team" },
-      // 2026-06-04 (Arshak) — Directory deletion: Staff (operator/agent/admin
-      // employees) view folds into CRM as a dedicated tab. Was Directory >
-      // People > Staff(operator/agent/admin) chip. Rename: parentheses dropped
-      // ("Staff" only — the role mix is filterable inside the page).
-      { href: "/crm/staff", labelKey: "admin.nav.tab.crm.staff", labelFallback: "Staff" },
+      // 2026-06-06 (Arshak) — "/crm/staff" REMOVED (it listed all companies'
+      // owners platform-wide as "staff" — wrong; operators/agents are companies
+      // in Management). The per-company employee view is "Team" (scoped).
       { href: "/crm/options", labelKey: "admin.nav.tab.crm.options" },
     ],
     visibility: "section_crm",
