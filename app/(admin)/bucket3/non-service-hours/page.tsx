@@ -14,7 +14,7 @@ import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { canAccessMyCompanySection } from "@/lib/access";
+import { canAccessHrSection } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
 import { exportRowsAsCsv } from "@/lib/export-csv";
@@ -132,7 +132,7 @@ export default function Bucket3NonServiceHoursPage() {
   // HR (time punches / time off) is company-internal — gated on company
   // membership, not inventory-create perms (operator owners without explicit
   // create perms still manage their own HR).
-  const allowed = canAccessMyCompanySection(user);
+  const allowed = canAccessHrSection(user);
   const [rows, setRows] = useState<TimeOffRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
   const [page, setPage] = useState(1);

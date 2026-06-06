@@ -15,7 +15,7 @@ import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { formatDate } from "@/lib/format";
-import { canAccessOperatorToolsNav } from "@/lib/access";
+import { canAccessHrSection } from "@/lib/access";
 import { ApiRequestError, apiDownloadFile, apiFetchJson } from "@/lib/api-client";
 import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
 import {
@@ -84,7 +84,7 @@ export default function Bucket3PayrollPage() {
   const { token, user } = useAdminAuth();
   const confirm = useConfirm();
   const { t, lang } = useLanguage();
-  const allowed = canAccessOperatorToolsNav(user);
+  const allowed = canAccessHrSection(user);
   const [rows, setRows] = useState<PayrollRow[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
   const [page, setPage] = useState(1);

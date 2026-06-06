@@ -184,112 +184,86 @@ export function isOperatorRole(user: AdminUser | null): boolean {
   return false;
 }
 
-// ─── Section-level predicates (8 new sidebar groups, 2026-05-24) ────────
-// These are intentionally permissive at the section level — fine-grained
-// per-tab visibility is enforced by tab.superAdminOnly / perm / serviceType
-// / moduleKey filters that AdminGroupTabs already honours.
+// ─── Section access — STRICT, gated on the section's view permission ─────────
+// RBAC #2 redo (2026-06-06): each section can be accessed by a non-super user
+// IFF they hold its single `<section>.view` gate. The SAME gate drives sidebar
+// visibility (AdminShell/MgmtPage via GROUP_MENU_PERMISSION) and the server
+// routes — so no checkmark ⇒ no access by menu, direct URL, or API (Arshak's
+// requirement). Super admins are unrestricted. NO permissive fallbacks.
 
 export function canAccessDashboardSection(user: AdminUser | null): boolean {
-  return user != null;
+  if (!user) return false;
+  if (user.is_super_admin) return true;
+  return userHasPermission(user, "dashboard.view");
 }
 
-/** Inventory PAGE access: super, the menu permission, or operator tools.
- * Sidebar visibility is gated separately by menu.inventory.view (AdminShell);
- * this stays permissive so a granted menu item never lands on a 403. */
 export function canAccessInventorySection(user: AdminUser | null): boolean {
   if (!user) return false;
   if (user.is_super_admin) return true;
-  if (userHasPermission(user, "menu.inventory.view")) return true;
-  return canAccessOperatorToolsNav(user) || canAccessInventoryOversightNav(user);
+  return userHasPermission(user, "inventory.view");
 }
 
-/** Bookings: anyone who can view bookings (Phase R.2 — permission-gated so a
- * revoked `bookings.view` actually hides the section). Super admin always. */
 export function canAccessBookingsSection(user: AdminUser | null): boolean {
   if (!user) return false;
   if (user.is_super_admin) return true;
-  return userHasPermission(user, "menu.bookings.view") || userHasPermission(user, "bookings.view");
+  return userHasPermission(user, "bookings.view");
 }
 
-/** Sales workspace: agents only (super admin can preview via direct URL but not in sidebar). */
+/** Legacy sales-workspace group (no longer in the sidebar). Agents only. */
 export function canAccessSalesWorkspaceSection(user: AdminUser | null): boolean {
   if (!user) return false;
-  if (user.is_super_admin) return true; // sidebar parity for QA, matches existing canAccessAgentToolsNav semantics
+  if (user.is_super_admin) return true;
   return user.roles?.includes("agent") ?? false;
 }
 
-/** Finance: anyone with a finance/commission view permission (Phase R.2 —
- * permission-gated). Super admin always. */
 export function canAccessFinanceSection(user: AdminUser | null): boolean {
   if (!user) return false;
   if (user.is_super_admin) return true;
-  return (
-    userHasPermission(user, "menu.finance.view") ||
-    userHasPermission(user, "commissions.view") ||
-    userHasPermission(user, "finance.entitlements.view") ||
-    userHasPermission(user, "finance.settlements.view") ||
-    userHasPermission(user, "platform.finance.view")
-  );
+  return userHasPermission(user, "finance.view");
 }
 
-/** My company: page ACCESS — all three roles (each sees only their own
- * company). Super admin can open the pages too (oversight). */
+/** My company pages (seller status, payments, subscriptions, per-X invoicing). */
 export function canAccessMyCompanySection(user: AdminUser | null): boolean {
   if (!user) return false;
   if (user.is_super_admin) return true;
-  // Shared by the My-company AND HR pages — accept either menu permission so a
-  // granted nav item always opens; falls back to plain company membership.
-  if (userHasPermission(user, "menu.my_company.view")) return true;
-  if (userHasPermission(user, "menu.hr.view")) return true;
-  return (user.companies?.length ?? 0) > 0;
+  return userHasPermission(user, "my_company.view");
 }
 
-/** "My company" SIDEBAR visibility — operator/agent only. 2026-06-02 (Arshak):
- * super-admins manage every company via Management/Directory, so a personal
- * "My company" entry (which lands on their own seller-status) was just
- * confusing in the super menu. Page access is unchanged
- * (canAccessMyCompanySection still lets super open the pages by URL). */
+/** HR pages (non-service hours, payroll). Separate gate from My company. */
+export function canAccessHrSection(user: AdminUser | null): boolean {
+  if (!user) return false;
+  if (user.is_super_admin) return true;
+  return userHasPermission(user, "hr.view");
+}
+
+/** "My company" SIDEBAR visibility — operator/agent only (super uses Management). */
 export function canSeeOwnCompanyNav(user: AdminUser | null): boolean {
   if (!user) return false;
   if (user.is_super_admin) return false;
-  return (user.companies?.length ?? 0) > 0;
+  return userHasPermission(user, "my_company.view");
 }
 
-/** Marketplace ops: super_admin only. */
+/** Management (cross-tenant governance) — super or the management.view gate. */
 export function canAccessMarketplaceOpsSection(user: AdminUser | null): boolean {
-  return user?.is_super_admin === true;
+  if (!user) return false;
+  if (user.is_super_admin) return true;
+  return userHasPermission(user, "management.view");
 }
 
-/** Settings: visible to all roles; tabs inside filter based on scope. */
 export function canAccessSettingsSection(user: AdminUser | null): boolean {
-  return user != null;
+  if (!user) return false;
+  if (user.is_super_admin) return true;
+  return userHasPermission(user, "settings.view");
 }
 
-/**
- * Internal chat (2026-06-01) — company-scoped messaging. Visible to anyone
- * with a company membership (option Բ: colleagues message each other), plus
- * super/platform admins for oversight/QA.
- */
 export function canAccessChatSection(user: AdminUser | null): boolean {
   if (!user) return false;
   if (user.is_super_admin) return true;
-  if (userHasPermission(user, "menu.chat.view")) return true;
-  if (canAccessPlatformAdminNav(user)) return true;
-  return (user.companies?.length ?? 0) > 0;
+  return userHasPermission(user, "chat.view");
 }
 
-/**
- * CRM (2026-05-31) — separate sales / customer-relationship section.
- * Audience (Arshak's decision): super-admin (top), operator/agent leaders and
- * their company staff. Anyone with a company membership, an agent role, or
- * platform-admin oversight sees it; pure-platform-admins included for parity.
- * Per-role scoping (which customers/deals each sees) is enforced server-side.
- */
 export function canAccessCrmSection(user: AdminUser | null): boolean {
   if (!user) return false;
   if (user.is_super_admin) return true;
-  if (userHasPermission(user, "menu.crm.view")) return true;
-  if (canAccessPlatformAdminNav(user)) return true;
-  if ((user.companies?.length ?? 0) > 0) return true;
-  return user.roles?.includes("agent") ?? false;
+  return userHasPermission(user, "crm.view");
 }

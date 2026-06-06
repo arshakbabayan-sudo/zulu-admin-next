@@ -495,29 +495,30 @@ export const SIDEBAR_TABLER_ICON: Record<string, string> = {
   settings: "ti-settings",
 };
 
-// ─── Left-menu visibility gate (RBAC #2 Part Ա — 2026-06-06) ────────────────
-// Each sidebar group is shown to a non-super user IFF they hold the matching
-// `menu.<group>.view` permission. This is the SINGLE gate now — it replaces the
-// old mix of role/company/always predicates so that toggling a role's
-// permissions in Settings → Permissions → "Left menu (visibility)" immediately
-// (within ~5s, via the /me session-sync) changes what that operator/agent sees.
-// Super admins are unrestricted (handled in AdminShell). Keyed by AdminNavGroup.key.
-// Backend mirror: AdminRbacController::PERMISSION_TREE 'menu' section +
-// the 2026_06_06_000010 menu-permissions migration.
+// ─── Section view/access gate (RBAC #2 redo — 2026-06-06) ───────────────────
+// Each sidebar group maps to its menu section's single `<section>.view` gate.
+// A non-super user sees the group IFF they hold that permission, and the SAME
+// gate guards the section's pages + server routes — so revoking it removes
+// access by EVERY route (menu hidden, direct URL forbidden, API 403). Super
+// admins are unrestricted (handled in AdminShell). The gate is the FIRST item
+// ("Show & access") of the matching section in the RBAC permission tree — there
+// is no separate "Left menu" list. Keyed by AdminNavGroup.key.
+// Backend mirror: AdminRbacController::PERMISSION_TREE section "access" items +
+// the 2026_06_06_000040 section-view migration.
 export const GROUP_MENU_PERMISSION: Record<string, string> = {
-  dashboard: "menu.dashboard.view",
-  inventory: "menu.inventory.view",
-  bookings: "menu.bookings.view",
-  crm: "menu.crm.view",
-  chat: "menu.chat.view",
-  finance: "menu.finance.view",
-  my_company: "menu.my_company.view",
-  hr: "menu.hr.view",
-  marketplace_ops: "menu.management.view",
-  file_manager: "menu.files.view",
-  my_profile: "menu.profile.view",
-  notifications_v2: "menu.inbox.view",
-  settings: "menu.settings.view",
+  dashboard: "dashboard.view",
+  inventory: "inventory.view",
+  bookings: "bookings.view",
+  crm: "crm.view",
+  chat: "chat.view",
+  finance: "finance.view",
+  my_company: "my_company.view",
+  hr: "hr.view",
+  marketplace_ops: "management.view",
+  file_manager: "files.view",
+  my_profile: "profile.view",
+  notifications_v2: "inbox.view",
+  settings: "settings.view",
 };
 
 // ─── Settings sub-group structure (Phase 2D — 2026-05-31) ────────────────
