@@ -124,16 +124,15 @@ export function canAccessNotificationsNav(user: AdminUser | null): boolean {
 }
 
 /**
- * Default landing page for a user after admin login.
- * Platform admins (super, platform) → /dashboard (platform KPIs).
- * Operator/agency admins → /operator/offers (their inventory home).
- * Travel agents (sell on zulu.am, no admin CRUD) → /agent/welcome.
- * Anyone else with no operator tools → /dashboard (will show ForbiddenNotice).
+ * Default landing page after admin login. Everyone lands on /dashboard — it's
+ * the one section every role holds by default (dashboard.view) and is always a
+ * valid page. (Previously agents were sent to /agent/welcome, which doesn't
+ * exist → 404; operators to /operator/offers, which a view-only operator may not
+ * have inventory perms for. /dashboard avoids both.)
  */
 export function defaultLandingPath(user: AdminUser | null): string {
-  if (canAccessPlatformAdminNav(user)) return "/dashboard";
-  if (canAccessOperatorToolsNav(user)) return "/operator/offers";
-  if (user?.roles?.includes("agent")) return "/agent/welcome";
+  if (canAccessDashboardSection(user)) return "/dashboard";
+  // Dashboard turned off for this role → fall back to the public site bridge.
   return "/dashboard";
 }
 
