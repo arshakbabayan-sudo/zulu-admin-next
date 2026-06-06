@@ -67,18 +67,23 @@ const MGMT_PREFIXES = [
   // 2026-06-05 pt4 — System cluster: API docs (Swagger UI viewer wrapped in the
   // unified chrome). With this, all 24 Settings sub-pages render in-page.
   "/platform/api-docs",
-  // 2026-06-07 — CRM consolidation Stage Բ: the unified CrmPage (7-crm mock).
-  // Migrated in-page so far: Pipeline / Leads / Segments. The remaining wired CRM
-  // panes keep AdminShell + their own routes until ported (then add them here).
-  // These three have no sub-routes, so they are safe as startsWith prefixes.
+  // 2026-06-07 — CRM consolidation: the unified CrmPage (7-crm mock). In-page
+  // panes wired to the real CrmController: Pipeline / Leads / Deals / Activities /
+  // Segments / Team / Options. None of these have sub-routes, so they are safe as
+  // startsWith prefixes. (Customers is handled by MGMT_EXACT below so the
+  // /crm/customers/[id] deep-link route keeps AdminShell as a fallback.)
   "/crm/pipeline",
   "/crm/leads",
   "/crm/segments",
+  "/crm/deals",
+  "/crm/activities",
+  "/crm/team",
+  "/crm/options",
 ];
 
 /** Routes that render the unified chrome ONLY on an exact path match (their
  *  sub-routes must keep AdminShell). */
-const MGMT_EXACT = ["/pages"];
+const MGMT_EXACT = ["/pages", "/crm/customers"];
 
 /**
  * v2 admin-redesign (2026-05-24) — AdminGroupTabs removed.
