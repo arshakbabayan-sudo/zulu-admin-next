@@ -393,6 +393,7 @@ export default function PlatformBookingsPage() {
           { label: t("admin.platform_bookings.title") },
         ]}
         title={t("admin.platform_bookings.title")}
+        subtitle="All bookings across the platform with status tracking."
         actions={
           <>
             <V2Button onClick={() => void load()} icon={<RefreshCw className="h-4 w-4" />} aria-label="Refresh">

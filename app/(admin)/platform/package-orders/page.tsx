@@ -337,6 +337,7 @@ export default function PlatformPackageOrdersPage() {
           { label: t("admin.package_orders.title") },
         ]}
         title={t("admin.package_orders.title")}
+        subtitle="Package orders across the platform with payment status."
         actions={
           <>
             <V2Button onClick={() => void load()} icon={<RefreshCw className="h-4 w-4" />} aria-label="Refresh">

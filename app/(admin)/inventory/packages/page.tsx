@@ -142,6 +142,7 @@ export default function InventoryPackagesOversightPage() {
           { label: "Packages" },
         ]}
         title={t("admin.packages.title_long")}
+        subtitle="Platform oversight of all operators' packages."
         actions={
           <div className="flex flex-wrap items-center gap-2">
           {/* Phase Ա.1 — scope switch back to the operator's own packages. */}

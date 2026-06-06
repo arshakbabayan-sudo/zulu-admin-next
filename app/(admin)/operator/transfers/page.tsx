@@ -581,6 +581,7 @@ export default function OperatorTransfersPage() {
             {form === null && <ContentLanguagePill />}
           </span>
         }
+        subtitle="Manage your transfer inventory"
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <ImportExportButtons

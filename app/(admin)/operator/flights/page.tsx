@@ -486,6 +486,7 @@ export default function OperatorFlightsPage() {
             {form === null && <ContentLanguagePill />}
           </span>
         }
+        subtitle="Manage your flight inventory"
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <ImportExportButtons

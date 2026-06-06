@@ -97,6 +97,7 @@ export default function OperatorStatisticsPage() {
           { label: t("admin.operator_statistics.title") },
         ]}
         title={t("admin.operator_statistics.title")}
+        subtitle="Your sales and service performance over the selected period."
         actions={<V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>}
       />
 

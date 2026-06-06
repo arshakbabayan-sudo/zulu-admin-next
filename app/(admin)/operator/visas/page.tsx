@@ -546,6 +546,7 @@ export default function OperatorVisasPage() {
             {form === null && <ContentLanguagePill />}
           </span>
         }
+        subtitle="Manage your visa services"
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <ImportExportButtons

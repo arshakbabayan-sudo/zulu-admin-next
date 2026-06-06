@@ -777,6 +777,7 @@ export default function OperatorCarsPage() {
             {form === null && <ContentLanguagePill />}
           </span>
         }
+        subtitle="Manage your car rental inventory"
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <ImportExportButtons

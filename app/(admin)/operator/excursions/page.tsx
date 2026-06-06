@@ -437,6 +437,7 @@ export default function OperatorExcursionsPage() {
             {form === null && <ContentLanguagePill />}
           </span>
         }
+        subtitle="Manage your excursion inventory"
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <ImportExportButtons
