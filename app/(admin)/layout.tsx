@@ -79,11 +79,26 @@ const MGMT_PREFIXES = [
   "/crm/activities",
   "/crm/team",
   "/crm/options",
+  // 2026-06-07 — CRM consolidation WORK cluster. These three have NO sub-routes,
+  // so they are safe as startsWith prefixes. They render the unified CrmPage
+  // (Work → Work hours / Payroll / Files panes).
+  "/bucket3/non-service-hours",
+  "/bucket3/payroll",
+  "/admin-redesign/files",
 ];
 
 /** Routes that render the unified chrome ONLY on an exact path match (their
  *  sub-routes must keep AdminShell). */
-const MGMT_EXACT = ["/pages", "/crm/customers"];
+const MGMT_EXACT = [
+  "/pages",
+  "/crm/customers",
+  // 2026-06-07 — CRM consolidation WORK cluster: Contracts. The list route shows
+  // the in-pane CrmPage (Work → Contracts), but the /operator/contracts/[id] and
+  // /agent/contracts/[id] deep-link detail routes must keep AdminShell — so these
+  // are EXACT, not startsWith prefixes. (/platform/contracts is in MGMT_PREFIXES.)
+  "/operator/contracts",
+  "/agent/contracts",
+];
 
 /**
  * v2 admin-redesign (2026-05-24) — AdminGroupTabs removed.

@@ -19,15 +19,51 @@
  */
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import "../platform/management/management.css";
 import { Sidebar, Header } from "../platform/management/MgmtPage";
 import { crmStrings, type CrmKey } from "./crm-i18n";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessNotificationsNav, canAccessPlatformAdminNav } from "@/lib/access";
-import { ApiRequestError } from "@/lib/api-client";
+import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
+import type { ApiListMeta, ApiSuccessEnvelope } from "@/lib/api-envelope";
 import { apiNotificationsUnreadCount } from "@/lib/notifications-api";
+import {
+  apiAdminContracts,
+  apiAdminContract,
+  apiSellerContracts,
+  apiSellerContract,
+  apiAdminSendContract,
+  apiAdminCountersignContract,
+  apiAdminTerminateContract,
+  apiSellerSignContract,
+  apiAdminCreateContract,
+  apiAdminContractTemplates,
+  CONTRACT_LANGUAGES,
+  type ContractRow,
+  type ContractDetail,
+  type ContractStatus,
+  type ContractTemplateRow,
+  type ContractLanguage,
+} from "@/lib/contracts-api";
+import { apiCompaniesList, type CompanyListRow } from "@/lib/inventory-crud-api";
+import {
+  apiFilesList,
+  apiFilesUpload,
+  apiFilesDownload,
+  apiFilesObjectUrl,
+  apiFilesCreateFolder,
+  apiFilesDelete,
+  apiFilesDeleteFolder,
+  apiFilesStorageStats,
+  formatBytes,
+  isPreviewableImage,
+  mimeBucket,
+  type FileAssetRow,
+  type FolderSummary,
+  type StorageStats,
+} from "@/lib/file-assets-api";
 import {
   apiCrmDeals,
   apiCreateCrmDeal,
@@ -116,6 +152,29 @@ const STATUS_BADGE: Record<string, string> = {
   suspended: "badge-danger",
 };
 
+const CONTRACT_STATUS_BADGE: Record<ContractStatus, string> = {
+  draft: "badge-gray",
+  sent: "badge-info",
+  signed_by_a: "badge-info",
+  signed_by_b: "badge-info",
+  countersigned: "badge-success",
+  active: "badge-success",
+  expired: "badge-warning",
+  terminated: "badge-danger",
+  disputed: "badge-warning",
+};
+const CONTRACT_STATUS_KEY: Record<ContractStatus, CrmKey> = {
+  draft: "ctStatusDraft",
+  sent: "ctStatusSent",
+  signed_by_a: "ctStatusSignedA",
+  signed_by_b: "ctStatusSignedB",
+  countersigned: "ctStatusCountersigned",
+  active: "ctStatusActive",
+  expired: "ctStatusExpired",
+  terminated: "ctStatusTerminated",
+  disputed: "ctStatusDisputed",
+};
+
 const BOOKING_BADGE: Record<string, string> = {
   paid: "badge-success",
   confirmed: "badge-info",
@@ -170,10 +229,10 @@ export function CrmPage({ initialPage = "pipeline" }: { initialPage?: CrmPageKey
     segments:   { cluster: "sales",   labelKey: "pgSegments",   subKey: "subSegments",   inPage: true,  href: "/crm/segments" },
     customers:  { cluster: "people",  labelKey: "pgCustomers",  subKey: "subCustomers",  inPage: true,  href: "/crm/customers" },
     team:       { cluster: "people",  labelKey: "pgTeam",       subKey: "subTeam",       inPage: true,  href: "/crm/team" },
-    contracts:  { cluster: "work",    labelKey: "pgContracts",  subKey: "subContracts",  inPage: false, href: contractsHref },
-    workhours:  { cluster: "work",    labelKey: "pgWorkhours",  subKey: "subWorkhours",  inPage: false, href: "/bucket3/non-service-hours" },
-    payroll:    { cluster: "work",    labelKey: "pgPayroll",    subKey: "subPayroll",    inPage: false, href: "/bucket3/payroll" },
-    files:      { cluster: "work",    labelKey: "pgFiles",      subKey: "subFiles",      inPage: false, href: "/admin-redesign/files" },
+    contracts:  { cluster: "work",    labelKey: "pgContracts",  subKey: "subContracts",  inPage: true,  href: contractsHref },
+    workhours:  { cluster: "work",    labelKey: "pgWorkhours",  subKey: "subWorkhours",  inPage: true,  href: "/bucket3/non-service-hours" },
+    payroll:    { cluster: "work",    labelKey: "pgPayroll",    subKey: "subPayroll",    inPage: true,  href: "/bucket3/payroll" },
+    files:      { cluster: "work",    labelKey: "pgFiles",      subKey: "subFiles",      inPage: true,  href: "/admin-redesign/files" },
     options:    { cluster: "options", labelKey: "pgOptions",    subKey: "subOptions",    inPage: true,  href: "/crm/options" },
   }), [contractsHref]);
   // NOTE: options.inPage stays false in PAGES only as a fallback href; the pane
@@ -334,6 +393,18 @@ export function CrmPage({ initialPage = "pipeline" }: { initialPage?: CrmPageKey
               <TeamPane token={token} user={user} lang={lang} registerAction={setActionNode} showToast={showToast} />
             )}
             {page === "options" && <OptionsPane token={token} lang={lang} showToast={showToast} />}
+            {page === "contracts" && (
+              <ContractsPane token={token} user={user} lang={lang} registerAction={setActionNode} showToast={showToast} />
+            )}
+            {page === "workhours" && (
+              <WorkHoursPane token={token} user={user} lang={lang} registerAction={setActionNode} showToast={showToast} />
+            )}
+            {page === "payroll" && (
+              <PayrollPane token={token} lang={lang} registerAction={setActionNode} showToast={showToast} />
+            )}
+            {page === "files" && (
+              <FilesPane token={token} user={user} lang={lang} registerAction={setActionNode} showToast={showToast} />
+            )}
           </div>
         </div>
       </div>
@@ -1859,6 +1930,1967 @@ function OptionsPane({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// Work hours pane — time-off ledger (filter + table + create/edit modal)
+// ════════════════════════════════════════════════════════════════
+const TIMEOFF_TYPES = ["vacation", "sick", "personal", "unpaid", "other"] as const;
+type TimeOffType = (typeof TIMEOFF_TYPES)[number];
+type TimeOffStatus = "pending" | "approved" | "rejected" | "cancelled";
+
+type TimeOffRow = {
+  id: number;
+  user: { id: number; name: string; email: string } | null;
+  type: TimeOffType;
+  starts_on: string | null;
+  ends_on: string | null;
+  hours_total: number | null;
+  notes: string | null;
+  status: TimeOffStatus;
+  created_at: string | null;
+};
+
+const TIMEOFF_TYPE_KEY: Record<TimeOffType, CrmKey> = {
+  vacation: "whTypeVacation",
+  sick: "whTypeSick",
+  personal: "whTypePersonal",
+  unpaid: "whTypeUnpaid",
+  other: "whTypeOther",
+};
+const TIMEOFF_TYPE_BADGE: Record<TimeOffType, string> = {
+  vacation: "badge-info",
+  sick: "badge-warning",
+  personal: "badge-primary",
+  unpaid: "badge-gray",
+  other: "badge-gray",
+};
+const TIMEOFF_STATUS_KEY: Record<TimeOffStatus, CrmKey> = {
+  pending: "whStatusPending",
+  approved: "whStatusApproved",
+  rejected: "whStatusRejected",
+  cancelled: "whStatusCancelled",
+};
+const TIMEOFF_STATUS_BADGE: Record<TimeOffStatus, string> = {
+  pending: "badge-warning",
+  approved: "badge-success",
+  rejected: "badge-danger",
+  cancelled: "badge-gray",
+};
+
+function monthString(d = new Date()): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+type WorkHoursModalState = { mode: "create" } | { mode: "edit"; row: TimeOffRow } | null;
+
+function WorkHoursPane({
+  token,
+  lang,
+  registerAction,
+  showToast,
+}: PaneProps & { user: TeamUser | null }) {
+  const s = crmStrings(lang);
+  const [rows, setRows] = useState<TimeOffRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [employeeFilter, setEmployeeFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
+  const [month, setMonth] = useState(monthString());
+  const [modal, setModal] = useState<WorkHoursModalState>(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    setErr(null);
+    try {
+      const res = await apiFetchJson<ApiSuccessEnvelope<TimeOffRow[]> & { meta: ApiListMeta }>(
+        `/time-off?per_page=200`,
+        { method: "GET", token }
+      );
+      setRows(res.data);
+    } catch (e) {
+      setErr(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+  useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    registerAction(
+      <button className="btn btn-primary" onClick={() => setModal({ mode: "create" })}>
+        <i className="ti ti-plus" />
+        {s.whAddEntry}
+      </button>
+    );
+    return () => registerAction(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang]);
+
+  const employees = useMemo(() => {
+    const m = new Map<number, string>();
+    rows.forEach((r) => { if (r.user) m.set(r.user.id, r.user.name); });
+    return Array.from(m.entries());
+  }, [rows]);
+
+  const filtered = useMemo(() => {
+    return rows.filter((r) => {
+      if (employeeFilter && String(r.user?.id ?? "") !== employeeFilter) return false;
+      if (typeFilter && r.type !== typeFilter) return false;
+      if (month) {
+        const ref = r.starts_on ?? r.created_at;
+        if (!ref || ref.slice(0, 7) !== month) return false;
+      }
+      return true;
+    });
+  }, [rows, employeeFilter, typeFilter, month]);
+
+  async function decide(row: TimeOffRow, status: "approved" | "rejected") {
+    if (!token) return;
+    const msg = status === "approved" ? s.whConfirmApprove : s.whConfirmReject;
+    if (typeof window !== "undefined" && !window.confirm(msg)) return;
+    setBusy(true);
+    try {
+      await apiFetchJson(`/time-off/${row.id}/decide`, { method: "PATCH", token, body: { status } });
+      showToast(status === "approved" ? s.whApprovedToast : s.whRejectedToast);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove(row: TimeOffRow) {
+    if (!token) return;
+    if (typeof window !== "undefined" && !window.confirm(s.whConfirmDelete)) return;
+    setBusy(true);
+    try {
+      await apiFetchJson(`/time-off/${row.id}/decide`, { method: "PATCH", token, body: { status: "cancelled" } });
+      showToast(s.whDeletedToast);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div>
+      <div className="filter-card">
+        <div className="filter-field">
+          <span className="filter-label">{s.whFilterEmployee}</span>
+          <select value={employeeFilter} onChange={(e) => setEmployeeFilter(e.target.value)}>
+            <option value="">{s.whEmployeeAll}</option>
+            {employees.map(([id, name]) => (
+              <option key={id} value={String(id)}>{name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="filter-field">
+          <span className="filter-label">{s.whFilterType}</span>
+          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+            <option value="">{s.whTypeAll}</option>
+            {TIMEOFF_TYPES.map((t) => (
+              <option key={t} value={t}>{s[TIMEOFF_TYPE_KEY[t]]}</option>
+            ))}
+          </select>
+        </div>
+        <div className="filter-field">
+          <span className="filter-label">{s.whFilterMonth}</span>
+          <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
+        </div>
+        <button className="btn btn-primary" onClick={() => void load()}>
+          <i className="ti ti-filter" />
+          {s.apply}
+        </button>
+      </div>
+
+      {err ? <div className="card" style={{ padding: 16, color: "var(--danger)" }}>{err}</div> : null}
+
+      <div className="card" style={{ marginBottom: 0 }}>
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>{s.whColEmployee}</th>
+                <th>{s.whColType}</th>
+                <th>{s.whColDate}</th>
+                <th className="num-cell">{s.whColHours}</th>
+                <th>{s.whColNote}</th>
+                <th style={{ textAlign: "right" }}>{s.colActions}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading && rows.length === 0 ? (
+                <tr><td colSpan={6} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.loading}</td></tr>
+              ) : filtered.length === 0 ? (
+                <tr><td colSpan={6} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.whEmpty}</td></tr>
+              ) : (
+                filtered.map((r) => (
+                  <tr key={r.id} onClick={() => setModal({ mode: "edit", row: r })}>
+                    <td>
+                      <span className="flex items-center gap-2">
+                        <span className={`avatar sm ${avatarTone(r.user?.id ?? r.id)}`}>{initials(r.user?.name)}</span>
+                        {r.user?.name ?? s.none}
+                      </span>
+                    </td>
+                    <td><span className={`badge ${TIMEOFF_TYPE_BADGE[r.type] ?? "badge-gray"}`}>{s[TIMEOFF_TYPE_KEY[r.type]]}</span></td>
+                    <td className="cell-muted">{fmtDate(r.starts_on)}</td>
+                    <td className="num-cell font-mono">{r.hours_total ?? "—"}</td>
+                    <td className="cell-muted">
+                      <span className={`badge ${TIMEOFF_STATUS_BADGE[r.status]}`} style={{ marginRight: 6 }}>
+                        {s[TIMEOFF_STATUS_KEY[r.status]]}
+                      </span>
+                      {r.notes ?? ""}
+                    </td>
+                    <td style={{ textAlign: "right" }} onClick={(e) => e.stopPropagation()}>
+                      <div className="row-actions">
+                        {r.status === "pending" ? (
+                          <>
+                            <button className="icon-btn" title={s.whApprove} disabled={busy} onClick={() => void decide(r, "approved")}>
+                              <i className="ti ti-check" />
+                            </button>
+                            <button className="icon-btn" title={s.whReject} disabled={busy} onClick={() => void decide(r, "rejected")}>
+                              <i className="ti ti-x" />
+                            </button>
+                          </>
+                        ) : null}
+                        <button className="icon-btn danger" title={s.delete} disabled={busy} onClick={() => void remove(r)}>
+                          <i className="ti ti-trash" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <WorkHoursModal
+        state={modal}
+        lang={lang}
+        token={token}
+        onClose={() => setModal(null)}
+        onSaved={() => { setModal(null); showToast(s.whSavedToast); void load(); }}
+      />
+    </div>
+  );
+}
+
+function WorkHoursModal({
+  state,
+  lang,
+  token,
+  onClose,
+  onSaved,
+}: {
+  state: WorkHoursModalState;
+  lang: string;
+  token: string | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const s = crmStrings(lang);
+  const isEdit = state?.mode === "edit";
+  const [userId, setUserId] = useState("");
+  const [type, setType] = useState<TimeOffType>("vacation");
+  const [starts, setStarts] = useState("");
+  const [ends, setEnds] = useState("");
+  const [hours, setHours] = useState("");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!state) return;
+    setErr(null);
+    if (state.mode === "edit") {
+      setUserId(state.row.user ? String(state.row.user.id) : "");
+      setType(state.row.type);
+      setStarts(state.row.starts_on ? state.row.starts_on.slice(0, 10) : "");
+      setEnds(state.row.ends_on ? state.row.ends_on.slice(0, 10) : "");
+      setHours(state.row.hours_total != null ? String(state.row.hours_total) : "");
+      setNote(state.row.notes ?? "");
+    } else {
+      setUserId("");
+      setType("vacation");
+      setStarts("");
+      setEnds("");
+      setHours("");
+      setNote("");
+    }
+  }, [state]);
+
+  async function submit() {
+    if (!token || !state) return;
+    if (!starts || !ends) { setErr(s.whErrDates); return; }
+    setBusy(true);
+    setErr(null);
+    try {
+      const body: Record<string, unknown> = {
+        type,
+        starts_on: starts,
+        ends_on: ends,
+        notes: note.trim() || null,
+      };
+      if (userId.trim()) body.user_id = Number(userId);
+      if (hours.trim()) body.hours_total = Number(hours);
+      // Backend has no time-off PATCH for fields; editing re-creates as a new
+      // request (the mock's modal is "save"). For an existing row we just POST a
+      // fresh request, matching how the standalone page works (create-only form).
+      await apiFetchJson(`/time-off`, { method: "POST", token, body });
+      onSaved();
+    } catch (e) {
+      setErr(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className={`modal-overlay ${state ? "open" : ""}`} onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <div className="modal-title">{isEdit ? s.whModalEditTitle : s.whModalTitle}</div>
+          <button className="icon-btn" onClick={onClose}><i className="ti ti-x" /></button>
+        </div>
+        <div className="modal-body">
+          {err ? <div className="card" style={{ padding: 12, marginBottom: 12, color: "var(--danger)" }}>{err}</div> : null}
+          <div className="fld mb-3">
+            <span className="fld-label">{s.whFldEmployee}</span>
+            <input type="number" min={1} value={userId} placeholder="—" onChange={(e) => setUserId(e.target.value)} />
+            <span className="fld-hint">{s.whFldEmployeeHint}</span>
+          </div>
+          <div className="form-grid-2">
+            <div className="fld">
+              <span className="fld-label">{s.whFldType}</span>
+              <select value={type} onChange={(e) => setType(e.target.value as TimeOffType)}>
+                {TIMEOFF_TYPES.map((t) => (
+                  <option key={t} value={t}>{s[TIMEOFF_TYPE_KEY[t]]}</option>
+                ))}
+              </select>
+            </div>
+            <div className="fld">
+              <span className="fld-label">{s.whFldHours}</span>
+              <input type="number" step="0.5" min="0" value={hours} placeholder="8" onChange={(e) => setHours(e.target.value)} />
+            </div>
+          </div>
+          <div className="form-grid-2" style={{ marginTop: 12 }}>
+            <div className="fld">
+              <span className="fld-label">{s.whFldStarts}</span>
+              <input type="date" value={starts} onChange={(e) => setStarts(e.target.value)} />
+            </div>
+            <div className="fld">
+              <span className="fld-label">{s.whFldEnds}</span>
+              <input type="date" value={ends} onChange={(e) => setEnds(e.target.value)} />
+            </div>
+          </div>
+          <div className="fld" style={{ marginTop: 12 }}>
+            <span className="fld-label">{s.whFldNote}</span>
+            <input value={note} placeholder={s.whFldNotePh} onChange={(e) => setNote(e.target.value)} />
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn" onClick={onClose}>{s.cancel}</button>
+          <button className="btn btn-primary" disabled={busy} onClick={() => void submit()}>
+            <i className="ti ti-device-floppy" />
+            {s.save}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// Payroll pane — month selector + stat cards + table + breakdown drawer
+// ════════════════════════════════════════════════════════════════
+type PayrollStatus = "draft" | "finalized" | "paid";
+type PayrollRow = {
+  id: number;
+  user: { id: number; name: string; email: string } | null;
+  period_start: string | null;
+  period_end: string | null;
+  base_salary: number;
+  hours_worked: number | null;
+  hourly_rate: number | null;
+  commission_amount: number;
+  bonus_amount: number;
+  deductions_amount: number;
+  gross_pay: number;
+  net_pay: number;
+  currency: string;
+  status: PayrollStatus;
+  paid_at: string | null;
+  notes: string | null;
+};
+
+const PAYROLL_STATUS_KEY: Record<PayrollStatus, CrmKey> = {
+  draft: "prStatusDraft",
+  finalized: "prStatusFinalized",
+  paid: "prStatusPaid",
+};
+const PAYROLL_STATUS_BADGE: Record<PayrollStatus, string> = {
+  draft: "badge-gray",
+  finalized: "badge-info",
+  paid: "badge-success",
+};
+
+function PayrollPane({ token, lang, registerAction, showToast }: PaneProps) {
+  const s = crmStrings(lang);
+  const [rows, setRows] = useState<PayrollRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [month, setMonth] = useState(monthString());
+  const [drawer, setDrawer] = useState<PayrollRow | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    setErr(null);
+    try {
+      const res = await apiFetchJson<ApiSuccessEnvelope<PayrollRow[]> & { meta: ApiListMeta }>(
+        `/payroll?per_page=200`,
+        { method: "GET", token }
+      );
+      setRows(res.data);
+    } catch (e) {
+      setErr(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+  useEffect(() => { void load(); }, [load]);
+
+  const filtered = useMemo(() => {
+    return rows.filter((r) => {
+      if (!month) return true;
+      const ref = r.period_start ?? r.period_end;
+      return !!ref && ref.slice(0, 7) === month;
+    });
+  }, [rows, month]);
+
+  async function exportBatch() {
+    if (!token) return;
+    try {
+      const base = (process.env.NEXT_PUBLIC_API_URL || "https://api.zulu.am").replace(/\/$/, "");
+      const res = await fetch(`${base}/payroll/bank-batch?status=finalized`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new ApiRequestError(`HTTP ${res.status}`, res.status);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `payroll-batch-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast(s.prExportedToast);
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    }
+  }
+
+  async function finalizeMonth() {
+    if (!token) return;
+    const drafts = filtered.filter((r) => r.status === "draft");
+    if (drafts.length === 0) { alert(s.prNoDraftsToFinalize); return; }
+    if (typeof window !== "undefined" && !window.confirm(s.prConfirmFinalize)) return;
+    setBusy(true);
+    try {
+      for (const r of drafts) {
+        await apiFetchJson(`/payroll/${r.id}/status`, { method: "PATCH", token, body: { status: "finalized" } });
+      }
+      showToast(s.prFinalizedToast);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function changeStatus(row: PayrollRow, status: PayrollStatus) {
+    if (!token) return;
+    if (status === "paid" && typeof window !== "undefined" && !window.confirm(s.prConfirmPaid)) return;
+    setBusy(true);
+    try {
+      await apiFetchJson(`/payroll/${row.id}/status`, { method: "PATCH", token, body: { status } });
+      showToast(status === "paid" ? s.prPaidToast : s.prFinalizedToast);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    registerAction(
+      <>
+        <button className="btn" onClick={() => void exportBatch()}>
+          <i className="ti ti-file-export" />
+          {s.prActExport}
+        </button>
+        <button className="btn" onClick={() => setAddOpen(true)}>
+          <i className="ti ti-plus" />
+          {s.prActAddRecord}
+        </button>
+        <button className="btn btn-primary" disabled={busy} onClick={() => void finalizeMonth()}>
+          <i className="ti ti-lock" />
+          {s.prActFinalize}
+        </button>
+      </>
+    );
+    return () => registerAction(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang, busy, filtered]);
+
+  // header stats
+  const currency = filtered[0]?.currency ?? "AMD";
+  const totalPay = filtered.reduce((acc, r) => acc + r.net_pay, 0);
+  const totalCommission = filtered.reduce((acc, r) => acc + r.commission_amount, 0);
+  const employeeCount = new Set(filtered.map((r) => r.user?.id ?? r.id)).size;
+  const monthStatus = useMemo<CrmKey>(() => {
+    if (filtered.length === 0) return "prMonthDraft";
+    const statuses = new Set(filtered.map((r) => r.status));
+    if (statuses.size === 1) {
+      const only = filtered[0]!.status;
+      return only === "paid" ? "prMonthPaid" : only === "finalized" ? "prMonthFinalized" : "prMonthDraft";
+    }
+    return "prMonthMixed";
+  }, [filtered]);
+
+  return (
+    <div>
+      <div className="stat-grid">
+        <div className="stat-card c-primary">
+          <div className="stat-header"><i className="ti ti-cash" /></div>
+          <div className="stat-value" style={{ fontSize: 20 }}>{money(totalPay, currency)}</div>
+          <div className="stat-label">{s.prStatTotal}</div>
+        </div>
+        <div className="stat-card c-info">
+          <div className="stat-header"><i className="ti ti-users-group" /></div>
+          <div className="stat-value">{employeeCount}</div>
+          <div className="stat-label">{s.prStatEmployees}</div>
+        </div>
+        <div className="stat-card c-success">
+          <div className="stat-header"><i className="ti ti-percentage" /></div>
+          <div className="stat-value" style={{ fontSize: 20 }}>{money(totalCommission, currency)}</div>
+          <div className="stat-label">{s.prStatCommission}</div>
+        </div>
+        <div className="stat-card c-warning">
+          <div className="stat-header"><i className="ti ti-file-pencil" /></div>
+          <div className="stat-value" style={{ fontSize: 20 }}>{s[monthStatus]}</div>
+          <div className="stat-label">{s.prStatMonthStatus}</div>
+        </div>
+      </div>
+
+      <div className="filter-card">
+        <div className="filter-field">
+          <span className="filter-label">{s.prFilterMonth}</span>
+          <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
+        </div>
+        <button className="btn btn-primary" onClick={() => void load()}>
+          <i className="ti ti-filter" />
+          {s.apply}
+        </button>
+      </div>
+
+      {err ? <div className="card" style={{ padding: 16, color: "var(--danger)" }}>{err}</div> : null}
+
+      <div className="card" style={{ marginBottom: 0 }}>
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>{s.prColEmployee}</th>
+                <th className="num-cell">{s.prColBase}</th>
+                <th className="num-cell">{s.prColCommission}</th>
+                <th className="num-cell">{s.prColTotal}</th>
+                <th>{s.prColStatus}</th>
+                <th style={{ textAlign: "right" }}>{s.colActions}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading && rows.length === 0 ? (
+                <tr><td colSpan={6} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.loading}</td></tr>
+              ) : filtered.length === 0 ? (
+                <tr><td colSpan={6} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.prEmpty}</td></tr>
+              ) : (
+                filtered.map((r) => (
+                  <tr key={r.id} onClick={() => setDrawer(r)}>
+                    <td>
+                      <span className="flex items-center gap-2">
+                        <span className={`avatar sm ${avatarTone(r.user?.id ?? r.id)}`}>{initials(r.user?.name)}</span>
+                        {r.user?.name ?? s.none}
+                      </span>
+                    </td>
+                    <td className="num-cell font-mono">{money(r.base_salary, r.currency)}</td>
+                    <td className="num-cell font-mono">{money(r.commission_amount, r.currency)}</td>
+                    <td className="num-cell font-mono">{money(r.net_pay, r.currency)}</td>
+                    <td><span className={`badge ${PAYROLL_STATUS_BADGE[r.status]}`}>{s[PAYROLL_STATUS_KEY[r.status]]}</span></td>
+                    <td style={{ textAlign: "right" }} onClick={(e) => e.stopPropagation()}>
+                      <div className="row-actions">
+                        <button className="btn btn-sm" onClick={() => setDrawer(r)}>
+                          <i className="ti ti-eye" />
+                          {s.prBreakdown}
+                        </button>
+                        {r.status === "draft" ? (
+                          <button className="btn btn-sm" disabled={busy} onClick={() => void changeStatus(r, "finalized")}>
+                            {s.prFinalize}
+                          </button>
+                        ) : null}
+                        {r.status === "finalized" ? (
+                          <button className="btn btn-sm btn-primary" disabled={busy} onClick={() => void changeStatus(r, "paid")}>
+                            {s.prMarkPaid}
+                          </button>
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <PayrollDrawer row={drawer} lang={lang} onClose={() => setDrawer(null)} />
+      <PayrollAddModal
+        open={addOpen}
+        lang={lang}
+        token={token}
+        onClose={() => setAddOpen(false)}
+        onSaved={() => { setAddOpen(false); showToast(s.whSavedToast); void load(); }}
+      />
+    </div>
+  );
+}
+
+function PayrollDrawer({ row, lang, onClose }: { row: PayrollRow | null; lang: string; onClose: () => void }) {
+  const s = crmStrings(lang);
+  return (
+    <>
+      <div className={`drawer-overlay ${row ? "open" : ""}`} onClick={onClose} />
+      <div className={`drawer ${row ? "open" : ""}`}>
+        <div className="drawer-header">
+          <div>
+            <div className="card-title">{s.prDrawerTitle}</div>
+            <div className="card-subtitle">
+              {row?.user?.name ?? ""}
+              {row?.period_start ? ` · ${fmtDate(row.period_start)} → ${fmtDate(row.period_end)}` : ""}
+            </div>
+          </div>
+          <button className="icon-btn" onClick={onClose}><i className="ti ti-x" /></button>
+        </div>
+        <div className="drawer-body">
+          {row ? (
+            <div className="info-grid">
+              <div className="info-row">
+                <span className="info-label">{s.prBdBase}</span>
+                <span className="info-value font-mono">{money(row.base_salary, row.currency)}</span>
+              </div>
+              {row.hours_worked != null && row.hourly_rate != null ? (
+                <div className="info-row">
+                  <span className="info-label">{s.prBdHourly}</span>
+                  <span className="info-value font-mono">{`${row.hours_worked} × ${money(row.hourly_rate, row.currency)}`}</span>
+                </div>
+              ) : null}
+              <div className="info-row">
+                <span className="info-label">{s.prBdCommission}</span>
+                <span className="info-value font-mono">{money(row.commission_amount, row.currency)}</span>
+              </div>
+              <div className="info-row">
+                <span className="info-label">{s.prBdBonus}</span>
+                <span className="info-value font-mono">{money(row.bonus_amount, row.currency)}</span>
+              </div>
+              <div className="info-row">
+                <span className="info-label">{s.prBdGross}</span>
+                <span className="info-value font-mono">{money(row.gross_pay, row.currency)}</span>
+              </div>
+              <div className="info-row">
+                <span className="info-label">{s.prBdAdjustments}</span>
+                <span className="info-value font-mono">{money(row.deductions_amount, row.currency)}</span>
+              </div>
+              <div className="info-row">
+                <span className="info-label">{s.prBdTotal}</span>
+                <span className="info-value font-mono" style={{ fontWeight: 600 }}>{money(row.net_pay, row.currency)}</span>
+              </div>
+            </div>
+          ) : null}
+        </div>
+        <div className="drawer-footer">
+          <button className="btn" onClick={onClose}>{s.cancel}</button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function PayrollAddModal({
+  open,
+  lang,
+  token,
+  onClose,
+  onSaved,
+}: {
+  open: boolean;
+  lang: string;
+  token: string | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const s = crmStrings(lang);
+  const [form, setForm] = useState({
+    user_id: "",
+    period_start: "",
+    period_end: "",
+    base_salary: "0",
+    hours_worked: "",
+    hourly_rate: "",
+    commission_amount: "0",
+    bonus_amount: "0",
+    deductions_amount: "0",
+    currency: "AMD",
+    notes: "",
+  });
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setErr(null);
+      setForm({
+        user_id: "", period_start: "", period_end: "", base_salary: "0",
+        hours_worked: "", hourly_rate: "", commission_amount: "0", bonus_amount: "0",
+        deductions_amount: "0", currency: "AMD", notes: "",
+      });
+    }
+  }, [open]);
+
+  async function submit() {
+    if (!token) return;
+    if (!form.user_id.trim() || !form.period_start || !form.period_end) { setErr(s.prmErr); return; }
+    setBusy(true);
+    setErr(null);
+    try {
+      const body: Record<string, unknown> = {
+        user_id: Number(form.user_id),
+        period_start: form.period_start,
+        period_end: form.period_end,
+        base_salary: Number(form.base_salary) || 0,
+        commission_amount: Number(form.commission_amount) || 0,
+        bonus_amount: Number(form.bonus_amount) || 0,
+        deductions_amount: Number(form.deductions_amount) || 0,
+        currency: form.currency.trim().toUpperCase() || "AMD",
+        notes: form.notes.trim() || null,
+      };
+      if (form.hours_worked.trim()) body.hours_worked = Number(form.hours_worked);
+      if (form.hourly_rate.trim()) body.hourly_rate = Number(form.hourly_rate);
+      await apiFetchJson(`/payroll`, { method: "POST", token, body });
+      onSaved();
+    } catch (e) {
+      setErr(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className={`modal-overlay ${open ? "open" : ""}`} onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal lg">
+        <div className="modal-header">
+          <div className="modal-title">{s.prmTitle}</div>
+          <button className="icon-btn" onClick={onClose}><i className="ti ti-x" /></button>
+        </div>
+        <div className="modal-body">
+          {err ? <div className="card" style={{ padding: 12, marginBottom: 12, color: "var(--danger)" }}>{err}</div> : null}
+          <div className="form-grid-2">
+            <div className="fld">
+              <span className="fld-label">{s.prmUser}</span>
+              <input type="number" min={1} value={form.user_id} onChange={(e) => setForm({ ...form, user_id: e.target.value })} />
+            </div>
+            <div className="fld">
+              <span className="fld-label">{s.prmCurrency}</span>
+              <input maxLength={3} value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase() })} />
+            </div>
+            <div className="fld">
+              <span className="fld-label">{s.prmPeriodStart}</span>
+              <input type="date" value={form.period_start} onChange={(e) => setForm({ ...form, period_start: e.target.value })} />
+            </div>
+            <div className="fld">
+              <span className="fld-label">{s.prmPeriodEnd}</span>
+              <input type="date" value={form.period_end} onChange={(e) => setForm({ ...form, period_end: e.target.value })} />
+            </div>
+            <div className="fld">
+              <span className="fld-label">{s.prmBase}</span>
+              <input type="number" step="0.01" min="0" value={form.base_salary} onChange={(e) => setForm({ ...form, base_salary: e.target.value })} />
+            </div>
+            <div className="fld">
+              <span className="fld-label">{s.prmCommission}</span>
+              <input type="number" step="0.01" min="0" value={form.commission_amount} onChange={(e) => setForm({ ...form, commission_amount: e.target.value })} />
+            </div>
+            <div className="fld">
+              <span className="fld-label">{s.prmHours}</span>
+              <input type="number" step="0.01" min="0" value={form.hours_worked} onChange={(e) => setForm({ ...form, hours_worked: e.target.value })} />
+            </div>
+            <div className="fld">
+              <span className="fld-label">{s.prmRate}</span>
+              <input type="number" step="0.01" min="0" value={form.hourly_rate} onChange={(e) => setForm({ ...form, hourly_rate: e.target.value })} />
+            </div>
+            <div className="fld">
+              <span className="fld-label">{s.prmBonus}</span>
+              <input type="number" step="0.01" min="0" value={form.bonus_amount} onChange={(e) => setForm({ ...form, bonus_amount: e.target.value })} />
+            </div>
+            <div className="fld">
+              <span className="fld-label">{s.prmDeductions}</span>
+              <input type="number" step="0.01" min="0" value={form.deductions_amount} onChange={(e) => setForm({ ...form, deductions_amount: e.target.value })} />
+            </div>
+          </div>
+          <div className="fld" style={{ marginTop: 12 }}>
+            <span className="fld-label">{s.prmNote}</span>
+            <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn" onClick={onClose}>{s.cancel}</button>
+          <button className="btn btn-primary" disabled={busy} onClick={() => void submit()}>
+            <i className="ti ti-device-floppy" />
+            {s.prmCreate}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// Contracts pane — role-routed list + in-pane detail + new-contract modal
+// ════════════════════════════════════════════════════════════════
+type TermObj = Record<string, unknown> | null | undefined;
+
+function fmtContractCommission(cc: TermObj, none: string): string {
+  if (!cc || cc.value == null) return none;
+  const v = String(cc.value);
+  return cc.type === "percent" ? `${v}%` : v;
+}
+function fmtContractPayment(pt: TermObj, s: Record<CrmKey, string>): string {
+  if (!pt) return s.none;
+  const collector =
+    pt.collector === "operator" || pt.collector === "partner" ? s.ctCollectorPartner : s.ctCollectorPlatform;
+  const days = pt.t_plus_days != null ? ` · T+${String(pt.t_plus_days)}` : "";
+  return `${collector}${days}`;
+}
+function fmtContractCancellation(cp: TermObj, s: Record<CrmKey, string>): string {
+  if (!cp) return s.none;
+  const parts: string[] = [];
+  if (cp.notice_days != null) parts.push(`${String(cp.notice_days)} ${s.ctNoticeDays}`);
+  if (cp.fee_percent != null) parts.push(`${String(cp.fee_percent)}%`);
+  return parts.length ? parts.join(" · ") : s.none;
+}
+function fmtContractSignature(sig: TermObj, key: "party_a" | "party_b", none: string): string {
+  if (!sig) return none;
+  const entry = sig[key] as Record<string, unknown> | undefined;
+  if (!entry) return none;
+  const name = entry.name != null ? String(entry.name) : "";
+  const at = entry.signed_at != null ? fmtDateTime(String(entry.signed_at)) : "";
+  return [name, at].filter(Boolean).join(" · ") || none;
+}
+function fmtContractBody(rb: TermObj): string {
+  if (!rb) return "";
+  if (typeof rb.text === "string") return rb.text;
+  if (typeof rb.body === "string") return rb.body;
+  try { return JSON.stringify(rb, null, 2); } catch { return ""; }
+}
+
+const CONTRACT_DETAIL_TABS: Array<{ key: "overview" | "document" | "signatures" | "history"; labelKey: CrmKey }> = [
+  { key: "overview", labelKey: "ctTabOverview" },
+  { key: "document", labelKey: "ctTabDocument" },
+  { key: "signatures", labelKey: "ctTabSignatures" },
+  { key: "history", labelKey: "ctTabHistory" },
+];
+
+function ContractsPane({
+  token,
+  user,
+  lang,
+  registerAction,
+  showToast,
+}: PaneProps & { user: TeamUser | null }) {
+  const s = crmStrings(lang);
+  const isAdmin = !!(user?.is_super_admin || canAccessPlatformAdminNav(user));
+  const [rows, setRows] = useState<ContractRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [templateFilter, setTemplateFilter] = useState("");
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [newOpen, setNewOpen] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    setErr(null);
+    try {
+      if (isAdmin) {
+        const res = await apiAdminContracts(token, {
+          per_page: 200,
+          status: (statusFilter || "") as ContractStatus | "",
+          q: search || undefined,
+        });
+        setRows(res.data);
+      } else {
+        const res = await apiSellerContracts(token);
+        setRows(res.data);
+      }
+    } catch (e) {
+      setErr(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, isAdmin, statusFilter, search]);
+  useEffect(() => { void load(); }, [load]);
+
+  // top-right action: New contract (admin only — sellers cannot create)
+  useEffect(() => {
+    if (!isAdmin || detailId != null) { registerAction(null); return; }
+    registerAction(
+      <button className="btn btn-primary" onClick={() => setNewOpen(true)}>
+        <i className="ti ti-plus" />
+        {s.actNewContract}
+      </button>
+    );
+    return () => registerAction(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang, isAdmin, detailId]);
+
+  const templates = useMemo(() => {
+    const m = new Map<string, string>();
+    rows.forEach((r) => { if (r.template) m.set(r.template.id, r.template.name); });
+    return Array.from(m.entries());
+  }, [rows]);
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    return rows.filter((r) => {
+      if (!isAdmin && statusFilter && r.status !== statusFilter) return false;
+      if (templateFilter && r.template?.id !== templateFilter) return false;
+      if (!isAdmin && q) {
+        const hay = `${r.contract_number} ${r.partyA?.name ?? ""} ${r.partyB?.name ?? ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [rows, isAdmin, statusFilter, templateFilter, search]);
+
+  if (detailId != null) {
+    return (
+      <ContractDetailView
+        token={token}
+        isAdmin={isAdmin}
+        contractId={detailId}
+        lang={lang}
+        showToast={showToast}
+        onBack={() => { setDetailId(null); void load(); }}
+      />
+    );
+  }
+
+  // stats
+  const total = rows.length;
+  const signed = rows.filter((r) => r.status === "active" || r.status === "countersigned").length;
+  const drafts = rows.filter((r) => r.status === "draft").length;
+  const now = new Date();
+  const expiring = rows.filter((r) => {
+    if (!r.expiry_date) return false;
+    const diff = (new Date(r.expiry_date).getTime() - now.getTime()) / 86_400_000;
+    return diff > 0 && diff <= 30;
+  }).length;
+
+  return (
+    <div>
+      <div className="stat-grid">
+        <div className="stat-card c-primary">
+          <div className="stat-header"><i className="ti ti-file-text" /></div>
+          <div className="stat-value">{total}</div>
+          <div className="stat-label">{s.ctStatTotal}</div>
+        </div>
+        <div className="stat-card c-success">
+          <div className="stat-header"><i className="ti ti-signature" /></div>
+          <div className="stat-value">{signed}</div>
+          <div className="stat-label">{s.ctStatSigned}</div>
+        </div>
+        <div className="stat-card c-warning">
+          <div className="stat-header"><i className="ti ti-pencil" /></div>
+          <div className="stat-value">{drafts}</div>
+          <div className="stat-label">{s.ctStatDraft}</div>
+        </div>
+        <div className="stat-card c-danger">
+          <div className="stat-header"><i className="ti ti-calendar-x" /></div>
+          <div className="stat-value">{expiring}</div>
+          <div className="stat-label">{s.ctStatExpiring}</div>
+        </div>
+      </div>
+
+      <div className="filter-card">
+        <div className="filter-field" style={{ flex: 2 }}>
+          <span className="filter-label">{s.search}</span>
+          <input
+            type="search"
+            placeholder={s.ctSearchPh}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && setSearch(searchInput.trim())}
+          />
+        </div>
+        <div className="filter-field">
+          <span className="filter-label">{s.status}</span>
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="">{s.allStages}</option>
+            <option value="draft">{s.ctStatusDraft}</option>
+            <option value="sent">{s.ctStatusSent}</option>
+            <option value="countersigned">{s.ctStatusCountersigned}</option>
+            <option value="active">{s.ctStatusActive}</option>
+            <option value="expired">{s.ctStatusExpired}</option>
+            <option value="terminated">{s.ctStatusTerminated}</option>
+          </select>
+        </div>
+        <div className="filter-field">
+          <span className="filter-label">{s.ctFilterTemplate}</span>
+          <select value={templateFilter} onChange={(e) => setTemplateFilter(e.target.value)}>
+            <option value="">{s.ctTemplateAll}</option>
+            {templates.map(([id, name]) => (
+              <option key={id} value={id}>{name}</option>
+            ))}
+          </select>
+        </div>
+        <button className="btn btn-primary" onClick={() => setSearch(searchInput.trim())}>
+          <i className="ti ti-filter" />
+          {s.apply}
+        </button>
+      </div>
+
+      {err ? <div className="card" style={{ padding: 16, color: "var(--danger)" }}>{err}</div> : null}
+
+      <div className="card" style={{ marginBottom: 0 }}>
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>{s.ctColNumber}</th>
+                <th>{s.ctColType}</th>
+                <th>{s.ctColParty}</th>
+                <th>{s.ctColTemplate}</th>
+                <th>{s.ctColStatus}</th>
+                <th>{s.ctColEffective}</th>
+                <th>{s.ctColExpires}</th>
+                <th style={{ textAlign: "right" }}>{s.colActions}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading && rows.length === 0 ? (
+                <tr><td colSpan={8} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.loading}</td></tr>
+              ) : filtered.length === 0 ? (
+                <tr><td colSpan={8} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{isAdmin ? s.ctEmpty : s.ctEmptySeller}</td></tr>
+              ) : (
+                filtered.map((r) => {
+                  const party = r.partyB?.name ?? r.partyA?.name ?? `Company #${r.party_b_company_id}`;
+                  return (
+                    <tr key={r.id} onClick={() => setDetailId(r.id)}>
+                      <td className="font-mono">{r.contract_number}</td>
+                      <td><span className="type-badge">{r.type === "platform" ? s.ctTypePlatform : s.ctTypePartner}</span></td>
+                      <td className="font-semibold">{party}</td>
+                      <td className="cell-muted">{r.template?.name ?? s.none}</td>
+                      <td><span className={`badge ${CONTRACT_STATUS_BADGE[r.status] ?? "badge-gray"}`}>{s[CONTRACT_STATUS_KEY[r.status]]}</span></td>
+                      <td className="cell-muted">{fmtDate(r.effective_date)}</td>
+                      <td className="cell-muted">{fmtDate(r.expiry_date)}</td>
+                      <td style={{ textAlign: "right" }} onClick={(e) => e.stopPropagation()}>
+                        <div className="row-actions">
+                          <button className="icon-btn" title={s.ctView} onClick={() => setDetailId(r.id)}>
+                            <i className="ti ti-eye" />
+                          </button>
+                          <button
+                            className="icon-btn"
+                            title={s.ctActDownloadPdf}
+                            onClick={() => {
+                              if (r.signed_pdf_url) window.open(r.signed_pdf_url, "_blank");
+                              else showToast(s.ctActDownloadPdf);
+                            }}
+                          >
+                            <i className="ti ti-download" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {isAdmin ? (
+        <NewContractModal
+          open={newOpen}
+          token={token}
+          lang={lang}
+          onClose={() => setNewOpen(false)}
+          onCreated={() => { setNewOpen(false); showToast(s.ctCreatedToast); void load(); }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function ContractDetailView({
+  token,
+  isAdmin,
+  contractId,
+  lang,
+  showToast,
+  onBack,
+}: {
+  token: string | null;
+  isAdmin: boolean;
+  contractId: string;
+  lang: string;
+  showToast: (msg: string) => void;
+  onBack: () => void;
+}) {
+  const s = crmStrings(lang);
+  const [detail, setDetail] = useState<ContractDetail | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [tab, setTab] = useState<"overview" | "document" | "signatures" | "history">("overview");
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    setErr(null);
+    try {
+      const res = isAdmin
+        ? await apiAdminContract(token, contractId)
+        : await apiSellerContract(token, contractId);
+      setDetail(res.data);
+    } catch (e) {
+      if (e instanceof ApiRequestError && e.status === 404) setErr(s.ctNotAvailable);
+      else setErr(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, isAdmin, contractId]);
+  useEffect(() => { void load(); }, [load]);
+
+  const d = detail;
+
+  async function doAction(kind: "send" | "countersign" | "sign" | "terminate") {
+    if (!token || !d) return;
+    const confirms: Record<typeof kind, string> = {
+      send: s.ctConfirmSend,
+      countersign: s.ctConfirmCountersign,
+      sign: s.ctConfirmSign,
+      terminate: s.ctConfirmTerminate,
+    };
+    if (typeof window !== "undefined" && !window.confirm(confirms[kind])) return;
+    let reason = "";
+    if (kind === "terminate") {
+      reason = (typeof window !== "undefined" && window.prompt(s.ctTerminateReasonPrompt)) || "";
+      if (!reason) return;
+    }
+    setBusy(true);
+    try {
+      if (kind === "send") { await apiAdminSendContract(token, d.id); showToast(s.ctSentToast); }
+      else if (kind === "countersign") { await apiAdminCountersignContract(token, d.id); showToast(s.ctCountersignedToast); }
+      else if (kind === "sign") { await apiSellerSignContract(token, d.id); showToast(s.ctSignedToast); }
+      else { await apiAdminTerminateContract(token, d.id, reason); showToast(s.ctTerminatedToast); }
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const sellerCanSign = !isAdmin && (d?.status === "sent" || d?.status === "signed_by_a");
+  const hasSignatures = d?.signatures && Object.keys(d.signatures).length > 0;
+
+  return (
+    <div>
+      <button className="btn btn-ghost detail-back" onClick={onBack}>
+        <i className="ti ti-arrow-left" />
+        {s.ctBackToList}
+      </button>
+
+      {err ? <div className="card" style={{ padding: 16, color: "var(--danger)" }}>{err}</div> : null}
+
+      <div className="detail-head">
+        <div className="detail-logo">CT</div>
+        <div>
+          <div className="detail-title">
+            <span className="font-mono">{d?.contract_number ?? (loading ? s.loading : s.none)}</span>
+            {d ? <span className={`badge ${CONTRACT_STATUS_BADGE[d.status] ?? "badge-gray"}`}>{s[CONTRACT_STATUS_KEY[d.status]]}</span> : null}
+          </div>
+          <div className="detail-meta">
+            <span>{d?.type === "platform" ? s.ctPlatformContract : s.ctPartnerContract}</span>
+            <span>·</span>
+            <span>{s.ctPartyLabel}: <strong>{d?.partyB?.name ?? d?.partyA?.name ?? s.none}</strong></span>
+          </div>
+        </div>
+        <div className="detail-head-right">
+          <button className="btn" disabled={!d?.signed_pdf_url} onClick={() => d?.signed_pdf_url && window.open(d.signed_pdf_url, "_blank")}>
+            <i className="ti ti-download" />
+            {s.ctActDownloadPdf}
+          </button>
+        </div>
+      </div>
+
+      <div className="sub-tabs">
+        {CONTRACT_DETAIL_TABS.map((t) => (
+          <button key={t.key} className={`sub-tab ct-tab ${tab === t.key ? "active" : ""}`} onClick={() => setTab(t.key)}>
+            {s[t.labelKey]}
+          </button>
+        ))}
+      </div>
+
+      {/* overview */}
+      {tab === "overview" ? (
+        <div className="detail-card-grid">
+          <div className="card">
+            <div className="card-header"><div className="card-title">{s.ctParties}</div></div>
+            <div className="card-body">
+              <div className="info-grid">
+                <div className="info-row"><span className="info-label">{s.ctPartyA}</span><span className="info-value">{d?.partyA?.name ?? "ZULU Platform"}</span></div>
+                <div className="info-row"><span className="info-label">{s.ctPartyB}</span><span className="info-value">{d?.partyB?.name ?? (d ? `Company #${d.party_b_company_id}` : s.none)}</span></div>
+                <div className="info-row"><span className="info-label">{s.ctLanguage}</span><span className="info-value" style={{ textTransform: "uppercase" }}>{d?.language ?? s.none}</span></div>
+              </div>
+            </div>
+          </div>
+          <div className="card">
+            <div className="card-header"><div className="card-title">{s.ctTerms}</div></div>
+            <div className="card-body">
+              <div className="info-grid">
+                <div className="info-row"><span className="info-label">{s.ctCommission}</span><span className="info-value">{fmtContractCommission(d?.commission_clause, s.none)}</span></div>
+                <div className="info-row"><span className="info-label">{s.ctWhoCollects}</span><span className="info-value">{fmtContractPayment(d?.payment_terms, s)}</span></div>
+                <div className="info-row"><span className="info-label">{s.ctCancellation}</span><span className="info-value">{fmtContractCancellation(d?.cancellation_policy, s)}</span></div>
+              </div>
+            </div>
+          </div>
+          <div className="card">
+            <div className="card-header"><div className="card-title">{s.ctSchedule}</div></div>
+            <div className="card-body">
+              <div className="info-grid">
+                <div className="info-row"><span className="info-label">{s.ctEffective}</span><span className="info-value">{fmtDate(d?.effective_date)}</span></div>
+                <div className="info-row"><span className="info-label">{s.ctExpires}</span><span className="info-value">{fmtDate(d?.expiry_date)}</span></div>
+                <div className="info-row">
+                  <span className="info-label">{s.ctAutoRenew}</span>
+                  <span className="info-value">
+                    {d?.auto_renew ? s.yes : s.no}
+                    {d?.termination_notice_days ? ` · ${d.termination_notice_days} ${s.ctNoticeDays}` : ""}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* document */}
+      {tab === "document" ? (
+        <div className="card">
+          <div className="card-header">
+            <div className="card-title">{s.ctRenderedBody}</div>
+            <button className="btn btn-sm" disabled={!d?.signed_pdf_url} onClick={() => d?.signed_pdf_url && window.open(d.signed_pdf_url, "_blank")}>
+              <i className="ti ti-download" />PDF
+            </button>
+          </div>
+          <div className="card-body">
+            {d?.rendered_body && fmtContractBody(d.rendered_body) ? (
+              <div className="code-block">{fmtContractBody(d.rendered_body)}</div>
+            ) : (
+              <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>{s.ctNoBody}</p>
+            )}
+          </div>
+        </div>
+      ) : null}
+
+      {/* signatures */}
+      {tab === "signatures" ? (
+        <div className="card">
+          <div className="card-header"><div className="card-title">{s.ctSignaturesTitle}</div></div>
+          <div className="card-body">
+            <div className="info-grid">
+              <div className="info-row wide"><span className="info-label">{s.ctSignedA}</span><span className="info-value">{hasSignatures ? fmtContractSignature(d!.signatures, "party_a", s.ctNotSigned) : s.ctNotSigned}</span></div>
+              <div className="info-row wide"><span className="info-label">{s.ctSignedB}</span><span className="info-value">{hasSignatures ? fmtContractSignature(d!.signatures, "party_b", s.ctNotSigned) : s.ctNotSigned}</span></div>
+              <div className="info-row wide">
+                <span className="info-label">{s.ctSignStatus}</span>
+                <span className="info-value">{d ? <span className={`badge ${CONTRACT_STATUS_BADGE[d.status] ?? "badge-gray"}`}>{s[CONTRACT_STATUS_KEY[d.status]]}</span> : s.none}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* history */}
+      {tab === "history" ? (
+        <div className="card">
+          <div className="card-header"><div className="card-title">{s.ctVersionHistory}</div></div>
+          <div className="card-body">
+            {d?.versions && d.versions.length > 0 ? (
+              <div className="timeline">
+                {d.versions.map((v, i) => (
+                  <div className={`tl-item ${i === 0 ? "active" : "done"}`} key={v.id}>
+                    <span className="tl-dot" />
+                    <div className="tl-title">v{v.version_number}</div>
+                    <div className="tl-time">{v.created_at ? fmtDateTime(v.created_at) : ""}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>{s.ctNoHistory}</p>
+            )}
+          </div>
+        </div>
+      ) : null}
+
+      {/* sticky actions */}
+      <div className="sticky-actions">
+        {isAdmin ? (
+          <>
+            <button className="btn" disabled={busy || !d || d.status !== "draft"} onClick={() => void doAction("send")}>
+              <i className="ti ti-send" />{s.ctActSend}
+            </button>
+            <button className="btn" disabled={busy || !d || (d.status !== "signed_by_a" && d.status !== "signed_by_b")} onClick={() => void doAction("countersign")}>
+              <i className="ti ti-writing-sign" />{s.ctActCountersign}
+            </button>
+            <span className="spacer" />
+            <button className="btn btn-danger" disabled={busy || !d || d.status === "terminated" || d.status === "expired"} onClick={() => void doAction("terminate")}>
+              <i className="ti ti-ban" />{s.ctActTerminate}
+            </button>
+          </>
+        ) : (
+          <>
+            <button className="btn btn-primary" disabled={busy || !sellerCanSign} onClick={() => void doAction("sign")}>
+              <i className="ti ti-writing-sign" />{s.ctActSign}
+            </button>
+            <span className="spacer" />
+          </>
+        )}
+        <button className="btn btn-primary" disabled={!d?.signed_pdf_url} onClick={() => d?.signed_pdf_url && window.open(d.signed_pdf_url, "_blank")}>
+          <i className="ti ti-download" />{s.ctActDownloadPdf}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function NewContractModal({
+  open,
+  token,
+  lang,
+  onClose,
+  onCreated,
+}: {
+  open: boolean;
+  token: string | null;
+  lang: string;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const s = crmStrings(lang);
+  const [templates, setTemplates] = useState<ContractTemplateRow[]>([]);
+  const [companies, setCompanies] = useState<CompanyListRow[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    template_id: "",
+    party_b_company_id: "",
+    language: "en" as ContractLanguage,
+    commission_type: "percent" as "percent" | "amount",
+    commission_value: "",
+    payment_collector: "platform" as "platform" | "operator",
+    payment_days: "7",
+    cancellation_notice_days: "30",
+    cancellation_fee_percent: "",
+    effective_date: "",
+    expiry_date: "",
+    auto_renew: true,
+    termination_notice_days: "30",
+  });
+
+  useEffect(() => {
+    if (!open || !token) return;
+    setErr(null);
+    let cancelled = false;
+    void (async () => {
+      try {
+        const [tpl, co] = await Promise.all([
+          apiAdminContractTemplates(token, { per_page: 100 }),
+          apiCompaniesList(token),
+        ]);
+        if (cancelled) return;
+        setTemplates(tpl.data);
+        setCompanies(co.data);
+      } catch { /* options best-effort */ }
+    })();
+    return () => { cancelled = true; };
+  }, [open, token]);
+
+  async function submit() {
+    if (!token) return;
+    if (!form.template_id) { setErr(s.ctmErrTemplate); return; }
+    if (!form.party_b_company_id) { setErr(s.ctmErrPartyB); return; }
+    const commissionNumeric = form.commission_value.trim() === "" ? null : Number(form.commission_value);
+    const paymentDaysNumeric = form.payment_days.trim() === "" ? null : Number(form.payment_days);
+    const cancelDaysNumeric = form.cancellation_notice_days.trim() === "" ? null : Number(form.cancellation_notice_days);
+    const cancelFeeNumeric = form.cancellation_fee_percent.trim() === "" ? null : Number(form.cancellation_fee_percent);
+    const commission: Record<string, unknown> = commissionNumeric === null ? {} : { type: form.commission_type, value: commissionNumeric };
+    const payment: Record<string, unknown> = paymentDaysNumeric === null
+      ? { collector: form.payment_collector }
+      : { collector: form.payment_collector, t_plus_days: paymentDaysNumeric };
+    const cancellation: Record<string, unknown> = {};
+    if (cancelDaysNumeric !== null) cancellation.notice_days = cancelDaysNumeric;
+    if (cancelFeeNumeric !== null) cancellation.fee_percent = cancelFeeNumeric;
+
+    setSaving(true);
+    setErr(null);
+    try {
+      await apiAdminCreateContract(token, {
+        template_id: form.template_id,
+        party_a_company_id: null,
+        party_b_company_id: Number(form.party_b_company_id),
+        language: form.language,
+        effective_date: form.effective_date || null,
+        expiry_date: form.expiry_date || null,
+        auto_renew: form.auto_renew,
+        termination_notice_days: form.termination_notice_days ? Number(form.termination_notice_days) : undefined,
+        commission_clause: commission,
+        payment_terms: payment,
+        cancellation_policy: cancellation,
+      });
+      onCreated();
+    } catch (e) {
+      setErr(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className={`modal-overlay ${open ? "open" : ""}`} onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal lg">
+        <div className="modal-header">
+          <div className="modal-title">{s.actNewContract}</div>
+          <button className="icon-btn" onClick={onClose}><i className="ti ti-x" /></button>
+        </div>
+        <div className="modal-body">
+          {err ? <div className="card" style={{ padding: 12, marginBottom: 12, color: "var(--danger)" }}>{err}</div> : null}
+
+          <div className="modal-section-label">{s.ctmPartiesTemplate}</div>
+          <div className="form-grid-2">
+            <div className="fld">
+              <span className="fld-label">{s.ctmTemplate}</span>
+              <select value={form.template_id} onChange={(e) => setForm({ ...form, template_id: e.target.value })}>
+                <option value="">{s.ctmPickTemplate}</option>
+                {templates.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name} ({t.language.toUpperCase()})</option>
+                ))}
+              </select>
+            </div>
+            <div className="fld">
+              <span className="fld-label">{s.ctmLanguage}</span>
+              <select value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value as ContractLanguage })}>
+                {CONTRACT_LANGUAGES.map((l) => <option key={l} value={l}>{l.toUpperCase()}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="fld" style={{ marginTop: 12 }}>
+            <span className="fld-label">{s.ctmPartyB}</span>
+            <select value={form.party_b_company_id} onChange={(e) => setForm({ ...form, party_b_company_id: e.target.value })}>
+              <option value="">{s.ctmPickCompany}</option>
+              {companies.map((c) => <option key={c.id} value={c.id}>{c.name ?? `Company #${c.id}`}</option>)}
+            </select>
+          </div>
+
+          <div className="modal-section-label">{s.ctmTermsLabel}</div>
+          <div className="form-grid-2">
+            <div className="fld">
+              <span className="fld-label">{s.ctmCommissionType}</span>
+              <select value={form.commission_type} onChange={(e) => setForm({ ...form, commission_type: e.target.value as "percent" | "amount" })}>
+                <option value="percent">{s.ctmPercent}</option>
+                <option value="amount">{s.ctmAmount}</option>
+              </select>
+            </div>
+            <div className="fld">
+              <span className="fld-label">{s.ctmCommission}</span>
+              <input type="number" placeholder={s.ctmCommissionPh} value={form.commission_value} onChange={(e) => setForm({ ...form, commission_value: e.target.value })} />
+            </div>
+            <div className="fld">
+              <span className="fld-label">{s.ctmPaymentCollector}</span>
+              <select value={form.payment_collector} onChange={(e) => setForm({ ...form, payment_collector: e.target.value as "platform" | "operator" })}>
+                <option value="platform">{s.ctCollectorPlatform}</option>
+                <option value="operator">{s.ctCollectorPartner}</option>
+              </select>
+            </div>
+            <div className="fld">
+              <span className="fld-label">{s.ctmPaymentDays}</span>
+              <input type="number" value={form.payment_days} onChange={(e) => setForm({ ...form, payment_days: e.target.value })} />
+            </div>
+          </div>
+          <div className="fld" style={{ marginTop: 12 }}>
+            <span className="fld-label">{s.ctmCancellation}</span>
+            <input type="number" value={form.cancellation_notice_days} onChange={(e) => setForm({ ...form, cancellation_notice_days: e.target.value })} />
+          </div>
+
+          <div className="modal-section-label">{s.ctmScheduleLabel}</div>
+          <div className="form-grid-2">
+            <div className="fld">
+              <span className="fld-label">{s.ctmEffective}</span>
+              <input type="date" value={form.effective_date} onChange={(e) => setForm({ ...form, effective_date: e.target.value })} />
+            </div>
+            <div className="fld">
+              <span className="fld-label">{s.ctmExpiry}</span>
+              <input type="date" value={form.expiry_date} onChange={(e) => setForm({ ...form, expiry_date: e.target.value })} />
+            </div>
+          </div>
+          <div className="flex items-center gap-2" style={{ marginTop: 12 }}>
+            <label className="switch">
+              <input type="checkbox" checked={form.auto_renew} onChange={(e) => setForm({ ...form, auto_renew: e.target.checked })} />
+              <span className="switch-slider" />
+            </label>
+            <span className="text-sm">{s.ctmAutoRenew}</span>
+            <div className="fld" style={{ marginLeft: "auto", maxWidth: 200 }}>
+              <span className="fld-label">{s.ctmTerminationNotice}</span>
+              <input type="number" value={form.termination_notice_days} onChange={(e) => setForm({ ...form, termination_notice_days: e.target.value })} />
+            </div>
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn" onClick={onClose}>{s.cancel}</button>
+          <button className="btn btn-primary" disabled={saving} onClick={() => void submit()}>
+            <i className="ti ti-plus" />
+            {s.ctmCreateDraft}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// Files pane — folder rail + storage bar + folder grid + files table
+// ════════════════════════════════════════════════════════════════
+type FilesQuick = "all" | "recent" | "trash";
+
+const FILE_ICO_CLASS: Record<string, string> = {
+  pdf: "pdf",
+  image: "img",
+  application: "doc",
+  text: "doc",
+  video: "img",
+  audio: "sheet",
+  other: "doc",
+};
+function fileIcoClass(mime: string): string {
+  if (mime === "application/pdf") return "pdf";
+  if (mime === "image/svg+xml") return "svg";
+  if (mime.startsWith("image/")) return "img";
+  if (
+    mime === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+    mime === "application/vnd.ms-excel" ||
+    mime === "text/csv"
+  ) return "sheet";
+  return FILE_ICO_CLASS[mimeBucket(mime)] ?? "doc";
+}
+function fileIcoIcon(mime: string): string {
+  if (mime === "application/pdf") return "ti-file-type-pdf";
+  if (mime.startsWith("image/")) return mime === "image/svg+xml" ? "ti-file-vector" : "ti-photo";
+  if (
+    mime === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+    mime === "application/vnd.ms-excel" ||
+    mime === "text/csv"
+  ) return "ti-file-spreadsheet";
+  return "ti-file";
+}
+
+function FilesPane({
+  token,
+  user,
+  lang,
+  registerAction,
+  showToast,
+}: PaneProps & { user: TeamUser | null }) {
+  const s = crmStrings(lang);
+  const [folder, setFolder] = useState("/");
+  const [files, setFiles] = useState<FileAssetRow[]>([]);
+  const [subfolders, setSubfolders] = useState<FolderSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [quick, setQuick] = useState<FilesQuick>("all");
+  const [stats, setStats] = useState<StorageStats | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [previewFile, setPreviewFile] = useState<FileAssetRow | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const loadFolder = useCallback(async (target: string) => {
+    if (!token) return;
+    setLoading(true);
+    setErr(null);
+    try {
+      const res = await apiFilesList(token, { folder: target });
+      setFiles(res.data.files);
+      setSubfolders(res.data.subfolders);
+    } catch (e) {
+      setErr(e instanceof ApiRequestError ? e.message : s.errGeneric);
+      setFiles([]);
+      setSubfolders([]);
+    } finally {
+      setLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
+  const loadStats = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await apiFilesStorageStats(token);
+      setStats(res.data);
+    } catch { /* non-fatal */ }
+  }, [token]);
+
+  useEffect(() => { void loadFolder(folder); }, [folder, loadFolder]);
+  useEffect(() => { void loadStats(); }, [loadStats]);
+
+  const handleUpload = useCallback(async (selected: FileList | null) => {
+    if (!selected || selected.length === 0 || !token) return;
+    setUploading(true);
+    setErr(null);
+    try {
+      let count = 0;
+      for (const file of Array.from(selected)) {
+        await apiFilesUpload(token, file, { folder, visibility: "private" });
+        count++;
+      }
+      showToast(count === 1 ? s.flUploadedToast : `${count} ${s.flUploadedManyToast}`);
+      await loadFolder(folder);
+      await loadStats();
+    } catch (e) {
+      setErr(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, folder, loadFolder, loadStats, lang]);
+
+  const handleNewFolder = useCallback(async () => {
+    if (!token) return;
+    const name = window.prompt(s.flFolderPrompt);
+    if (!name) return;
+    const safe = name.trim().replace(/[/\\]/g, "_").replace(/^\.+/, "");
+    if (!safe) return;
+    const target = folder === "/" ? `/${safe}` : `${folder}/${safe}`;
+    try {
+      await apiFilesCreateFolder(token, target, { visibility: "private" });
+      showToast(s.flNewFolderToast);
+      await loadFolder(folder);
+    } catch (e) {
+      setErr(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, folder, loadFolder, lang]);
+
+  // top-right actions
+  useEffect(() => {
+    registerAction(
+      <>
+        <button className="btn" onClick={() => void handleNewFolder()}>
+          <i className="ti ti-folder-plus" />
+          {s.flNewFolder}
+        </button>
+        <button className="btn btn-primary" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
+          <i className="ti ti-upload" />
+          {uploading ? s.flUploading : s.flUpload}
+        </button>
+      </>
+    );
+    return () => registerAction(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang, uploading, handleNewFolder]);
+
+  const visibleFiles = useMemo(() => {
+    let arr = files;
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      arr = arr.filter((f) => f.filename.toLowerCase().includes(q));
+    }
+    if (quick === "recent") {
+      arr = [...arr].sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? "")).slice(0, 20);
+    }
+    return arr;
+  }, [files, search, quick]);
+
+  async function handleFileClick(asset: FileAssetRow) {
+    if (!isPreviewableImage(asset.mime_type)) {
+      if (!token) return;
+      try { await apiFilesDownload(token, asset); } catch (e) { setErr(e instanceof ApiRequestError ? e.message : s.errGeneric); }
+      return;
+    }
+    if (!token) return;
+    setPreviewFile(asset);
+    setPreviewLoading(true);
+    setPreviewUrl(null);
+    try {
+      const objectUrl = await apiFilesObjectUrl(token, asset);
+      setPreviewUrl(objectUrl);
+    } catch (e) {
+      setErr(e instanceof ApiRequestError ? e.message : s.errGeneric);
+      setPreviewFile(null);
+    } finally {
+      setPreviewLoading(false);
+    }
+  }
+  function closePreview() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+    setPreviewFile(null);
+    setPreviewLoading(false);
+  }
+
+  async function handleDelete(asset: FileAssetRow) {
+    if (!token) return;
+    if (typeof window !== "undefined" && !window.confirm(`${s.flConfirmDeleteFile}\n\n${asset.filename}`)) return;
+    try {
+      await apiFilesDelete(token, asset.id);
+      showToast(s.flDeletedToast);
+      await loadFolder(folder);
+      await loadStats();
+    } catch (e) {
+      setErr(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    }
+  }
+  async function handleDeleteFolder(sub: FolderSummary) {
+    if (!token) return;
+    if (typeof window !== "undefined" && !window.confirm(`${s.flConfirmDeleteFolder}\n\n${sub.name}`)) return;
+    try {
+      await apiFilesDeleteFolder(token, sub.folder);
+      showToast(s.flFolderDeletedToast);
+      await loadFolder(folder);
+      await loadStats();
+    } catch (e) {
+      setErr(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    }
+  }
+  async function handleDownload(asset: FileAssetRow) {
+    if (!token) return;
+    try { await apiFilesDownload(token, asset); } catch (e) { setErr(e instanceof ApiRequestError ? e.message : s.errGeneric); }
+  }
+
+  const folderCrumbs = useMemo(() => {
+    if (folder === "/") return [{ label: s.flMyFiles, path: "/" }];
+    const segs = folder.split("/").filter(Boolean);
+    return [
+      { label: s.flMyFiles, path: "/" },
+      ...segs.map((seg, i) => ({ label: seg, path: "/" + segs.slice(0, i + 1).join("/") })),
+    ];
+  }, [folder, s.flMyFiles]);
+
+  const storagePct = stats && stats.quota_bytes > 0
+    ? Math.min(100, Math.round((stats.total_bytes / stats.quota_bytes) * 100))
+    : 0;
+
+  function ownerLabel(uploadedBy: number): string {
+    if (user?.id && uploadedBy === user.id) return s.flOwnerYou;
+    return `#${uploadedBy}`;
+  }
+
+  return (
+    <div>
+      {err ? <div className="card" style={{ padding: 16, marginBottom: 16, color: "var(--danger)" }}>{err}</div> : null}
+      <input ref={fileInputRef} type="file" multiple hidden onChange={(e) => void handleUpload(e.target.files)} />
+
+      <div className="fm-layout">
+        {/* left rail */}
+        <div className="fm-rail">
+          <div className="fm-nav">
+            <div
+              className={`fm-nav-item ${quick === "all" ? "active" : ""}`}
+              onClick={() => { setQuick("all"); setFolder("/"); }}
+            >
+              <i className="ti ti-folder" />{s.flMyFiles}
+              {stats ? <span className="fm-nav-count">{stats.total_count}</span> : null}
+            </div>
+            <div className={`fm-nav-item ${quick === "recent" ? "active" : ""}`} onClick={() => setQuick("recent")}>
+              <i className="ti ti-clock" />{s.flRecent}
+            </div>
+            <div className={`fm-nav-item ${quick === "trash" ? "active" : ""}`} onClick={() => setQuick("trash")}>
+              <i className="ti ti-trash" />{s.flTrash}
+            </div>
+          </div>
+          <div className="fm-storage">
+            <div className="fm-storage-title"><i className="ti ti-database" />{s.flStorage}</div>
+            <div className="storage-bar"><span style={{ width: `${storagePct}%` }} /></div>
+            <div className="fm-storage-used">
+              {stats
+                ? `${formatBytes(stats.total_bytes)} ${s.flStorageUsed} ${formatBytes(stats.quota_bytes)} ${s.flStorageUsedSuffix}`
+                : s.loading}
+            </div>
+            {stats ? (
+              <div className="fm-legend">
+                <div className="fm-legend-row"><span className="ldot doc" />{`Documents · ${formatBytes(stats.by_bucket.application?.bytes ?? 0)}`}</div>
+                <div className="fm-legend-row"><span className="ldot img" />{`Images · ${formatBytes(stats.by_bucket.image?.bytes ?? 0)}`}</div>
+                <div className="fm-legend-row"><span className="ldot video" />{`Video · ${formatBytes(stats.by_bucket.video?.bytes ?? 0)}`}</div>
+                <div className="fm-legend-row"><span className="ldot other" />{`Other · ${formatBytes(stats.by_bucket.other?.bytes ?? 0)}`}</div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        {/* main */}
+        <div className="fm-main">
+          <div className="fm-bar">
+            <div className="fm-crumb">
+              <i className="ti ti-home" style={{ fontSize: 14 }} />
+              {folderCrumbs.map((c, i) => (
+                <span key={c.path} className="flex items-center gap-2">
+                  {i > 0 ? <i className="ti ti-chevron-right" /> : null}
+                  <a onClick={() => setFolder(c.path)}>{c.label}</a>
+                </span>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <div className="fm-search">
+                <i className="ti ti-search" />
+                <input type="search" placeholder={s.flSearchPh} value={search} onChange={(e) => setSearch(e.target.value)} />
+              </div>
+            </div>
+          </div>
+
+          {quick === "all" && subfolders.length > 0 ? (
+            <>
+              <div className="fm-sec-label">{s.flFolders}</div>
+              <div className="fm-folders">
+                {subfolders.map((f) => (
+                  <div className="fm-folder" key={f.folder} onClick={() => setFolder(f.folder)}>
+                    <i className="ti ti-folder-filled fm-folder-ic" />
+                    <div>
+                      <div className="ff-name">{f.name}</div>
+                      <div className="ff-meta">{`${f.file_count} ${s.flCount} · ${formatBytes(f.total_bytes)}`}</div>
+                    </div>
+                    <button className="icon-btn ff-menu danger" title={s.flDeleteFolder} onClick={(e) => { e.stopPropagation(); void handleDeleteFolder(f); }}>
+                      <i className="ti ti-trash" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : null}
+
+          <div className="fm-sec-label">{s.flFiles}</div>
+          <div className="card">
+            {quick === "trash" ? (
+              <div className="empty-state" style={{ border: "none" }}>
+                <div className="es-icon"><i className="ti ti-trash" /></div>
+                <div className="es-title">{s.flTrashEmpty}</div>
+                <div className="es-sub">{s.flTrashHint}</div>
+              </div>
+            ) : (
+              <div className="table-wrap">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>{s.flColName}</th>
+                      <th>{s.flColOwner}</th>
+                      <th className="num-cell">{s.flColSize}</th>
+                      <th>{s.flColModified}</th>
+                      <th style={{ textAlign: "right" }}>{s.colActions}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loading && files.length === 0 ? (
+                      <tr><td colSpan={5} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.loading}</td></tr>
+                    ) : visibleFiles.length === 0 ? (
+                      <tr><td colSpan={5} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.flEmpty}</td></tr>
+                    ) : (
+                      visibleFiles.map((file) => (
+                        <tr key={file.id} onClick={() => void handleFileClick(file)}>
+                          <td>
+                            <span className="flex items-center gap-2">
+                              <span className={`file-ico ${fileIcoClass(file.mime_type)}`}><i className={`ti ${fileIcoIcon(file.mime_type)}`} /></span>
+                              {file.filename}
+                            </span>
+                          </td>
+                          <td className="cell-muted">{ownerLabel(file.uploaded_by)}</td>
+                          <td className="num-cell font-mono">{formatBytes(file.size_bytes)}</td>
+                          <td className="cell-muted">{fmtDate(file.created_at)}</td>
+                          <td style={{ textAlign: "right" }} onClick={(e) => e.stopPropagation()}>
+                            <div className="row-actions">
+                              <button className="icon-btn" title={s.flDownload} onClick={() => void handleDownload(file)}>
+                                <i className="ti ti-download" />
+                              </button>
+                              <button className="icon-btn danger" title={s.flDelete} onClick={() => void handleDelete(file)}>
+                                <i className="ti ti-trash" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* image preview lightbox */}
+      {previewFile ? (
+        <div className="modal-overlay open" onClick={(e) => e.target === e.currentTarget && closePreview()}>
+          <div className="modal lg">
+            <div className="modal-header">
+              <div className="modal-title">{previewFile.filename}</div>
+              <button className="icon-btn" onClick={closePreview}><i className="ti ti-x" /></button>
+            </div>
+            <div className="modal-body" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 240 }}>
+              {previewLoading ? (
+                <span className="cell-muted">{s.flLoadingPreview}</span>
+              ) : previewUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={previewUrl} alt={previewFile.filename} style={{ maxHeight: "70vh", maxWidth: "100%", objectFit: "contain", borderRadius: 8 }} />
+              ) : null}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={() => void handleDownload(previewFile)}>
+                <i className="ti ti-download" />
+                {s.flDownload}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
