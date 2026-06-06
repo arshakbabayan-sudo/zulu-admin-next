@@ -345,7 +345,6 @@ export function SettingsPage({ initialPage = "exchange-rates" }: { initialPage?:
           <Header
             collapsed={sidebarCollapsed}
             onHamburger={() => setSidebarCollapsed((v) => !v)}
-            title={`${s.sectionSettings} · ${title}`}
             user={user ?? null}
             token={token}
             lang={lang}

@@ -1260,7 +1260,6 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
           <Header
             collapsed={sidebarCollapsed}
             onHamburger={() => setSidebarCollapsed((v) => !v)}
-            title={`${s.sectionManagement} · ${detailHeaderName ?? activeLabel}`}
             user={user ?? null}
             token={token}
             lang={lang}
@@ -2017,7 +2016,6 @@ const APPS_QUICKLINKS: Array<{ href: string; icon: string; labelKey: MgmtKey }> 
 export function Header({
   collapsed: _c,
   onHamburger,
-  title,
   user,
   token,
   lang,
@@ -2029,7 +2027,6 @@ export function Header({
 }: {
   collapsed: boolean;
   onHamburger: () => void;
-  title: string;
   user: { name?: string | null; email?: string | null; context?: { world?: string } } | null;
   token: string | null;
   lang: string;
@@ -2131,7 +2128,6 @@ export function Header({
       <button className="header-hamburger" onClick={onHamburger} title={s.toggleSidebar}>
         <i className="ti ti-menu-2" />
       </button>
-      <div className="header-title">{title}</div>
       <div className="header-search">
         <i className="ti ti-search" />
         <input type="search" placeholder={s.searchPlaceholder} />

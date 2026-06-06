@@ -52,24 +52,24 @@
 .mgmt-page .sidebar-badge.warn { background:var(--warning); }
 
 .mgmt-page .header { background:var(--bg-primary); border-bottom:1px solid var(--border-color); height:56px; display:flex; align-items:center; gap:4px; padding:0 16px 0 0; position:fixed; top:0; left:0; right:0; z-index:20; }
-.mgmt-page .header-brand { width:260px; flex-shrink:0; display:flex; align-items:center; padding-left:24px; height:100%; border-right:1px solid var(--border-color); }
-.mgmt-page .header-brand .brand-logo-svg { height:38px; width:auto; max-width:160px; display:block; object-fit:contain; }
-.mgmt-page .header-brand .brand-logo-icon { height:28px; width:28px; display:none; object-fit:contain; }
+.mgmt-page .header-brand { width:260px; flex-shrink:0; display:flex; align-items:center; padding-left:16px; height:100%; border-right:1px solid var(--border-color); }
+.mgmt-page .header-brand .brand-logo-svg { height:28px; width:auto; max-width:160px; display:block; object-fit:contain; }
+.mgmt-page .header-brand .brand-logo-icon { height:20px; width:20px; display:none; object-fit:contain; }
 .mgmt-page .header-lang-flag { width:20px; height:14px; border-radius:2px; flex-shrink:0; display:block; object-fit:cover; }
 .mgmt-page .layout.sidebar-collapsed .header-brand .brand-logo-svg { display:none; }
 .mgmt-page .layout.sidebar-collapsed .header-brand .brand-logo-icon { display:block; }
-.mgmt-page .header-hamburger { width:36px; height:36px; border-radius:var(--radius-md); background:transparent; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-secondary); flex-shrink:0; margin-left:8px; }
+.mgmt-page .header-hamburger { width:32px; height:32px; border-radius:var(--radius-md); background:transparent; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-secondary); flex-shrink:0; margin-left:12px; }
 .mgmt-page .header-hamburger:hover { background:var(--bg-secondary); color:var(--text-primary); }
-.mgmt-page .header-hamburger i { font-size:20px; }
-.mgmt-page .header-title { font-size:14px; font-weight:500; margin-left:6px; }
-.mgmt-page .header-search { position:relative; flex:1; max-width:420px; margin:0 auto; }
+.mgmt-page .header-hamburger i { font-size:16px; }
+.mgmt-page .header-search { position:relative; flex:1; max-width:400px; margin:0 auto; }
 .mgmt-page .header-search i { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-tertiary); font-size:16px; }
 .mgmt-page .header-search input { width:100%; height:36px; padding:0 12px 0 36px; border:1px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-secondary); font-size:13px; outline:none; font-family:inherit; }
 .mgmt-page .header-actions { display:flex; align-items:center; gap:6px; flex-shrink:0; }
-.mgmt-page .header-icon-btn { width:36px; height:36px; border-radius:50%; background:transparent; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-secondary); position:relative; }
+.mgmt-page .header-icon-btn { width:32px; height:32px; border-radius:50%; background:transparent; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-secondary); position:relative; }
+.mgmt-page .header-icon-btn i { font-size:16px; }
 .mgmt-page .header-icon-btn:hover { background:var(--bg-secondary); color:var(--text-primary); }
-.mgmt-page .header-icon-btn .dot { position:absolute; top:7px; right:9px; width:8px; height:8px; background:var(--danger); border-radius:50%; border:2px solid var(--bg-primary); }
-.mgmt-page .header-lang { display:flex; align-items:center; gap:6px; height:36px; padding:0 10px; border-radius:999px; background:transparent; border:none; cursor:pointer; color:var(--text-secondary); font-family:inherit; font-size:12px; font-weight:600; }
+.mgmt-page .header-icon-btn .dot { position:absolute; top:5px; right:7px; width:8px; height:8px; background:var(--danger); border-radius:50%; border:2px solid var(--bg-primary); }
+.mgmt-page .header-lang { display:flex; align-items:center; gap:6px; height:32px; padding:0 8px; border-radius:999px; background:transparent; border:none; cursor:pointer; color:var(--text-secondary); font-family:inherit; font-size:12px; font-weight:600; }
 .mgmt-page .header-lang:hover { background:var(--bg-secondary); color:var(--text-primary); }
 .mgmt-page .header-divider { width:1px; height:24px; background:var(--border-color); margin:0 6px; }
 .mgmt-page .header-user { display:flex; align-items:center; gap:10px; padding:4px 10px 4px 4px; border-radius:999px; cursor:pointer; }

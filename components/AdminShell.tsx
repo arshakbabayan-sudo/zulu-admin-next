@@ -18,7 +18,6 @@ import {
   type AdminNavGroup,
   findActiveGroup,
   GROUP_MENU_PERMISSION,
-  resolveAdminPageTitle,
   SIDEBAR_TABLER_ICON,
 } from "@/lib/admin-nav-config";
 import {
@@ -274,8 +273,6 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   // Tabs flagged superAdminOnly stay hidden from scoped platform admins.
   const showSuperAdminOnlyPlatform = canAccessSuperAdminOnlyPlatformNav(user);
 
-  const pageTitle = pathname ? resolveAdminPageTitle(pathname, t) : t("admin.nav.dashboard");
-
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-slate-100 text-slate-900">
       <header className="z-20 flex h-14 shrink-0 items-center justify-between border-b px-4 text-slate-800" style={{ backgroundColor: "var(--admin-header-bg)", borderColor: "var(--admin-border)" }}>
@@ -313,7 +310,6 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               <path d="M5 8h14M5 12h10M5 16h14" />
             </svg>
           </button>
-          <div className="ml-3 text-sm font-semibold tracking-wide text-slate-800">{pageTitle}</div>
         </div>
         {/* Center — global search (Phase 2 admin-redesign 2026-05-24).
             Currently visual-only; wiring up the search backend is a separate
