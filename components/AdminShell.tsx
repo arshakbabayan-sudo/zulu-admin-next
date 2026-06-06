@@ -17,27 +17,12 @@ import {
   ADMIN_NAV_GROUPS,
   type AdminNavGroup,
   findActiveGroup,
+  GROUP_MENU_PERMISSION,
   resolveAdminPageTitle,
   SIDEBAR_TABLER_ICON,
 } from "@/lib/admin-nav-config";
 import {
-  canAccessAgentToolsNav,
-  canAccessBookingsSection,
-  canAccessChatSection,
-  canAccessCrmSection,
-  canAccessDashboardSection,
-  canAccessFinanceSection,
-  canAccessInventoryOversightNav,
-  canAccessInventorySection,
-  canAccessLocalizationSectionNav,
-  canAccessMarketplaceOpsSection,
-  canAccessMyCompanySection,
-  canSeeOwnCompanyNav,
   canAccessNotificationsNav,
-  canAccessOperatorToolsNav,
-  canAccessPlatformAdminNav,
-  canAccessSalesWorkspaceSection,
-  canAccessSettingsSection,
   canAccessSuperAdminOnlyPlatformNav,
   userHasModuleAccess,
   userHasPermission,
@@ -286,12 +271,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     }
   }, [notificationsOpen, loadRecentNotifications, refreshUnreadCount]);
 
-  const showPlatform = canAccessPlatformAdminNav(user);
-  const showOperatorTools = canAccessOperatorToolsNav(user);
+  // Tabs flagged superAdminOnly stay hidden from scoped platform admins.
   const showSuperAdminOnlyPlatform = canAccessSuperAdminOnlyPlatformNav(user);
-  const showInventory = canAccessInventoryOversightNav(user);
-  const showLocalization = canAccessLocalizationSectionNav(user);
-  const showAgentTools = canAccessAgentToolsNav(user);
 
   const pageTitle = pathname ? resolveAdminPageTitle(pathname, t) : t("admin.nav.dashboard");
 
@@ -711,51 +692,17 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         ) : null}
         <nav className="flex flex-col gap-1.5 px-3 py-3 text-sm">
           {(() => {
+            // Sidebar group visibility is now driven SOLELY by the per-group
+            // `menu.<group>.view` permission (RBAC #2 Part Ա). Super admins are
+            // unrestricted; everyone else sees a group iff their role grants its
+            // menu permission, so toggling it in Settings → Permissions →
+            // "Left menu" changes the operator/agent sidebar live (~5s via /me sync).
             const isGroupVisible = (g: AdminNavGroup): boolean => {
-              switch (g.visibility) {
-                // legacy keys (still used by any leftover importer)
-                case "always":
-                  return true;
-                case "platform_admin":
-                  return showPlatform;
-                case "operator_tools":
-                  return showOperatorTools;
-                case "inventory_oversight":
-                  return showInventory;
-                case "localization":
-                  return showLocalization;
-                case "super_admin":
-                  return showSuperAdminOnlyPlatform;
-                case "bucket3":
-                  return showPlatform;
-                case "agent_tools":
-                  return showAgentTools;
-                // 2026-05-24 — 8-section IA keys
-                case "section_dashboard":
-                  return canAccessDashboardSection(user);
-                case "section_inventory":
-                  return canAccessInventorySection(user);
-                case "section_bookings":
-                  return canAccessBookingsSection(user);
-                case "section_crm":
-                  return canAccessCrmSection(user);
-                case "section_chat":
-                  return canAccessChatSection(user);
-                case "section_sales_workspace":
-                  return canAccessSalesWorkspaceSection(user);
-                case "section_finance":
-                  return canAccessFinanceSection(user);
-                case "section_my_company":
-                  return canAccessMyCompanySection(user);
-                case "section_own_company":
-                  return canSeeOwnCompanyNav(user);
-                case "section_marketplace_ops":
-                  return canAccessMarketplaceOpsSection(user);
-                case "section_settings":
-                  return canAccessSettingsSection(user);
-                default:
-                  return false;
-              }
+              if (user?.is_super_admin) return true;
+              const menuPerm = GROUP_MENU_PERMISSION[g.key];
+              // Defensive: a group with no mapped menu permission stays hidden
+              // for non-super users (every current group is mapped).
+              return menuPerm ? userHasPermission(user, menuPerm) : false;
             };
 
             const isTabVisible = (

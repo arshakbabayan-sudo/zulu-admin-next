@@ -193,10 +193,13 @@ export function canAccessDashboardSection(user: AdminUser | null): boolean {
   return user != null;
 }
 
-/** Inventory section: super or operator. Agents do NOT see it. */
+/** Inventory PAGE access: super, the menu permission, or operator tools.
+ * Sidebar visibility is gated separately by menu.inventory.view (AdminShell);
+ * this stays permissive so a granted menu item never lands on a 403. */
 export function canAccessInventorySection(user: AdminUser | null): boolean {
   if (!user) return false;
   if (user.is_super_admin) return true;
+  if (userHasPermission(user, "menu.inventory.view")) return true;
   return canAccessOperatorToolsNav(user) || canAccessInventoryOversightNav(user);
 }
 
@@ -205,7 +208,7 @@ export function canAccessInventorySection(user: AdminUser | null): boolean {
 export function canAccessBookingsSection(user: AdminUser | null): boolean {
   if (!user) return false;
   if (user.is_super_admin) return true;
-  return userHasPermission(user, "bookings.view");
+  return userHasPermission(user, "menu.bookings.view") || userHasPermission(user, "bookings.view");
 }
 
 /** Sales workspace: agents only (super admin can preview via direct URL but not in sidebar). */
@@ -221,6 +224,7 @@ export function canAccessFinanceSection(user: AdminUser | null): boolean {
   if (!user) return false;
   if (user.is_super_admin) return true;
   return (
+    userHasPermission(user, "menu.finance.view") ||
     userHasPermission(user, "commissions.view") ||
     userHasPermission(user, "finance.entitlements.view") ||
     userHasPermission(user, "finance.settlements.view") ||
@@ -233,6 +237,10 @@ export function canAccessFinanceSection(user: AdminUser | null): boolean {
 export function canAccessMyCompanySection(user: AdminUser | null): boolean {
   if (!user) return false;
   if (user.is_super_admin) return true;
+  // Shared by the My-company AND HR pages — accept either menu permission so a
+  // granted nav item always opens; falls back to plain company membership.
+  if (userHasPermission(user, "menu.my_company.view")) return true;
+  if (userHasPermission(user, "menu.hr.view")) return true;
   return (user.companies?.length ?? 0) > 0;
 }
 
@@ -265,6 +273,7 @@ export function canAccessSettingsSection(user: AdminUser | null): boolean {
 export function canAccessChatSection(user: AdminUser | null): boolean {
   if (!user) return false;
   if (user.is_super_admin) return true;
+  if (userHasPermission(user, "menu.chat.view")) return true;
   if (canAccessPlatformAdminNav(user)) return true;
   return (user.companies?.length ?? 0) > 0;
 }
@@ -279,6 +288,7 @@ export function canAccessChatSection(user: AdminUser | null): boolean {
 export function canAccessCrmSection(user: AdminUser | null): boolean {
   if (!user) return false;
   if (user.is_super_admin) return true;
+  if (userHasPermission(user, "menu.crm.view")) return true;
   if (canAccessPlatformAdminNav(user)) return true;
   if ((user.companies?.length ?? 0) > 0) return true;
   return user.roles?.includes("agent") ?? false;

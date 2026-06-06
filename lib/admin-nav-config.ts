@@ -495,6 +495,31 @@ export const SIDEBAR_TABLER_ICON: Record<string, string> = {
   settings: "ti-settings",
 };
 
+// ─── Left-menu visibility gate (RBAC #2 Part Ա — 2026-06-06) ────────────────
+// Each sidebar group is shown to a non-super user IFF they hold the matching
+// `menu.<group>.view` permission. This is the SINGLE gate now — it replaces the
+// old mix of role/company/always predicates so that toggling a role's
+// permissions in Settings → Permissions → "Left menu (visibility)" immediately
+// (within ~5s, via the /me session-sync) changes what that operator/agent sees.
+// Super admins are unrestricted (handled in AdminShell). Keyed by AdminNavGroup.key.
+// Backend mirror: AdminRbacController::PERMISSION_TREE 'menu' section +
+// the 2026_06_06_000010 menu-permissions migration.
+export const GROUP_MENU_PERMISSION: Record<string, string> = {
+  dashboard: "menu.dashboard.view",
+  inventory: "menu.inventory.view",
+  bookings: "menu.bookings.view",
+  crm: "menu.crm.view",
+  chat: "menu.chat.view",
+  finance: "menu.finance.view",
+  my_company: "menu.my_company.view",
+  hr: "menu.hr.view",
+  marketplace_ops: "menu.management.view",
+  file_manager: "menu.files.view",
+  my_profile: "menu.profile.view",
+  notifications_v2: "menu.inbox.view",
+  settings: "menu.settings.view",
+};
+
 // ─── Settings sub-group structure (Phase 2D — 2026-05-31) ────────────────
 //
 // The Settings group's flat tab list is logically grouped per the Bucket B
