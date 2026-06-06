@@ -1605,6 +1605,9 @@ export type RbacRoleScope = "platform" | "company";
 export type RbacRoleRow = {
   id: number;
   name: string;
+  /** Free-text label the super-admin can edit (RBAC #2 Part Գ). Null = fall back
+   *  to the localized label map. The internal `name` slug stays fixed. */
+  display_name: string | null;
   description: string | null;
   scope: RbacRoleScope;
   memberships_count: number;
@@ -1637,7 +1640,7 @@ export async function apiRbacCreateRole(
 export async function apiRbacUpdateRole(
   token: string,
   id: number,
-  body: { description?: string; scope: RbacRoleScope }
+  body: { display_name?: string | null; description?: string; scope: RbacRoleScope }
 ): Promise<ApiSuccessEnvelope<RbacRoleRow>> {
   return apiFetchJson(`${PA}/rbac/roles/${id}`, { method: "PATCH", token, body });
 }

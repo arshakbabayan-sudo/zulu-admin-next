@@ -5032,18 +5032,20 @@ function rbPretty(name: string): string {
 /** Clear, translated display name for the known roles (Arshak's 3-concept model);
  *  falls back to the prettified raw name for any other role. Internal role names
  *  are unchanged — this is display only. */
-function rbRoleLabel(name: string, s: ReturnType<typeof settingsStrings>): string {
-  switch (name.toLowerCase()) {
+function rbRoleLabel(role: { name: string; display_name?: string | null }, s: ReturnType<typeof settingsStrings>): string {
+  // Arshak's editable display name wins; otherwise the localized default label.
+  if (role.display_name && role.display_name.trim() !== "") return role.display_name.trim();
+  switch (role.name.toLowerCase()) {
     case "super_admin": return s.rbRoleSuper;
     case "platform_admin": return s.rbRoleStaff;
     case "company_admin": return s.rbRoleOwner;
     case "operator_admin": return s.rbRoleManager;
     case "agent": return s.rbRoleAgent;
-    default: return rbPretty(name);
+    default: return rbPretty(role.name);
   }
 }
 
-type RbForm = { name: string; description: string; scope: RbacRoleScope };
+type RbForm = { name: string; display_name: string; description: string; scope: RbacRoleScope };
 
 function RbacPane({ token, lang }: { token: string | null; lang: string }) {
   const s = settingsStrings(lang);
@@ -5095,7 +5097,11 @@ function RbacPane({ token, lang }: { token: string | null; lang: string }) {
     setBusy(true);
     try {
       if (modal.mode === "edit") {
-        await apiRbacUpdateRole(token, modal.role.id, { description: form.description.trim(), scope: form.scope });
+        await apiRbacUpdateRole(token, modal.role.id, {
+          display_name: form.display_name.trim() || null,
+          description: form.description.trim(),
+          scope: form.scope,
+        });
       } else {
         const created = await apiRbacCreateRole(token, {
           name: form.name.trim(),
@@ -5165,7 +5171,7 @@ function RbacPane({ token, lang }: { token: string | null; lang: string }) {
               ) : (
                 visibleRoles.map((r) => (
                   <tr key={r.id} onClick={() => setSelectedRoleId(r.id)} style={{ cursor: "pointer", background: selectedRoleId === r.id ? "var(--bg-secondary)" : undefined }}>
-                    <td><span className={`badge ${rbBadgeTone(r.name)}`}>{rbRoleLabel(r.name, s)}</span></td>
+                    <td><span className={`badge ${rbBadgeTone(r.name)}`}>{rbRoleLabel(r, s)}</span></td>
                     <td className="cell-muted text-sm">{r.description || "—"}</td>
                     <td className="num-cell">{r.memberships_count}</td>
                     <td className="num-cell cell-muted">{r.permissions.length} / {permTotal}</td>
@@ -5190,7 +5196,7 @@ function RbacPane({ token, lang }: { token: string | null; lang: string }) {
           <RbacMenuTree
             token={token}
             roleId={selectedRoleId}
-            roleName={selectedRole ? rbRoleLabel(selectedRole.name, s) : undefined}
+            roleName={selectedRole ? rbRoleLabel(selectedRole, s) : undefined}
             canEdit={isSuper}
           />
         ) : null}
@@ -5213,7 +5219,7 @@ function RbacPane({ token, lang }: { token: string | null; lang: string }) {
         description={
           pinRole ? (
             <>
-              {s.rbPinGate} <strong>{rbRoleLabel(pinRole.name, s)}</strong>.
+              {s.rbPinGate} <strong>{rbRoleLabel(pinRole, s)}</strong>.
               {pinRole.memberships_count > 0 ? (
                 <span style={{ display: "block", marginTop: 8 }}>{s.rbDeleteBlocked}</span>
               ) : null}
@@ -5248,14 +5254,14 @@ function RbacRoleModal({
   const isEdit = state.mode === "edit";
   const [f, setF] = useState<RbForm>(
     isEdit
-      ? { name: state.role.name, description: state.role.description ?? "", scope: state.role.scope }
-      : { name: "", description: "", scope: "company" }
+      ? { name: state.role.name, display_name: state.role.display_name ?? "", description: state.role.description ?? "", scope: state.role.scope }
+      : { name: "", display_name: "", description: "", scope: "company" }
   );
   useEffect(() => {
     if (state.mode === "edit") {
-      setF({ name: state.role.name, description: state.role.description ?? "", scope: state.role.scope });
+      setF({ name: state.role.name, display_name: state.role.display_name ?? "", description: state.role.description ?? "", scope: state.role.scope });
     } else {
-      setF({ name: "", description: "", scope: "company" });
+      setF({ name: "", display_name: "", description: "", scope: "company" });
     }
   }, [state]);
   const set = (patch: Partial<RbForm>) => setF((p) => ({ ...p, ...patch }));
@@ -5270,11 +5276,30 @@ function RbacRoleModal({
         </div>
         <div className="modal-body">
           <div className="form-grid">
-            <div className="fld" style={{ gridColumn: "1 / -1" }}>
-              <label className="fld-label">{s.rbFldName}</label>
-              <input value={f.name} disabled={isEdit} placeholder="operator_admin" onChange={(e) => set({ name: e.target.value })} />
-              <span className="cell-muted text-sm" style={{ marginTop: 4 }}>{isEdit ? s.rbFldNameLocked : s.rbFldNameHelp}</span>
-            </div>
+            {isEdit ? (
+              <>
+                <div className="fld" style={{ gridColumn: "1 / -1" }}>
+                  <label className="fld-label">{s.rbFldDisplayName}</label>
+                  <input
+                    value={f.display_name}
+                    placeholder={rbRoleLabel({ name: state.role.name, display_name: null }, s)}
+                    onChange={(e) => set({ display_name: e.target.value })}
+                  />
+                  <span className="cell-muted text-sm" style={{ marginTop: 4 }}>{s.rbFldDisplayNameHelp}</span>
+                </div>
+                <div className="fld" style={{ gridColumn: "1 / -1" }}>
+                  <label className="fld-label">{s.rbFldSlug}</label>
+                  <input value={f.name} disabled />
+                  <span className="cell-muted text-sm" style={{ marginTop: 4 }}>{s.rbFldNameLocked}</span>
+                </div>
+              </>
+            ) : (
+              <div className="fld" style={{ gridColumn: "1 / -1" }}>
+                <label className="fld-label">{s.rbFldName}</label>
+                <input value={f.name} placeholder="operator_admin" onChange={(e) => set({ name: e.target.value })} />
+                <span className="cell-muted text-sm" style={{ marginTop: 4 }}>{s.rbFldNameHelp}</span>
+              </div>
+            )}
             <div className="fld" style={{ gridColumn: "1 / -1" }}>
               <label className="fld-label">{s.rbFldDescription}</label>
               <input value={f.description} placeholder={s.rbFldDescriptionPh} onChange={(e) => set({ description: e.target.value })} />
