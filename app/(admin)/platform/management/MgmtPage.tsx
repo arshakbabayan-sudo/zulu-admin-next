@@ -31,6 +31,7 @@ import {
   ADMIN_NAV_GROUPS,
   type AdminNavGroup,
   findActiveGroup,
+  GROUP_MENU_PERMISSION,
   SIDEBAR_TABLER_ICON,
 } from "@/lib/admin-nav-config";
 import {
@@ -40,22 +41,7 @@ import {
 } from "@/lib/notifications-api";
 import {
   canAccessPlatformAdminNav,
-  canAccessAgentToolsNav,
-  canAccessBookingsSection,
-  canAccessChatSection,
-  canAccessCrmSection,
-  canAccessDashboardSection,
-  canAccessFinanceSection,
-  canAccessInventoryOversightNav,
-  canAccessInventorySection,
-  canAccessLocalizationSectionNav,
-  canAccessMarketplaceOpsSection,
-  canAccessMyCompanySection,
-  canSeeOwnCompanyNav,
   canAccessNotificationsNav,
-  canAccessOperatorToolsNav,
-  canAccessSalesWorkspaceSection,
-  canAccessSettingsSection,
   canAccessSuperAdminOnlyPlatformNav,
   userHasModuleAccess,
   userHasPermission,
@@ -1954,51 +1940,15 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
 // SHELL — sidebar + header
 // ═══════════════════════════════════════════════════════════════
 
-// Visibility predicate per group — mirrors AdminShell.tsx exactly so the
-// Management chrome shows the same items each role is allowed elsewhere.
+// Visibility predicate per group — mirrors AdminShell.tsx exactly: each sidebar
+// group shows iff the user holds its menu.<group>.view permission (RBAC #2
+// Part Ա). Super admins are unrestricted. Keeps the Management chrome's sidebar
+// identical to the main shell so toggling a role's "Left menu" permissions
+// changes both consistently.
 function isMgmtGroupVisible(g: AdminNavGroup, user: AdminUser | null): boolean {
-  switch (g.visibility) {
-    case "always":
-      return true;
-    case "platform_admin":
-      return canAccessPlatformAdminNav(user);
-    case "operator_tools":
-      return canAccessOperatorToolsNav(user);
-    case "inventory_oversight":
-      return canAccessInventoryOversightNav(user);
-    case "localization":
-      return canAccessLocalizationSectionNav(user);
-    case "super_admin":
-      return canAccessSuperAdminOnlyPlatformNav(user);
-    case "bucket3":
-      return canAccessPlatformAdminNav(user);
-    case "agent_tools":
-      return canAccessAgentToolsNav(user);
-    case "section_dashboard":
-      return canAccessDashboardSection(user);
-    case "section_inventory":
-      return canAccessInventorySection(user);
-    case "section_bookings":
-      return canAccessBookingsSection(user);
-    case "section_crm":
-      return canAccessCrmSection(user);
-    case "section_chat":
-      return canAccessChatSection(user);
-    case "section_sales_workspace":
-      return canAccessSalesWorkspaceSection(user);
-    case "section_finance":
-      return canAccessFinanceSection(user);
-    case "section_my_company":
-      return canAccessMyCompanySection(user);
-    case "section_own_company":
-      return canSeeOwnCompanyNav(user);
-    case "section_marketplace_ops":
-      return canAccessMarketplaceOpsSection(user);
-    case "section_settings":
-      return canAccessSettingsSection(user);
-    default:
-      return false;
-  }
+  if (user?.is_super_admin) return true;
+  const menuPerm = GROUP_MENU_PERMISSION[g.key];
+  return menuPerm ? userHasPermission(user, menuPerm) : false;
 }
 
 function isMgmtTabVisible(
