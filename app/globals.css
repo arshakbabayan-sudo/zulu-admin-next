@@ -455,8 +455,13 @@
 html.dark {
   color-scheme: dark;
 }
-html.dark input[type="checkbox"],
-html.dark input[type="radio"] {
+/* Brand accent on native checkboxes/radios in BOTH themes. Previously this was
+   scoped to html.dark only, so in LIGHT mode every checkbox fell back to the
+   browser-default teal/blue box — clashed with the design across admin pages
+   (Arshak). Applies app-wide (old V2 pages too); the mgmt-shell `.switch-row`
+   toggles are additionally restyled into brand pills in management.css. */
+input[type="checkbox"],
+input[type="radio"] {
   accent-color: var(--color-primary-500);
 }
 
