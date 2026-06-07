@@ -41,8 +41,16 @@ export default function RootLayout({
 }>) {
   const htmlLang = getServerLang();
   return (
-    <html lang={htmlLang} suppressHydrationWarning>
+    <html lang={htmlLang} translate="no" suppressHydrationWarning>
       <head>
+        {/* Stop Chrome's auto-translate from re-translating on every render.
+            The admin is an internal staff tool with its own EN/HY/RU switcher,
+            so browser translation is redundant — and when it's on (e.g. a
+            Russian-locale Chrome viewing the Armenian UI) it re-scans the DOM on
+            every field change and visibly flickers the page, worst on text-heavy
+            pages like RBAC (105 permission labels). `translate=no` + this meta
+            disable it. (Customer site keeps translation — tourists need it.) */}
+        <meta name="google" content="notranslate" />
         {/* Tabler Icons webfont — used by admin v3 surface (Management redesign
             2026-06-03+). `<i class="ti ti-*"/>` markup in v3 components and HTML
             specs (docs/admin_designe/) renders the icon glyph. Loaded via CDN
