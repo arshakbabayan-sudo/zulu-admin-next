@@ -196,6 +196,27 @@
 .mgmt-page .switch input:checked + .switch-slider { background:var(--primary); border-color:var(--primary); }
 .mgmt-page .switch input:checked + .switch-slider::before { transform:translateX(16px); }
 .mgmt-page .switch-row { display:flex; align-items:center; gap:8px; font-size:13px; }
+/* Render a naked "Active"/boolean checkbox inside a .switch-row AS the brand pill
+   switch (matches .switch above / the mock), instead of the big browser-default
+   teal box that clashed with the design (Arshak, all admin forms). Scoped to a
+   DIRECT child so OptionsPane's already-styled `.switch-row > .switch > input`
+   slider is NOT touched (no double pill). */
+.mgmt-page .switch-row > input[type="checkbox"] {
+  appearance:none; -webkit-appearance:none; margin:0; flex-shrink:0;
+  position:relative; width:36px; height:20px; border-radius:20px;
+  background:var(--bg-tertiary); border:1px solid var(--border-color);
+  cursor:pointer; transition:background .2s, border-color .2s;
+}
+.mgmt-page .switch-row > input[type="checkbox"]::before {
+  content:''; position:absolute; top:1px; left:1px; width:16px; height:16px;
+  border-radius:50%; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.15); transition:transform .2s;
+}
+.mgmt-page .switch-row > input[type="checkbox"]:checked { background:var(--primary); border-color:var(--primary); }
+.mgmt-page .switch-row > input[type="checkbox"]:checked::before { transform:translateX(16px); }
+.mgmt-page .switch-row > input[type="checkbox"]:disabled { opacity:.5; cursor:not-allowed; }
+/* Any remaining native checkbox (table select-all/rows, RBAC perm tree, multi-
+   select lists): brand colour, not the default teal/blue. */
+.mgmt-page input[type="checkbox"] { accent-color:var(--primary); }
 
 .mgmt-page .info-grid { display:grid; gap:12px; }
 .mgmt-page .info-row { display:grid; grid-template-columns:130px 1fr; gap:16px; align-items:baseline; padding:6px 0; border-bottom:1px dashed var(--border-color); }
