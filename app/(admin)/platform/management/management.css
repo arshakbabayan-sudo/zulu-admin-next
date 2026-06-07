@@ -436,9 +436,17 @@ html.dark .mgmt-page .loyalty-badge { background:linear-gradient(135deg,#3a2e10,
 html.dark .mgmt-page .pill-warn { background:#3a2e10; color:#f3c969; }
 html.dark .mgmt-page .hero-avatar { background:#3a2540; color:#e0b8d8; }
 
-/* Body background — when the page is mounted, paint the FULL viewport
-   with the page-background colour from the mock (--bg-tertiary). */
-.mgmt-page-host { background:#F4F5F7; min-height:100vh; }
+/* Body background + window-lock in ONE element, NO :has().
+   The host is the only tall child of <body>, so pinning it to exactly the
+   viewport height and clipping its overflow keeps the window itself from
+   scrolling — `.main` (and the sidebar) scroll internally, so the scrollbar
+   sits BELOW the fixed 56px header (1:1 with the mock). This replaces the old
+   `html:has(.mgmt-page){overflow-y:scroll}` AND `html:has(.mgmt-page){overflow:hidden}`
+   rules: a root-level :has() forces Chrome to re-evaluate + re-rasterise the
+   WHOLE document on every DOM mutation (e.g. ticking an RBAC permission box),
+   which is the faint full-page flicker Arshak saw on field changes. A plain
+   class on the host (present at first paint, no flash) avoids that entirely. */
+.mgmt-page-host { background:#F4F5F7; height:100vh; overflow:hidden; }
 
 /* ── Dark mode (header moon/sun toggle) ──────────────────────────────────
    The toggle adds `.dark` to <html>. The mgmt-page is otherwise light-only
@@ -466,16 +474,10 @@ html.dark .mgmt-page .badge-danger { background:#3a1820; color:#f2899a; }
 html.dark .mgmt-page .badge-info, html.dark .mgmt-page .avatar-blue, html.dark .mgmt-page .alert { background:#16263a; color:#7fb6f0; }
 html.dark .mgmt-page .super-tag { background:#3a2540; color:#e0b8d8; }
 
-/* Window-lock so the scrollbar lives BELOW the header, not over it — 1:1 with the
-   mock (docs/admin_designe/7-crm/4_crm.html ~line 346: `html,body{height:100%;
-   overflow:hidden}` + `.main{height:calc(100vh-56px);overflow-y:auto}`). The window
-   itself never scrolls; `.main` and the sidebar scroll internally. `.main` also
-   reserves its scrollbar gutter (scrollbar-gutter:stable, set on `.main` above) so
-   switching a section-tab to a shorter/taller pane never shifts the layout left/
-   right — the "աջ ու ձախ" jump Arshak reported on tab clicks. (Earlier this forced
-   `overflow-y:scroll` on the WINDOW, which put an always-on scrollbar OVER the
-   fixed header and left a stray gutter strip on the right — both now gone.) */
-html:has(.mgmt-page), body:has(.mgmt-page) { height:100%; overflow:hidden; }
+/* (Window-lock moved up onto `.mgmt-page-host` — no :has(). `.main` reserves its
+   scrollbar gutter via scrollbar-gutter:stable [set on `.main` above] so switching
+   a section-tab to a shorter/taller pane never shifts the layout left/right — the
+   "աջ ու ձախ" jump Arshak reported on tab clicks.) */
 
 /* ── CRM (7-crm) — kanban board + rich empty-state (icon/title/sub) ──── */
 .mgmt-page .kanban { display:flex; gap:14px; overflow-x:auto; padding-bottom:8px; align-items:flex-start; }
