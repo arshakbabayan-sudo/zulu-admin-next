@@ -200,7 +200,12 @@ export function RbacMenuTree({ token, roleId, roleName, ceilingPermissionIds, ca
           </div>
         ) : null}
 
-        {loading ? (
+        {/* Only blank to "Loading…" on the FIRST load (empty tree). On a role
+            switch the tree structure is identical — only `granted` differs — so
+            keep the existing sections rendered (they update in place when the new
+            data arrives). Blanking on every switch collapsed/re-opened every
+            section = the "flicker" Arshak saw when clicking Agent/Operator/etc. */}
+        {loading && sections.length === 0 ? (
           <p className="text-[13px]" style={{ color: "var(--admin-text-secondary)" }}>Loading…</p>
         ) : (
           <div className="flex flex-col gap-2">
