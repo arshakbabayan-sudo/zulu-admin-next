@@ -318,7 +318,8 @@ export function SettingsPage({ initialPage = "exchange-rates" }: { initialPage?:
         if (typeof window !== "undefined" && m.href) {
           window.history.replaceState(window.history.state, "", m.href);
         }
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        // `.main` is the scroll container (window is locked); reset it, not window.
+        document.querySelector(".mgmt-page .main")?.scrollTo({ top: 0, behavior: "smooth" });
       } else if (m.href) {
         router.push(m.href);
       }

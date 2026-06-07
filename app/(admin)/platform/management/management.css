@@ -40,7 +40,7 @@
 .mgmt-page .layout.sidebar-collapsed .sidebar-item i { font-size:18px; width:auto; }
 .mgmt-page .layout.sidebar-collapsed .sidebar-badge { display:none; }
 .mgmt-page .layout.sidebar-collapsed .header-brand { width:64px; padding-left:0; justify-content:center; }
-.mgmt-page .main { display:flex; flex-direction:column; min-width:0; }
+.mgmt-page .main { display:flex; flex-direction:column; min-width:0; height:calc(100vh - 56px); overflow-y:auto; min-height:0; scrollbar-gutter:stable; }
 .mgmt-page .page { padding:24px; max-width:1500px; width:100%; }
 
 .mgmt-page .sidebar { background:var(--bg-primary); border-right:1px solid var(--border-color); position:sticky; top:56px; height:calc(100vh - 56px); overflow-y:auto; overflow-x:hidden; padding:16px 12px; transition:transform .18s ease; }
@@ -466,13 +466,16 @@ html.dark .mgmt-page .badge-danger { background:#3a1820; color:#f2899a; }
 html.dark .mgmt-page .badge-info, html.dark .mgmt-page .avatar-blue, html.dark .mgmt-page .alert { background:#16263a; color:#7fb6f0; }
 html.dark .mgmt-page .super-tag { background:#3a2540; color:#e0b8d8; }
 
-/* Always reserve the vertical scrollbar gutter while a Management page is
-   mounted. Without this, switching a section-tab to a pane that is shorter
-   (or taller) than the viewport makes the scrollbar appear/disappear, which
-   shifts the whole page left/right by the scrollbar width — the "աջ ու ձախ"
-   jump Arshak reported on tab clicks. `scrollbar-gutter:stable` keeps the
-   track space reserved at all times so the layout never shifts. */
-html:has(.mgmt-page) { scrollbar-gutter: stable; overflow-y: scroll; }
+/* Window-lock so the scrollbar lives BELOW the header, not over it — 1:1 with the
+   mock (docs/admin_designe/7-crm/4_crm.html ~line 346: `html,body{height:100%;
+   overflow:hidden}` + `.main{height:calc(100vh-56px);overflow-y:auto}`). The window
+   itself never scrolls; `.main` and the sidebar scroll internally. `.main` also
+   reserves its scrollbar gutter (scrollbar-gutter:stable, set on `.main` above) so
+   switching a section-tab to a shorter/taller pane never shifts the layout left/
+   right — the "աջ ու ձախ" jump Arshak reported on tab clicks. (Earlier this forced
+   `overflow-y:scroll` on the WINDOW, which put an always-on scrollbar OVER the
+   fixed header and left a stray gutter strip on the right — both now gone.) */
+html:has(.mgmt-page), body:has(.mgmt-page) { height:100%; overflow:hidden; }
 
 /* ── CRM (7-crm) — kanban board + rich empty-state (icon/title/sub) ──── */
 .mgmt-page .kanban { display:flex; gap:14px; overflow-x:auto; padding-bottom:8px; align-items:flex-start; }
