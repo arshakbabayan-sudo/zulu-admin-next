@@ -90,6 +90,7 @@ import { apiCrmCustomers, type CustomerRow } from "@/lib/customers-api";
 import { apiShowPlatformUser, type PlatformAdminUserDetail } from "@/lib/platform-admin-api";
 import { apiBookings, type BookingRow } from "@/lib/bookings-api";
 import { AddEmployeeModal } from "@/components/employees/AddEmployeeModal";
+import { AccountPane, MyCompanyPane, MyAgentsPane } from "./MyProfilePanes";
 
 // ── helpers ────────────────────────────────────────────────────────
 function money(amount: number | null | undefined, currency: string): string {
@@ -186,11 +187,12 @@ const BOOKING_BADGE: Record<string, string> = {
   refunded: "badge-gray",
 };
 
-type ClusterKey = "sales" | "people" | "work" | "options";
+type ClusterKey = "sales" | "people" | "work" | "myprofile" | "options";
 export type CrmPageKey =
   | "pipeline" | "leads" | "deals" | "activities" | "segments"
   | "customers" | "team"
   | "contracts" | "workhours" | "payroll" | "files"
+  | "account" | "mycompany" | "myteam" | "myagents"
   | "options";
 
 type CrmMeta = {
@@ -205,6 +207,7 @@ const CLUSTERS: Array<{ key: ClusterKey; labelKey: CrmKey; icon: string }> = [
   { key: "sales", labelKey: "clSales", icon: "ti-businessplan" },
   { key: "people", labelKey: "clPeople", icon: "ti-users" },
   { key: "work", labelKey: "clWork", icon: "ti-briefcase" },
+  { key: "myprofile", labelKey: "clMyProfile", icon: "ti-user-circle" },
   { key: "options", labelKey: "clOptions", icon: "ti-adjustments" },
 ];
 
@@ -233,13 +236,17 @@ export function CrmPage({ initialPage = "pipeline" }: { initialPage?: CrmPageKey
     workhours:  { cluster: "work",    labelKey: "pgWorkhours",  subKey: "subWorkhours",  inPage: true,  href: "/bucket3/non-service-hours" },
     payroll:    { cluster: "work",    labelKey: "pgPayroll",    subKey: "subPayroll",    inPage: true,  href: "/bucket3/payroll" },
     files:      { cluster: "work",    labelKey: "pgFiles",      subKey: "subFiles",      inPage: true,  href: "/admin-redesign/files" },
+    account:    { cluster: "myprofile", labelKey: "pgAccount",   subKey: "subAccount",    inPage: true,  href: "/crm/account" },
+    mycompany:  { cluster: "myprofile", labelKey: "pgMyCompany", subKey: "subMyCompany",  inPage: true,  href: "/crm/my-company" },
+    myteam:     { cluster: "myprofile", labelKey: "pgMyTeam",    subKey: "subMyTeam",     inPage: true,  href: "/crm/my-team" },
+    myagents:   { cluster: "myprofile", labelKey: "pgMyAgents",  subKey: "subMyAgents",   inPage: true,  href: "/crm/my-agents" },
     options:    { cluster: "options", labelKey: "pgOptions",    subKey: "subOptions",    inPage: true,  href: "/crm/options" },
   }), [contractsHref]);
   // NOTE: options.inPage stays false in PAGES only as a fallback href; the pane
   // IS rendered in-page below. The route /crm/options renders <CrmPage> too.
 
   const PAGES_BY_CLUSTER = useMemo(() => {
-    const m: Record<ClusterKey, CrmPageKey[]> = { sales: [], people: [], work: [], options: [] };
+    const m: Record<ClusterKey, CrmPageKey[]> = { sales: [], people: [], work: [], myprofile: [], options: [] };
     (Object.keys(PAGES) as CrmPageKey[]).forEach((k) => m[PAGES[k].cluster].push(k));
     return m;
   }, [PAGES]);
@@ -274,6 +281,26 @@ export function CrmPage({ initialPage = "pipeline" }: { initialPage?: CrmPageKey
   const meta = PAGES[page];
   const activeCluster = meta.cluster;
   const isSuper = !!(user?.is_super_admin || canAccessPlatformAdminNav(user));
+
+  // My profile cluster — pill scoping (menu-level UX; the backend enforces the
+  // real data access). Account = everyone. My company / My team = company
+  // owners (company_admin OR agent), not super. My agents = operator owner only
+  // (company_admin / operator_admin, NOT pure agents), not super.
+  const isAgentOwner = !!user?.roles?.includes("agent");
+  const isCompanyOwner =
+    !!user?.roles?.includes("company_admin") || isAgentOwner;
+  const isOperatorOwner = !isAgentOwner && !!user?.roles?.includes("company_admin");
+  const visibleMyProfilePages = useMemo<CrmPageKey[]>(() => {
+    const pages: CrmPageKey[] = ["account"];
+    if (isSuper) return pages; // super sees only Account in this cluster
+    if (isCompanyOwner) {
+      pages.push("mycompany", "myteam");
+    }
+    if (isOperatorOwner) {
+      pages.push("myagents");
+    }
+    return pages;
+  }, [isSuper, isCompanyOwner, isOperatorOwner]);
 
   // In-page → swap pane + sync URL; otherwise navigate to the existing route.
   const showPage = useCallback(
@@ -362,7 +389,10 @@ export function CrmPage({ initialPage = "pipeline" }: { initialPage?: CrmPageKey
 
             {/* Level 2 — page pills for the active cluster */}
             <div className="pills-row active">
-              {PAGES_BY_CLUSTER[activeCluster].map((k) => (
+              {(activeCluster === "myprofile"
+                ? visibleMyProfilePages
+                : PAGES_BY_CLUSTER[activeCluster]
+              ).map((k) => (
                 <button
                   key={k}
                   className={`sub-tab pg-pill ${k === page ? "active" : ""}`}
@@ -406,6 +436,30 @@ export function CrmPage({ initialPage = "pipeline" }: { initialPage?: CrmPageKey
             {page === "files" && (
               <FilesPane token={token} user={user} lang={lang} registerAction={setActionNode} showToast={showToast} />
             )}
+
+            {/* My profile cluster — pane render is guarded by the role-scoped
+                pill list: a page the user can't see falls back to Account. */}
+            {page === "account" && (
+              <AccountPane token={token} user={user} lang={lang} registerAction={setActionNode} showToast={showToast} />
+            )}
+            {page === "mycompany" &&
+              (visibleMyProfilePages.includes("mycompany") ? (
+                <MyCompanyPane token={token} user={user} lang={lang} registerAction={setActionNode} showToast={showToast} />
+              ) : (
+                <AccountPane token={token} user={user} lang={lang} registerAction={setActionNode} showToast={showToast} />
+              ))}
+            {page === "myteam" &&
+              (visibleMyProfilePages.includes("myteam") ? (
+                <TeamPane token={token} user={user} lang={lang} registerAction={setActionNode} showToast={showToast} />
+              ) : (
+                <AccountPane token={token} user={user} lang={lang} registerAction={setActionNode} showToast={showToast} />
+              ))}
+            {page === "myagents" &&
+              (visibleMyProfilePages.includes("myagents") ? (
+                <MyAgentsPane token={token} user={user} lang={lang} registerAction={setActionNode} showToast={showToast} />
+              ) : (
+                <AccountPane token={token} user={user} lang={lang} registerAction={setActionNode} showToast={showToast} />
+              ))}
           </div>
         </div>
       </div>
@@ -525,7 +579,7 @@ type DealDrawerState = { mode: "create" } | { mode: "edit"; row: CrmDeal } | nul
 const DEAL_CURRENCIES = ["AMD", "USD", "EUR", "RUB", "GBP"];
 const CHIP_STAGES: Array<CrmDealStage | "all"> = ["all", "new", "qualified", "proposal", "won", "lost"];
 
-type PaneProps = {
+export type PaneProps = {
   token: string | null;
   lang: string;
   registerAction: (node: ReactNode) => void;
@@ -1505,7 +1559,7 @@ const TEAM_MODEL_KEY: Record<CrmCompModel, CrmKey> = {
   fixed_plus_percent: "teamModelFixedPercent",
 };
 
-type TeamUser = NonNullable<ReturnType<typeof useAdminAuth>["user"]>;
+export type TeamUser = NonNullable<ReturnType<typeof useAdminAuth>["user"]>;
 
 function TeamPane({
   token,

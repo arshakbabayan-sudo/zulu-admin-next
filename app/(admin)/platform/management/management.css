@@ -581,3 +581,56 @@ html.dark .mgmt-page .super-tag { background:#3a2540; color:#e0b8d8; }
 .mgmt-page .file-ico.img { background:var(--info-light); color:var(--info-dark); }
 .mgmt-page .file-ico.doc, .mgmt-page .file-ico.svg { background:var(--primary-light); color:var(--primary-dark); }
 .mgmt-page .file-ico.sheet { background:var(--success-light); color:var(--success-dark); }
+
+/* ── My profile cluster (Account · My company · My team · My agents) ──
+   Ported from docs/admin_designe/my-profile/my-profile.html <style> block.
+   Only classes not already present above are added here. */
+.mgmt-page .tile-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px; }
+@media (max-width:760px){ .mgmt-page .tile-grid { grid-template-columns:1fr 1fr; } }
+.mgmt-page .tile { background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:14px 16px; }
+.mgmt-page .tile .tile-v { font-size:20px; font-weight:700; }
+.mgmt-page .tile .tile-l { font-size:12px; color:var(--text-secondary); margin-top:2px; }
+
+.mgmt-page .verif { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; color:var(--success-dark); background:var(--success-light); padding:3px 8px; border-radius:999px; text-transform:uppercase; letter-spacing:.3px; }
+
+.mgmt-page .barchart { display:flex; align-items:flex-end; gap:3px; height:120px; padding:6px 0 0; }
+.mgmt-page .barchart.tall { height:150px; }
+.mgmt-page .bc-axis { display:flex; justify-content:space-between; font-size:11px; color:var(--text-tertiary); margin-top:6px; }
+
+.mgmt-page .act-item { display:flex; gap:12px; align-items:flex-start; padding:10px 0; border-bottom:1px dashed var(--border-color); }
+.mgmt-page .act-item:last-child { border-bottom:none; }
+.mgmt-page .act-ic { width:32px; height:32px; border-radius:var(--radius-md); background:var(--bg-tertiary); color:var(--text-secondary); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+.mgmt-page .act-ic.ok { background:var(--success-light); color:var(--success-dark); }
+.mgmt-page .act-ic.info { background:var(--info-light); color:var(--info-dark); }
+.mgmt-page .act-ic.warn { background:var(--warning-light); color:var(--warning-dark); }
+.mgmt-page .act-body { flex:1; min-width:0; }
+.mgmt-page .act-title { font-size:13px; }
+.mgmt-page .act-time { font-size:11px; color:var(--text-tertiary); margin-top:1px; }
+
+.mgmt-page .sec-row { display:flex; align-items:center; gap:14px; padding:14px 0; border-bottom:1px dashed var(--border-color); }
+.mgmt-page .sec-row:last-child { border-bottom:none; }
+.mgmt-page .sec-ic { width:40px; height:40px; border-radius:var(--radius-md); background:var(--primary-soft); color:var(--primary); display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+.mgmt-page .sec-row .sec-body { flex:1; min-width:0; }
+.mgmt-page .sec-row .sec-title { font-size:13px; font-weight:600; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.mgmt-page .sec-row .sec-sub { font-size:12px; color:var(--text-secondary); margin-top:1px; }
+.mgmt-page .sec-row .sec-action { margin-left:auto; display:flex; align-items:center; gap:8px; flex-shrink:0; }
+
+.mgmt-page .sess-item { display:flex; align-items:center; gap:14px; padding:13px 0; border-bottom:1px dashed var(--border-color); }
+.mgmt-page .sess-item:last-child { border-bottom:none; }
+.mgmt-page .sess-ic { width:38px; height:38px; border-radius:50%; background:var(--bg-tertiary); color:var(--text-secondary); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+.mgmt-page .sess-item.current .sess-ic { background:var(--success-light); color:var(--success-dark); }
+.mgmt-page .sess-body { flex:1; min-width:0; }
+.mgmt-page .sess-title { font-size:13px; font-weight:600; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.mgmt-page .sess-meta { font-size:12px; color:var(--text-secondary); margin-top:1px; }
+
+.mgmt-page .mini-list { display:flex; flex-direction:column; gap:9px; }
+.mgmt-page .mini-row { display:flex; align-items:center; gap:10px; font-size:13px; }
+.mgmt-page .mini-row .mr-name { width:150px; flex-shrink:0; }
+.mgmt-page .mini-row .mr-track { flex:1; height:8px; border-radius:4px; background:var(--bg-tertiary); overflow:hidden; }
+.mgmt-page .mini-row .mr-track > span { display:block; height:100%; background:var(--primary); border-radius:4px; }
+.mgmt-page .mini-row .mr-val { width:54px; text-align:right; font-variant-numeric:tabular-nums; color:var(--text-secondary); font-size:12px; flex-shrink:0; }
+
+.mgmt-page .radio-row { display:flex; flex-direction:column; gap:8px; }
+.mgmt-page .radio-opt { display:flex; gap:10px; align-items:flex-start; font-size:13px; cursor:pointer; padding:8px 0; }
+.mgmt-page .radio-opt input { width:16px; height:16px; accent-color:var(--primary); margin-top:2px; cursor:pointer; }
+.mgmt-page .radio-opt .ro-sub { font-size:11px; color:var(--text-tertiary); margin-top:1px; }

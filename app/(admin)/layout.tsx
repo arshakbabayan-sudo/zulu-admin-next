@@ -79,6 +79,12 @@ const MGMT_PREFIXES = [
   "/crm/activities",
   "/crm/team",
   "/crm/options",
+  // 2026-06-10 — CRM "My profile" cluster (5th cluster: Account · My company ·
+  // My team · My agents). None have sub-routes, so safe as startsWith prefixes.
+  "/crm/account",
+  "/crm/my-company",
+  "/crm/my-team",
+  "/crm/my-agents",
   // 2026-06-07 — CRM consolidation WORK cluster. These three have NO sub-routes,
   // so they are safe as startsWith prefixes. They render the unified CrmPage
   // (Work → Work hours / Payroll / Files panes).
