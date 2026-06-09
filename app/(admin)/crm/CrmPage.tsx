@@ -292,10 +292,16 @@ export function CrmPage({ initialPage = "pipeline" }: { initialPage?: CrmPageKey
   const isOperatorOwner = !isAgentOwner && !!user?.roles?.includes("company_admin");
   const visibleMyProfilePages = useMemo<CrmPageKey[]>(() => {
     const pages: CrmPageKey[] = ["account"];
-    if (isSuper) return pages; // super sees only Account in this cluster
+    // Super (platform owner) sees ALL 4 pills — consistent with super seeing
+    // everything else in the panel, and so the whole section is reviewable.
+    if (isSuper) {
+      pages.push("mycompany", "myteam", "myagents");
+      return pages;
+    }
     if (isCompanyOwner) {
       pages.push("mycompany", "myteam");
     }
+    // Operator owner manages its agents; an agent owner has no sub-agents.
     if (isOperatorOwner) {
       pages.push("myagents");
     }
