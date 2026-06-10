@@ -311,6 +311,11 @@ export function CrmPage({ initialPage = "pipeline" }: { initialPage?: CrmPageKey
   // In-page → swap pane + sync URL; otherwise navigate to the existing route.
   const showPage = useCallback(
     (key: CrmPageKey) => {
+      // Clicking the ALREADY-active pill is a no-op. Otherwise we'd clear the
+      // action-slot button (setActionNode(null)) but the pane wouldn't remount
+      // (same page) so it never re-registers its button → it vanished. (Arshak
+      // 2026-06-10: "+New contract" disappeared on clicking the active sub-tab.)
+      if (key === page) return;
       const m = PAGES[key];
       if (m.inPage || key === "options") {
         setActionNode(null);
@@ -324,7 +329,7 @@ export function CrmPage({ initialPage = "pipeline" }: { initialPage?: CrmPageKey
         router.push(m.href);
       }
     },
-    [PAGES, router]
+    [PAGES, router, page]
   );
 
   const goCluster = useCallback(
