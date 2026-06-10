@@ -355,14 +355,10 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   // Files (/admin-redesign/files) now lives UNDER CRM (Work cluster) — operators/
   // agents store their contracts + customer payment receipts there. Reached via
   // the CRM section-tab strip; sidebar highlights CRM via SECTION_ALIAS_PREFIXES.
-  {
-    key: "my_profile",
-    labelKey: "admin.nav.section.my_profile",
-    labelFallback: "My profile",
-    defaultHref: "/admin-redesign/profile",
-    tabs: [],
-    visibility: "always",
-  },
+  // My profile — REMOVED as a separate sidebar group 2026-06-10. "My profile"
+  // now lives INSIDE CRM as its own cluster (Account · My company · My team ·
+  // My agents) — see app/(admin)/crm/CrmPage.tsx + MyProfilePanes.tsx. The old
+  // standalone /admin-redesign/profile route is now a redirect to /crm/account.
   // Phase 4F (2026-05-31) — Inbox group: renamed from "Notifications" and
   // expanded to host the three pending-action surfaces that previously lived
   // in three different spots (Notifications group + My company tabs).
@@ -462,7 +458,6 @@ export const SIDEBAR_TABLER_ICON: Record<string, string> = {
   // groups folded into CRM; 2026-06-04 — `directory` group deleted. None of these
   // group keys exist in ADMIN_NAV_GROUPS anymore, so their icons are unreferenced.
   marketplace_ops: "ti-shield-check",
-  my_profile: "ti-user",
   notifications_v2: "ti-inbox",
   settings: "ti-settings",
 };
@@ -490,7 +485,6 @@ export const GROUP_MENU_PERMISSION: Record<string, string> = {
   // backend `my_company.view` permission string is kept; only the dead frontend
   // nav wiring is removed here.
   marketplace_ops: "management.view",
-  my_profile: "profile.view",
   notifications_v2: "inbox.view",
   settings: "settings.view",
 };
