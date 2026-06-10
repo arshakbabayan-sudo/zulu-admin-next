@@ -27,7 +27,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessFinanceSection } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
-import { apiInvoices, apiIssueInvoice, apiCancelInvoice, apiPayInvoice, apiSendInvoiceReminder, apiStoreInvoice, downloadInvoicesCsv, type InvoiceRow } from "@/lib/invoices-api";
+import { apiInvoices, apiIssueInvoice, apiCancelInvoice, apiPayInvoice, apiSendInvoiceReminder, apiSearchOrdersForInvoice, apiStoreInvoice, downloadInvoicesCsv, type InvoiceOrderSearchRow, type InvoiceRow } from "@/lib/invoices-api";
 import { apiInvoicesStats, type InvoicesStats } from "@/lib/finance-stats-api";
 import { formatMoney } from "@/lib/format";
 import {
@@ -142,6 +142,12 @@ export default function PlatformInvoicesPage() {
   const [newInvoiceOpen, setNewInvoiceOpen] = useState(false);
   const [newOrderId, setNewOrderId] = useState("");
   const [creating, setCreating] = useState(false);
+  // Order typeahead inside the New-invoice modal (replaces hand-typed UUID).
+  const [orderQuery, setOrderQuery] = useState("");
+  const [orderResults, setOrderResults] = useState<InvoiceOrderSearchRow[]>([]);
+  const [orderSearching, setOrderSearching] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<InvoiceOrderSearchRow | null>(null);
+  const [manualOrderEntry, setManualOrderEntry] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
@@ -164,6 +170,58 @@ export default function PlatformInvoicesPage() {
     };
   }, [moreMenuId]);
 
+  // Debounced (400ms) order search for the New-invoice modal. Skipped while
+  // the modal is closed, in manual-UUID mode, or once an order is picked.
+  useEffect(() => {
+    if (!token || !newInvoiceOpen || manualOrderEntry || selectedOrder) return;
+    const q = orderQuery.trim();
+    if (q.length < 2) {
+      setOrderResults([]);
+      setOrderSearching(false);
+      return;
+    }
+    setOrderSearching(true);
+    let cancelled = false;
+    const id = setTimeout(() => {
+      apiSearchOrdersForInvoice(token, q)
+        .then((res) => {
+          if (!cancelled) setOrderResults(res.data);
+        })
+        .catch(() => {
+          if (!cancelled) setOrderResults([]);
+        })
+        .finally(() => {
+          if (!cancelled) setOrderSearching(false);
+        });
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
+  }, [token, newInvoiceOpen, manualOrderEntry, selectedOrder, orderQuery]);
+
+  function closeNewInvoiceModal() {
+    setNewInvoiceOpen(false);
+    setNewOrderId("");
+    setOrderQuery("");
+    setOrderResults([]);
+    setOrderSearching(false);
+    setSelectedOrder(null);
+    setManualOrderEntry(false);
+  }
+
+  function pickOrder(o: InvoiceOrderSearchRow) {
+    setSelectedOrder(o);
+    setNewOrderId(o.id);
+    setOrderQuery("");
+    setOrderResults([]);
+  }
+
+  function clearPickedOrder() {
+    setSelectedOrder(null);
+    setNewOrderId("");
+  }
+
   async function handleCreateInvoice() {
     if (!token) return;
     const orderId = newOrderId.trim();
@@ -174,8 +232,7 @@ export default function PlatformInvoicesPage() {
     setCreating(true);
     try {
       await apiStoreInvoice(token, orderId);
-      setNewInvoiceOpen(false);
-      setNewOrderId("");
+      closeNewInvoiceModal();
       await load();
       setToast(tx(t, "admin.invoices.ok_created", "Invoice created."));
     } catch (e) {
@@ -864,35 +921,121 @@ export default function PlatformInvoicesPage() {
         ) : null}
       </V2Drawer>
 
-      {/* GROUP D — New invoice create modal. POST /invoices needs an order UUID. */}
+      {/* GROUP D — New invoice create modal. POST /invoices needs an order UUID;
+          a typeahead over /platform-admin/bookings?search= picks it, with a
+          manual-UUID escape hatch. */}
       <V2Modal
         open={newInvoiceOpen}
-        onClose={() => setNewInvoiceOpen(false)}
+        onClose={closeNewInvoiceModal}
         title={tx(t, "admin.invoices.btn_new", "New invoice")}
         footer={
           <>
-            <V2Button onClick={() => setNewInvoiceOpen(false)}>{t("common.cancel")}</V2Button>
+            <V2Button onClick={closeNewInvoiceModal}>{t("common.cancel")}</V2Button>
             <V2Button variant="primary" disabled={creating} onClick={() => void handleCreateInvoice()}>
               {creating ? t("common.saving") : tx(t, "admin.invoices.btn_create", "Create invoice")}
             </V2Button>
           </>
         }
       >
-        <label className="flex flex-col gap-1.5 text-sm">
+        <div className="flex flex-col gap-1.5 text-sm">
           <span className="font-medium" style={{ color: "var(--admin-text-secondary)" }}>
-            {tx(t, "admin.invoices.field_order_id", "Order ID")}
+            {manualOrderEntry
+              ? tx(t, "admin.invoices.field_order_id", "Order ID")
+              : tx(t, "admin.invoices.picker_label", "Order")}
           </span>
-          <input
-            type="text"
-            value={newOrderId}
-            onChange={(e) => setNewOrderId(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") void handleCreateInvoice();
-            }}
-            placeholder="00000000-0000-0000-0000-000000000000"
-            className="h-[38px] rounded-md border bg-white px-3 font-mono text-[13px] outline-none focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
-            style={{ borderColor: "var(--admin-border)" }}
-          />
+
+          {manualOrderEntry ? (
+            <input
+              type="text"
+              value={newOrderId}
+              onChange={(e) => setNewOrderId(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void handleCreateInvoice();
+              }}
+              placeholder="00000000-0000-0000-0000-000000000000"
+              className="h-[38px] rounded-md border bg-white px-3 font-mono text-[13px] outline-none focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+              style={{ borderColor: "var(--admin-border)" }}
+            />
+          ) : selectedOrder ? (
+            <span
+              className="inline-flex w-fit items-center gap-1.5 rounded-md border px-2.5 py-1 text-[12px] font-medium"
+              style={{
+                backgroundColor: "var(--admin-primary-soft)",
+                borderColor: "var(--admin-primary-light)",
+                color: "var(--admin-primary)",
+              }}
+            >
+              <span className="font-mono">{selectedOrder.order_number ?? selectedOrder.id}</span>
+              {selectedOrder.user?.name || selectedOrder.company?.name ? (
+                <span className="opacity-80">
+                  · {[selectedOrder.user?.name, selectedOrder.company?.name].filter(Boolean).join(" · ")}
+                </span>
+              ) : null}
+              <button
+                type="button"
+                aria-label={tx(t, "admin.invoices.picker_clear", "Clear selected order")}
+                onClick={clearPickedOrder}
+                className="transition hover:opacity-70"
+              >
+                <XIcon className="h-3 w-3" />
+              </button>
+            </span>
+          ) : (
+            <>
+              <input
+                type="search"
+                value={orderQuery}
+                onChange={(e) => setOrderQuery(e.target.value)}
+                placeholder={tx(
+                  t,
+                  "admin.invoices.picker_placeholder",
+                  "Search by order #, customer or company…",
+                )}
+                autoFocus
+                className="h-[38px] rounded-md border bg-white px-3 text-[13px] outline-none focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+                style={{ borderColor: "var(--admin-border)" }}
+              />
+              {orderQuery.trim().length >= 2 ? (
+                <div
+                  className="max-h-56 overflow-y-auto rounded-md border"
+                  style={{ borderColor: "var(--admin-border)" }}
+                >
+                  {orderSearching ? (
+                    <div className="px-3 py-2.5 text-[12px]" style={{ color: "var(--admin-text-tertiary)" }}>
+                      {tx(t, "admin.invoices.picker_searching", "Searching…")}
+                    </div>
+                  ) : orderResults.length === 0 ? (
+                    <div className="px-3 py-2.5 text-[12px]" style={{ color: "var(--admin-text-tertiary)" }}>
+                      {tx(t, "admin.invoices.picker_no_results", "No orders found.")}
+                    </div>
+                  ) : (
+                    orderResults.map((o) => (
+                      <button
+                        key={o.id}
+                        type="button"
+                        onClick={() => pickOrder(o)}
+                        className="flex w-full items-center justify-between gap-3 border-b px-3 py-2 text-left text-[13px] last:border-b-0 hover:bg-[color:var(--admin-bg-secondary)]"
+                        style={{ borderColor: "var(--admin-border)" }}
+                      >
+                        <span className="min-w-0">
+                          <span className="font-mono text-[12px]" style={{ color: "var(--admin-primary)" }}>
+                            {o.order_number ?? o.id}
+                          </span>
+                          <span className="block truncate text-[12px]" style={{ color: "var(--admin-text-secondary)" }}>
+                            {[o.user?.name, o.company?.name].filter(Boolean).join(" · ") || "—"}
+                          </span>
+                        </span>
+                        <span className="shrink-0 font-semibold tabular-nums text-fg-t8">
+                          {o.total != null ? formatMoney(o.total, lang, o.currency) : "—"}
+                        </span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              ) : null}
+            </>
+          )}
+
           <span className="text-[12px]" style={{ color: "var(--admin-text-tertiary)" }}>
             {tx(
               t,
@@ -900,7 +1043,24 @@ export default function PlatformInvoicesPage() {
               "The invoice lines are generated from this order automatically.",
             )}
           </span>
-        </label>
+
+          <button
+            type="button"
+            onClick={() => {
+              setManualOrderEntry((m) => !m);
+              setSelectedOrder(null);
+              setNewOrderId("");
+              setOrderQuery("");
+              setOrderResults([]);
+            }}
+            className="w-fit text-[12px] font-medium underline-offset-2 transition hover:underline"
+            style={{ color: "var(--admin-primary)" }}
+          >
+            {manualOrderEntry
+              ? tx(t, "admin.invoices.picker_search_toggle", "Search orders instead")
+              : tx(t, "admin.invoices.picker_manual_toggle", "Enter ID manually")}
+          </button>
+        </div>
       </V2Modal>
 
       {toast ? (

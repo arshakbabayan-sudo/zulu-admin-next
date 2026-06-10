@@ -874,7 +874,11 @@ export default function DashboardPage() {
     let cancelled = false;
     void (async () => {
       try {
-        const res = await apiPlatformStats(token);
+        // Roadmap 10.06 §5 — the hero cards now follow the date-range picker
+        // (order-flow numbers are filtered server-side; stock totals like
+        // "total operators" stay all-time by design).
+        const range = rangeDays === 7 ? "7d" : rangeDays === 90 ? "90d" : "30d";
+        const res = await apiPlatformStats(token, range);
         if (!cancelled) setStats(res.data);
       } catch (e) {
         if (!cancelled) {
@@ -895,7 +899,7 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [allowed, token, t]);
+  }, [allowed, token, t, rangeDays]);
 
   const greeting = user?.name ? `${t("admin.dashboard.title")} — ${user.name}` : t("admin.dashboard.title");
 

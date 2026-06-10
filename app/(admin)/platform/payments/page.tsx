@@ -28,7 +28,7 @@ import { canAccessFinanceSection } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { apiPlatformPayments, downloadPaymentsCsv, type PlatformPaymentRow } from "@/lib/platform-admin-api";
-import { apiPaymentsStats, downloadPaymentReceiptPdf, type PaymentsStats } from "@/lib/finance-stats-api";
+import { apiPaymentsStats, apiRetryPayment, downloadPaymentReceiptPdf, type PaymentsStats } from "@/lib/finance-stats-api";
 import { formatMoney } from "@/lib/format";
 import {
   STATUS_BADGE_CLASS,
@@ -577,22 +577,30 @@ export default function PlatformPaymentsPage() {
                             </IconButton>
                           ) : null}
                           {r.status === "failed" ? (
-                            // NEEDS-BACKEND: no gateway-retry endpoint exists yet
-                            // (routes/api.php has pay/capture/fail/refund only — no
-                            // /payments/{id}/retry). Until that ships, "Retry" opens
-                            // the detail drawer so the operator can inspect the failed
-                            // payment instead of doing nothing.
+                            // Roadmap 10.06 §5 — wired to the real backend retry
+                            // (POST /payments/{id}/retry): a fresh gateway intent is
+                            // created and the payment flips back to pending.
                             <IconButton
                               aria-label={tx(t, "admin.payments.retry", "Retry")}
-                              onClick={() => {
-                                setDetail(r);
-                                setToast(
-                                  tx(
-                                    t,
-                                    "admin.payments.retry_unavailable",
-                                    "Automatic retry isn't available yet — review the payment and re-collect it manually.",
-                                  ),
-                                );
+                              onClick={async () => {
+                                if (!token) return;
+                                try {
+                                  await apiRetryPayment(token, r.id);
+                                  setToast(
+                                    tx(
+                                      t,
+                                      "admin.payments.retry_started",
+                                      "Retry initiated — the payment is pending again and a new payment flow was opened for the customer.",
+                                    ),
+                                  );
+                                  void load();
+                                } catch (e) {
+                                  setToast(
+                                    e instanceof ApiRequestError
+                                      ? e.message
+                                      : tx(t, "admin.payments.retry_failed", "Retry failed"),
+                                  );
+                                }
                               }}
                             >
                               <RefreshCw />

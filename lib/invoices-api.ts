@@ -114,6 +114,35 @@ export async function apiSendInvoiceReminder(
 }
 
 /**
+ * Order row for the New-invoice modal typeahead. Backed by the existing
+ * GET /platform-admin/bookings?search= endpoint (paginated OrderResource
+ * rows) — we only type the fields the picker actually renders.
+ */
+export type InvoiceOrderSearchRow = {
+  /** Order UUID — what POST /invoices expects as order_id. */
+  id: string;
+  order_number?: string | null;
+  status: string;
+  total?: number | null;
+  currency?: string | null;
+  user?: { id: number; name: string; email?: string } | null;
+  company?: { id: number; name: string } | null;
+};
+
+/**
+ * New-invoice modal — searchable order picker. Reuses the platform-admin
+ * bookings index whose `search` param matches order_number, customer
+ * name/email and company name (PlatformAdminService::listAllBookings).
+ */
+export async function apiSearchOrdersForInvoice(
+  token: string,
+  q: string
+): Promise<ApiSuccessEnvelope<InvoiceOrderSearchRow[]> & { meta: ApiListMeta }> {
+  const params = new URLSearchParams({ search: q, per_page: "10" });
+  return apiFetchJson(`/platform-admin/bookings?${params.toString()}`, { method: "GET", token });
+}
+
+/**
  * Finance group v2 — Phase 2e Quick Actions.
  * Creates a new invoice for the given order. Backend computes the invoice
  * lines from the order's items (see InvoiceService::createForOrder).

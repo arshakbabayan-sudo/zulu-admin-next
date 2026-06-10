@@ -55,6 +55,7 @@ import {
   apiPatchCompanyProfile,
   apiPatchCompanyGovernance,
   apiPatchCompanyPartnerSettings,
+  apiListUnverifiedAccounts,
   apiPlatformUsers,
   apiPlatformUsersStats,
   apiShowPlatformUser,
@@ -794,11 +795,14 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
     if (!token || !allowed) return;
     setUnverifiedLoading(true);
     try {
-      const res = await apiPlatformUsers(token, {
+      // Roadmap 10.06 §5 — switched from the generic /users?type=unverified
+      // list to /unverified-accounts, whose meta.stats carries the FULL-
+      // dataset counts (stale_30d / new_7d / intended_staff) the stat cards
+      // need (the old path made the pane approximate them from one page).
+      const res = await apiListUnverifiedAccounts(token, {
         page: unverifiedPage,
         per_page: 20,
         search: unverifiedSearch || undefined,
-        type: "unverified",
       });
       setUnverified(res.data);
       setUnverifiedMeta(res.meta);

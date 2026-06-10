@@ -545,9 +545,15 @@ export async function apiRejectGenericApproval(
 export type PlatformStats = Record<string, number>;
 
 export async function apiPlatformStats(
-  token: string
+  token: string,
+  /**
+   * Roadmap 10.06 §5 — optional 7d/30d/90d/year window for the dashboard
+   * date picker. Filters the order-flow aggregates (bookings/package-orders)
+   * server-side; stock totals (companies/users/…) stay all-time.
+   */
+  range?: "7d" | "30d" | "90d" | "year"
 ): Promise<ApiSuccessEnvelope<PlatformStats>> {
-  return apiFetchJson(`${PA}/stats`, { method: "GET", token });
+  return apiFetchJson(`${PA}/stats${range ? `?range=${range}` : ""}`, { method: "GET", token });
 }
 
 /**
@@ -614,6 +620,28 @@ export async function apiPlatformUsers(
   if (params.type) q.set("type", params.type);
   const qs = q.toString();
   return apiFetchJson(`${PA}/users${qs ? `?${qs}` : ""}`, { method: "GET", token });
+}
+
+/**
+ * Roadmap 10.06 §5 — Unverified accounts list WITH full-dataset stat counts.
+ * Unlike the generic /users?type=unverified list, this endpoint attaches
+ * meta.stats (stale_30d / new_7d / intended_staff) computed over the WHOLE
+ * dataset, so the pane's stat cards stop approximating from the current page.
+ */
+export async function apiListUnverifiedAccounts(
+  token: string,
+  params: {
+    page?: number;
+    per_page?: number;
+    search?: string;
+  }
+): Promise<ApiSuccessEnvelope<PlatformAdminUserRow[]> & { meta: ApiListMeta }> {
+  const q = new URLSearchParams();
+  if (params.page != null) q.set("page", String(params.page));
+  if (params.per_page != null) q.set("per_page", String(params.per_page));
+  if (params.search) q.set("search", params.search);
+  const qs = q.toString();
+  return apiFetchJson(`${PA}/unverified-accounts${qs ? `?${qs}` : ""}`, { method: "GET", token });
 }
 
 export async function apiDeactivatePlatformUser(
@@ -1649,4 +1677,30 @@ export async function apiRbacDeleteRole(
   id: number
 ): Promise<ApiSuccessEnvelope<unknown>> {
   return apiFetchJson(`${PA}/rbac/roles/${id}`, { method: "DELETE", token });
+}
+
+// ─── Global search (header "Search anything" box) ──────────────────────────
+// Cross-entity lookup behind the admin header search. The backend returns
+// empty arrays when the query is shorter than 2 characters.
+export type GlobalSearchItem = {
+  id: number;
+  label: string;
+  /** Admin-relative path to navigate to, e.g. /platform/companies/12 */
+  href: string;
+};
+
+export type GlobalSearchResults = {
+  companies: GlobalSearchItem[];
+  users: GlobalSearchItem[];
+  bookings: GlobalSearchItem[];
+};
+
+export async function apiGlobalSearch(
+  token: string,
+  q: string
+): Promise<ApiSuccessEnvelope<GlobalSearchResults>> {
+  return apiFetchJson(`${PA}/search?q=${encodeURIComponent(q)}`, {
+    method: "GET",
+    token,
+  });
 }

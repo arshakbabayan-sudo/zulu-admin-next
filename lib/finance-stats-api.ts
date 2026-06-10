@@ -144,6 +144,19 @@ export async function apiRecentTransactions(
 }
 
 /**
+ * Roadmap 10.06 §5 — re-initiate the gateway charge on a FAILED payment.
+ * Backend: PaymentController::retry (POST /payments/{id}/retry). Returns the
+ * refreshed payment row + the new client_secret; 422 for non-failed payments
+ * and non-gateway methods (cash/bank_transfer).
+ */
+export async function apiRetryPayment(
+  token: string,
+  paymentId: number
+): Promise<{ success: boolean; data: unknown; client_secret?: string | null }> {
+  return apiFetchJson(`/payments/${paymentId}/retry`, { method: "POST", token, body: {} });
+}
+
+/**
  * Triggers a PDF download for a paid payment receipt.
  * Backend: PaymentController::receiptPdf → PaymentReceiptPdfService.
  */
