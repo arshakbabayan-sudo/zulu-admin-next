@@ -5050,6 +5050,8 @@ function rbRoleLabel(role: { name: string; display_name?: string | null }, s: Re
     case "company_admin": return s.rbRoleOwner;
     case "operator_admin": return s.rbRoleManager;
     case "company_manager": return s.rbRoleManager;
+    case "company_operator": return s.rbRoleOperatorStaff;
+    case "company_viewer": return s.rbRoleViewer;
     case "agent": return s.rbRoleAgent;
     default: return rbPretty(role.name);
   }

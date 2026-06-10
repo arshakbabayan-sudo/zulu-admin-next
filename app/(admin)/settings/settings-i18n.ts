@@ -637,6 +637,8 @@ const EN = {
   rbRoleOwner: "Operator",
   rbRoleManager: "Company manager",
   rbRoleAgent: "Agent",
+  rbRoleOperatorStaff: "Company staff",
+  rbRoleViewer: "Viewer (read-only)",
   // RBAC menu-mirror permission tree (components/rbac/RbacMenuTree.tsx)
   rbTreeHeader: "Permissions — {role}",
   rbTreeRoleNum: "role #{id}",
@@ -1323,6 +1325,8 @@ const HY: Partial<Record<SettingsKey, string>> = {
   rbRoleOwner: "Օպերատոր",
   rbRoleManager: "Ընկերության ղեկավար",
   rbRoleAgent: "Ագենտ",
+  rbRoleOperatorStaff: "Ընկերության աշխատակից",
+  rbRoleViewer: "Դիտող (միայն կարդալու)",
   // RBAC menu-mirror permission tree (components/rbac/RbacMenuTree.tsx)
   rbTreeHeader: "Թույլտվություններ — {role}",
   rbTreeRoleNum: "դեր #{id}",
@@ -2006,6 +2010,8 @@ const RU: Partial<Record<SettingsKey, string>> = {
   rbRoleOwner: "Оператор",
   rbRoleManager: "Менеджер компании",
   rbRoleAgent: "Агент",
+  rbRoleOperatorStaff: "Сотрудник компании",
+  rbRoleViewer: "Наблюдатель (только чтение)",
   // RBAC menu-mirror permission tree (components/rbac/RbacMenuTree.tsx)
   rbTreeHeader: "Права — {role}",
   rbTreeRoleNum: "роль #{id}",
