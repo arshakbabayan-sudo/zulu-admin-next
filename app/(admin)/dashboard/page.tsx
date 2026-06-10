@@ -20,7 +20,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
-import { canAccessDashboardSection } from "@/lib/access";
+import { canAccessDashboardSection, canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import { apiPlatformStats, type PlatformStats } from "@/lib/platform-admin-api";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -868,6 +868,13 @@ export default function DashboardPage() {
   // (operator sees their own company KPIs, super sees platform-wide), so the
   // page is open to any signed-in admin user — not super-only.
   const allowed = canAccessDashboardSection(user);
+  // The /statistics/dashboard + /statistics/sellers endpoints are platform-staff
+  // only (platform.stats.view). Tenants used to reach them only because every
+  // company role wrongly held that permission (§7 pollution, fixed 2026-06-10) —
+  // now firing them as operator/agent just 403s, so skip the fetches and let the
+  // widgets render their empty "—" state. Operator's own statistics charts are a
+  // separate roadmap item (§11).
+  const allowedPlatformStats = allowed && canAccessPlatformAdminNav(user);
 
   useEffect(() => {
     if (!allowed || !token) return;
@@ -1042,7 +1049,7 @@ export default function DashboardPage() {
           <BookingOverview stats={stats} />
         </WidgetCard>
         <WidgetCard title={t("admin.dashboard.monthly_earnings")} icon={DollarSign}>
-          <MonthlyEarnings token={token} allowed={allowed} days={rangeDays} />
+          <MonthlyEarnings token={token} allowed={allowedPlatformStats} days={rangeDays} />
         </WidgetCard>
         <WidgetCard title={t("admin.dashboard.companies_on_platform")} icon={CheckCircle2}>
           <ApprovalsProgress stats={stats} />
@@ -1090,7 +1097,7 @@ export default function DashboardPage() {
             icon={ArrowUpRight}
             action={<span className="text-xs text-fg-t6">{t("admin.dashboard.total_revenue_placeholder")}</span>}
           >
-            <TopOperatorsByRevenue token={token} allowed={allowed} days={rangeDays} />
+            <TopOperatorsByRevenue token={token} allowed={allowedPlatformStats} days={rangeDays} />
           </WidgetCard>
         </div>
         <div className="min-w-0">
