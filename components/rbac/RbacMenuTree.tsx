@@ -29,11 +29,24 @@ type Props = {
   token: string;
   roleId: number | null;
   roleName?: string;
+  /**
+   * Scope of the selected role. For company-scoped roles the platform.*
+   * permissions are hidden entirely — the backend §7 guard refuses them for
+   * such roles anyway (one platform.* grant promotes the holder to platform
+   * staff), so showing the checkboxes would only produce ticks that silently
+   * vanish on save. Undefined/null = no filtering (back-compat).
+   */
+  roleScope?: "platform" | "company" | null;
   /** Permission ids the editor is allowed to grant (ceiling). Undefined = no cap. */
   ceilingPermissionIds?: Set<number>;
   /** Whether the current user may save (super-admin / manager). */
   canEdit?: boolean;
 };
+
+/** Permissions a company-scoped role must never hold (mirrors the backend guard). */
+function isPlatformOnlyPerm(name: string): boolean {
+  return name.startsWith("platform.") || name === "super_admin";
+}
 
 /** Permission action → settings-i18n key. Unknown actions fall back to the raw string. */
 const ACTION_KEY: Record<string, SettingsKey> = {
@@ -130,7 +143,7 @@ const ITEM_LABEL_KEY: Record<string, SettingsKey> = {
   "profile.account": "rbTreeItemAccount",
 };
 
-export function RbacMenuTree({ token, roleId, roleName, ceilingPermissionIds, canEdit = true }: Props) {
+export function RbacMenuTree({ token, roleId, roleName, roleScope, ceilingPermissionIds, canEdit = true }: Props) {
   const { lang } = useLanguage();
   const s = useMemo(() => settingsStrings(lang), [lang]);
   const [sections, setSections] = useState<RbacTreeSection[]>([]);
@@ -211,12 +224,42 @@ export function RbacMenuTree({ token, roleId, roleName, ceilingPermissionIds, ca
     });
   };
 
+  const hidePlatform = roleScope === "company";
+
+  /** Tree with platform-only permissions removed for company-scoped roles
+      (items/sections that end up empty disappear with them). */
+  const visibleSections = useMemo(() => {
+    if (!hidePlatform) return sections;
+    return sections
+      .map((section) => ({
+        ...section,
+        items: section.items
+          .map((item) => ({ ...item, permissions: item.permissions.filter((p) => !isPlatformOnlyPerm(p.name)) }))
+          .filter((item) => item.permissions.length > 0),
+      }))
+      .filter((section) => section.items.length > 0);
+  }, [sections, hidePlatform]);
+
+  /** Ids hidden by the scope filter — excluded from counts and from save(). */
+  const hiddenIds = useMemo(() => {
+    const hidden = new Set<number>();
+    if (!hidePlatform) return hidden;
+    for (const section of sections)
+      for (const item of section.items)
+        for (const p of item.permissions) if (isPlatformOnlyPerm(p.name)) hidden.add(p.id);
+    return hidden;
+  }, [sections, hidePlatform]);
+
   const save = async () => {
     if (!token || roleId == null || !canEdit) return;
     setSaving(true);
     setErr(null);
     try {
-      await apiSyncRolePermissions(token, roleId, Array.from(granted));
+      await apiSyncRolePermissions(
+        token,
+        roleId,
+        Array.from(granted).filter((id) => !hiddenIds.has(id)),
+      );
       setSavedOk(true);
     } catch (e) {
       setErr(e instanceof Error ? e.message : s.rbTreeErrSave);
@@ -240,10 +283,13 @@ export function RbacMenuTree({ token, roleId, roleName, ceilingPermissionIds, ca
     return key ? s[key] : fallback;
   };
 
-  const grantedCount = granted.size;
+  const grantedCount = useMemo(
+    () => Array.from(granted).filter((id) => !hiddenIds.has(id)).length,
+    [granted, hiddenIds],
+  );
   const totalCount = useMemo(
-    () => sections.reduce((n, s) => n + s.items.reduce((m, it) => m + it.permissions.length, 0), 0),
-    [sections],
+    () => visibleSections.reduce((n, s) => n + s.items.reduce((m, it) => m + it.permissions.length, 0), 0),
+    [visibleSections],
   );
 
   if (roleId == null) {
@@ -292,7 +338,7 @@ export function RbacMenuTree({ token, roleId, roleName, ceilingPermissionIds, ca
           <p className="text-[13px]" style={{ color: "var(--admin-text-secondary)" }}>{s.loading}</p>
         ) : (
           <div className="flex flex-col gap-2">
-            {sections.map((section) => {
+            {visibleSections.map((section) => {
               const isOpen = open.has(section.key);
               const sectionPermIds = section.items.flatMap((it) => it.permissions.map((p) => p.id));
               const sectionGranted = sectionPermIds.filter((id) => granted.has(id)).length;

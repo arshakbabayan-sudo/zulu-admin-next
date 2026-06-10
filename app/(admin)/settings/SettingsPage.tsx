@@ -5206,6 +5206,7 @@ function RbacPane({ token, lang }: { token: string | null; lang: string }) {
             token={token}
             roleId={selectedRoleId}
             roleName={selectedRole ? rbRoleLabel(selectedRole, s) : undefined}
+            roleScope={selectedRole?.scope ?? null}
             canEdit={isSuper}
           />
         ) : null}
