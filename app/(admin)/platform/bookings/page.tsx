@@ -74,6 +74,15 @@ import {
 } from "@/components/ui/v2";
 import { BookingsSectionTabs } from "@/components/bookings/BookingsSectionTabs";
 
+/**
+ * Local i18n shim — returns `fallback` when the server translation row for
+ * `key` hasn't been seeded yet (t() echoes the key on a miss).
+ */
+function tx(t: (k: string) => string, key: string, fallback: string): string {
+  const v = t(key);
+  return v === key ? fallback : v;
+}
+
 const BOOKING_STATUSES = [
   "",
   "cart",
@@ -393,7 +402,7 @@ export default function PlatformBookingsPage() {
           { label: t("admin.platform_bookings.title") },
         ]}
         title={t("admin.platform_bookings.title")}
-        subtitle="All bookings across the platform with status tracking."
+        subtitle={tx(t, "admin.bookings.subtitle", "All bookings across the platform with status tracking.")}
         actions={
           <>
             <V2Button onClick={() => void load()} icon={<RefreshCw className="h-4 w-4" />} aria-label="Refresh">

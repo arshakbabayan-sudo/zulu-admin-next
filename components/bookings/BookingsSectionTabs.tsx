@@ -8,6 +8,16 @@
  */
 
 import { SectionTabs } from "@/components/ui/v2";
+import { useLanguage } from "@/contexts/LanguageContext";
+
+/**
+ * Local i18n shim — returns `fallback` when the server translation row for
+ * `key` hasn't been seeded yet (t() echoes the key on a miss).
+ */
+function tx(t: (k: string) => string, key: string, fallback: string): string {
+  const v = t(key);
+  return v === key ? fallback : v;
+}
 
 export type BookingsCounts = Partial<{
   bookings: number;
@@ -20,14 +30,19 @@ type Props = {
 };
 
 export function BookingsSectionTabs({ activeHref, counts }: Props) {
+  const { t } = useLanguage();
   return (
     <SectionTabs
       activeHref={activeHref}
       items={[
-        { href: "/platform/bookings", label: "All bookings", count: counts?.bookings },
+        {
+          href: "/platform/bookings",
+          label: tx(t, "admin.nav.tab.all_bookings", "All bookings"),
+          count: counts?.bookings,
+        },
         {
           href: "/platform/package-orders",
-          label: "Package orders",
+          label: tx(t, "admin.nav.tab.package_orders", "Package orders"),
           count: counts?.packageOrders,
         },
       ]}

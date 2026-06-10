@@ -31,11 +31,11 @@ import {
 } from "@/components/ui";
 import {
   PageHeader as V2PageHeader,
-  SectionTabs,
   V2Card,
   V2Button,
   IconButton,
 } from "@/components/ui/v2";
+import { InventorySectionTabs } from "@/components/inventory/InventorySectionTabs";
 import { Edit3, Trash2, Send } from "lucide-react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { userHasPermission } from "@/lib/access";
@@ -70,6 +70,15 @@ import {
   runCarCsvImport,
 } from "@/lib/csv-import-export";
 import { useCallback, useEffect, useRef, useState } from "react";
+
+/**
+ * Local i18n shim — returns `fallback` when the server translation row for
+ * `key` hasn't been seeded yet (t() echoes the key on a miss).
+ */
+function tx(t: (k: string) => string, key: string, fallback: string): string {
+  const v = t(key);
+  return v === key ? fallback : v;
+}
 
 /** Aligned with `App\Models\Car::PRICING_MODES` / `OPERATIONAL_STATUSES` / `AVAILABILITY_STATUSES`. */
 const CAR_PRICING_MODES = [
@@ -777,7 +786,7 @@ export default function OperatorCarsPage() {
             {form === null && <ContentLanguagePill />}
           </span>
         }
-        subtitle="Manage your car rental inventory"
+        subtitle={tx(t, "admin.inventory.cars.subtitle", "Manage your car rental inventory")}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <ImportExportButtons
@@ -807,19 +816,7 @@ export default function OperatorCarsPage() {
         }
       />
 
-      <SectionTabs
-        activeHref="/operator/cars"
-        items={[
-          { href: "/operator/hotels", label: "Hotels" },
-          { href: "/operator/flights", label: "Flights" },
-          { href: "/operator/transfers", label: "Transfers" },
-          { href: "/operator/cars", label: "Cars", count: meta?.total },
-          { href: "/operator/excursions", label: "Excursions" },
-          { href: "/operator/visas", label: "Visas" },
-          { href: "/operator/packages", label: "Packages" },
-          { href: "/operator/offers", label: "Offers" },
-        ]}
-      />
+      <InventorySectionTabs activeHref="/operator/cars" activeCount={meta?.total} />
       <CsvImportModal
         open={importOpen}
         title={t("admin.crud.cars.import_title")}

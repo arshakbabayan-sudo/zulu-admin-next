@@ -34,6 +34,15 @@ import {
 } from "@/components/ui/v2";
 import { Download } from "lucide-react";
 
+/**
+ * Local i18n shim — returns `fallback` when the server translation row for
+ * `key` hasn't been seeded yet (t() echoes the key on a miss).
+ */
+function tx(t: (k: string) => string, key: string, fallback: string): string {
+  const v = t(key);
+  return v === key ? fallback : v;
+}
+
 export default function OperatorStatisticsPage() {
   const { token, user } = useAdminAuth();
   const { t } = useLanguage();
@@ -97,7 +106,7 @@ export default function OperatorStatisticsPage() {
           { label: t("admin.operator_statistics.title") },
         ]}
         title={t("admin.operator_statistics.title")}
-        subtitle="Your sales and service performance over the selected period."
+        subtitle={tx(t, "admin.statistics.subtitle", "Your sales and service performance over the selected period.")}
         actions={<V2Button icon={<Download className="h-4 w-4" />}>Export</V2Button>}
       />
 

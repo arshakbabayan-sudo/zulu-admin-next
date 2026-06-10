@@ -19,6 +19,7 @@
 
 import { useEffect, useState } from "react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { apiFetchJson, ApiRequestError } from "@/lib/api-client";
 
 type Props = {
@@ -29,8 +30,84 @@ type Props = {
   onConfirm: () => void | Promise<void>;
 };
 
+/**
+ * Self-contained EN/HY/RU dictionary. This dialog is used from several admin
+ * surfaces, so it deliberately does NOT depend on any page-local i18n dict.
+ * The `title` / `description` props still override the built-in defaults.
+ */
+type PinDict = {
+  title: string;
+  description: string;
+  pinLabel: string;
+  pinTooShort: string;
+  pinNotSet: string;
+  pinIncorrect: string;
+  verifyFailed: string;
+  actionFailed: string;
+  cancel: string;
+  confirm: string;
+  verifying: string;
+  working: string;
+};
+
+const PIN_STRINGS: Record<"en" | "hy" | "ru", PinDict> = {
+  en: {
+    title: "Verify your PIN",
+    description: "This action is gated. Enter your account PIN to continue.",
+    pinLabel: "PIN",
+    pinTooShort: "PIN must be 4-8 digits",
+    pinNotSet:
+      "PIN is not set on your account. Go to My profile → Security to set it before using gated actions.",
+    pinIncorrect: "PIN incorrect.",
+    verifyFailed: "Verification failed",
+    actionFailed: "Action failed",
+    cancel: "Cancel",
+    confirm: "Confirm",
+    verifying: "Verifying…",
+    working: "Working…",
+  },
+  hy: {
+    title: "Հաստատիր PIN-ը",
+    description: "Այս գործողությունը պաշտպանված է։ Շարունակելու համար մուտքագրիր հաշվիդ PIN-ը։",
+    pinLabel: "PIN",
+    pinTooShort: "PIN-ը պետք է լինի 4-8 թվանշան",
+    pinNotSet:
+      "Քո հաշվին PIN սահմանված չէ։ Գնա Իմ պրոֆիլը → Անվտանգություն և սահմանիր այն՝ նախքան պաշտպանված գործողություններ անելը։",
+    pinIncorrect: "PIN-ը սխալ է։",
+    verifyFailed: "Ստուգումը չհաջողվեց",
+    actionFailed: "Գործողությունը չհաջողվեց",
+    cancel: "Չեղարկել",
+    confirm: "Հաստատել",
+    verifying: "Ստուգվում է…",
+    working: "Կատարվում է…",
+  },
+  ru: {
+    title: "Подтвердите PIN",
+    description: "Это действие защищено. Введите PIN вашего аккаунта, чтобы продолжить.",
+    pinLabel: "PIN",
+    pinTooShort: "PIN должен содержать 4-8 цифр",
+    pinNotSet:
+      "PIN не задан в вашем аккаунте. Откройте Мой профиль → Безопасность и задайте его, прежде чем выполнять защищённые действия.",
+    pinIncorrect: "Неверный PIN.",
+    verifyFailed: "Проверка не удалась",
+    actionFailed: "Действие не выполнено",
+    cancel: "Отмена",
+    confirm: "Подтвердить",
+    verifying: "Проверка…",
+    working: "Выполняется…",
+  },
+};
+
+function pinStrings(lang: string): PinDict {
+  if (lang === "hy") return PIN_STRINGS.hy;
+  if (lang === "ru") return PIN_STRINGS.ru;
+  return PIN_STRINGS.en;
+}
+
 export function PinPromptDialog({ isOpen, title, description, onCancel, onConfirm }: Props) {
   const { token } = useAdminAuth();
+  const { lang } = useLanguage();
+  const s = pinStrings(lang);
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
@@ -50,7 +127,7 @@ export function PinPromptDialog({ isOpen, title, description, onCancel, onConfir
   const submit = async () => {
     if (!token) return;
     if (pin.length < 4) {
-      setError("PIN must be 4-8 digits");
+      setError(s.pinTooShort);
       return;
     }
     setVerifying(true);
@@ -60,14 +137,12 @@ export function PinPromptDialog({ isOpen, title, description, onCancel, onConfir
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 422) {
         if (/not set/i.test(e.message)) {
-          setError(
-            "PIN is not set on your account. Go to My profile → Security to set it before using gated actions."
-          );
+          setError(s.pinNotSet);
         } else {
-          setError("PIN incorrect.");
+          setError(s.pinIncorrect);
         }
       } else {
-        setError(e instanceof Error ? e.message : "Verification failed");
+        setError(e instanceof Error ? e.message : s.verifyFailed);
       }
       setVerifying(false);
       return;
@@ -77,7 +152,7 @@ export function PinPromptDialog({ isOpen, title, description, onCancel, onConfir
     try {
       await onConfirm();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Action failed");
+      setError(e instanceof Error ? e.message : s.actionFailed);
       setBusy(false);
       return;
     }
@@ -96,18 +171,16 @@ export function PinPromptDialog({ isOpen, title, description, onCancel, onConfir
       >
         <div className="p-5">
           <h2 className="text-base font-semibold text-fg-t11">
-            {title ?? "Verify your PIN"}
+            {title ?? s.title}
           </h2>
           {description ? (
             <p className="mt-1 text-xs text-fg-t6">{description}</p>
           ) : (
-            <p className="mt-1 text-xs text-fg-t6">
-              This action is gated. Enter your account PIN to continue.
-            </p>
+            <p className="mt-1 text-xs text-fg-t6">{s.description}</p>
           )}
           <div className="mt-4">
             <label className="text-xs font-medium text-fg-t8" htmlFor="pin-input">
-              PIN
+              {s.pinLabel}
             </label>
             <input
               id="pin-input"
@@ -139,7 +212,7 @@ export function PinPromptDialog({ isOpen, title, description, onCancel, onConfir
               className="rounded-md border px-3 py-1.5 text-xs font-medium text-fg-t8 hover:bg-figma-bg-1 disabled:opacity-60"
               style={{ borderColor: "var(--admin-border)" }}
             >
-              Cancel
+              {s.cancel}
             </button>
             <button
               type="button"
@@ -151,7 +224,7 @@ export function PinPromptDialog({ isOpen, title, description, onCancel, onConfir
                 borderColor: "var(--admin-primary)",
               }}
             >
-              {verifying ? "Verifying…" : busy ? "Working…" : "Confirm"}
+              {verifying ? s.verifying : busy ? s.working : s.confirm}
             </button>
           </div>
         </div>

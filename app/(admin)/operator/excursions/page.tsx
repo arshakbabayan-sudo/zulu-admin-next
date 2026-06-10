@@ -29,11 +29,11 @@ import {
 } from "@/components/ui";
 import {
   PageHeader as V2PageHeader,
-  SectionTabs,
   V2Card,
   V2Button,
   IconButton,
 } from "@/components/ui/v2";
+import { InventorySectionTabs } from "@/components/inventory/InventorySectionTabs";
 import { Edit3, Trash2, Send } from "lucide-react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { userHasPermission } from "@/lib/access";
@@ -72,6 +72,15 @@ import {
 } from "@/lib/csv-import-export";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useCallback, useEffect, useRef, useState } from "react";
+
+/**
+ * Local i18n shim — returns `fallback` when the server translation row for
+ * `key` hasn't been seeded yet (t() echoes the key on a miss).
+ */
+function tx(t: (k: string) => string, key: string, fallback: string): string {
+  const v = t(key);
+  return v === key ? fallback : v;
+}
 
 const EXCURSION_FIELD_LABEL_KEYS: Record<string, string> = {
   "": "admin.crud.excursions.field.form",
@@ -437,7 +446,7 @@ export default function OperatorExcursionsPage() {
             {form === null && <ContentLanguagePill />}
           </span>
         }
-        subtitle="Manage your excursion inventory"
+        subtitle={tx(t, "admin.inventory.excursions.subtitle", "Manage your excursion inventory")}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <ImportExportButtons
@@ -467,19 +476,7 @@ export default function OperatorExcursionsPage() {
         }
       />
 
-      <SectionTabs
-        activeHref="/operator/excursions"
-        items={[
-          { href: "/operator/hotels", label: "Hotels" },
-          { href: "/operator/flights", label: "Flights" },
-          { href: "/operator/transfers", label: "Transfers" },
-          { href: "/operator/cars", label: "Cars" },
-          { href: "/operator/excursions", label: "Excursions", count: meta?.total },
-          { href: "/operator/visas", label: "Visas" },
-          { href: "/operator/packages", label: "Packages" },
-          { href: "/operator/offers", label: "Offers" },
-        ]}
-      />
+      <InventorySectionTabs activeHref="/operator/excursions" activeCount={meta?.total} />
       <CsvImportModal
         open={importOpen}
         title={t("admin.crud.excursions.import_title")}

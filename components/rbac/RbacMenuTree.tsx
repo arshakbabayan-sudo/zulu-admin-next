@@ -22,6 +22,8 @@ import {
   type RbacTreeSection,
 } from "@/lib/rbac-tree-api";
 import { V2Card, V2CardHeader, V2CardBody, V2Button, EmptyState } from "@/components/ui/v2";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { settingsStrings, type SettingsKey } from "@/app/(admin)/settings/settings-i18n";
 
 type Props = {
   token: string;
@@ -33,38 +35,104 @@ type Props = {
   canEdit?: boolean;
 };
 
-const ACTION_LABEL: Record<string, string> = {
-  view: "View",
-  create: "Create",
-  update: "Edit",
-  edit: "Edit",
-  delete: "Delete",
-  manage: "Manage",
-  confirm: "Confirm",
-  cancel: "Cancel",
-  publish: "Publish",
-  archive: "Archive",
-  issue: "Issue",
-  pay: "Pay",
-  capture: "Capture",
-  fail: "Fail",
-  refund: "Refund",
-  moderate: "Moderate",
-  list: "List",
-  governance: "Governance",
-  upload: "Upload",
-  manage_components: "Components",
-  manage_seller_permissions: "Seller perms",
-  view_dashboard: "Dashboard",
-  edit_profile: "Edit profile",
-  update_profile: "Edit profile",
+/** Permission action → settings-i18n key. Unknown actions fall back to the raw string. */
+const ACTION_KEY: Record<string, SettingsKey> = {
+  view: "rbActView",
+  create: "rbActCreate",
+  update: "rbActEdit",
+  edit: "rbActEdit",
+  delete: "rbActDelete",
+  manage: "rbActManage",
+  confirm: "rbActConfirm",
+  cancel: "rbActCancel",
+  publish: "rbActPublish",
+  archive: "rbActArchive",
+  issue: "rbActIssue",
+  pay: "rbActPay",
+  capture: "rbActCapture",
+  fail: "rbActFail",
+  refund: "rbActRefund",
+  moderate: "rbActModerate",
+  list: "rbActList",
+  governance: "rbActGovernance",
+  upload: "rbActUpload",
+  manage_components: "rbActComponents",
+  manage_seller_permissions: "rbActSellerPerms",
+  view_dashboard: "rbActDashboard",
+  edit_profile: "rbActEditProfile",
+  update_profile: "rbActEditProfile",
 };
 
-function actionLabel(action: string): string {
-  return ACTION_LABEL[action] ?? action.replace(/_/g, " ");
-}
+/**
+ * Section/item labels arrive from AdminRbacController::PERMISSION_TREE in
+ * English, but every node carries a stable machine `key` — so labels are
+ * translated client-side by key, with FALLBACK to the server-sent English
+ * label for any future section/item these maps don't know yet.
+ *
+ * Items are resolved by the `<sectionKey>.<itemKey>` composite because item
+ * keys repeat across sections (every section has an `access` item).
+ */
+const SECTION_LABEL_KEY: Record<string, SettingsKey> = {
+  dashboard: "rbTreeSecDashboard",
+  inventory: "rbTreeSecInventory",
+  bookings: "rbTreeSecBookings",
+  crm: "rbTreeSecCrm",
+  chat: "rbTreeSecChat",
+  finance: "rbTreeSecFinance",
+  my_company: "rbTreeSecMyCompany",
+  management: "rbTreeSecManagement",
+  inbox: "rbTreeSecInbox",
+  settings: "rbTreeSecSettings",
+  profile: "rbTreeSecProfile",
+};
+
+const ITEM_LABEL_KEY: Record<string, SettingsKey> = {
+  "dashboard.access": "rbTreeItemAccess",
+  "dashboard.stats": "rbTreeItemStats",
+  "inventory.access": "rbTreeItemAccess",
+  "inventory.hotels": "rbTreeItemHotels",
+  "inventory.flights": "rbTreeItemFlights",
+  "inventory.cars": "rbTreeItemCars",
+  "inventory.transfers": "rbTreeItemTransfers",
+  "inventory.excursions": "rbTreeItemExcursions",
+  "inventory.visas": "rbTreeItemVisas",
+  "inventory.packages": "rbTreeItemPackages",
+  "inventory.offers": "rbTreeItemOffers",
+  "bookings.access": "rbTreeItemAccessView",
+  "bookings.manage": "rbTreeItemManageBookings",
+  "bookings.package_orders": "rbTreeItemPackageOrders",
+  "crm.access": "rbTreeItemAccess",
+  "crm.team": "rbTreeItemTeam",
+  "crm.files": "rbTreeItemFiles",
+  "chat.access": "rbTreeItemAccess",
+  "finance.access": "rbTreeItemAccess",
+  "finance.invoices": "rbTreeItemInvoices",
+  "finance.payments": "rbTreeItemPayments",
+  "finance.commissions": "rbTreeItemCommissions",
+  "finance.entitlements": "rbTreeItemEntitlements",
+  "finance.settlements": "rbTreeItemSettlements",
+  "finance.platform_finance": "rbTreeItemPlatformFinance",
+  "my_company.access": "rbTreeItemAccess",
+  "my_company.profile": "rbTreeItemCompanyProfile",
+  "my_company.seller": "rbTreeItemSellerSettings",
+  "management.access": "rbTreeItemAccess",
+  "management.companies": "rbTreeItemCompaniesAccess",
+  "management.approvals": "rbTreeItemApprovals",
+  "management.users": "rbTreeItemUsers",
+  "management.reviews": "rbTreeItemReviews",
+  "management.oversight": "rbTreeItemOversight",
+  "inbox.access": "rbTreeItemAccess",
+  "settings.access": "rbTreeItemAccess",
+  "settings.localization": "rbTreeItemLocalization",
+  "settings.platform_settings": "rbTreeItemPlatformSettings",
+  "settings.imports": "rbTreeItemImports",
+  "profile.access": "rbTreeItemAccess",
+  "profile.account": "rbTreeItemAccount",
+};
 
 export function RbacMenuTree({ token, roleId, roleName, ceilingPermissionIds, canEdit = true }: Props) {
+  const { lang } = useLanguage();
+  const s = useMemo(() => settingsStrings(lang), [lang]);
   const [sections, setSections] = useState<RbacTreeSection[]>([]);
   const [granted, setGranted] = useState<Set<number>>(new Set());
   const [open, setOpen] = useState<Set<string>>(new Set());
@@ -151,10 +219,25 @@ export function RbacMenuTree({ token, roleId, roleName, ceilingPermissionIds, ca
       await apiSyncRolePermissions(token, roleId, Array.from(granted));
       setSavedOk(true);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Failed to save permissions");
+      setErr(e instanceof Error ? e.message : s.rbTreeErrSave);
     } finally {
       setSaving(false);
     }
+  };
+
+  const actionLabel = (action: string): string => {
+    const key = ACTION_KEY[action];
+    return key ? s[key] : action.replace(/_/g, " ");
+  };
+
+  const sectionLabel = (sectionKey: string, fallback: string): string => {
+    const key = SECTION_LABEL_KEY[sectionKey];
+    return key ? s[key] : fallback;
+  };
+
+  const itemLabel = (sectionKey: string, itemKey: string, fallback: string): string => {
+    const key = ITEM_LABEL_KEY[`${sectionKey}.${itemKey}`];
+    return key ? s[key] : fallback;
   };
 
   const grantedCount = granted.size;
@@ -167,8 +250,8 @@ export function RbacMenuTree({ token, roleId, roleName, ceilingPermissionIds, ca
     return (
       <EmptyState
         icon={<Lock className="h-10 w-10" />}
-        title="Select a role"
-        subtitle="Pick a role above to edit its permissions as a menu tree."
+        title={s.rbTreeSelectRole}
+        subtitle={s.rbTreeSelectRoleSubtitle}
       />
     );
   }
@@ -176,18 +259,18 @@ export function RbacMenuTree({ token, roleId, roleName, ceilingPermissionIds, ca
   return (
     <V2Card>
       <V2CardHeader
-        title={`Permissions — ${roleName ?? `role #${roleId}`}`}
-        subtitle={`${grantedCount} of ${totalCount} permissions granted`}
+        title={s.rbTreeHeader.replace("{role}", roleName ?? s.rbTreeRoleNum.replace("{id}", String(roleId)))}
+        subtitle={s.rbTreeGrantedOf.replace("{granted}", String(grantedCount)).replace("{total}", String(totalCount))}
         action={
           canEdit ? (
             <span className="flex items-center gap-3">
               {savedOk ? (
                 <span className="inline-flex items-center gap-1 text-[13px]" style={{ color: "var(--admin-success)" }}>
-                  <Check className="h-4 w-4" /> Saved
+                  <Check className="h-4 w-4" /> {s.rbTreeSaved}
                 </span>
               ) : null}
               <V2Button variant="primary" onClick={() => void save()} disabled={saving}>
-                {saving ? "Saving…" : "Save permissions"}
+                {saving ? s.rbTreeSaving : s.rbTreeSavePerms}
               </V2Button>
             </span>
           ) : null
@@ -206,7 +289,7 @@ export function RbacMenuTree({ token, roleId, roleName, ceilingPermissionIds, ca
             data arrives). Blanking on every switch collapsed/re-opened every
             section = the "flicker" Arshak saw when clicking Agent/Operator/etc. */}
         {loading && sections.length === 0 ? (
-          <p className="text-[13px]" style={{ color: "var(--admin-text-secondary)" }}>Loading…</p>
+          <p className="text-[13px]" style={{ color: "var(--admin-text-secondary)" }}>{s.loading}</p>
         ) : (
           <div className="flex flex-col gap-2">
             {sections.map((section) => {
@@ -222,7 +305,7 @@ export function RbacMenuTree({ token, roleId, roleName, ceilingPermissionIds, ca
                   >
                     {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                     <span className="text-[13px] font-semibold" style={{ color: "var(--admin-text-primary)" }}>
-                      {section.label}
+                      {sectionLabel(section.key, section.label)}
                     </span>
                     <span
                       className="ml-auto rounded-full px-[7px] py-px text-[11px] font-semibold"
@@ -244,7 +327,7 @@ export function RbacMenuTree({ token, roleId, roleName, ceilingPermissionIds, ca
                           <div key={item.key} className="border-b px-3.5 py-2.5 last:border-b-0" style={{ borderColor: "var(--admin-border)" }}>
                             <div className="mb-1.5 flex items-center gap-2">
                               <span className="text-[12px] font-medium" style={{ color: "var(--admin-text-primary)" }}>
-                                {item.label}
+                                {itemLabel(section.key, item.key, item.label)}
                               </span>
                               {canEdit ? (
                                 <button
@@ -253,7 +336,7 @@ export function RbacMenuTree({ token, roleId, roleName, ceilingPermissionIds, ca
                                   className="ml-auto text-[11px] font-medium"
                                   style={{ color: "var(--admin-primary)" }}
                                 >
-                                  {allOn ? "Clear all" : "Select all"}
+                                  {allOn ? s.rbTreeClearAll : s.rbTreeSelectAll}
                                 </button>
                               ) : null}
                             </div>
@@ -264,7 +347,7 @@ export function RbacMenuTree({ token, roleId, roleName, ceilingPermissionIds, ca
                                 return (
                                   <label
                                     key={p.id}
-                                    title={capped ? "Beyond your permission ceiling" : p.name}
+                                    title={capped ? s.rbTreeCeiling : p.name}
                                     className="inline-flex items-center gap-1.5 rounded-[6px] border px-2 py-1 text-[12px]"
                                     style={{
                                       cursor: capped || !canEdit ? "not-allowed" : "pointer",

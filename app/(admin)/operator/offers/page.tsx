@@ -28,13 +28,13 @@ import {
 } from "@/components/ui";
 import {
   PageHeader as V2PageHeader,
-  SectionTabs,
   FilterCard,
   FilterField,
   V2Card,
   V2Button,
   IconButton,
 } from "@/components/ui/v2";
+import { InventorySectionTabs } from "@/components/inventory/InventorySectionTabs";
 import { Download, Languages } from "lucide-react";
 
 const STATUSES = ["", "draft", "published", "archived"];
@@ -140,19 +140,7 @@ export default function OperatorOffersPage() {
         }
       />
 
-      <SectionTabs
-        activeHref="/operator/offers"
-        items={[
-          { href: "/operator/hotels", label: "Hotels" },
-          { href: "/operator/flights", label: "Flights" },
-          { href: "/operator/transfers", label: "Transfers" },
-          { href: "/operator/cars", label: "Cars" },
-          { href: "/operator/excursions", label: "Excursions" },
-          { href: "/operator/visas", label: "Visas" },
-          { href: "/operator/packages", label: "Packages" },
-          { href: "/operator/offers", label: "Offers", count: meta?.total },
-        ]}
-      />
+      <InventorySectionTabs activeHref="/operator/offers" activeCount={meta?.total} />
 
       <FilterCard>
         <FilterField label={t("admin.crud.offers.filter.status")} minWidth={180}>

@@ -75,12 +75,24 @@ import { FinanceSectionTabs } from "@/components/finance/FinanceSectionTabs";
 import { FinanceQuickActionDrawer, type QuickActionMode } from "@/components/finance/FinanceQuickActionDrawer";
 
 type RangeKey = "7d" | "30d" | "90d" | "year";
-const RANGE_LABELS: Record<RangeKey, string> = {
+const RANGE_KEYS: RangeKey[] = ["7d", "30d", "90d", "year"];
+const RANGE_FALLBACKS: Record<RangeKey, string> = {
   "7d": "Last 7 days",
   "30d": "Last 30 days",
   "90d": "Last 90 days",
   year: "This year",
 };
+
+/**
+ * Local i18n shim — returns `fallback` when the server translation row for
+ * `key` hasn't been seeded yet (t() echoes the key on a miss). Mirrors the
+ * package-orders detail-drawer pattern so new labels are i18n-overridable
+ * but never render a raw dotted key.
+ */
+function tx(t: (k: string) => string, key: string, fallback: string): string {
+  const v = t(key);
+  return v === key ? fallback : v;
+}
 
 export default function PlatformFinanceSummaryPage() {
   const { token, user } = useAdminAuth();
@@ -141,12 +153,36 @@ export default function PlatformFinanceSummaryPage() {
   const denom = totalCollected + totalPending;
   const collectionPct = denom > 0 ? Math.round((totalCollected / denom) * 100) : 100;
 
+  const rangeLabels: Record<RangeKey, string> = {
+    "7d": tx(t, "admin.finance_summary.range_7d", RANGE_FALLBACKS["7d"]),
+    "30d": tx(t, "admin.finance_summary.range_30d", RANGE_FALLBACKS["30d"]),
+    "90d": tx(t, "admin.finance_summary.range_90d", RANGE_FALLBACKS["90d"]),
+    year: tx(t, "admin.finance_summary.range_year", RANGE_FALLBACKS.year),
+  };
+
+  // Transaction-type labels live outside the row map below because the map
+  // callback's `tx` row param shadows the tx() i18n shim.
+  const txTypeLabels: Record<RecentTransactionRow["type"], string> = {
+    payment_in: tx(t, "admin.finance_summary.tx_type_payment_in", "Payment in"),
+    commission: tx(t, "admin.finance_summary.tx_type_commission", "Commission"),
+    refund: tx(t, "admin.finance_summary.tx_type_refund", "Refund"),
+    voucher_issued: tx(t, "admin.finance_summary.tx_type_voucher_issued", "Voucher issued"),
+    payout: tx(t, "admin.finance_summary.tx_type_payout", "Payout"),
+  };
+
   return (
     <div>
       <V2PageHeader
-        breadcrumb={[{ label: "Home", href: "/dashboard" }, { label: "Finance summary" }]}
+        breadcrumb={[
+          { label: tx(t, "admin.nav.dashboard", "Home"), href: "/dashboard" },
+          { label: tx(t, "admin.finance_summary.title_short", "Finance summary") },
+        ]}
         title={t("admin.finance_summary.title")}
-        subtitle={`High-level financial overview across the platform · ${RANGE_LABELS[range]}`}
+        subtitle={tx(
+          t,
+          "admin.finance_summary.subtitle",
+          "High-level financial overview across the platform · {range}"
+        ).replace("{range}", rangeLabels[range])}
         actions={
           <>
             <select
@@ -155,13 +191,17 @@ export default function PlatformFinanceSummaryPage() {
               className="h-[36px] min-w-[160px] rounded-md border bg-white px-3 text-[13px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
               style={{ borderColor: "var(--admin-border)" }}
             >
-              {(Object.keys(RANGE_LABELS) as RangeKey[]).map((k) => (
+              {RANGE_KEYS.map((k) => (
                 <option key={k} value={k}>
-                  {RANGE_LABELS[k]}
+                  {rangeLabels[k]}
                 </option>
               ))}
             </select>
-            <V2Button onClick={() => void load()} icon={<RefreshCw className="h-4 w-4" />} aria-label="Refresh">
+            <V2Button
+              onClick={() => void load()}
+              icon={<RefreshCw className="h-4 w-4" />}
+              aria-label={tx(t, "admin.finance_summary.btn_refresh", "Refresh")}
+            >
               {""}
             </V2Button>
             {/* Phase Բ.6 (2026-05-28) — Export the recent-transactions snapshot
@@ -183,7 +223,7 @@ export default function PlatformFinanceSummaryPage() {
                 ])
               }
             >
-              Export
+              {tx(t, "admin.finance_summary.btn_export", "Export")}
             </V2Button>
           </>
         }
@@ -210,7 +250,10 @@ export default function PlatformFinanceSummaryPage() {
           tone="purple"
           icon={<DollarSign className="h-[22px] w-[22px]" />}
           value={data ? formatMoney(data.total_payments_paid, lang) : "—"}
-          label={`Total revenue (${range})`}
+          label={tx(t, "admin.finance_summary.stat_total_revenue", "Total revenue ({range})").replace(
+            "{range}",
+            rangeLabels[range]
+          )}
           footer={
             v2 && Object.keys(v2.currency_breakdown).length > 0
               ? Object.entries(v2.currency_breakdown)
@@ -223,10 +266,12 @@ export default function PlatformFinanceSummaryPage() {
           tone="green"
           icon={<Percent className="h-[22px] w-[22px]" />}
           value={data ? formatMoney(data.total_commission_accrued, lang) : "—"}
-          label="Commissions accrued"
+          label={tx(t, "admin.finance_summary.stat_commissions_accrued", "Commissions accrued")}
           footer={
             v2
-              ? `Platform: ${formatMoney(v2.commission_split.platform, lang)} · Agent: ${formatMoney(v2.commission_split.agent, lang)}`
+              ? tx(t, "admin.finance_summary.meta_commission_split", "Platform: {platform} · Agent: {agent}")
+                  .replace("{platform}", formatMoney(v2.commission_split.platform, lang))
+                  .replace("{agent}", formatMoney(v2.commission_split.agent, lang))
               : "—"
           }
         />
@@ -235,17 +280,25 @@ export default function PlatformFinanceSummaryPage() {
           icon={<Clock className="h-[22px] w-[22px]" />}
           value={
             v2 && v2.pending_meta.count > 0
-              ? `${v2.pending_meta.count} pending`
+              ? tx(t, "admin.finance_summary.stat_pending_count", "{n} pending").replace(
+                  "{n}",
+                  String(v2.pending_meta.count)
+                )
               : data
               ? formatMoney(data.total_commission_pending, lang)
               : "—"
           }
-          label="Pending payments"
+          label={tx(t, "admin.finance_summary.stat_pending_payments", "Pending payments")}
           footer={
             v2 && v2.pending_meta.avg_age_days > 0
-              ? `Avg. age: ${v2.pending_meta.avg_age_days.toFixed(1)} days · Oldest: ${v2.pending_meta.oldest_days.toFixed(0)} days`
+              ? tx(t, "admin.finance_summary.meta_pending_age", "Avg. age: {avg} days · Oldest: {oldest} days")
+                  .replace("{avg}", v2.pending_meta.avg_age_days.toFixed(1))
+                  .replace("{oldest}", v2.pending_meta.oldest_days.toFixed(0))
               : data
-              ? `${data.commission_records_count} pending record${data.commission_records_count === 1 ? "" : "s"}`
+              ? tx(t, "admin.finance_summary.meta_pending_records", "{n} pending records").replace(
+                  "{n}",
+                  String(data.commission_records_count)
+                )
               : "—"
           }
         />
@@ -255,12 +308,12 @@ export default function PlatformFinanceSummaryPage() {
       <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Widget 1 — Revenue by service */}
         <V2Card>
-          <V2CardHeader title="Revenue by service" />
+          <V2CardHeader title={tx(t, "admin.finance_summary.card_revenue_by_service", "Revenue by service")} />
           <V2CardBody>
             <div className="space-y-3">
               {revenueByService.length === 0 ? (
                 <p className="py-4 text-center text-[12px]" style={{ color: "var(--admin-text-tertiary)" }}>
-                  No paid payments in this range yet.
+                  {tx(t, "admin.finance_summary.empty_no_paid_payments", "No paid payments in this range yet.")}
                 </p>
               ) : (
                 revenueByService.slice(0, 6).map((row, i) => {
@@ -306,7 +359,7 @@ export default function PlatformFinanceSummaryPage() {
 
         {/* Widget 2 — Collection rate (donut) */}
         <V2Card>
-          <V2CardHeader title="Collection rate" />
+          <V2CardHeader title={tx(t, "admin.finance_summary.card_collection_rate", "Collection rate")} />
           <V2CardBody>
             <div className="flex flex-col items-center text-center">
               <svg viewBox="0 0 120 120" className="h-[120px] w-[120px]">
@@ -339,7 +392,10 @@ export default function PlatformFinanceSummaryPage() {
                   : "—"}
               </div>
               <div className="mt-1 text-[11px]" style={{ color: "var(--admin-text-secondary)" }}>
-                {collectionPct}% of invoices collected on time
+                {tx(t, "admin.finance_summary.meta_collection_rate", "{pct}% of invoices collected on time").replace(
+                  "{pct}",
+                  String(collectionPct)
+                )}
               </div>
             </div>
           </V2CardBody>
@@ -347,7 +403,7 @@ export default function PlatformFinanceSummaryPage() {
 
         {/* Widget 3 — Payment methods */}
         <V2Card>
-          <V2CardHeader title="Payment methods" />
+          <V2CardHeader title={tx(t, "admin.finance_summary.card_payment_methods", "Payment methods")} />
           <V2CardBody>
             <div
               className="mb-3 text-[24px] font-semibold tabular-nums"
@@ -393,7 +449,7 @@ export default function PlatformFinanceSummaryPage() {
                 })
               ) : (
                 <p className="py-4 text-center text-[12px]" style={{ color: "var(--admin-text-tertiary)" }}>
-                  No paid payments in this range yet.
+                  {tx(t, "admin.finance_summary.empty_no_paid_payments", "No paid payments in this range yet.")}
                 </p>
               )}
             </div>
@@ -406,14 +462,14 @@ export default function PlatformFinanceSummaryPage() {
         <div className="lg:col-span-2">
           <V2Card>
             <V2CardHeader
-              title="Recent transactions"
+              title={tx(t, "admin.finance_summary.card_recent_transactions", "Recent transactions")}
               action={
                 <Link
                   href="/platform/payments"
                   className="text-[12px] font-medium"
                   style={{ color: "var(--admin-primary)" }}
                 >
-                  View all →
+                  {tx(t, "admin.finance_summary.view_all", "View all")} →
                 </Link>
               }
             />
@@ -424,12 +480,12 @@ export default function PlatformFinanceSummaryPage() {
                   style={{ backgroundColor: "var(--admin-bg-secondary)", color: "var(--admin-text-secondary)" }}
                 >
                   <tr>
-                    <th className="px-4 py-2.5 text-left">ID</th>
-                    <th className="px-4 py-2.5 text-left">Type</th>
-                    <th className="px-4 py-2.5 text-left">Amount</th>
-                    <th className="px-4 py-2.5 text-left">Company</th>
-                    <th className="px-4 py-2.5 text-left">When</th>
-                    <th className="px-4 py-2.5 text-right">Status</th>
+                    <th className="px-4 py-2.5 text-left">{tx(t, "admin.finance_summary.col_id", "ID")}</th>
+                    <th className="px-4 py-2.5 text-left">{tx(t, "admin.finance_summary.col_type", "Type")}</th>
+                    <th className="px-4 py-2.5 text-left">{tx(t, "admin.finance_summary.col_amount", "Amount")}</th>
+                    <th className="px-4 py-2.5 text-left">{tx(t, "admin.finance_summary.col_company", "Company")}</th>
+                    <th className="px-4 py-2.5 text-left">{tx(t, "admin.finance_summary.col_when", "When")}</th>
+                    <th className="px-4 py-2.5 text-right">{tx(t, "admin.finance_summary.col_status", "Status")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -440,18 +496,12 @@ export default function PlatformFinanceSummaryPage() {
                         className="px-4 py-10 text-center text-sm"
                         style={{ color: "var(--admin-text-secondary)" }}
                       >
-                        No recent transactions yet.
+                        {tx(t, "admin.finance_summary.empty_no_recent_tx", "No recent transactions yet.")}
                       </td>
                     </tr>
                   ) : (
                     recentTx.map((tx) => {
-                      const typeLabel = ({
-                        payment_in: "Payment in",
-                        commission: "Commission",
-                        refund: "Refund",
-                        voucher_issued: "Voucher issued",
-                        payout: "Payout",
-                      } as const)[tx.type];
+                      const typeLabel = txTypeLabels[tx.type];
                       const statusTone: StatusTone =
                         tx.status === "settled" || tx.status === "completed"
                           ? "success"
@@ -514,20 +564,24 @@ export default function PlatformFinanceSummaryPage() {
         </div>
 
         <V2Card>
-          <V2CardHeader title="Quick actions" />
+          <V2CardHeader title={tx(t, "admin.finance_summary.card_quick_actions", "Quick actions")} />
           <V2CardBody>
             <div className="flex flex-col gap-2">
               <V2Button icon={<FilePlus2 className="h-4 w-4" />} onClick={() => setQuickMode("issue-invoice")}>
-                Issue invoice
+                {tx(t, "admin.finance_summary.qa_issue_invoice", "Issue invoice")}
               </V2Button>
               <V2Button icon={<Wallet className="h-4 w-4" />} onClick={() => setQuickMode("record-payment")}>
-                Record payment
+                {tx(t, "admin.finance_summary.qa_record_payment", "Record payment")}
               </V2Button>
               <V2Button icon={<Receipt className="h-4 w-4" />} onClick={() => setQuickMode("issue-voucher")}>
-                Issue voucher
+                {tx(t, "admin.finance_summary.qa_issue_voucher", "Issue voucher")}
               </V2Button>
-              <V2Button icon={<ReceiptText className="h-4 w-4" />} disabled title="Reconciliation tool coming soon">
-                Run reconciliation
+              <V2Button
+                icon={<ReceiptText className="h-4 w-4" />}
+                disabled
+                title={tx(t, "admin.finance_summary.qa_reconciliation_soon", "Reconciliation tool coming soon")}
+              >
+                {tx(t, "admin.finance_summary.qa_run_reconciliation", "Run reconciliation")}
               </V2Button>
               <div className="my-1 h-px" style={{ backgroundColor: "var(--admin-border)" }} />
               <Link
@@ -537,7 +591,7 @@ export default function PlatformFinanceSummaryPage() {
               >
                 <span className="inline-flex items-center gap-1.5">
                   <FileDown className="h-4 w-4" />
-                  Monthly statement
+                  {tx(t, "admin.finance_summary.qa_monthly_statement", "Monthly statement")}
                 </span>
                 <ChevronRight className="h-4 w-4" />
               </Link>
@@ -548,7 +602,7 @@ export default function PlatformFinanceSummaryPage() {
               >
                 <span className="inline-flex items-center gap-1.5">
                   <Percent className="h-4 w-4" />
-                  Tax report
+                  {tx(t, "admin.finance_summary.qa_tax_report", "Tax report")}
                 </span>
                 <ChevronRight className="h-4 w-4" />
               </Link>

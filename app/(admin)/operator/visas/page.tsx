@@ -25,11 +25,11 @@ import {
 } from "@/components/ui";
 import {
   PageHeader as V2PageHeader,
-  SectionTabs,
   V2Card,
   V2Button,
   IconButton,
 } from "@/components/ui/v2";
+import { InventorySectionTabs } from "@/components/inventory/InventorySectionTabs";
 import { Edit3, Trash2, Send } from "lucide-react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
@@ -68,6 +68,15 @@ import {
 } from "@/lib/visa-ui";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useCallback, useEffect, useMemo, useState } from "react";
+
+/**
+ * Local i18n shim — returns `fallback` when the server translation row for
+ * `key` hasn't been seeded yet (t() echoes the key on a miss).
+ */
+function tx(t: (k: string) => string, key: string, fallback: string): string {
+  const v = t(key);
+  return v === key ? fallback : v;
+}
 
 function visaFormFromApiRow(r: VisaRow): VisaPayload {
   const vp = r.visa_price;
@@ -546,7 +555,7 @@ export default function OperatorVisasPage() {
             {form === null && <ContentLanguagePill />}
           </span>
         }
-        subtitle="Manage your visa services"
+        subtitle={tx(t, "admin.inventory.visas.subtitle", "Manage your visa services")}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <ImportExportButtons
@@ -576,19 +585,7 @@ export default function OperatorVisasPage() {
         }
       />
 
-      <SectionTabs
-        activeHref="/operator/visas"
-        items={[
-          { href: "/operator/hotels", label: "Hotels" },
-          { href: "/operator/flights", label: "Flights" },
-          { href: "/operator/transfers", label: "Transfers" },
-          { href: "/operator/cars", label: "Cars" },
-          { href: "/operator/excursions", label: "Excursions" },
-          { href: "/operator/visas", label: "Visas", count: meta?.total },
-          { href: "/operator/packages", label: "Packages" },
-          { href: "/operator/offers", label: "Offers" },
-        ]}
-      />
+      <InventorySectionTabs activeHref="/operator/visas" activeCount={meta?.total} />
 
       <CsvImportModal
         open={importOpen}

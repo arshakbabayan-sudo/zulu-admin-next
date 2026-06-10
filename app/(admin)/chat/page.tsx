@@ -9,9 +9,10 @@
  * websockets yet (Phase 2 can swap the poll for a live channel, same API).
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { canAccessChatSection } from "@/lib/access";
 import {
@@ -25,11 +26,14 @@ import {
   type ChatMessageRow,
 } from "@/lib/chat-api";
 import { PageHeader, V2Card, EmptyState, V2Button } from "@/components/ui/v2";
+import { chatStrings } from "./chat-i18n";
 import { avatarInitials, avatarStyle, formatRelativeTime, pickAvatarTone } from "@/lib/admin-v2-helpers";
 import { MessageSquare, Plus, Send, X, Search } from "lucide-react";
 
 export default function ChatPage() {
-  useDocumentTitle("Chat");
+  const { lang } = useLanguage();
+  const s = useMemo(() => chatStrings(lang), [lang]);
+  useDocumentTitle(s.title);
   const { token, user } = useAdminAuth();
   const allowed = canAccessChatSection(user);
 
@@ -56,9 +60,9 @@ export default function ChatPage() {
       const res = await apiChatConversations(token);
       setConvs(res.data);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Failed to load conversations");
+      setErr(e instanceof Error ? e.message : s.errLoadConversations);
     }
-  }, [token]);
+  }, [token, s]);
 
   const loadMessages = useCallback(
     async (conversationId: number, append: boolean) => {
@@ -128,7 +132,7 @@ export default function ChatPage() {
       await loadConvs();
       setActiveId(res.data.id);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Failed to start chat");
+      setErr(e instanceof Error ? e.message : s.errStartChat);
     }
   };
 
@@ -143,7 +147,7 @@ export default function ChatPage() {
       setMessages((prev) => [...prev, res.data]);
       void loadConvs();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Failed to send");
+      setErr(e instanceof Error ? e.message : s.errSend);
       setDraft(body); // restore on failure
     } finally {
       setSending(false);
@@ -160,12 +164,12 @@ export default function ChatPage() {
   return (
     <div>
       <PageHeader
-        breadcrumb={[{ label: "Home", href: "/dashboard" }, { label: "Chat" }]}
-        title="Chat"
-        subtitle="Message colleagues in your company"
+        breadcrumb={[{ label: s.breadcrumbHome, href: "/dashboard" }, { label: s.title }]}
+        title={s.title}
+        subtitle={s.subtitle}
         actions={
           <V2Button variant="primary" onClick={() => void openPicker()} icon={<Plus className="h-4 w-4" />}>
-            New chat
+            {s.newChat}
           </V2Button>
         }
       />
@@ -182,7 +186,7 @@ export default function ChatPage() {
           <div className="border-r" style={{ borderColor: "var(--admin-border)" }}>
             {convs.length === 0 ? (
               <div className="p-4 text-[13px]" style={{ color: "var(--admin-text-secondary)" }}>
-                No conversations yet. Start one with “New chat”.
+                {s.convEmpty}
               </div>
             ) : (
               <ul>
@@ -233,8 +237,8 @@ export default function ChatPage() {
             {active == null ? (
               <EmptyState
                 icon={<MessageSquare className="h-10 w-10" />}
-                title="Select a conversation"
-                subtitle="Pick a chat on the left, or start a new one."
+                title={s.threadEmptyTitle}
+                subtitle={s.threadEmptySubtitle}
               />
             ) : (
               <>
@@ -244,7 +248,7 @@ export default function ChatPage() {
                 <div ref={threadRef} className="flex-1 overflow-y-auto px-4 py-3" style={{ backgroundColor: "var(--admin-bg-secondary)" }}>
                   {messages.length === 0 ? (
                     <p className="py-8 text-center text-[13px]" style={{ color: "var(--admin-text-tertiary)" }}>
-                      No messages yet — say hello.
+                      {s.noMessages}
                     </p>
                   ) : (
                     <div className="flex flex-col gap-2">
@@ -278,12 +282,12 @@ export default function ChatPage() {
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
-                    placeholder="Write a message…"
+                    placeholder={s.msgPlaceholder}
                     className="h-[38px] flex-1 rounded-md border px-3 text-[13px] outline-none"
                     style={{ borderColor: "var(--admin-border)" }}
                   />
                   <V2Button variant="primary" onClick={() => void send()} disabled={sending || draft.trim() === ""} icon={<Send className="h-4 w-4" />}>
-                    Send
+                    {s.send}
                   </V2Button>
                 </div>
               </>
@@ -298,8 +302,8 @@ export default function ChatPage() {
           <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setPickerOpen(false)} aria-hidden />
           <div className="fixed inset-y-0 right-0 z-50 flex w-[380px] max-w-full flex-col bg-white shadow-xl" style={{ borderLeft: "1px solid var(--admin-border)" }}>
             <div className="flex items-center justify-between border-b px-5 py-4" style={{ borderColor: "var(--admin-border)" }}>
-              <span className="text-[15px] font-semibold">New chat</span>
-              <button type="button" onClick={() => setPickerOpen(false)} aria-label="Close" className="rounded-md p-1 hover:bg-slate-100">
+              <span className="text-[15px] font-semibold">{s.newChat}</span>
+              <button type="button" onClick={() => setPickerOpen(false)} aria-label={s.close} className="rounded-md p-1 hover:bg-slate-100">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -309,7 +313,7 @@ export default function ChatPage() {
                 <input
                   value={colleagueFilter}
                   onChange={(e) => setColleagueFilter(e.target.value)}
-                  placeholder="Search colleagues…"
+                  placeholder={s.searchColleaguesPh}
                   className="h-[36px] w-full rounded-md border pl-9 pr-3 text-[13px] outline-none"
                   style={{ borderColor: "var(--admin-border)" }}
                 />
@@ -318,7 +322,7 @@ export default function ChatPage() {
             <div className="flex-1 overflow-y-auto">
               {filteredColleagues.length === 0 ? (
                 <p className="px-4 py-6 text-center text-[13px]" style={{ color: "var(--admin-text-secondary)" }}>
-                  No colleagues found.
+                  {s.noColleagues}
                 </p>
               ) : (
                 <ul>

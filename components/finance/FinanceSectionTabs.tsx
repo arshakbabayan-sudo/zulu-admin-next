@@ -18,6 +18,17 @@
 
 import { SectionTabs } from "@/components/ui/v2";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
+
+/**
+ * Local i18n shim — returns `fallback` when the server translation row for
+ * `key` hasn't been seeded yet (t() echoes the key on a miss), so tabs never
+ * render a raw dotted key.
+ */
+function tx(t: (k: string) => string, key: string, fallback: string): string {
+  const v = t(key);
+  return v === key ? fallback : v;
+}
 
 export type FinanceCounts = Partial<{
   invoices: number;
@@ -37,16 +48,24 @@ export function FinanceSectionTabs({ activeHref, counts }: Props) {
   // governance tool (invoice aggregates/statements); it joins the Finance
   // strip only for super admins so operators/agents never see a 403 tab.
   const { user } = useAdminAuth();
+  const { t } = useLanguage();
   const items = [
-    { href: "/platform/finance-summary", label: "Finance summary" },
-    { href: "/platform/invoices", label: "Invoices", count: counts?.invoices },
-    { href: "/platform/payments", label: "Payments", count: counts?.payments },
-    { href: "/platform/commissions", label: "Commissions", count: counts?.commissions },
-    { href: "/platform/finance", label: "Transactions", count: counts?.transactions },
-    { href: "/platform/vouchers", label: "Vouchers", count: counts?.vouchers },
+    { href: "/platform/finance-summary", label: tx(t, "admin.nav.tab.finance_summary", "Finance summary") },
+    { href: "/platform/invoices", label: tx(t, "admin.nav.tab.invoices", "Invoices"), count: counts?.invoices },
+    { href: "/platform/payments", label: tx(t, "admin.nav.tab.payments", "Payments"), count: counts?.payments },
+    {
+      href: "/platform/commissions",
+      label: tx(t, "admin.nav.tab.commissions", "Commissions"),
+      count: counts?.commissions,
+    },
+    { href: "/platform/finance", label: tx(t, "admin.nav.tab.transactions", "Transactions"), count: counts?.transactions },
+    { href: "/platform/vouchers", label: tx(t, "admin.nav.tab.vouchers", "Vouchers"), count: counts?.vouchers },
   ];
   if (user?.is_super_admin) {
-    items.push({ href: "/bucket3/per-x-invoicing", label: "Per-X invoicing" });
+    items.push({
+      href: "/bucket3/per-x-invoicing",
+      label: tx(t, "admin.nav.tab.bucket3.per_x_invoicing", "Per-X invoicing"),
+    });
   }
   return <SectionTabs activeHref={activeHref} items={items} />;
 }

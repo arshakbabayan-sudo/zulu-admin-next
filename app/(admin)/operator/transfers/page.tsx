@@ -26,11 +26,11 @@ import {
 } from "@/components/ui";
 import {
   PageHeader as V2PageHeader,
-  SectionTabs,
   V2Card,
   V2Button,
   IconButton,
 } from "@/components/ui/v2";
+import { InventorySectionTabs } from "@/components/inventory/InventorySectionTabs";
 import { Edit3, Trash2, Send } from "lucide-react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { userHasPermission } from "@/lib/access";
@@ -68,6 +68,15 @@ import {
   transferTemplateCsv,
 } from "@/lib/csv-import-export";
 import { useCallback, useEffect, useState } from "react";
+
+/**
+ * Local i18n shim — returns `fallback` when the server translation row for
+ * `key` hasn't been seeded yet (t() echoes the key on a miss).
+ */
+function tx(t: (k: string) => string, key: string, fallback: string): string {
+  const v = t(key);
+  return v === key ? fallback : v;
+}
 
 type FieldType = "text" | "number" | "datetime-local" | "select" | "boolean" | "date" | "time";
 
@@ -581,7 +590,7 @@ export default function OperatorTransfersPage() {
             {form === null && <ContentLanguagePill />}
           </span>
         }
-        subtitle="Manage your transfer inventory"
+        subtitle={tx(t, "admin.inventory.transfers.subtitle", "Manage your transfer inventory")}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <ImportExportButtons
@@ -611,19 +620,7 @@ export default function OperatorTransfersPage() {
         }
       />
 
-      <SectionTabs
-        activeHref="/operator/transfers"
-        items={[
-          { href: "/operator/hotels", label: "Hotels" },
-          { href: "/operator/flights", label: "Flights" },
-          { href: "/operator/transfers", label: "Transfers", count: meta?.total },
-          { href: "/operator/cars", label: "Cars" },
-          { href: "/operator/excursions", label: "Excursions" },
-          { href: "/operator/visas", label: "Visas" },
-          { href: "/operator/packages", label: "Packages" },
-          { href: "/operator/offers", label: "Offers" },
-        ]}
-      />
+      <InventorySectionTabs activeHref="/operator/transfers" activeCount={meta?.total} />
 
       <CsvImportModal
         open={importOpen}

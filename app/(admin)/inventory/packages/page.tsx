@@ -47,6 +47,15 @@ import {
 import { Download } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
+/**
+ * Local i18n shim — returns `fallback` when the server translation row for
+ * `key` hasn't been seeded yet (t() echoes the key on a miss).
+ */
+function tx(t: (k: string) => string, key: string, fallback: string): string {
+  const v = t(key);
+  return v === key ? fallback : v;
+}
+
 export default function InventoryPackagesOversightPage() {
   const { token, user } = useAdminAuth();
   const { t } = useLanguage();
@@ -142,7 +151,7 @@ export default function InventoryPackagesOversightPage() {
           { label: "Packages" },
         ]}
         title={t("admin.packages.title_long")}
-        subtitle="Platform oversight of all operators' packages."
+        subtitle={tx(t, "admin.inventory.packages_oversight.subtitle", "Platform oversight of all operators' packages.")}
         actions={
           <div className="flex flex-wrap items-center gap-2">
           {/* Phase Ա.1 — scope switch back to the operator's own packages. */}

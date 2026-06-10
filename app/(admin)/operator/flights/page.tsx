@@ -41,11 +41,11 @@ import {
 } from "@/components/ui";
 import {
   PageHeader as V2PageHeader,
-  SectionTabs,
   V2Card,
   V2Button,
   IconButton,
 } from "@/components/ui/v2";
+import { InventorySectionTabs } from "@/components/inventory/InventorySectionTabs";
 import { Edit3, Trash2 } from "lucide-react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { userHasPermission } from "@/lib/access";
@@ -93,6 +93,15 @@ import {
   validateFlightOperatorForm,
 } from "@/lib/flight-ui";
 import { useCallback, useEffect, useState } from "react";
+
+/**
+ * Local i18n shim — returns `fallback` when the server translation row for
+ * `key` hasn't been seeded yet (t() echoes the key on a miss).
+ */
+function tx(t: (k: string) => string, key: string, fallback: string): string {
+  const v = t(key);
+  return v === key ? fallback : v;
+}
 
 const EMPTY: FlightFormPayload = {
   offer_id: "",
@@ -486,7 +495,7 @@ export default function OperatorFlightsPage() {
             {form === null && <ContentLanguagePill />}
           </span>
         }
-        subtitle="Manage your flight inventory"
+        subtitle={tx(t, "admin.inventory.flights.subtitle", "Manage your flight inventory")}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <ImportExportButtons
@@ -516,19 +525,7 @@ export default function OperatorFlightsPage() {
         }
       />
 
-      <SectionTabs
-        activeHref="/operator/flights"
-        items={[
-          { href: "/operator/hotels", label: "Hotels" },
-          { href: "/operator/flights", label: "Flights", count: meta?.total },
-          { href: "/operator/transfers", label: "Transfers" },
-          { href: "/operator/cars", label: "Cars" },
-          { href: "/operator/excursions", label: "Excursions" },
-          { href: "/operator/visas", label: "Visas" },
-          { href: "/operator/packages", label: "Packages" },
-          { href: "/operator/offers", label: "Offers" },
-        ]}
-      />
+      <InventorySectionTabs activeHref="/operator/flights" activeCount={meta?.total} />
 
       {err && (
         <div className="mb-4 rounded-md border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">{err}</div>

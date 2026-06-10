@@ -27,11 +27,11 @@ import {
 } from "@/components/ui";
 import {
   PageHeader as V2PageHeader,
-  SectionTabs,
   V2Card,
   V2Button,
   IconButton,
 } from "@/components/ui/v2";
+import { InventorySectionTabs } from "@/components/inventory/InventorySectionTabs";
 import { Edit3, Trash2 } from "lucide-react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { userHasPermission } from "@/lib/access";
@@ -81,6 +81,15 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
+
+/**
+ * Local i18n shim — returns `fallback` when the server translation row for
+ * `key` hasn't been seeded yet (t() echoes the key on a miss).
+ */
+function tx(t: (k: string) => string, key: string, fallback: string): string {
+  const v = t(key);
+  return v === key ? fallback : v;
+}
 
 // Lazy-load the XLSX import modal — it pulls in ExcelJS (~200 KB) which is
 // only needed when the operator actually clicks "Import". Module + dep
@@ -298,7 +307,7 @@ export default function OperatorHotelsPage() {
             {form === null && <ContentLanguagePill />}
           </span>
         }
-        subtitle="Manage your hotel inventory"
+        subtitle={tx(t, "admin.inventory.hotels.subtitle", "Manage your hotel inventory")}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <ImportExportButtons
@@ -337,19 +346,7 @@ export default function OperatorHotelsPage() {
       />
 
       {/* Inventory section-tabs — switch between inventory types */}
-      <SectionTabs
-        activeHref="/operator/hotels"
-        items={[
-          { href: "/operator/hotels", label: "Hotels", count: meta?.total },
-          { href: "/operator/flights", label: "Flights" },
-          { href: "/operator/transfers", label: "Transfers" },
-          { href: "/operator/cars", label: "Cars" },
-          { href: "/operator/excursions", label: "Excursions" },
-          { href: "/operator/visas", label: "Visas" },
-          { href: "/operator/packages", label: "Packages" },
-          { href: "/operator/offers", label: "Offers" },
-        ]}
-      />
+      <InventorySectionTabs activeHref="/operator/hotels" activeCount={meta?.total} />
       {importOpen && (
         <HotelsXlsxImportModal
           open

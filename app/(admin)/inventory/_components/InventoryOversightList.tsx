@@ -7,12 +7,19 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { userHasPermission } from "@/lib/access";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import { ApiRequestError } from "@/lib/api-client";
 import type { OperatorInventorySegment } from "@/lib/operator-inventory-api";
 import { apiOperatorInventoryList } from "@/lib/operator-inventory-api";
 import { useCallback, useEffect, useMemo, useState } from "react";
+
+/** i18n shim — falls back to English when the DB row isn't seeded. */
+function tx(t: (k: string) => string, key: string, fallback: string): string {
+  const v = t(key);
+  return v === key ? fallback : v;
+}
 import {
   Pagination,
   Table,
@@ -55,6 +62,7 @@ export function InventoryOversightList({
   filterBar,
 }: Props) {
   const { token, user } = useAdminAuth();
+  const { t } = useLanguage();
   const allowed = userHasPermission(user, permission);
   const [rows, setRows] = useState<Record<string, unknown>[]>([]);
   const [meta, setMeta] = useState<ApiListMeta | null>(null);
@@ -132,14 +140,16 @@ export function InventoryOversightList({
         subtitle={meta ? `${meta.total} total · page ${meta.current_page} of ${meta.last_page}` : undefined}
       />
 
+      {/* 2026-06-10 (roadmap §3) — labels were hardcoded English; reuse the
+          seeded admin.nav.tab.* rows like InventorySectionTabs does. */}
       <SectionTabs
         activeHref={`/inventory/${segment}`}
         items={[
-          { href: "/inventory/hotels", label: "Hotels" },
-          { href: "/inventory/flights", label: "Flights" },
-          { href: "/inventory/transfers", label: "Transfers" },
-          { href: "/inventory/cars", label: "Cars" },
-          { href: "/inventory/excursions", label: "Excursions" },
+          { href: "/inventory/hotels", label: tx(t, "admin.nav.tab.hotels", "Hotels") },
+          { href: "/inventory/flights", label: tx(t, "admin.nav.tab.flights", "Flights") },
+          { href: "/inventory/transfers", label: tx(t, "admin.nav.tab.transfers", "Transfers") },
+          { href: "/inventory/cars", label: tx(t, "admin.nav.tab.cars", "Cars") },
+          { href: "/inventory/excursions", label: tx(t, "admin.nav.tab.excursions", "Excursions") },
         ]}
       />
 
