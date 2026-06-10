@@ -13,7 +13,7 @@
  */
 
 import { useState } from "react";
-import { X as XIcon } from "lucide-react";
+import { Eye, EyeOff, RefreshCw, X as XIcon } from "lucide-react";
 import { V2Button } from "@/components/ui/v2";
 import { ApiRequestError } from "@/lib/api-client";
 import {
@@ -54,7 +54,9 @@ export function AddEmployeeModal({
   companyName,
   grantableRoles,
 }: Props) {
-  const [name, setName] = useState("");
+  // §7 — first + last name (users.name stores "First Last").
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [roleName, setRoleName] = useState<CompanyEmployeeRole>("company_viewer");
@@ -63,6 +65,7 @@ export function AddEmployeeModal({
   const [mode, setMode] = useState<"invite" | "direct">("invite");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
@@ -72,15 +75,32 @@ export function AddEmployeeModal({
     : ALL_ROLES;
 
   function reset() {
-    setName("");
+    setFirstName("");
+    setLastName("");
     setEmail("");
     setPhone("");
     setRoleName("company_viewer");
     setMode("invite");
     setPassword("");
     setPasswordConfirm("");
+    setShowPassword(false);
     setErr(null);
     setFieldErrors({});
+  }
+
+  /** Generate a strong password and SHOW it so the manager can copy/hand it over. */
+  function generatePassword() {
+    const chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789";
+    let p = "";
+    do {
+      p = "";
+      const buf = new Uint32Array(12);
+      crypto.getRandomValues(buf);
+      for (const v of buf) p += chars[v % chars.length];
+    } while (!/[a-zA-Z]/.test(p) || !/[0-9]/.test(p));
+    setPassword(p);
+    setPasswordConfirm(p);
+    setShowPassword(true);
   }
 
   function handleClose() {
@@ -95,10 +115,15 @@ export function AddEmployeeModal({
     setErr(null);
     setFieldErrors({});
 
-    // Direct mode: validate the password client-side before hitting the API.
+    // Direct mode: validate the password client-side before hitting the API
+    // (mirrors the backend §7 strength floor: 8+ chars, letters AND numbers).
     if (mode === "direct") {
       if (password.length < 8) {
         setErr("Password must be at least 8 characters.");
+        return;
+      }
+      if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+        setErr("Password must contain both letters and numbers.");
         return;
       }
       if (password !== passwordConfirm) {
@@ -110,7 +135,7 @@ export function AddEmployeeModal({
     setSubmitting(true);
     try {
       const payload: AddEmployeePayload = {
-        name: name.trim(),
+        name: `${firstName.trim()} ${lastName.trim()}`.trim(),
         email: email.trim(),
         role_name: roleName,
         phone: phone.trim() || null,
@@ -178,19 +203,33 @@ export function AddEmployeeModal({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3 px-5 py-4">
-          <Field label="Full name" error={fieldErrors.name?.[0]}>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              maxLength={255}
-              autoFocus
-              className="h-[36px] w-full rounded-md border bg-white px-3 text-[13px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
-              style={{ borderColor: "var(--admin-border)" }}
-              placeholder="Karen Nazaryan"
-            />
-          </Field>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="First name" error={fieldErrors.name?.[0]}>
+              <input
+                type="text"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                required
+                maxLength={127}
+                autoFocus
+                className="h-[36px] w-full rounded-md border bg-white px-3 text-[13px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+                style={{ borderColor: "var(--admin-border)" }}
+                placeholder="Karen"
+              />
+            </Field>
+            <Field label="Last name">
+              <input
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                required
+                maxLength={127}
+                className="h-[36px] w-full rounded-md border bg-white px-3 text-[13px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+                style={{ borderColor: "var(--admin-border)" }}
+                placeholder="Nazaryan"
+              />
+            </Field>
+          </div>
 
           <Field label="Email" error={fieldErrors.email?.[0]}>
             <input
@@ -261,21 +300,43 @@ export function AddEmployeeModal({
           {mode === "direct" ? (
             <>
               <Field label="Password" error={fieldErrors.password?.[0]}>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={8}
-                  autoComplete="new-password"
-                  className="h-[36px] w-full rounded-md border bg-white px-3 text-[13px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
-                  style={{ borderColor: "var(--admin-border)" }}
-                  placeholder="At least 8 characters"
-                />
+                <div className="flex items-center gap-1.5">
+                  <div className="relative flex-1">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      minLength={8}
+                      autoComplete="new-password"
+                      className="h-[36px] w-full rounded-md border bg-white px-3 pr-9 text-[13px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+                      style={{ borderColor: "var(--admin-border)" }}
+                      placeholder="8+ chars, letters and numbers"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-fg-t6 hover:text-fg-t8"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={generatePassword}
+                    title="Generate a strong password"
+                    className="inline-flex h-[36px] items-center gap-1 rounded-md border px-2.5 text-[12px] font-medium text-fg-t8 transition hover:bg-figma-bg-1"
+                    style={{ borderColor: "var(--admin-border)" }}
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Generate
+                  </button>
+                </div>
               </Field>
               <Field label="Confirm password">
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={passwordConfirm}
                   onChange={(e) => setPasswordConfirm(e.target.value)}
                   required
@@ -299,7 +360,7 @@ export function AddEmployeeModal({
           >
             {mode === "invite"
               ? "The employee will receive an email with a link to set their password. The invitation is valid for 7 days."
-              : "The employee is created immediately with this password and can sign in at admin.zulu.am right away. Share the login + password with them securely."}
+              : "The employee is created immediately and gets an email that their account is ready (the password is NOT emailed). Share the password with them securely."}
           </p>
 
           {err ? (
