@@ -117,7 +117,7 @@ export type ContractDetail = ContractRow & {
 
 export async function apiAdminContracts(
   token: string,
-  params: { page?: number; per_page?: number; status?: ContractStatus | ""; type?: ContractType | ""; q?: string }
+  params: { page?: number; per_page?: number; status?: ContractStatus | ""; type?: ContractType | ""; q?: string; template_id?: string }
 ): Promise<ApiSuccessEnvelope<ContractRow[]> & { meta: ApiListMeta }> {
   const q = new URLSearchParams();
   if (params.page != null) q.set("page", String(params.page));
@@ -125,6 +125,7 @@ export async function apiAdminContracts(
   if (params.status) q.set("status", params.status);
   if (params.type) q.set("type", params.type);
   if (params.q && params.q.trim() !== "") q.set("q", params.q.trim());
+  if (params.template_id) q.set("template_id", params.template_id);
   const qs = q.toString();
   return apiFetchJson(`${PA}/contracts${qs ? `?${qs}` : ""}`, { method: "GET", token });
 }

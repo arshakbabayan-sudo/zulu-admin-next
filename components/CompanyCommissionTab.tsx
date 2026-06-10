@@ -7,8 +7,11 @@
  * commission % + per-agent overrides without navigating to the operator's
  * own commission page.
  *
- * Trimmed version of /operator/commission-settings UI — same primitives,
- * same API, scoped to a specific company id.
+ * Rendered inside MgmtPage's company-detail .detail-pane > .card > .card-body,
+ * so the markup uses the management.css idiom (.section-label / .form-grid /
+ * .fld / .btn / .table / .empty-state) — same primitives as the sibling
+ * Profile / Staff panes. Logic + API calls are identical to the original
+ * Tailwind version; only the markup/classes changed (roadmap §6).
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -38,6 +41,13 @@ type DraftRow = {
   custom_base_percentage: string;
   notes: string;
 };
+
+/** DB-translation shim: falls back to the canonical English while the
+ *  ui_translations row for `key` hasn't been seeded yet (t returns the key). */
+function tx(t: (k: string) => string, key: string, fallback: string): string {
+  const v = t(key);
+  return v === key ? fallback : v;
+}
 
 function configToDraft(c: CommissionConfig | null): DraftRow {
   return {
@@ -81,7 +91,11 @@ export default function CompanyCommissionTab({ token, companyId }: Props) {
       setData(res.data);
       setDefaultDraft(configToDraft(res.data.default));
     } catch (e) {
-      setErr(e instanceof ApiRequestError ? e.message : t("admin.commission.err_load"));
+      setErr(
+        e instanceof ApiRequestError
+          ? e.message
+          : tx(t, "admin.commission.err_load", "Failed to load commission settings"),
+      );
     }
   }, [token, companyId, t]);
 
@@ -106,7 +120,11 @@ export default function CompanyCommissionTab({ token, companyId }: Props) {
       setSavedAt(new Date().toISOString());
       await load();
     } catch (e) {
-      setErr(e instanceof ApiRequestError ? e.message : t("admin.commission.err_save"));
+      setErr(
+        e instanceof ApiRequestError
+          ? e.message
+          : tx(t, "admin.commission.err_save", "Failed to save commission settings"),
+      );
     } finally {
       setBusy(false);
     }
@@ -115,7 +133,7 @@ export default function CompanyCommissionTab({ token, companyId }: Props) {
   async function saveOverride() {
     const agentId = Number(overrideAgentId);
     if (!Number.isFinite(agentId) || agentId <= 0) {
-      setErr(t("admin.commission.err_agent_id"));
+      setErr(tx(t, "admin.commission.err_agent_id", "Please enter a valid agent company ID"));
       return;
     }
     setBusy(true);
@@ -137,7 +155,11 @@ export default function CompanyCommissionTab({ token, companyId }: Props) {
       setSavedAt(new Date().toISOString());
       await load();
     } catch (e) {
-      setErr(e instanceof ApiRequestError ? e.message : t("admin.commission.err_save"));
+      setErr(
+        e instanceof ApiRequestError
+          ? e.message
+          : tx(t, "admin.commission.err_save", "Failed to save commission settings"),
+      );
     } finally {
       setBusy(false);
     }
@@ -146,10 +168,11 @@ export default function CompanyCommissionTab({ token, companyId }: Props) {
   async function deleteOverride(row: CommissionConfig) {
     if (row.agent_company_id == null) return;
     const ok = await confirm({
-      message: t("admin.commission.confirm_delete_override").replace(
-        "{name}",
-        row.agent_company_name ?? `#${row.agent_company_id}`,
-      ),
+      message: tx(
+        t,
+        "admin.commission.confirm_delete_override",
+        'Delete override for "{name}"?',
+      ).replace("{name}", row.agent_company_name ?? `#${row.agent_company_id}`),
       variant: "danger",
     });
     if (!ok) return;
@@ -158,222 +181,260 @@ export default function CompanyCommissionTab({ token, companyId }: Props) {
       await apiDeleteCommissionOverride(token, row.agent_company_id, companyId);
       await load();
     } catch (e) {
-      setErr(e instanceof ApiRequestError ? e.message : t("admin.commission.err_save"));
+      setErr(
+        e instanceof ApiRequestError
+          ? e.message
+          : tx(t, "admin.commission.err_save", "Failed to save commission settings"),
+      );
     } finally {
       setBusy(false);
     }
   }
 
   if (!data) {
-    return <p className="text-sm text-fg-t6">{t("admin.commission.loading")}</p>;
+    return (
+      <p className="cell-muted" style={{ margin: 0 }}>
+        {tx(t, "admin.commission.loading", "Loading commission settings…")}
+      </p>
+    );
   }
 
+  const lblCalculationBase = tx(t, "admin.commission.calculation_base", "Calculation base");
+  const lblPercentage = tx(t, "admin.commission.default_percentage", "Percentage (%)");
+
   return (
-    <div className="space-y-6">
+    <div>
       {err && (
-        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
-          {err}
+        <div className="alert" style={{ background: "var(--danger-light)", color: "var(--danger-dark)" }}>
+          <i className="ti ti-alert-circle" />
+          <div>{err}</div>
         </div>
       )}
 
       {/* DEFAULT section */}
-      <section className="rounded-zulu border border-default bg-white p-4">
-        <h3 className="mb-3 text-sm font-semibold text-fg-t8">
-          {t("admin.commission.default_title")}
-        </h3>
-        <p className="mb-4 text-xs text-fg-t6">{t("admin.commission.default_hint")}</p>
+      <div className="section-label">
+        {tx(t, "admin.commission.default_title", "Default commission for all agents")}
+      </div>
+      <div className="text-sm text-secondary mb-3">
+        {tx(
+          t,
+          "admin.commission.default_hint",
+          "Applied to every agent unless an override row below exists for that agent.",
+        )}
+      </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-fg-t7">{t("admin.commission.calculation_base")}</span>
-            <select
-              value={defaultDraft.calculation_base}
-              onChange={(e) =>
-                setDefaultDraft({
-                  ...defaultDraft,
-                  calculation_base: e.target.value as CalculationBase,
-                })
-              }
-              className="h-10 rounded-zulu border border-default bg-white px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
-            >
-              {CALCULATION_BASES.map((b) => (
-                <option key={b} value={b}>
-                  {calculationBaseLabel(b)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-fg-t7">{t("admin.commission.default_percentage")}</span>
+      <div className="form-grid">
+        <div className="fld">
+          <span className="fld-label">{lblCalculationBase}</span>
+          <select
+            value={defaultDraft.calculation_base}
+            onChange={(e) =>
+              setDefaultDraft({
+                ...defaultDraft,
+                calculation_base: e.target.value as CalculationBase,
+              })
+            }
+          >
+            {CALCULATION_BASES.map((b) => (
+              <option key={b} value={b}>
+                {calculationBaseLabel(b, t)}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="fld">
+          <span className="fld-label">{lblPercentage}</span>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            max="100"
+            value={defaultDraft.default_percentage}
+            onChange={(e) =>
+              setDefaultDraft({ ...defaultDraft, default_percentage: e.target.value })
+            }
+            placeholder="0.00"
+          />
+        </div>
+        {defaultDraft.calculation_base === "custom" && (
+          <div className="fld">
+            <span className="fld-label">
+              {tx(t, "admin.commission.custom_base", "Custom base percentage (%)")}
+            </span>
             <input
               type="number"
               step="0.01"
               min="0"
               max="100"
-              value={defaultDraft.default_percentage}
+              value={defaultDraft.custom_base_percentage}
               onChange={(e) =>
-                setDefaultDraft({ ...defaultDraft, default_percentage: e.target.value })
+                setDefaultDraft({ ...defaultDraft, custom_base_percentage: e.target.value })
               }
-              className="h-10 rounded-zulu border border-default px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
               placeholder="0.00"
             />
-          </label>
-          {defaultDraft.calculation_base === "custom" && (
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-fg-t7">{t("admin.commission.custom_base")}</span>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                max="100"
-                value={defaultDraft.custom_base_percentage}
-                onChange={(e) =>
-                  setDefaultDraft({ ...defaultDraft, custom_base_percentage: e.target.value })
-                }
-                className="h-10 rounded-zulu border border-default px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
-                placeholder="0.00"
-              />
-            </label>
-          )}
-          <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-            <span className="font-medium text-fg-t7">{t("admin.commission.notes")}</span>
-            <textarea
-              value={defaultDraft.notes}
-              onChange={(e) => setDefaultDraft({ ...defaultDraft, notes: e.target.value })}
-              className="min-h-[60px] rounded-zulu border border-default px-2 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
-              placeholder={t("admin.commission.notes_placeholder")}
-            />
-          </label>
+          </div>
+        )}
+        <div className="fld span-2">
+          <span className="fld-label">{tx(t, "admin.commission.notes", "Notes (optional)")}</span>
+          <textarea
+            value={defaultDraft.notes}
+            onChange={(e) => setDefaultDraft({ ...defaultDraft, notes: e.target.value })}
+            placeholder={tx(
+              t,
+              "admin.commission.notes_placeholder",
+              "Internal note about how this default was decided…",
+            )}
+          />
         </div>
+      </div>
 
-        <div className="mt-4 flex items-center gap-3">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void saveDefault()}
-            className="inline-flex h-10 items-center rounded-zulu bg-primary px-4 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
-          >
-            {t("admin.commission.save_default")}
-          </button>
-          {savedAt && (
-            <span className="text-xs text-success-700">
-              {t("admin.commission.saved_just_now")}
-            </span>
-          )}
-        </div>
-      </section>
+      <div className="flex items-center gap-3" style={{ marginTop: 14 }}>
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled={busy}
+          onClick={() => void saveDefault()}
+        >
+          <i className="ti ti-device-floppy" />
+          {tx(t, "admin.commission.save_default", "Save default")}
+        </button>
+        {savedAt && (
+          <span className="text-sm" style={{ color: "var(--success-dark)" }}>
+            {tx(t, "admin.commission.saved_just_now", "Saved just now")}
+          </span>
+        )}
+      </div>
 
       {/* OVERRIDES section */}
-      <section className="rounded-zulu border border-default bg-white p-4">
-        <h3 className="mb-3 text-sm font-semibold text-fg-t8">
-          {t("admin.commission.overrides_title")}
-        </h3>
-        <p className="mb-4 text-xs text-fg-t6">{t("admin.commission.overrides_hint")}</p>
-
-        {data.overrides.length === 0 ? (
-          <p className="mb-4 text-sm text-fg-t6">{t("admin.commission.no_overrides")}</p>
-        ) : (
-          <table className="mb-4 w-full text-left text-sm">
-            <thead className="border-b border-default text-xs uppercase tracking-wide text-fg-t6">
-              <tr>
-                <th className="py-2">{t("admin.commission.agent")}</th>
-                <th className="py-2">{t("admin.commission.calculation_base")}</th>
-                <th className="py-2 text-right">{t("admin.commission.default_percentage")}</th>
-                <th className="py-2 text-right">{t("admin.commission.actions")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.overrides.map((r) => (
-                <tr key={r.id} className="border-b border-default last:border-0">
-                  <td className="py-2">
-                    {r.agent_company_name ?? `#${r.agent_company_id}`}
-                  </td>
-                  <td className="py-2 text-fg-t7">{calculationBaseLabel(r.calculation_base)}</td>
-                  <td className="py-2 text-right tabular-nums">
-                    {r.default_percentage != null ? `${r.default_percentage}%` : "—"}
-                  </td>
-                  <td className="py-2 text-right">
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => void deleteOverride(r)}
-                      className="inline-flex h-8 items-center rounded-zulu border border-error-200 bg-white px-2.5 text-xs font-medium text-error-700 transition hover:bg-error-50 disabled:opacity-40"
-                    >
-                      {t("admin.commission.delete")}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div className="section-label" style={{ marginTop: 28 }}>
+        {tx(t, "admin.commission.overrides_title", "Per-agent overrides")}
+      </div>
+      <div className="text-sm text-secondary mb-3">
+        {tx(
+          t,
+          "admin.commission.overrides_hint",
+          "Override the default for specific agents — used when a partner has negotiated a different rate.",
         )}
+      </div>
 
-        {/* Add override form */}
-        <div className="rounded-zulu border border-default bg-figma-bg-1/40 p-3">
-          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-t6">
-            {t("admin.commission.add_override")}
-          </h4>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-fg-t7">
-                {t("admin.commission.agent_company_id")}
-              </span>
-              <input
-                type="number"
-                min="1"
-                value={overrideAgentId}
-                onChange={(e) => setOverrideAgentId(e.target.value)}
-                className="h-10 rounded-zulu border border-default px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
-                placeholder={t("admin.commission.agent_id_placeholder")}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-fg-t7">{t("admin.commission.calculation_base")}</span>
-              <select
-                value={overrideDraft.calculation_base}
-                onChange={(e) =>
-                  setOverrideDraft({
-                    ...overrideDraft,
-                    calculation_base: e.target.value as CalculationBase,
-                  })
-                }
-                className="h-10 rounded-zulu border border-default bg-white px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
-              >
-                {CALCULATION_BASES.map((b) => (
-                  <option key={b} value={b}>
-                    {calculationBaseLabel(b)}
-                  </option>
+      {data.overrides.length === 0 ? (
+        <div className="empty-state mb-4" style={{ padding: "28px 20px" }}>
+          <i className="ti ti-percentage" />
+          {tx(t, "admin.commission.no_overrides", "No per-agent overrides yet.")}
+        </div>
+      ) : (
+        <div
+          className="mb-4"
+          style={{
+            border: "1px solid var(--border-color)",
+            borderRadius: "var(--radius-md)",
+            overflow: "hidden",
+          }}
+        >
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>{tx(t, "admin.commission.agent", "Agent")}</th>
+                  <th>{lblCalculationBase}</th>
+                  <th className="num-cell">{lblPercentage}</th>
+                  <th style={{ textAlign: "right" }}>
+                    {tx(t, "admin.commission.actions", "Actions")}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.overrides.map((r) => (
+                  <tr key={r.id}>
+                    <td className="font-semibold">
+                      {r.agent_company_name ?? `#${r.agent_company_id}`}
+                    </td>
+                    <td className="cell-muted">{calculationBaseLabel(r.calculation_base, t)}</td>
+                    <td className="num-cell">
+                      {r.default_percentage != null ? `${r.default_percentage}%` : "—"}
+                    </td>
+                    <td>
+                      <div className="row-actions">
+                        <button
+                          type="button"
+                          className="btn btn-sm"
+                          style={{ color: "var(--danger-dark)", borderColor: "var(--danger-light)" }}
+                          disabled={busy}
+                          onClick={() => void deleteOverride(r)}
+                        >
+                          <i className="ti ti-trash" />
+                          {tx(t, "admin.commission.delete", "Delete")}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
                 ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-fg-t7">{t("admin.commission.default_percentage")}</span>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                max="100"
-                value={overrideDraft.default_percentage}
-                onChange={(e) =>
-                  setOverrideDraft({ ...overrideDraft, default_percentage: e.target.value })
-                }
-                className="h-10 rounded-zulu border border-default px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
-                placeholder="0.00"
-              />
-            </label>
-          </div>
-          <div className="mt-3">
-            <button
-              type="button"
-              disabled={busy || overrideAgentId === ""}
-              onClick={() => void saveOverride()}
-              className="inline-flex h-10 items-center rounded-zulu border border-default bg-white px-4 text-sm font-semibold text-fg-t8 transition hover:bg-figma-bg-1 disabled:opacity-40"
-            >
-              {t("admin.commission.add_override_btn")}
-            </button>
+              </tbody>
+            </table>
           </div>
         </div>
-      </section>
+      )}
+
+      {/* Add override form */}
+      <div className="section-label" style={{ marginTop: 20 }}>
+        {tx(t, "admin.commission.add_override", "Add per-agent override")}
+      </div>
+      <div className="form-grid">
+        <div className="fld">
+          <span className="fld-label">
+            {tx(t, "admin.commission.agent_company_id", "Agent company ID")}
+          </span>
+          <input
+            type="number"
+            min="1"
+            value={overrideAgentId}
+            onChange={(e) => setOverrideAgentId(e.target.value)}
+            placeholder={tx(t, "admin.commission.agent_id_placeholder", "e.g. 19")}
+          />
+        </div>
+        <div className="fld">
+          <span className="fld-label">{lblCalculationBase}</span>
+          <select
+            value={overrideDraft.calculation_base}
+            onChange={(e) =>
+              setOverrideDraft({
+                ...overrideDraft,
+                calculation_base: e.target.value as CalculationBase,
+              })
+            }
+          >
+            {CALCULATION_BASES.map((b) => (
+              <option key={b} value={b}>
+                {calculationBaseLabel(b, t)}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="fld">
+          <span className="fld-label">{lblPercentage}</span>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            max="100"
+            value={overrideDraft.default_percentage}
+            onChange={(e) =>
+              setOverrideDraft({ ...overrideDraft, default_percentage: e.target.value })
+            }
+            placeholder="0.00"
+          />
+        </div>
+      </div>
+      <div style={{ marginTop: 14 }}>
+        <button
+          type="button"
+          className="btn"
+          disabled={busy || overrideAgentId === ""}
+          onClick={() => void saveOverride()}
+        >
+          {tx(t, "admin.commission.add_override_btn", "+ Add override")}
+        </button>
+      </div>
     </div>
   );
 }

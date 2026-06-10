@@ -102,13 +102,33 @@ export async function apiDeleteCommissionOverride(
   );
 }
 
-export function calculationBaseLabel(base: CalculationBase): string {
-  switch (base) {
-    case "gross":
-      return "Gross booking amount";
-    case "post_platform_fee":
-      return "Post platform fee (operator's net)";
-    case "custom":
-      return "Custom % of gross";
-  }
+/** ui_translations keys for the calculation-base labels (seeded en/hy/ru). */
+const CALCULATION_BASE_LABEL_KEYS: Record<CalculationBase, string> = {
+  gross: "admin.commission.base_gross",
+  post_platform_fee: "admin.commission.base_post_platform_fee",
+  custom: "admin.commission.base_custom",
+};
+
+/** English fallbacks used before the ui_translations rows are seeded. */
+const CALCULATION_BASE_LABEL_FALLBACKS: Record<CalculationBase, string> = {
+  gross: "Gross booking amount",
+  post_platform_fee: "Post platform fee (operator's net)",
+  custom: "Custom % of gross",
+};
+
+/**
+ * Human label for a calculation base. Pass LanguageContext's `t` to get the
+ * localized label (admin.commission.base_* keys); without `t` — or while the
+ * DB rows aren't seeded yet (t returns the key) — it falls back to English,
+ * so existing `calculationBaseLabel(base)` callers keep working unchanged.
+ */
+export function calculationBaseLabel(
+  base: CalculationBase,
+  t?: (key: string) => string,
+): string {
+  const fallback = CALCULATION_BASE_LABEL_FALLBACKS[base];
+  if (!t) return fallback;
+  const key = CALCULATION_BASE_LABEL_KEYS[base];
+  const translated = t(key);
+  return translated === key ? fallback : translated;
 }

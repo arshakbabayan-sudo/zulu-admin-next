@@ -2977,6 +2977,7 @@ function ContractsPane({
           per_page: 200,
           status: (statusFilter || "") as ContractStatus | "",
           q: search || undefined,
+          template_id: templateFilter || undefined,
         });
         setRows(res.data);
       } else {
@@ -2989,7 +2990,7 @@ function ContractsPane({
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, isAdmin, statusFilter, search]);
+  }, [token, isAdmin, statusFilter, templateFilter, search]);
   useEffect(() => { void load(); }, [load]);
 
   // top-right action: New contract (admin only — sellers cannot create)
@@ -3005,24 +3006,34 @@ function ContractsPane({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lang, isAdmin, detailId]);
 
-  const templates = useMemo(() => {
-    const m = new Map<string, string>();
-    rows.forEach((r) => { if (r.template) m.set(r.template.id, r.template.name); });
-    return Array.from(m.entries());
-  }, [rows]);
+  // Template dropdown options — super/platform path only (apiSellerContracts
+  // has no template_id param, so sellers never see the dropdown).
+  const [templateOptions, setTemplateOptions] = useState<ContractTemplateRow[]>([]);
+  useEffect(() => {
+    if (!token || !isAdmin) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await apiAdminContractTemplates(token, { per_page: 200 });
+        if (!cancelled) setTemplateOptions(res.data);
+      } catch {
+        // non-fatal — the dropdown just stays empty
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [token, isAdmin]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return rows.filter((r) => {
       if (!isAdmin && statusFilter && r.status !== statusFilter) return false;
-      if (templateFilter && r.template?.id !== templateFilter) return false;
       if (!isAdmin && q) {
         const hay = `${r.contract_number} ${r.partyA?.name ?? ""} ${r.partyB?.name ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
     });
-  }, [rows, isAdmin, statusFilter, templateFilter, search]);
+  }, [rows, isAdmin, statusFilter, search]);
 
   if (detailId != null) {
     return (
@@ -3096,15 +3107,17 @@ function ContractsPane({
             <option value="terminated">{s.ctStatusTerminated}</option>
           </select>
         </div>
-        <div className="filter-field">
-          <span className="filter-label">{s.ctFilterTemplate}</span>
-          <select value={templateFilter} onChange={(e) => setTemplateFilter(e.target.value)}>
-            <option value="">{s.ctTemplateAll}</option>
-            {templates.map(([id, name]) => (
-              <option key={id} value={id}>{name}</option>
-            ))}
-          </select>
-        </div>
+        {isAdmin ? (
+          <div className="filter-field">
+            <span className="filter-label">{s.ctFilterTemplate}</span>
+            <select value={templateFilter} onChange={(e) => setTemplateFilter(e.target.value)}>
+              <option value="">{s.ctTemplateAll}</option>
+              {templateOptions.map((t) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+          </div>
+        ) : null}
         <button className="btn btn-primary" onClick={() => setSearch(searchInput.trim())}>
           <i className="ti ti-filter" />
           {s.apply}

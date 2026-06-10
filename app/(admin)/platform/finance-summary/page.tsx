@@ -32,6 +32,7 @@ import {
   apiRevenueByService,
   apiPaymentMethods,
   apiRecentTransactions,
+  downloadFinanceSummaryPdf,
   type FinanceSummaryV2,
   type RevenueByServiceRow,
   type PaymentMethodsBreakdown,
@@ -70,6 +71,7 @@ import {
   ReceiptText,
   ChevronRight,
   FileDown,
+  Loader2 as LoaderIcon,
 } from "lucide-react";
 import { FinanceSectionTabs } from "@/components/finance/FinanceSectionTabs";
 import { FinanceQuickActionDrawer, type QuickActionMode } from "@/components/finance/FinanceQuickActionDrawer";
@@ -107,6 +109,21 @@ export default function PlatformFinanceSummaryPage() {
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [range, setRange] = useState<RangeKey>("30d");
+  const [pdfBusy, setPdfBusy] = useState(false);
+
+  // Roadmap §6 — server-rendered one-page PDF of this dashboard (hero
+  // numbers + currency breakdown + revenue by service) for the active range.
+  const onDownloadPdf = useCallback(async () => {
+    if (!token || pdfBusy) return;
+    setPdfBusy(true);
+    try {
+      await downloadFinanceSummaryPdf(token, range);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPdfBusy(false);
+    }
+  }, [token, range, pdfBusy]);
 
   const load = useCallback(async () => {
     if (!token || !allowed) return;
@@ -224,6 +241,21 @@ export default function PlatformFinanceSummaryPage() {
               }
             >
               {tx(t, "admin.finance_summary.btn_export", "Export")}
+            </V2Button>
+            {/* Roadmap §6 — one-page PDF export of the summary widgets
+                (backend dompdf render, same data as the cards above). */}
+            <V2Button
+              icon={
+                pdfBusy ? (
+                  <LoaderIcon className="h-4 w-4 animate-spin" />
+                ) : (
+                  <FileDown className="h-4 w-4" />
+                )
+              }
+              disabled={pdfBusy || !token}
+              onClick={() => void onDownloadPdf()}
+            >
+              {tx(t, "admin.finance_summary.btn_pdf", "PDF")}
             </V2Button>
           </>
         }
