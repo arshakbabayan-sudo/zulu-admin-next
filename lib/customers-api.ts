@@ -61,3 +61,24 @@ export async function apiCrmCustomers(
     token,
   });
 }
+
+/** Full-dataset stat counts for the CRM Customers cards. */
+export type CrmCustomersStats = {
+  active: number;
+  with_bookings: number;
+  new_this_month: number;
+};
+
+/**
+ * Aggregate counts for the CRM Customers stat cards, scoped server-side exactly
+ * like apiCrmCustomers (operators see only their buyers; super-admins see all).
+ * Backend: CrmController::customersStats @ /platform-admin/crm/customers/stats.
+ */
+export async function apiCrmCustomersStats(
+  token: string
+): Promise<ApiSuccessEnvelope<CrmCustomersStats>> {
+  return apiFetchJson(`/platform-admin/crm/customers/stats`, {
+    method: "GET",
+    token,
+  });
+}

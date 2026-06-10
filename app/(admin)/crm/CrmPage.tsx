@@ -86,7 +86,7 @@ import {
   type CrmTeamRow,
   type CrmCompModel,
 } from "@/lib/crm-api";
-import { apiCrmCustomers, type CustomerRow } from "@/lib/customers-api";
+import { apiCrmCustomers, apiCrmCustomersStats, type CustomerRow, type CrmCustomersStats } from "@/lib/customers-api";
 import { apiShowPlatformUser, type PlatformAdminUserDetail } from "@/lib/platform-admin-api";
 import { apiBookings, type BookingRow } from "@/lib/bookings-api";
 import { AddEmployeeModal } from "@/components/employees/AddEmployeeModal";
@@ -1258,6 +1258,7 @@ function CustomersPane({ token, lang, registerAction, showToast }: PaneProps) {
   const s = crmStrings(lang);
   const [rows, setRows] = useState<CustomerRow[]>([]);
   const [total, setTotal] = useState(0);
+  const [stats, setStats] = useState<CrmCustomersStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState("");
@@ -1283,6 +1284,20 @@ function CustomersPane({ token, lang, registerAction, showToast }: PaneProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, page, search, statusFilter]);
   useEffect(() => { void load(); }, [load]);
+
+  // Full-dataset stat cards (active / with_bookings / new_this_month), fetched
+  // once on mount. Defensive: on failure we fall back to page-derived counts
+  // (see below) without claiming they're platform-wide totals.
+  const loadStats = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await apiCrmCustomersStats(token);
+      setStats(res.data);
+    } catch {
+      setStats(null);
+    }
+  }, [token]);
+  useEffect(() => { void loadStats(); }, [loadStats]);
 
   const exportCsv = useCallback(() => {
     const header = ["Name", "Email", "Phone", "Status", "Bookings"];
@@ -1325,25 +1340,25 @@ function CustomersPane({ token, lang, registerAction, showToast }: PaneProps) {
   const pageCount = Math.max(1, Math.ceil(total / PER_PAGE));
   const start = (page - 1) * PER_PAGE;
 
-  // NOTE: only `total` is a real full-dataset figure (server meta.total). The
-  // three cards below are derived from the current page's rows — the CRM
-  // customers endpoint returns no aggregate stats. Labels say "(current page)"
-  // so the numbers aren't misread as platform-wide totals. TODO(backend): a
-  // /crm/customers/stats endpoint (active / with_bookings / new_this_month).
-  const activeCount = rows.filter((c) => c.status === "active").length;
-  const withBookings = rows.filter((c) => c.bookings_count > 0).length;
-  const newThisMonth = (() => {
-    const now = new Date();
-    return rows.filter((c) => {
-      if (!c.created_at) return false;
-      const d = new Date(c.created_at);
-      return (
-        !Number.isNaN(d.getTime()) &&
-        d.getFullYear() === now.getFullYear() &&
-        d.getMonth() === now.getMonth()
-      );
-    }).length;
-  })();
+  // Card values prefer the real full-dataset counts from /crm/customers/stats
+  // (active / with_bookings / new_this_month). If the stats call failed, fall
+  // back to page-derived approximations so the cards still render a number.
+  const activeCount = stats ? stats.active : rows.filter((c) => c.status === "active").length;
+  const withBookings = stats ? stats.with_bookings : rows.filter((c) => c.bookings_count > 0).length;
+  const newThisMonth = stats
+    ? stats.new_this_month
+    : (() => {
+        const now = new Date();
+        return rows.filter((c) => {
+          if (!c.created_at) return false;
+          const d = new Date(c.created_at);
+          return (
+            !Number.isNaN(d.getTime()) &&
+            d.getFullYear() === now.getFullYear() &&
+            d.getMonth() === now.getMonth()
+          );
+        }).length;
+      })();
 
   return (
     <div>
@@ -2320,12 +2335,16 @@ function WorkHoursModal({
         ends_on: ends,
         notes: note.trim() || null,
       };
-      if (userId.trim()) body.user_id = Number(userId);
       if (hours.trim()) body.hours_total = Number(hours);
-      // Create only — the backend has no field-update endpoint for time-off, so
-      // edit mode is read-only (see the modal footer). This POST is reachable
-      // only from the "Add entry" (create) flow.
-      await apiFetchJson(`/time-off`, { method: "POST", token, body });
+      if (state.mode === "edit") {
+        // Edit existing row → PATCH /time-off/{id}. The backend ignores user_id
+        // on update (a row's owner is fixed at creation), so it's omitted here.
+        await apiFetchJson(`/time-off/${state.row.id}`, { method: "PATCH", token, body });
+      } else {
+        // Create flow → POST /time-off. user_id may target another employee.
+        if (userId.trim()) body.user_id = Number(userId);
+        await apiFetchJson(`/time-off`, { method: "POST", token, body });
+      }
       onSaved();
     } catch (e) {
       setErr(e instanceof ApiRequestError ? e.message : s.errGeneric);
@@ -2343,21 +2362,10 @@ function WorkHoursModal({
         </div>
         <div className="modal-body">
           {err ? <div className="card" style={{ padding: 12, marginBottom: 12, color: "var(--danger)" }}>{err}</div> : null}
-          {/* Interim safeguard (Bug 6): the backend exposes only POST /time-off
-              (create) + PATCH /time-off/{id}/decide (status). There is NO field-
-              update endpoint, so opening an existing row in an editable form that
-              "saves" would silently POST a DUPLICATE row. Until a backend
-              PATCH/PUT /time-off/{id} lands, edit mode is read-only: inputs are
-              disabled and the Save button is replaced by a notice. */}
-          {isEdit ? (
-            <div
-              className="card"
-              style={{ padding: 12, marginBottom: 12, color: "var(--text-secondary)", fontSize: 13 }}
-            >
-              <i className="ti ti-info-circle" style={{ marginRight: 6 }} />
-              {s.whEditUnavailable}
-            </div>
-          ) : null}
+          {/* The employee field is fixed once a row exists (the backend ties a
+              time-off entry to its owner at creation and ignores user_id on
+              update), so it stays disabled in edit mode. All other fields are
+              editable and persisted via PATCH /time-off/{id}. */}
           <div className="fld mb-3">
             <span className="fld-label">{s.whFldEmployee}</span>
             <input type="number" min={1} value={userId} placeholder="—" disabled={isEdit} onChange={(e) => setUserId(e.target.value)} />
@@ -2366,7 +2374,7 @@ function WorkHoursModal({
           <div className="form-grid-2">
             <div className="fld">
               <span className="fld-label">{s.whFldType}</span>
-              <select value={type} disabled={isEdit} onChange={(e) => setType(e.target.value as TimeOffType)}>
+              <select value={type} onChange={(e) => setType(e.target.value as TimeOffType)}>
                 {TIMEOFF_TYPES.map((t) => (
                   <option key={t} value={t}>{s[TIMEOFF_TYPE_KEY[t]]}</option>
                 ))}
@@ -2374,32 +2382,30 @@ function WorkHoursModal({
             </div>
             <div className="fld">
               <span className="fld-label">{s.whFldHours}</span>
-              <input type="number" step="0.5" min="0" value={hours} placeholder="8" disabled={isEdit} onChange={(e) => setHours(e.target.value)} />
+              <input type="number" step="0.5" min="0" value={hours} placeholder="8" onChange={(e) => setHours(e.target.value)} />
             </div>
           </div>
           <div className="form-grid-2" style={{ marginTop: 12 }}>
             <div className="fld">
               <span className="fld-label">{s.whFldStarts}</span>
-              <input type="date" value={starts} disabled={isEdit} onChange={(e) => setStarts(e.target.value)} />
+              <input type="date" value={starts} onChange={(e) => setStarts(e.target.value)} />
             </div>
             <div className="fld">
               <span className="fld-label">{s.whFldEnds}</span>
-              <input type="date" value={ends} disabled={isEdit} onChange={(e) => setEnds(e.target.value)} />
+              <input type="date" value={ends} onChange={(e) => setEnds(e.target.value)} />
             </div>
           </div>
           <div className="fld" style={{ marginTop: 12 }}>
             <span className="fld-label">{s.whFldNote}</span>
-            <input value={note} placeholder={s.whFldNotePh} disabled={isEdit} onChange={(e) => setNote(e.target.value)} />
+            <input value={note} placeholder={s.whFldNotePh} onChange={(e) => setNote(e.target.value)} />
           </div>
         </div>
         <div className="modal-footer">
-          <button className="btn" onClick={onClose}>{isEdit ? s.close : s.cancel}</button>
-          {!isEdit ? (
-            <button className="btn btn-primary" disabled={busy} onClick={() => void submit()}>
-              <i className="ti ti-device-floppy" />
-              {s.save}
-            </button>
-          ) : null}
+          <button className="btn" onClick={onClose}>{s.cancel}</button>
+          <button className="btn btn-primary" disabled={busy} onClick={() => void submit()}>
+            <i className="ti ti-device-floppy" />
+            {s.save}
+          </button>
         </div>
       </div>
     </div>

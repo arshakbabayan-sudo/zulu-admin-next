@@ -149,9 +149,9 @@ const EN = {
 
   // ── customers pane ────────────────────────────────────────────
   cuStatTotal: "Total customers",
-  cuStatActive: "Active (current page)",
-  cuStatWithBookings: "With bookings (current page)",
-  cuStatNew: "New this month (current page)",
+  cuStatActive: "Active",
+  cuStatWithBookings: "With bookings",
+  cuStatNew: "New this month",
   cuSearchPh: "Name or email…",
   cuStatusAll: "All statuses",
   cuStatusActive: "Active",
@@ -353,8 +353,6 @@ const EN = {
   whAddEntry: "Add entry",
   whModalTitle: "Time-off entry",
   whModalEditTitle: "Time-off entry details",
-  whEditUnavailable:
-    "Editing an existing entry is not available yet. Approve, reject or delete it from the list, or create a new entry.",
   whFldEmployee: "Employee (user ID)",
   whFldEmployeeHint: "Leave empty to log for yourself.",
   whFldType: "Type",
@@ -753,9 +751,9 @@ const HY: Partial<Record<CrmKey, string>> = {
   actStatusOverdue: "Ժամկետանց",
 
   cuStatTotal: "Ընդամենը հաճախորդ",
-  cuStatActive: "Ակտիվ (ընթացիկ էջ)",
-  cuStatWithBookings: "Ամրագրումներով (ընթացիկ էջ)",
-  cuStatNew: "Նոր այս ամիս (ընթացիկ էջ)",
+  cuStatActive: "Ակտիվ",
+  cuStatWithBookings: "Ամրագրումներով",
+  cuStatNew: "Նոր այս ամիս",
   cuSearchPh: "Անուն կամ էլ. փոստ…",
   cuStatusAll: "Բոլոր կարգավիճակները",
   cuStatusActive: "Ակտիվ",
@@ -951,8 +949,6 @@ const HY: Partial<Record<CrmKey, string>> = {
   whAddEntry: "Ավելացնել գրառում",
   whModalTitle: "Արձակուրդի գրառում",
   whModalEditTitle: "Արձակուրդի գրառման մանրամասներ",
-  whEditUnavailable:
-    "Առկա գրառման փոփոխումը դեռ հասանելի չէ։ Ցանկից հաստատիր, մերժիր կամ ջնջիր այն, կամ ստեղծիր նոր գրառում։",
   whFldEmployee: "Աշխատակից (օգտատիրոջ ID)",
   whFldEmployeeHint: "Թող դատարկ՝ քո անունից գրանցելու համար։",
   whFldType: "Տեսակ",
@@ -1340,9 +1336,9 @@ const RU: Partial<Record<CrmKey, string>> = {
   actStatusOverdue: "Просрочено",
 
   cuStatTotal: "Всего клиентов",
-  cuStatActive: "Активные (текущая страница)",
-  cuStatWithBookings: "С бронированиями (текущая страница)",
-  cuStatNew: "Новые за месяц (текущая страница)",
+  cuStatActive: "Активные",
+  cuStatWithBookings: "С бронированиями",
+  cuStatNew: "Новые за месяц",
   cuSearchPh: "Имя или email…",
   cuStatusAll: "Все статусы",
   cuStatusActive: "Активен",
@@ -1538,8 +1534,6 @@ const RU: Partial<Record<CrmKey, string>> = {
   whAddEntry: "Добавить запись",
   whModalTitle: "Запись об отгуле",
   whModalEditTitle: "Детали записи об отгуле",
-  whEditUnavailable:
-    "Изменение существующей записи пока недоступно. Подтвердите, отклоните или удалите её из списка, либо создайте новую запись.",
   whFldEmployee: "Сотрудник (ID пользователя)",
   whFldEmployeeHint: "Оставьте пустым, чтобы записать на себя.",
   whFldType: "Тип",

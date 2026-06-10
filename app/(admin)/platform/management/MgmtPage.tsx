@@ -196,7 +196,7 @@ const TTYPE_KEY: Record<string, MgmtKey> = {
 // Sidebar Tabler-icon map is shared with AdminShell — imported from
 // admin-nav-config (SIDEBAR_TABLER_ICON) so both chromes stay in sync.
 
-type ApiListMeta = { current_page: number; last_page: number; per_page: number; total: number };
+type ApiListMeta = { current_page: number; last_page: number; per_page: number; total: number; stats?: Record<string, number> };
 type AuditLogRow = {
   id: string;
   category: string;
@@ -4645,9 +4645,10 @@ function UnverifiedPane(props: {
 }) {
   const { lang } = useLanguage();
   const s = mgmtStrings(lang);
-  // Page-scoped stat snapshots — the API returns one aggregate number; the
-  // other three cards approximate from the page (older-than-30d / new-7d /
-  // intended-staff). Mirrors the LogsPane "honest current-page scoped" pattern.
+  // Full-dataset stat counts arrive on the list response as meta.stats
+  // (stale_30d / new_7d / intended_staff). When present we show those exact
+  // counts; if absent (defensive) we fall back to page-derived approximations.
+  const metaStats = props.meta?.stats;
   const localStats = useMemo(() => {
     const now = Date.now();
     const day = 24 * 3600 * 1000;
@@ -4665,6 +4666,9 @@ function UnverifiedPane(props: {
     }
     return { old30, new7, staff };
   }, [props.rows]);
+  const stale30 = metaStats?.stale_30d ?? localStats.old30;
+  const new7d = metaStats?.new_7d ?? localStats.new7;
+  const intendedStaff = metaStats?.intended_staff ?? localStats.staff;
   const allSelectedOnPage =
     props.rows.length > 0 && props.rows.every((r) => props.selectedIds.has(r.id));
   return (
@@ -4679,19 +4683,19 @@ function UnverifiedPane(props: {
         <Stat
           icon="ti-clock-x"
           tone="danger"
-          value={String(localStats.old30)}
+          value={String(stale30)}
           label={s.uvStatOver30d}
         />
         <Stat
           icon="ti-user-plus"
           tone="info"
-          value={String(localStats.new7)}
+          value={String(new7d)}
           label={s.uvStatNew7d}
         />
         <Stat
           icon="ti-shield-lock"
           tone="primary"
-          value={String(localStats.staff)}
+          value={String(intendedStaff)}
           label={s.uvStatStaff}
         />
       </div>
