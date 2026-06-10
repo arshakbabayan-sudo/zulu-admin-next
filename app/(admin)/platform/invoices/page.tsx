@@ -27,7 +27,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessFinanceSection } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import type { ApiListMeta } from "@/lib/api-envelope";
-import { apiInvoices, apiIssueInvoice, apiCancelInvoice, apiPayInvoice, apiSendInvoiceReminder, downloadInvoicesCsv, type InvoiceRow } from "@/lib/invoices-api";
+import { apiInvoices, apiIssueInvoice, apiCancelInvoice, apiPayInvoice, apiSendInvoiceReminder, apiStoreInvoice, downloadInvoicesCsv, type InvoiceRow } from "@/lib/invoices-api";
 import { apiInvoicesStats, type InvoicesStats } from "@/lib/finance-stats-api";
 import { formatMoney } from "@/lib/format";
 import {
@@ -70,10 +70,25 @@ import {
   StatCard,
   StatGrid,
   IconButton,
+  V2Drawer,
+  V2DrawerSection,
+  V2DrawerInfoRow,
+  V2Modal,
 } from "@/components/ui/v2";
 import { FinanceSectionTabs } from "@/components/finance/FinanceSectionTabs";
 
 const STATUSES = ["", "draft", "issued", "paid", "cancelled", "overdue"] as const;
+
+/**
+ * Local i18n shim — returns `fallback` when the server translation row for
+ * `key` hasn't been seeded yet (t() echoes the key on a miss). Mirrors the
+ * package-orders detail-drawer pattern so new labels are i18n-overridable
+ * but never render a raw dotted key.
+ */
+function tx(t: (k: string) => string, key: string, fallback: string): string {
+  const v = t(key);
+  return v === key ? fallback : v;
+}
 
 type InvoiceStatusMeta = { tone: StatusTone; label: string; icon: React.ReactNode };
 
@@ -118,6 +133,57 @@ export default function PlatformInvoicesPage() {
   const [busyId, setBusyId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<InvoicesStats | null>(null);
+
+  // GROUP C — "View" / "More" open a detail drawer from the loaded row.
+  const [detail, setDetail] = useState<InvoiceRow | null>(null);
+  const [moreMenuId, setMoreMenuId] = useState<number | null>(null);
+  // GROUP D — "New invoice" opens a create modal. Backend POST /invoices needs
+  // an order_id (UUID); the service computes the lines from that order.
+  const [newInvoiceOpen, setNewInvoiceOpen] = useState(false);
+  const [newOrderId, setNewOrderId] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const id = setTimeout(() => setToast(null), 2800);
+    return () => clearTimeout(id);
+  }, [toast]);
+
+  useEffect(() => {
+    if (moreMenuId === null) return;
+    const close = () => setMoreMenuId(null);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMoreMenuId(null);
+    };
+    document.addEventListener("click", close);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("click", close);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [moreMenuId]);
+
+  async function handleCreateInvoice() {
+    if (!token) return;
+    const orderId = newOrderId.trim();
+    if (!orderId) {
+      setToast(tx(t, "admin.invoices.err_order_id_required", "Enter an order ID."));
+      return;
+    }
+    setCreating(true);
+    try {
+      await apiStoreInvoice(token, orderId);
+      setNewInvoiceOpen(false);
+      setNewOrderId("");
+      await load();
+      setToast(tx(t, "admin.invoices.ok_created", "Invoice created."));
+    } catch (e) {
+      setToast(e instanceof ApiRequestError ? e.message : t("admin.invoices.err_generic"));
+    } finally {
+      setCreating(false);
+    }
+  }
 
   const load = useCallback(async () => {
     if (!token || !allowed) return;
@@ -340,8 +406,12 @@ export default function PlatformInvoicesPage() {
             >
               {exporting ? t("admin.invoices.exporting") : t("admin.invoices.btn_export_csv")}
             </V2Button>
-            <V2Button variant="primary" icon={<Plus className="h-4 w-4" />}>
-              New invoice
+            <V2Button
+              variant="primary"
+              icon={<Plus className="h-4 w-4" />}
+              onClick={() => setNewInvoiceOpen(true)}
+            >
+              {tx(t, "admin.invoices.btn_new", "New invoice")}
             </V2Button>
           </>
         }
@@ -585,7 +655,7 @@ export default function PlatformInvoicesPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1.5">
-                          <IconButton aria-label="View">
+                          <IconButton aria-label={tx(t, "common.view", "View")} onClick={() => setDetail(r)}>
                             <Eye />
                           </IconButton>
                           {r.status === "draft" ? (
@@ -624,9 +694,93 @@ export default function PlatformInvoicesPage() {
                               <Ban />
                             </IconButton>
                           ) : null}
-                          <IconButton aria-label="More">
-                            <MoreVertical />
-                          </IconButton>
+                          <div className="relative inline-flex">
+                            <IconButton
+                              aria-label={tx(t, "common.more", "More")}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setMoreMenuId((cur) => (cur === r.id ? null : r.id));
+                              }}
+                            >
+                              <MoreVertical />
+                            </IconButton>
+                            {moreMenuId === r.id ? (
+                              <div
+                                className="absolute right-0 top-full z-20 mt-1 min-w-[180px] overflow-hidden rounded-md border bg-white py-1 shadow-lg"
+                                style={{ borderColor: "var(--admin-border)" }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <button
+                                  type="button"
+                                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] hover:bg-[color:var(--admin-bg-secondary)]"
+                                  style={{ color: "var(--admin-text-primary)" }}
+                                  onClick={() => {
+                                    setMoreMenuId(null);
+                                    setDetail(r);
+                                  }}
+                                >
+                                  <Eye className="h-3.5 w-3.5" />
+                                  {tx(t, "common.view", "View")}
+                                </button>
+                                {r.status === "draft" ? (
+                                  <button
+                                    type="button"
+                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] hover:bg-[color:var(--admin-bg-secondary)]"
+                                    style={{ color: "var(--admin-text-primary)" }}
+                                    onClick={() => {
+                                      setMoreMenuId(null);
+                                      void handleIssue(r.id);
+                                    }}
+                                  >
+                                    <Send className="h-3.5 w-3.5" />
+                                    {tx(t, "admin.invoices.issue", "Issue")}
+                                  </button>
+                                ) : null}
+                                {r.status === "issued" ? (
+                                  <button
+                                    type="button"
+                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] hover:bg-[color:var(--admin-bg-secondary)]"
+                                    style={{ color: "var(--admin-text-primary)" }}
+                                    onClick={() => {
+                                      setMoreMenuId(null);
+                                      void handleMarkPaid(r.id);
+                                    }}
+                                  >
+                                    <Check className="h-3.5 w-3.5" />
+                                    {tx(t, "admin.invoices.mark_paid", "Mark paid")}
+                                  </button>
+                                ) : null}
+                                {r.status === "overdue" || r.status === "issued" ? (
+                                  <button
+                                    type="button"
+                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] hover:bg-[color:var(--admin-bg-secondary)]"
+                                    style={{ color: "var(--admin-text-primary)" }}
+                                    onClick={() => {
+                                      setMoreMenuId(null);
+                                      void handleSendReminder(r.id);
+                                    }}
+                                  >
+                                    <Mail className="h-3.5 w-3.5" />
+                                    {tx(t, "admin.invoices.send_reminder", "Send reminder")}
+                                  </button>
+                                ) : null}
+                                {r.status === "draft" || r.status === "issued" ? (
+                                  <button
+                                    type="button"
+                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] hover:bg-[color:var(--admin-bg-secondary)]"
+                                    style={{ color: "var(--admin-danger)" }}
+                                    onClick={() => {
+                                      setMoreMenuId(null);
+                                      void handleCancel(r.id);
+                                    }}
+                                  >
+                                    <Ban className="h-3.5 w-3.5" />
+                                    {t("common.cancel")}
+                                  </button>
+                                ) : null}
+                              </div>
+                            ) : null}
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -649,6 +803,115 @@ export default function PlatformInvoicesPage() {
           </div>
         ) : null}
       </V2Card>
+
+      {/* GROUP C — invoice detail drawer (View / More → View land here). */}
+      <V2Drawer
+        open={detail !== null}
+        onClose={() => setDetail(null)}
+        title={
+          detail
+            ? `${tx(t, "admin.invoices.detail_title", "Invoice")} ${detail.invoice_number ?? `#${detail.id}`}`
+            : undefined
+        }
+      >
+        {detail ? (
+          <>
+            <V2DrawerSection>{tx(t, "admin.invoices.detail_title", "Invoice")}</V2DrawerSection>
+            <V2DrawerInfoRow label={t("admin.invoices.col_id")} value={`#${detail.id}`} />
+            <V2DrawerInfoRow
+              label={t("admin.invoices.col_invoice_number")}
+              value={detail.invoice_number ?? "—"}
+            />
+            <V2DrawerInfoRow
+              label={t("admin.invoices.col_status")}
+              value={STATUS_META[detail.status]?.label ?? detail.status}
+            />
+            <V2DrawerInfoRow
+              label={t("admin.invoices.col_amount")}
+              value={formatMoney(detail.total_amount, lang, detail.currency)}
+            />
+            <V2DrawerInfoRow
+              label={t("admin.invoices.col_issued")}
+              value={detail.issued_at ? formatRelativeTime(detail.issued_at) : "—"}
+            />
+            <V2DrawerInfoRow
+              label={t("admin.invoices.col_due")}
+              value={detail.due_date ?? "—"}
+            />
+            {detail.created_at ? (
+              <V2DrawerInfoRow
+                label={tx(t, "admin.approvals.col_created", "Created")}
+                value={formatRelativeTime(detail.created_at)}
+              />
+            ) : null}
+
+            <V2DrawerSection>{t("admin.invoices.col_company")}</V2DrawerSection>
+            <V2DrawerInfoRow
+              label={tx(t, "admin.invoices.company_name", "Name")}
+              value={detail.company?.name ?? (detail.company?.id ? `#${detail.company.id}` : "—")}
+            />
+
+            {detail.booking ? (
+              <>
+                <V2DrawerSection>{tx(t, "admin.invoices.booking", "Booking")}</V2DrawerSection>
+                <V2DrawerInfoRow
+                  label={tx(t, "admin.invoices.booking_ref", "Reference")}
+                  value={detail.booking.booking_reference ?? `#${detail.booking.id}`}
+                />
+              </>
+            ) : null}
+          </>
+        ) : null}
+      </V2Drawer>
+
+      {/* GROUP D — New invoice create modal. POST /invoices needs an order UUID. */}
+      <V2Modal
+        open={newInvoiceOpen}
+        onClose={() => setNewInvoiceOpen(false)}
+        title={tx(t, "admin.invoices.btn_new", "New invoice")}
+        footer={
+          <>
+            <V2Button onClick={() => setNewInvoiceOpen(false)}>{t("common.cancel")}</V2Button>
+            <V2Button variant="primary" disabled={creating} onClick={() => void handleCreateInvoice()}>
+              {creating ? t("common.saving") : tx(t, "admin.invoices.btn_create", "Create invoice")}
+            </V2Button>
+          </>
+        }
+      >
+        <label className="flex flex-col gap-1.5 text-sm">
+          <span className="font-medium" style={{ color: "var(--admin-text-secondary)" }}>
+            {tx(t, "admin.invoices.field_order_id", "Order ID")}
+          </span>
+          <input
+            type="text"
+            value={newOrderId}
+            onChange={(e) => setNewOrderId(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void handleCreateInvoice();
+            }}
+            placeholder="00000000-0000-0000-0000-000000000000"
+            className="h-[38px] rounded-md border bg-white px-3 font-mono text-[13px] outline-none focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+            style={{ borderColor: "var(--admin-border)" }}
+          />
+          <span className="text-[12px]" style={{ color: "var(--admin-text-tertiary)" }}>
+            {tx(
+              t,
+              "admin.invoices.field_order_id_hint",
+              "The invoice lines are generated from this order automatically.",
+            )}
+          </span>
+        </label>
+      </V2Modal>
+
+      {toast ? (
+        <div
+          className="fixed bottom-5 left-1/2 z-[70] -translate-x-1/2 rounded-md px-4 py-2.5 text-[13px] font-medium text-white shadow-lg"
+          style={{ backgroundColor: "var(--admin-text-primary)" }}
+          role="status"
+        >
+          {toast}
+        </div>
+      ) : null}
     </div>
   );
 }

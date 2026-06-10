@@ -26,6 +26,7 @@ import { apiPlatformStats, type PlatformStats } from "@/lib/platform-admin-api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useDocumentTitle } from "@/lib/use-document-title";
 import { formatNumber } from "@/lib/format";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import { PageHeader, Table, THead, TBody, TR, TH, TD, Badge, type BadgeTone } from "@/components/ui";
 import { PageHeader as V2PageHeader, V2Button } from "@/components/ui/v2";
 import Link from "next/link";
@@ -361,10 +362,11 @@ function BookingOverview({ stats }: { stats: PlatformStats }) {
   );
 }
 
-function MonthlyEarnings({ token, allowed }: { token: string | null; allowed: boolean }) {
+function MonthlyEarnings({ token, allowed, days }: { token: string | null; allowed: boolean; days: number }) {
   const { t, lang } = useLanguage();
-  // Phase Զ.15 / Item 5 — wired to /statistics/dashboard. Compares the
-  // last 30 days against the prior 30 days for the trend % .
+  // Phase Զ.15 / Item 5 — wired to /statistics/dashboard. Compares the chosen
+  // window against the immediately-preceding window of the same length for the
+  // trend %. The window length follows the dashboard date-range selector.
   const [current, setCurrent] = useState<number | null>(null);
   const [previous, setPrevious] = useState<number | null>(null);
 
@@ -375,18 +377,18 @@ function MonthlyEarnings({ token, allowed }: { token: string | null; allowed: bo
       try {
         const [c, p] = await Promise.all([
           apiFetchJson<{ success: boolean; data: { revenue: { total: number } } }>(
-            "/platform-admin/statistics/dashboard?days=30",
+            `/platform-admin/statistics/dashboard?days=${days}`,
             { token }
           ),
           apiFetchJson<{ success: boolean; data: { revenue: { total: number } } }>(
-            "/platform-admin/statistics/dashboard?days=60",
+            `/platform-admin/statistics/dashboard?days=${days * 2}`,
             { token }
           ),
         ]);
         if (cancelled) return;
         const cur = c.data?.revenue?.total ?? 0;
-        const total60 = p.data?.revenue?.total ?? 0;
-        const prev = Math.max(0, total60 - cur);
+        const totalDouble = p.data?.revenue?.total ?? 0;
+        const prev = Math.max(0, totalDouble - cur);
         setCurrent(cur);
         setPrevious(prev);
       } catch {
@@ -399,7 +401,7 @@ function MonthlyEarnings({ token, allowed }: { token: string | null; allowed: bo
     return () => {
       cancelled = true;
     };
-  }, [allowed, token]);
+  }, [allowed, token, days]);
 
   const valueStr = current == null ? "—" : `$${formatValue(current, lang)}`;
   const pct =
@@ -699,7 +701,7 @@ type TopSellerRow = {
   order_count: number;
 };
 
-function TopOperatorsByRevenue({ token, allowed }: { token: string | null; allowed: boolean }) {
+function TopOperatorsByRevenue({ token, allowed, days }: { token: string | null; allowed: boolean; days: number }) {
   const { t, lang } = useLanguage();
   const [sellers, setSellers] = useState<TopSellerRow[] | null>(null);
 
@@ -709,7 +711,7 @@ function TopOperatorsByRevenue({ token, allowed }: { token: string | null; allow
     void (async () => {
       try {
         const res = await apiFetchJson<{ success: boolean; data: TopSellerRow[] }>(
-          "/platform-admin/statistics/sellers?days=30&limit=5",
+          `/platform-admin/statistics/sellers?days=${days}&limit=5`,
           { token }
         );
         if (!cancelled) setSellers(res.data ?? []);
@@ -720,7 +722,7 @@ function TopOperatorsByRevenue({ token, allowed }: { token: string | null; allow
     return () => {
       cancelled = true;
     };
-  }, [allowed, token]);
+  }, [allowed, token, days]);
 
   if (sellers === null) {
     return (
@@ -831,6 +833,36 @@ export default function DashboardPage() {
   const { token, user } = useAdminAuth();
   const [stats, setStats] = useState<PlatformStats | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  // GROUP B — date-range selector. Drives the range-aware widgets (Monthly
+  // earnings, Top operators). NOTE: the platform-wide /platform-admin/stats
+  // endpoint that feeds the hero cards + donuts does NOT accept a `days`
+  // param (see backend PlatformAdminController::stats → getPlatformStats),
+  // so those tiles are range-independent until a backend follow-up adds it.
+  const [rangeDays, setRangeDays] = useState(30);
+  const [exportToast, setExportToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!exportToast) return;
+    const id = setTimeout(() => setExportToast(null), 2600);
+    return () => clearTimeout(id);
+  }, [exportToast]);
+
+  function handleExportDashboardCsv() {
+    if (!stats) return;
+    const entries = Object.entries(stats).filter(([, v]) => typeof v === "number");
+    if (entries.length === 0) return;
+    // One row per KPI: metric,value — the dashboard has no tabular list, so the
+    // most faithful export is the metric snapshot the cards/donuts are built from.
+    exportRowsAsCsv<[string, number]>(
+      "dashboard-metrics",
+      entries as [string, number][],
+      [
+        ["metric", ([k]) => k],
+        ["value", ([, v]) => v],
+      ],
+    );
+    setExportToast(tx(t, "admin.dashboard.export_done", "Dashboard metrics exported."));
+  }
 
   // Phase 6 frontend gate: the dashboard stats API is now tenant-scoped
   // (operator sees their own company KPIs, super sees platform-wide), so the
@@ -938,7 +970,8 @@ export default function DashboardPage() {
               </V2Button>
             ) : null}
             <select
-              defaultValue="30"
+              value={String(rangeDays)}
+              onChange={(e) => setRangeDays(Number(e.target.value))}
               className="h-9 rounded-md border bg-white px-3 text-[13px] outline-none transition focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
               style={{ borderColor: "var(--admin-border)", color: "var(--admin-text-primary)" }}
               aria-label={tx(t, "admin.dashboard.date_range", "Date range")}
@@ -949,6 +982,7 @@ export default function DashboardPage() {
             </select>
             <V2Button
               variant="primary"
+              onClick={handleExportDashboardCsv}
               icon={
                 <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -1004,7 +1038,7 @@ export default function DashboardPage() {
           <BookingOverview stats={stats} />
         </WidgetCard>
         <WidgetCard title={t("admin.dashboard.monthly_earnings")} icon={DollarSign}>
-          <MonthlyEarnings token={token} allowed={allowed} />
+          <MonthlyEarnings token={token} allowed={allowed} days={rangeDays} />
         </WidgetCard>
         <WidgetCard title={t("admin.dashboard.companies_on_platform")} icon={CheckCircle2}>
           <ApprovalsProgress stats={stats} />
@@ -1052,7 +1086,7 @@ export default function DashboardPage() {
             icon={ArrowUpRight}
             action={<span className="text-xs text-fg-t6">{t("admin.dashboard.total_revenue_placeholder")}</span>}
           >
-            <TopOperatorsByRevenue token={token} allowed={allowed} />
+            <TopOperatorsByRevenue token={token} allowed={allowed} days={rangeDays} />
           </WidgetCard>
         </div>
         <div className="min-w-0">
@@ -1061,6 +1095,16 @@ export default function DashboardPage() {
           </WidgetCard>
         </div>
       </div>
+
+      {exportToast ? (
+        <div
+          className="fixed bottom-5 left-1/2 z-[70] -translate-x-1/2 rounded-md px-4 py-2.5 text-[13px] font-medium text-white shadow-lg"
+          style={{ backgroundColor: "var(--admin-text-primary)" }}
+          role="status"
+        >
+          {exportToast}
+        </div>
+      ) : null}
     </div>
   );
 }

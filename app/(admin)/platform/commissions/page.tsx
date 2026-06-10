@@ -31,11 +31,14 @@ import {
   apiCommissions,
   apiCommissionRecords,
   apiCreateCommission,
+  apiUpdateCommission,
   apiDeactivateCommission,
   type CommissionPolicyCreate,
+  type CommissionPolicyUpdate,
   type CommissionPolicyRow,
   type CommissionRecordRow,
 } from "@/lib/commissions-api";
+import { exportRowsAsCsv } from "@/lib/export-csv";
 import { formatMoney } from "@/lib/format";
 import { apiCommissionsStats, type CommissionsStats } from "@/lib/finance-stats-api";
 import {
@@ -52,6 +55,7 @@ import {
   Plus,
   Download,
   Edit3,
+  Eye,
   MoreVertical,
   Ban,
   Percent,
@@ -71,6 +75,9 @@ import {
   StatCard,
   StatGrid,
   IconButton,
+  V2Drawer,
+  V2DrawerSection,
+  V2DrawerInfoRow,
 } from "@/components/ui/v2";
 import { FinanceSectionTabs } from "@/components/finance/FinanceSectionTabs";
 
@@ -89,6 +96,17 @@ const RECORD_STATUS_META: Record<string, { tone: StatusTone; label: string }> = 
   cancelled: { tone: "danger", label: "Cancelled" },
   processing: { tone: "info", label: "Processing" },
 };
+
+/**
+ * Local i18n shim — returns `fallback` when the server translation row for
+ * `key` hasn't been seeded yet (t() echoes the key on a miss). Mirrors the
+ * pattern used on the package-orders detail page so drawer labels are still
+ * i18n-overridable but never render a raw dotted key.
+ */
+function tx(t: (k: string) => string, key: string, fallback: string): string {
+  const v = t(key);
+  return v === key ? fallback : v;
+}
 
 export default function CommissionsPage() {
   const { token, user } = useAdminAuth();
@@ -124,6 +142,125 @@ export default function CommissionsPage() {
   });
   const [newSaving, setNewSaving] = useState(false);
   const [stats, setStats] = useState<CommissionsStats | null>(null);
+
+  // GROUP C — row "View" / "More" / "Edit" wiring.
+  // No GET /commissions/{id} fetch needed for the drawer: the list row already
+  // carries every field the detail view shows, so "View" opens a drawer from the
+  // loaded row (same approach as package-orders). "Edit" reuses that drawer in an
+  // editable mode and PATCHes via apiUpdateCommission. "More" is a tiny popover.
+  const [detail, setDetail] = useState<CommissionPolicyRow | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [editDraft, setEditDraft] = useState<CommissionPolicyUpdate>({});
+  const [editSaving, setEditSaving] = useState(false);
+  const [moreMenuId, setMoreMenuId] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const id = setTimeout(() => setToast(null), 2600);
+    return () => clearTimeout(id);
+  }, [toast]);
+
+  // Close the row "More" popover on any outside click / Escape.
+  useEffect(() => {
+    if (moreMenuId === null) return;
+    const close = () => setMoreMenuId(null);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMoreMenuId(null);
+    };
+    document.addEventListener("click", close);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("click", close);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [moreMenuId]);
+
+  function openDetail(r: CommissionPolicyRow) {
+    setDetail(r);
+    setEditing(false);
+    setMoreMenuId(null);
+  }
+
+  function openEdit(r: CommissionPolicyRow) {
+    setDetail(r);
+    setEditing(true);
+    setEditDraft({
+      service_type: r.service_type ?? "",
+      percent: r.percent ?? r.rate ?? null,
+      status: (["active", "inactive", "scheduled"].includes(r.status)
+        ? r.status
+        : "active") as "active" | "inactive" | "scheduled",
+    });
+    setMoreMenuId(null);
+  }
+
+  async function handleSaveEdit() {
+    if (!token || !detail) return;
+    const isPercentage = (detail.type ?? "percentage") === "percentage";
+    if (
+      isPercentage &&
+      editDraft.percent != null &&
+      (editDraft.percent < 0 || editDraft.percent > 100)
+    ) {
+      setToast(t("admin.platform_commissions.err_percent_invalid"));
+      return;
+    }
+    setEditSaving(true);
+    try {
+      const payload: CommissionPolicyUpdate = {
+        service_type: editDraft.service_type?.toString().trim() || null,
+        status: editDraft.status,
+      };
+      if (isPercentage) payload.percent = editDraft.percent ?? null;
+      else payload.fixed_value = editDraft.fixed_value ?? null;
+      await apiUpdateCommission(token, detail.id, payload);
+      setDetail(null);
+      setEditing(false);
+      await loadPolicies();
+      setToast(tx(t, "admin.platform_commissions.ok_saved", "Saved."));
+    } catch (e) {
+      setToast(e instanceof ApiRequestError ? e.message : t("admin.platform_commissions.err_failed"));
+    } finally {
+      setEditSaving(false);
+    }
+  }
+
+  function handleExport() {
+    if (tab === "policies") {
+      if (filteredPolicies.length === 0) {
+        setToast(tx(t, "admin.platform_commissions.nothing_to_export", "Nothing to export on this page."));
+        return;
+      }
+      exportRowsAsCsv("commission-policies", filteredPolicies, [
+        ["id", (r) => r.id],
+        ["name", (r) => r.name ?? ""],
+        ["type", (r) => r.type ?? "percentage"],
+        ["rate", (r) => ((r.type ?? "percentage") === "percentage" ? r.percent ?? r.rate ?? "" : r.rate ?? "")],
+        ["service_type", (r) => r.service_type ?? ""],
+        ["company_id", (r) => r.company_id ?? ""],
+        ["status", (r) => r.status],
+        ["effective_from", (r) => r.effective_from ?? ""],
+        ["effective_to", (r) => r.effective_to ?? ""],
+        ["created_at", (r) => r.created_at ?? ""],
+      ]);
+    } else {
+      if (records.length === 0) {
+        setToast(tx(t, "admin.platform_commissions.nothing_to_export", "Nothing to export on this page."));
+        return;
+      }
+      exportRowsAsCsv("commission-records", records, [
+        ["id", (r) => r.id],
+        ["amount", (r) => r.amount],
+        ["currency", (r) => r.currency],
+        ["status", (r) => r.status],
+        ["company", (r) => r.company?.name ?? (r.company_id ? `#${r.company_id}` : "")],
+        ["booking_id", (r) => r.booking_id ?? ""],
+        ["created_at", (r) => r.created_at ?? ""],
+      ]);
+    }
+    setToast(tx(t, "admin.platform_commissions.ok_exported", "CSV exported."));
+  }
 
   const loadPolicies = useCallback(async () => {
     if (!token || !allowed) return;
@@ -279,7 +416,9 @@ export default function CommissionsPage() {
         }
         actions={
           <>
-            <V2Button icon={<Download className="h-4 w-4" />}>Export CSV</V2Button>
+            <V2Button icon={<Download className="h-4 w-4" />} onClick={handleExport}>
+              {tx(t, "admin.platform_commissions.export_csv", "Export CSV")}
+            </V2Button>
             <V2Button variant="primary" icon={<Plus className="h-4 w-4" />} onClick={() => setNewOpen(true)}>
               {t("admin.platform_commissions.btn_new")}
             </V2Button>
@@ -566,21 +705,78 @@ export default function CommissionsPage() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-end gap-1.5">
-                            <IconButton aria-label="Edit">
+                            <IconButton
+                              aria-label={tx(t, "common.view", "View")}
+                              onClick={() => openDetail(r)}
+                            >
+                              <Eye />
+                            </IconButton>
+                            <IconButton
+                              aria-label={tx(t, "common.edit", "Edit")}
+                              onClick={() => openEdit(r)}
+                            >
                               <Edit3 />
                             </IconButton>
                             {r.status === "active" ? (
                               <IconButton
-                                aria-label="Deactivate"
+                                aria-label={tx(t, "common.deactivate", "Deactivate")}
                                 onClick={() => void handleDeactivate(r.id)}
                                 disabled={busyId === r.id}
                               >
                                 <Ban />
                               </IconButton>
                             ) : null}
-                            <IconButton aria-label="More">
-                              <MoreVertical />
-                            </IconButton>
+                            <div className="relative inline-flex">
+                              <IconButton
+                                aria-label={tx(t, "common.more", "More")}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setMoreMenuId((cur) => (cur === r.id ? null : r.id));
+                                }}
+                              >
+                                <MoreVertical />
+                              </IconButton>
+                              {moreMenuId === r.id ? (
+                                <div
+                                  className="absolute right-0 top-full z-20 mt-1 min-w-[160px] overflow-hidden rounded-md border bg-white py-1 shadow-lg"
+                                  style={{ borderColor: "var(--admin-border)" }}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <button
+                                    type="button"
+                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] hover:bg-[color:var(--admin-bg-secondary)]"
+                                    style={{ color: "var(--admin-text-primary)" }}
+                                    onClick={() => openDetail(r)}
+                                  >
+                                    <Eye className="h-3.5 w-3.5" />
+                                    {tx(t, "common.view", "View")}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] hover:bg-[color:var(--admin-bg-secondary)]"
+                                    style={{ color: "var(--admin-text-primary)" }}
+                                    onClick={() => openEdit(r)}
+                                  >
+                                    <Edit3 className="h-3.5 w-3.5" />
+                                    {tx(t, "common.edit", "Edit")}
+                                  </button>
+                                  {r.status === "active" ? (
+                                    <button
+                                      type="button"
+                                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] hover:bg-[color:var(--admin-bg-secondary)]"
+                                      style={{ color: "var(--admin-danger)" }}
+                                      onClick={() => {
+                                        setMoreMenuId(null);
+                                        void handleDeactivate(r.id);
+                                      }}
+                                    >
+                                      <Ban className="h-3.5 w-3.5" />
+                                      {tx(t, "common.deactivate", "Deactivate")}
+                                    </button>
+                                  ) : null}
+                                </div>
+                              ) : null}
+                            </div>
                           </div>
                         </td>
                       </tr>
@@ -860,6 +1056,187 @@ export default function CommissionsPage() {
           </div>
         </div>
       )}
+
+      {/* GROUP C — policy detail / edit drawer (View, Edit, More→View/Edit all land here). */}
+      <V2Drawer
+        open={detail !== null}
+        onClose={() => {
+          setDetail(null);
+          setEditing(false);
+        }}
+        title={
+          detail
+            ? `${
+                editing
+                  ? tx(t, "admin.platform_commissions.edit_title", "Edit policy")
+                  : tx(t, "admin.platform_commissions.detail_title", "Commission policy")
+              } — ${detail.name ?? `#${detail.id.slice(0, 8)}`}`
+            : undefined
+        }
+        footer={
+          detail && editing ? (
+            <>
+              <V2Button onClick={() => setEditing(false)}>{t("common.cancel")}</V2Button>
+              <V2Button variant="primary" disabled={editSaving} onClick={() => void handleSaveEdit()}>
+                {editSaving ? t("common.saving") : tx(t, "common.save", "Save")}
+              </V2Button>
+            </>
+          ) : detail ? (
+            <V2Button variant="primary" onClick={() => openEdit(detail)}>
+              {tx(t, "common.edit", "Edit")}
+            </V2Button>
+          ) : undefined
+        }
+      >
+        {detail ? (
+          editing ? (
+            <div className="space-y-4">
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-medium" style={{ color: "var(--admin-text-secondary)" }}>
+                  {t("admin.platform_commissions.field_service_type")}
+                </span>
+                <select
+                  value={editDraft.service_type ?? ""}
+                  onChange={(e) => setEditDraft({ ...editDraft, service_type: e.target.value || null })}
+                  className="h-[36px] rounded-md border bg-white px-3 text-[13px] outline-none focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+                  style={{ borderColor: "var(--admin-border)" }}
+                >
+                  <option value="">{t("common.all")}</option>
+                  <option value="hotel">Hotel</option>
+                  <option value="flight">Flight</option>
+                  <option value="transfer">Transfer</option>
+                  <option value="excursion">Excursion</option>
+                  <option value="car">Car</option>
+                  <option value="visa">Visa</option>
+                  <option value="package">Package</option>
+                </select>
+              </label>
+              {(detail.type ?? "percentage") === "percentage" ? (
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="font-medium" style={{ color: "var(--admin-text-secondary)" }}>
+                    {t("admin.platform_commissions.field_percent")}
+                  </span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    value={editDraft.percent ?? ""}
+                    onChange={(e) =>
+                      setEditDraft({ ...editDraft, percent: e.target.value === "" ? null : Number(e.target.value) })
+                    }
+                    className="h-[36px] rounded-md border bg-white px-3 text-[13px] outline-none focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+                    style={{ borderColor: "var(--admin-border)" }}
+                    placeholder="0.00"
+                  />
+                </label>
+              ) : (
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="font-medium" style={{ color: "var(--admin-text-secondary)" }}>
+                    {t("admin.platform_commissions.field_fixed_value")}
+                  </span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={editDraft.fixed_value ?? ""}
+                    onChange={(e) =>
+                      setEditDraft({ ...editDraft, fixed_value: e.target.value === "" ? null : Number(e.target.value) })
+                    }
+                    className="h-[36px] rounded-md border bg-white px-3 text-[13px] outline-none focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+                    style={{ borderColor: "var(--admin-border)" }}
+                    placeholder="0.00"
+                  />
+                </label>
+              )}
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-medium" style={{ color: "var(--admin-text-secondary)" }}>
+                  {t("admin.platform_commissions.field_status")}
+                </span>
+                <select
+                  value={editDraft.status ?? "active"}
+                  onChange={(e) =>
+                    setEditDraft({ ...editDraft, status: e.target.value as "active" | "inactive" | "scheduled" })
+                  }
+                  className="h-[36px] rounded-md border bg-white px-3 text-[13px] outline-none focus:border-[color:var(--admin-primary)] focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
+                  style={{ borderColor: "var(--admin-border)" }}
+                >
+                  <option value="active">{t("admin.platform_commissions.status_active")}</option>
+                  <option value="inactive">{t("admin.platform_commissions.status_inactive")}</option>
+                  <option value="scheduled">{t("admin.platform_commissions.status_scheduled")}</option>
+                </select>
+              </label>
+            </div>
+          ) : (
+            <>
+              <V2DrawerSection>{tx(t, "admin.platform_commissions.detail_title", "Commission policy")}</V2DrawerSection>
+              <V2DrawerInfoRow label={tx(t, "admin.crud.common.id", "ID")} value={`#${detail.id.slice(0, 8)}`} />
+              <V2DrawerInfoRow
+                label={tx(t, "admin.platform_commissions.col_name", "Policy name")}
+                value={detail.name ?? "—"}
+              />
+              <V2DrawerInfoRow
+                label={tx(t, "admin.platform_commissions.field_type", "Type")}
+                value={(detail.type ?? "percentage") === "percentage" ? "Percentage" : "Fixed"}
+              />
+              <V2DrawerInfoRow
+                label={tx(t, "admin.platform_commissions.col_rate", "Rate")}
+                value={
+                  (detail.type ?? "percentage") === "percentage"
+                    ? `${Number(detail.percent ?? detail.rate ?? 0).toFixed(2)}%`
+                    : formatMoney(detail.rate, lang, "USD")
+                }
+              />
+              <V2DrawerInfoRow
+                label={tx(t, "admin.platform_commissions.field_service_type", "Service")}
+                value={detail.service_type ?? "All"}
+              />
+              <V2DrawerInfoRow
+                label={tx(t, "admin.platform_commissions.field_company_id", "Company")}
+                value={detail.company_id ? `#${detail.company_id}` : "—"}
+              />
+              <V2DrawerInfoRow
+                label={tx(t, "admin.platform_commissions.field_status", "Status")}
+                value={POLICY_STATUS_META[detail.status]?.label ?? detail.status}
+              />
+              {detail.commission_mode ? (
+                <V2DrawerInfoRow
+                  label={tx(t, "admin.platform_commissions.mode", "Mode")}
+                  value={detail.commission_mode}
+                />
+              ) : null}
+              {detail.effective_from ? (
+                <V2DrawerInfoRow
+                  label={tx(t, "admin.platform_commissions.effective_from", "Effective from")}
+                  value={detail.effective_from}
+                />
+              ) : null}
+              {detail.effective_to ? (
+                <V2DrawerInfoRow
+                  label={tx(t, "admin.platform_commissions.effective_to", "Effective to")}
+                  value={detail.effective_to}
+                />
+              ) : null}
+              {detail.created_at ? (
+                <V2DrawerInfoRow
+                  label={tx(t, "admin.approvals.col_created", "Created")}
+                  value={formatRelativeTime(detail.created_at)}
+                />
+              ) : null}
+            </>
+          )
+        ) : null}
+      </V2Drawer>
+
+      {toast ? (
+        <div
+          className="fixed bottom-5 left-1/2 z-[60] -translate-x-1/2 rounded-md px-4 py-2.5 text-[13px] font-medium text-white shadow-lg"
+          style={{ backgroundColor: "var(--admin-text-primary)" }}
+          role="status"
+        >
+          {toast}
+        </div>
+      ) : null}
     </div>
   );
 }

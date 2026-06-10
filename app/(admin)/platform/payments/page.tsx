@@ -67,8 +67,22 @@ import {
   StatCard,
   StatGrid,
   IconButton,
+  V2Drawer,
+  V2DrawerSection,
+  V2DrawerInfoRow,
 } from "@/components/ui/v2";
 import { FinanceSectionTabs } from "@/components/finance/FinanceSectionTabs";
+
+/**
+ * Local i18n shim — returns `fallback` when the server translation row for
+ * `key` hasn't been seeded yet (t() echoes the key on a miss). Mirrors the
+ * package-orders detail-drawer pattern so new labels are i18n-overridable
+ * but never render a raw dotted key.
+ */
+function tx(t: (k: string) => string, key: string, fallback: string): string {
+  const v = t(key);
+  return v === key ? fallback : v;
+}
 
 const PAYMENT_STATUSES = ["", "pending", "processing", "paid", "failed", "refunded", "cancelled"] as const;
 const PAYMENT_METHODS = ["", "bank_transfer", "card", "wallet", "cash"] as const;
@@ -111,6 +125,31 @@ export default function PlatformPaymentsPage() {
   const [forbidden, setForbidden] = useState(false);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<PaymentsStats | null>(null);
+
+  // GROUP C — "View" / "More" open a detail drawer from the loaded row.
+  const [detail, setDetail] = useState<PlatformPaymentRow | null>(null);
+  const [moreMenuId, setMoreMenuId] = useState<number | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const id = setTimeout(() => setToast(null), 3200);
+    return () => clearTimeout(id);
+  }, [toast]);
+
+  useEffect(() => {
+    if (moreMenuId === null) return;
+    const close = () => setMoreMenuId(null);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMoreMenuId(null);
+    };
+    document.addEventListener("click", close);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("click", close);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [moreMenuId]);
 
   const load = useCallback(async () => {
     if (!token || !allowed) return;
@@ -519,7 +558,7 @@ export default function PlatformPaymentsPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1.5">
-                          <IconButton aria-label="View">
+                          <IconButton aria-label={tx(t, "common.view", "View")} onClick={() => setDetail(r)}>
                             <Eye />
                           </IconButton>
                           {r.status === "paid" ? (
@@ -538,13 +577,88 @@ export default function PlatformPaymentsPage() {
                             </IconButton>
                           ) : null}
                           {r.status === "failed" ? (
-                            <IconButton aria-label="Retry">
+                            // NEEDS-BACKEND: no gateway-retry endpoint exists yet
+                            // (routes/api.php has pay/capture/fail/refund only — no
+                            // /payments/{id}/retry). Until that ships, "Retry" opens
+                            // the detail drawer so the operator can inspect the failed
+                            // payment instead of doing nothing.
+                            <IconButton
+                              aria-label={tx(t, "admin.payments.retry", "Retry")}
+                              onClick={() => {
+                                setDetail(r);
+                                setToast(
+                                  tx(
+                                    t,
+                                    "admin.payments.retry_unavailable",
+                                    "Automatic retry isn't available yet — review the payment and re-collect it manually.",
+                                  ),
+                                );
+                              }}
+                            >
                               <RefreshCw />
                             </IconButton>
                           ) : null}
-                          <IconButton aria-label="More">
-                            <MoreVertical />
-                          </IconButton>
+                          <div className="relative inline-flex">
+                            <IconButton
+                              aria-label={tx(t, "common.more", "More")}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setMoreMenuId((cur) => (cur === r.id ? null : r.id));
+                              }}
+                            >
+                              <MoreVertical />
+                            </IconButton>
+                            {moreMenuId === r.id ? (
+                              <div
+                                className="absolute right-0 top-full z-20 mt-1 min-w-[180px] overflow-hidden rounded-md border bg-white py-1 shadow-lg"
+                                style={{ borderColor: "var(--admin-border)" }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <button
+                                  type="button"
+                                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] hover:bg-[color:var(--admin-bg-secondary)]"
+                                  style={{ color: "var(--admin-text-primary)" }}
+                                  onClick={() => {
+                                    setMoreMenuId(null);
+                                    setDetail(r);
+                                  }}
+                                >
+                                  <Eye className="h-3.5 w-3.5" />
+                                  {tx(t, "common.view", "View")}
+                                </button>
+                                {r.status === "paid" ? (
+                                  <button
+                                    type="button"
+                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] hover:bg-[color:var(--admin-bg-secondary)]"
+                                    style={{ color: "var(--admin-text-primary)" }}
+                                    onClick={async () => {
+                                      setMoreMenuId(null);
+                                      if (!token) return;
+                                      try {
+                                        await downloadPaymentReceiptPdf(token, r.id);
+                                      } catch (e) {
+                                        setToast(e instanceof Error ? e.message : "Receipt download failed");
+                                      }
+                                    }}
+                                  >
+                                    <Download className="h-3.5 w-3.5" />
+                                    {tx(t, "admin.payments.download_receipt", "Download receipt")}
+                                  </button>
+                                ) : null}
+                                {r.invoice?.id || r.invoice_id ? (
+                                  <Link
+                                    href={`/platform/invoices?focus=${r.invoice?.id ?? r.invoice_id}`}
+                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] hover:bg-[color:var(--admin-bg-secondary)]"
+                                    style={{ color: "var(--admin-text-primary)" }}
+                                    onClick={() => setMoreMenuId(null)}
+                                  >
+                                    <Eye className="h-3.5 w-3.5" />
+                                    {tx(t, "admin.payments.open_invoice", "Open invoice")}
+                                  </Link>
+                                ) : null}
+                              </div>
+                            ) : null}
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -567,6 +681,84 @@ export default function PlatformPaymentsPage() {
           </div>
         ) : null}
       </V2Card>
+
+      {/* GROUP C — payment detail drawer (View / More → View / Retry land here). */}
+      <V2Drawer
+        open={detail !== null}
+        onClose={() => setDetail(null)}
+        title={detail ? `${tx(t, "admin.payments.detail_title", "Payment")} #${detail.id}` : undefined}
+      >
+        {detail ? (
+          <>
+            <V2DrawerSection>{tx(t, "admin.payments.detail_title", "Payment")}</V2DrawerSection>
+            <V2DrawerInfoRow label={t("admin.invoices.col_id")} value={`#${detail.id}`} />
+            <V2DrawerInfoRow
+              label={t("admin.invoices.col_amount")}
+              value={formatMoney(detail.amount, lang, detail.currency)}
+            />
+            <V2DrawerInfoRow
+              label={t("admin.payments.col_currency")}
+              value={detail.currency?.toUpperCase() ?? "—"}
+            />
+            <V2DrawerInfoRow
+              label={t("admin.invoices.col_status")}
+              value={STATUS_META[detail.status]?.label ?? detail.status}
+            />
+            <V2DrawerInfoRow
+              label={t("admin.payments.col_method")}
+              value={formatMethod(detail.payment_method)}
+            />
+            {detail.reference_code ? (
+              <V2DrawerInfoRow
+                label={tx(t, "admin.payments.reference", "Reference")}
+                value={detail.reference_code}
+              />
+            ) : null}
+            <V2DrawerInfoRow
+              label={t("admin.payments.col_paid_at")}
+              value={detail.paid_at ? formatRelativeTime(detail.paid_at) : "—"}
+            />
+            {detail.created_at ? (
+              <V2DrawerInfoRow
+                label={tx(t, "admin.approvals.col_created", "Created")}
+                value={formatRelativeTime(detail.created_at)}
+              />
+            ) : null}
+
+            {detail.invoice || detail.invoice_id ? (
+              <>
+                <V2DrawerSection>{t("admin.payments.col_invoice")}</V2DrawerSection>
+                <V2DrawerInfoRow
+                  label={t("admin.invoices.col_id")}
+                  value={`#${detail.invoice?.id ?? detail.invoice_id}`}
+                />
+                {detail.invoice?.unique_booking_reference ? (
+                  <V2DrawerInfoRow
+                    label={tx(t, "admin.payments.booking_ref", "Booking reference")}
+                    value={detail.invoice.unique_booking_reference}
+                  />
+                ) : null}
+                {detail.invoice?.company?.name || detail.invoice?.agent_company?.name ? (
+                  <V2DrawerInfoRow
+                    label={t("admin.invoices.col_company")}
+                    value={detail.invoice?.company?.name ?? detail.invoice?.agent_company?.name ?? "—"}
+                  />
+                ) : null}
+              </>
+            ) : null}
+          </>
+        ) : null}
+      </V2Drawer>
+
+      {toast ? (
+        <div
+          className="fixed bottom-5 left-1/2 z-[70] max-w-[92vw] -translate-x-1/2 rounded-md px-4 py-2.5 text-center text-[13px] font-medium text-white shadow-lg"
+          style={{ backgroundColor: "var(--admin-text-primary)" }}
+          role="status"
+        >
+          {toast}
+        </div>
+      ) : null}
     </div>
   );
 }

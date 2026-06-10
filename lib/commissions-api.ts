@@ -84,3 +84,32 @@ export async function apiCreateCommission(
     body: body as unknown as Record<string, unknown>,
   });
 }
+
+/**
+ * Fields PATCH /commissions/{ruleId} accepts (backend CommissionController::updatePolicy).
+ * Only `service_type` + value/status/notes are mutable — the policy's company &
+ * `type` (percentage|fixed) are fixed at creation.
+ */
+export type CommissionPolicyUpdate = {
+  service_type?: string | null;
+  percent?: number | null;
+  fixed_value?: number | null;
+  fixed_currency?: string | null;
+  effective_from?: string | null;
+  effective_to?: string | null;
+  status?: "active" | "inactive" | "scheduled";
+  notes?: string | null;
+};
+
+/** PATCH /commissions/{ruleId} — edit an existing seller-scoped policy. */
+export async function apiUpdateCommission(
+  token: string,
+  id: string,
+  body: CommissionPolicyUpdate
+): Promise<ApiSuccessEnvelope<CommissionPolicyRow>> {
+  return apiFetchJson(`/commissions/${id}`, {
+    method: "PATCH",
+    token,
+    body: body as unknown as Record<string, unknown>,
+  });
+}

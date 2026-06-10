@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -115,6 +115,12 @@ function applyAdminTheme(theme: AdminTheme): void {
  */
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  // GROUP D — global "Search anything…" box. A true cross-entity global-search
+  // endpoint does NOT exist yet (backend gap). As a useful interim, Enter routes
+  // to the Companies list filtered by the query (/platform/companies?q=…), which
+  // MgmtPage reads to seed its companies search.
+  const [globalSearch, setGlobalSearch] = useState("");
   const { user, token, logout } = useAdminAuth();
   const { lang, setLang, languageOptions, t } = useLanguage();
   const [languageOpen, setLanguageOpen] = useState(false);
@@ -311,10 +317,20 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
         {/* Center — global search (Phase 2 admin-redesign 2026-05-24).
-            Currently visual-only; wiring up the search backend is a separate
-            task. Hidden on mobile to avoid crowding the header. */}
+            Interim wiring (GROUP D): Enter routes to the Companies list filtered
+            by the query. A real cross-entity global-search endpoint is a backend
+            follow-up. Hidden on mobile to avoid crowding the header. */}
         <div className="hidden lg:flex flex-1 items-center justify-center px-6">
-          <div className="relative w-full max-w-[400px]">
+          <form
+            className="relative w-full max-w-[400px]"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const q = globalSearch.trim();
+              if (!q) return;
+              router.push(`/platform/companies?q=${encodeURIComponent(q)}`);
+            }}
+            role="search"
+          >
             <svg
               viewBox="0 0 24 24"
               className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 fill-none stroke-slate-400"
@@ -328,12 +344,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </svg>
             <input
               type="search"
+              value={globalSearch}
+              onChange={(e) => setGlobalSearch(e.target.value)}
               placeholder={t("admin.header.search_placeholder") !== "admin.header.search_placeholder" ? t("admin.header.search_placeholder") : "Որոնում..."}
               className="h-9 w-full rounded-lg border bg-slate-50 pl-10 pr-3 text-[13px] text-slate-700 outline-none placeholder:text-slate-400 transition focus:border-[color:var(--admin-primary)] focus:bg-white focus:ring-2 focus:ring-[color:var(--admin-primary-soft)]"
               style={{ borderColor: "var(--admin-border)" }}
               aria-label={t("admin.header.search_placeholder") !== "admin.header.search_placeholder" ? t("admin.header.search_placeholder") : "Որոնում"}
             />
-          </div>
+          </form>
         </div>
         <div className="flex items-center gap-1.5">
           {/* Single language switcher — controls admin chrome.

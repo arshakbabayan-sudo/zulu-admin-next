@@ -21,7 +21,7 @@
  */
 
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./management.css";
 import { mgmtStrings, type MgmtKey } from "./management-i18n";
@@ -326,6 +326,11 @@ const CONTRACT_STATUS_TONE: Record<string, "badge-success" | "badge-warning" | "
 
 export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab }) {
   const router = useRouter();
+  // Interim global-search target: the header "Search anything…" box (AdminShell)
+  // routes to /platform/companies?q=<query>. Seed the companies search filter
+  // from that param so the global search lands the operator on a filtered list.
+  const searchParams = useSearchParams();
+  const initialQuery = searchParams?.get("q") ?? "";
   const { token, user, logout } = useAdminAuth();
   const { lang, setLang, languageOptions } = useLanguage();
   const s = mgmtStrings(lang);
@@ -363,7 +368,7 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
   const [companiesMeta, setCompaniesMeta] = useState<ApiListMeta | null>(null);
   const [companiesLoading, setCompaniesLoading] = useState(false);
   const [companiesPage, setCompaniesPage] = useState(1);
-  const [companiesSearch, setCompaniesSearch] = useState("");
+  const [companiesSearch, setCompaniesSearch] = useState(initialQuery);
   const [companiesFilterGov, setCompaniesFilterGov] = useState("");
   const [companiesFilterType, setCompaniesFilterType] = useState("");
   const [companiesFilterSeller, setCompaniesFilterSeller] = useState("");
@@ -1296,7 +1301,29 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
               </div>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 {tab === "companies" && !inCompanyDetail && (
-                  <button className="btn">
+                  <button
+                    className="btn"
+                    onClick={() => {
+                      if (companies.length === 0) {
+                        setToast(s.errNothingToExport);
+                        return;
+                      }
+                      exportRowsAsCsv("companies", companies, [
+                        ["id", (r) => r.id],
+                        ["name", (r) => r.name],
+                        ["type", (r) => r.type ?? ""],
+                        ["country", (r) => r.country ?? ""],
+                        ["city", (r) => r.city ?? ""],
+                        ["governance_status", (r) => r.governance_status],
+                        ["is_seller", (r) => (r.is_seller ? "yes" : "no")],
+                        ["tax_id", (r) => r.tax_id ?? ""],
+                        ["phone", (r) => r.phone ?? ""],
+                        ["website", (r) => r.website ?? ""],
+                        ["created_at", (r) => r.created_at ?? ""],
+                      ]);
+                      setToast(s.okExported);
+                    }}
+                  >
                     <i className="ti ti-download" />
                     {s.actionExport}
                   </button>
@@ -1304,7 +1331,11 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                 {tab === "companyApplications" && (
                   <button
                     className="btn"
-                    onClick={() =>
+                    onClick={() => {
+                      if (companyApps.length === 0) {
+                        setToast(s.errNothingToExport);
+                        return;
+                      }
                       exportRowsAsCsv("company-applications", companyApps, [
                         ["id", (r) => r.id],
                         ["company_name", (r) => r.company_name],
@@ -1317,15 +1348,35 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                         ["contact_person", (r) => r.contact_person ?? ""],
                         ["status", (r) => r.status],
                         ["submitted_at", (r) => r.submitted_at ?? ""],
-                      ])
-                    }
+                      ]);
+                      setToast(s.okExported);
+                    }}
                   >
                     <i className="ti ti-download" />
                     {s.actionExport}
                   </button>
                 )}
                 {tab === "applications" && (
-                  <button className="btn">
+                  <button
+                    className="btn"
+                    onClick={() => {
+                      if (apps.length === 0) {
+                        setToast(s.errNothingToExport);
+                        return;
+                      }
+                      exportRowsAsCsv("seller-applications", apps, [
+                        ["id", (r) => r.id],
+                        ["company_id", (r) => r.company_id],
+                        ["company_name", (r) => r.company_name ?? ""],
+                        ["service_type", (r) => r.service_type],
+                        ["status", (r) => r.status],
+                        ["applied_at", (r) => r.applied_at ?? ""],
+                        ["reviewed_at", (r) => r.reviewed_at ?? ""],
+                        ["rejection_reason", (r) => r.rejection_reason ?? ""],
+                      ]);
+                      setToast(s.okExported);
+                    }}
+                  >
                     <i className="ti ti-download" />
                     {s.actionExport}
                   </button>
@@ -1349,6 +1400,10 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                       className="btn"
                       onClick={() => {
                         if (tab === "customers") {
+                          if (customers.length === 0) {
+                            setToast(s.errNothingToExport);
+                            return;
+                          }
                           exportRowsAsCsv("b2c-customers", customers, [
                             ["id", (r) => r.id],
                             ["name", (r) => r.name],
@@ -1358,7 +1413,12 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                             ["created_at", (r) => r.created_at ?? ""],
                             ["last_login_at", (r) => r.last_login_at ?? ""],
                           ]);
+                          setToast(s.okExported);
                         } else if (tab === "unverified") {
+                          if (unverified.length === 0) {
+                            setToast(s.errNothingToExport);
+                            return;
+                          }
                           exportRowsAsCsv("unverified-accounts", unverified, [
                             ["id", (r) => r.id],
                             ["name", (r) => r.name],
@@ -1370,6 +1430,7 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                             ],
                             ["created_at", (r) => r.created_at ?? ""],
                           ]);
+                          setToast(s.okExported);
                         }
                       }}
                     >
