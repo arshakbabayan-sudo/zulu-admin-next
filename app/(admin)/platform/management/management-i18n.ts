@@ -388,6 +388,8 @@ const EN = {
   auPrevHash: "Previous hash",
   auChanges: "Changes",
   auVerified: "Verified",
+  auNotVerified: "Not verified yet — run the integrity check on the Logs page",
+  auTampered: "Chain broken — this record failed the integrity check",
 
   // ── template modal ──────────────────────────────────────────────
   tmNew: "New template",
@@ -955,6 +957,8 @@ const HY: Partial<Record<MgmtKey, string>> = {
   auPrevHash: "Նախորդ հաշ",
   auChanges: "Փոփոխություններ",
   auVerified: "Ստուգված",
+  auNotVerified: "Դեռ չստուգված — գործարկիր ամբողջականության ստուգումը Մատյաններ էջում",
+  auTampered: "Շղթան խախտված է — այս գրառումը ստուգումը չի անցել",
 
   tmNew: "Նոր ձևանմուշ",
   tmEdit: "Պայմանագրի ձևանմուշ",
@@ -1513,6 +1517,8 @@ const RU: Partial<Record<MgmtKey, string>> = {
   auPrevHash: "Предыдущий хеш",
   auChanges: "Изменения",
   auVerified: "Проверено",
+  auNotVerified: "Ещё не проверено — запустите проверку целостности на странице журналов",
+  auTampered: "Цепочка нарушена — запись не прошла проверку целостности",
 
   tmNew: "Новый шаблон",
   tmEdit: "Шаблон договора",

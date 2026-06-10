@@ -1852,7 +1852,7 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
           window.open(contractDrawer.signed_pdf_url, "_blank", "noopener,noreferrer");
         }}
       />
-      <AuditDrawer open={auditDrawer !== null} row={auditDrawer} onClose={() => setAuditDrawer(null)} />
+      <AuditDrawer open={auditDrawer !== null} row={auditDrawer} onClose={() => setAuditDrawer(null)} integrity={integrity} />
 
       {/* Company-application detail drawer (2026-06-05) */}
       <CompanyApplicationDrawer
@@ -3078,7 +3078,16 @@ function CompaniesDetail(props: {
                     return (
                       <tr key={a.id}>
                         <td className="font-mono">APP-{String(a.id).padStart(4, "0")}</td>
-                        <td>{s.apTypeRegistration}</td>
+                        {/* 2026-06-10 (roadmap §2 bug 1) — was hardcoded "Registration"
+                            for every row; show the application's REAL company type
+                            (operator vs agency) from company_type instead. */}
+                        <td>
+                          {a.company_type === "operator"
+                            ? s.typeOperator
+                            : a.company_type === "agent"
+                            ? s.typeAgency
+                            : s.apTypeRegistration}
+                        </td>
                         <td>
                           <span className={`badge ${tone}`}>
                             {s[APP_STATUS_KEY[a.status] ?? "optPending"]}
@@ -5978,7 +5987,13 @@ function ContractDrawer(props: {
   );
 }
 
-function AuditDrawer(props: { open: boolean; row: AuditLogRow | null; onClose: () => void }) {
+function AuditDrawer(props: {
+  open: boolean;
+  row: AuditLogRow | null;
+  onClose: () => void;
+  /** Result of the hash-chain check (LogsPane "Verify integrity" action); null until run. */
+  integrity?: IntegrityResult | null;
+}) {
   const { lang } = useLanguage();
   const s = mgmtStrings(lang);
   const router = useRouter();
@@ -6034,11 +6049,24 @@ function AuditDrawer(props: { open: boolean; row: AuditLogRow | null; onClose: (
                 </div>
               </div>
               <div className="drawer-section">{s.auHashChain}</div>
+              {/* 2026-06-10 (roadmap §2 bug 2) — badge was hardcoded green "Verified"
+                  with no check behind it. Now reflects the REAL hash-chain
+                  verification (backend verify-integrity endpoint): gray until the
+                  check is run, red if this record's id is in the corrupted list. */}
               <div className="hash-line mb-3">
-                <span className="badge badge-success">
-                  <i className="ti ti-shield-check" style={{ fontSize: 12 }} />
-                  {s.auVerified}
-                </span>
+                {!props.integrity ? (
+                  <span className="badge badge-gray">{s.auNotVerified}</span>
+                ) : props.integrity.corrupted_log_ids.includes(String(r.id)) ? (
+                  <span className="badge badge-danger">
+                    <i className="ti ti-alert-triangle" style={{ fontSize: 12 }} />
+                    {s.auTampered}
+                  </span>
+                ) : (
+                  <span className="badge badge-success">
+                    <i className="ti ti-shield-check" style={{ fontSize: 12 }} />
+                    {s.auVerified}
+                  </span>
+                )}
               </div>
               <div className="info-grid">
                 <div className="info-row">

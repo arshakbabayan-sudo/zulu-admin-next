@@ -1538,8 +1538,23 @@ function CustomerDetail({
           </div>
         </div>
         <div className="hero-actions">
-          <button className="btn"><i className="ti ti-mail" />{s.cuHeroEmail}</button>
-          <button className="btn"><i className="ti ti-message" />{s.cuHeroMessage}</button>
+          {/* 2026-06-10 (roadmap §2 bug 3) — both were dead buttons. mailto, same
+              as the Management B2C-detail Message action (no in-app customer
+              messaging channel exists yet — roadmap §4 customer chat). */}
+          <button
+            className="btn"
+            disabled={!data?.email}
+            onClick={() => { if (data?.email) window.open(`mailto:${data.email}`, "_blank"); }}
+          >
+            <i className="ti ti-mail" />{s.cuHeroEmail}
+          </button>
+          <button
+            className="btn"
+            disabled={!data?.email}
+            onClick={() => { if (data?.email) window.open(`mailto:${data.email}`, "_blank"); }}
+          >
+            <i className="ti ti-message" />{s.cuHeroMessage}
+          </button>
         </div>
       </div>
       <div className="card" style={{ marginBottom: 0 }}>
@@ -2204,9 +2219,12 @@ function WorkHoursPane({
           <span className="filter-label">{s.whFilterMonth}</span>
           <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
         </div>
+        {/* 2026-06-10 (roadmap §2 bug 4) — was labeled "Apply", but the three
+            filters are live client-side (filtered useMemo); the button's real
+            effect is re-fetching the list. Label it honestly as a refresh. */}
         <button className="btn btn-primary" onClick={() => void load()}>
-          <i className="ti ti-filter" />
-          {s.apply}
+          <i className="ti ti-refresh" />
+          {s.refresh}
         </button>
       </div>
 
