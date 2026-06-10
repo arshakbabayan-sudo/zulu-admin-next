@@ -15,6 +15,11 @@ import { useEffect } from "react";
  */
 const MGMT_PREFIXES = [
   "/platform/companies",
+  // 2026-06-10 — Company applications renders its OWN MgmtPage chrome (1:1 port
+  // of company-applications.html); without this bypass it double-rendered inside
+  // AdminShell. The /[id] sub-route only redirects to this list, so a startsWith
+  // prefix is safe (matches how the sibling /platform/companies is handled).
+  "/platform/company-applications",
   "/platform/seller-applications",
   "/platform/contracts",
   "/platform/contract-templates",

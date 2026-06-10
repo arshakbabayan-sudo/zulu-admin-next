@@ -1325,8 +1325,25 @@ function CustomersPane({ token, lang, registerAction, showToast }: PaneProps) {
   const pageCount = Math.max(1, Math.ceil(total / PER_PAGE));
   const start = (page - 1) * PER_PAGE;
 
+  // NOTE: only `total` is a real full-dataset figure (server meta.total). The
+  // three cards below are derived from the current page's rows — the CRM
+  // customers endpoint returns no aggregate stats. Labels say "(current page)"
+  // so the numbers aren't misread as platform-wide totals. TODO(backend): a
+  // /crm/customers/stats endpoint (active / with_bookings / new_this_month).
   const activeCount = rows.filter((c) => c.status === "active").length;
   const withBookings = rows.filter((c) => c.bookings_count > 0).length;
+  const newThisMonth = (() => {
+    const now = new Date();
+    return rows.filter((c) => {
+      if (!c.created_at) return false;
+      const d = new Date(c.created_at);
+      return (
+        !Number.isNaN(d.getTime()) &&
+        d.getFullYear() === now.getFullYear() &&
+        d.getMonth() === now.getMonth()
+      );
+    }).length;
+  })();
 
   return (
     <div>
@@ -1348,7 +1365,7 @@ function CustomersPane({ token, lang, registerAction, showToast }: PaneProps) {
         </div>
         <div className="stat-card c-warning">
           <div className="stat-header"><i className="ti ti-user-plus" /></div>
-          <div className="stat-value">{rows.length}</div>
+          <div className="stat-value">{newThisMonth}</div>
           <div className="stat-label">{s.cuStatNew}</div>
         </div>
       </div>
@@ -2305,9 +2322,9 @@ function WorkHoursModal({
       };
       if (userId.trim()) body.user_id = Number(userId);
       if (hours.trim()) body.hours_total = Number(hours);
-      // Backend has no time-off PATCH for fields; editing re-creates as a new
-      // request (the mock's modal is "save"). For an existing row we just POST a
-      // fresh request, matching how the standalone page works (create-only form).
+      // Create only — the backend has no field-update endpoint for time-off, so
+      // edit mode is read-only (see the modal footer). This POST is reachable
+      // only from the "Add entry" (create) flow.
       await apiFetchJson(`/time-off`, { method: "POST", token, body });
       onSaved();
     } catch (e) {
@@ -2326,15 +2343,30 @@ function WorkHoursModal({
         </div>
         <div className="modal-body">
           {err ? <div className="card" style={{ padding: 12, marginBottom: 12, color: "var(--danger)" }}>{err}</div> : null}
+          {/* Interim safeguard (Bug 6): the backend exposes only POST /time-off
+              (create) + PATCH /time-off/{id}/decide (status). There is NO field-
+              update endpoint, so opening an existing row in an editable form that
+              "saves" would silently POST a DUPLICATE row. Until a backend
+              PATCH/PUT /time-off/{id} lands, edit mode is read-only: inputs are
+              disabled and the Save button is replaced by a notice. */}
+          {isEdit ? (
+            <div
+              className="card"
+              style={{ padding: 12, marginBottom: 12, color: "var(--text-secondary)", fontSize: 13 }}
+            >
+              <i className="ti ti-info-circle" style={{ marginRight: 6 }} />
+              {s.whEditUnavailable}
+            </div>
+          ) : null}
           <div className="fld mb-3">
             <span className="fld-label">{s.whFldEmployee}</span>
-            <input type="number" min={1} value={userId} placeholder="—" onChange={(e) => setUserId(e.target.value)} />
+            <input type="number" min={1} value={userId} placeholder="—" disabled={isEdit} onChange={(e) => setUserId(e.target.value)} />
             <span className="fld-hint">{s.whFldEmployeeHint}</span>
           </div>
           <div className="form-grid-2">
             <div className="fld">
               <span className="fld-label">{s.whFldType}</span>
-              <select value={type} onChange={(e) => setType(e.target.value as TimeOffType)}>
+              <select value={type} disabled={isEdit} onChange={(e) => setType(e.target.value as TimeOffType)}>
                 {TIMEOFF_TYPES.map((t) => (
                   <option key={t} value={t}>{s[TIMEOFF_TYPE_KEY[t]]}</option>
                 ))}
@@ -2342,30 +2374,32 @@ function WorkHoursModal({
             </div>
             <div className="fld">
               <span className="fld-label">{s.whFldHours}</span>
-              <input type="number" step="0.5" min="0" value={hours} placeholder="8" onChange={(e) => setHours(e.target.value)} />
+              <input type="number" step="0.5" min="0" value={hours} placeholder="8" disabled={isEdit} onChange={(e) => setHours(e.target.value)} />
             </div>
           </div>
           <div className="form-grid-2" style={{ marginTop: 12 }}>
             <div className="fld">
               <span className="fld-label">{s.whFldStarts}</span>
-              <input type="date" value={starts} onChange={(e) => setStarts(e.target.value)} />
+              <input type="date" value={starts} disabled={isEdit} onChange={(e) => setStarts(e.target.value)} />
             </div>
             <div className="fld">
               <span className="fld-label">{s.whFldEnds}</span>
-              <input type="date" value={ends} onChange={(e) => setEnds(e.target.value)} />
+              <input type="date" value={ends} disabled={isEdit} onChange={(e) => setEnds(e.target.value)} />
             </div>
           </div>
           <div className="fld" style={{ marginTop: 12 }}>
             <span className="fld-label">{s.whFldNote}</span>
-            <input value={note} placeholder={s.whFldNotePh} onChange={(e) => setNote(e.target.value)} />
+            <input value={note} placeholder={s.whFldNotePh} disabled={isEdit} onChange={(e) => setNote(e.target.value)} />
           </div>
         </div>
         <div className="modal-footer">
-          <button className="btn" onClick={onClose}>{s.cancel}</button>
-          <button className="btn btn-primary" disabled={busy} onClick={() => void submit()}>
-            <i className="ti ti-device-floppy" />
-            {s.save}
-          </button>
+          <button className="btn" onClick={onClose}>{isEdit ? s.close : s.cancel}</button>
+          {!isEdit ? (
+            <button className="btn btn-primary" disabled={busy} onClick={() => void submit()}>
+              <i className="ti ti-device-floppy" />
+              {s.save}
+            </button>
+          ) : null}
         </div>
       </div>
     </div>

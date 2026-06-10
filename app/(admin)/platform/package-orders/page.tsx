@@ -62,8 +62,22 @@ import {
   StatCard,
   StatGrid,
   IconButton,
+  V2Drawer,
+  V2DrawerSection,
+  V2DrawerInfoRow,
 } from "@/components/ui/v2";
 import { BookingsSectionTabs } from "@/components/bookings/BookingsSectionTabs";
+
+/**
+ * Local i18n shim — returns `fallback` when the server translation row for
+ * `key` hasn't been seeded yet (translateKey echoes the key on a miss).
+ * Mirrors the pattern used on the bookings detail page so drawer labels are
+ * still i18n-overridable but never render a raw dotted key.
+ */
+function tx(t: (k: string) => string, key: string, fallback: string): string {
+  const v = t(key);
+  return v === key ? fallback : v;
+}
 
 const ORDER_STATUSES = [
   "",
@@ -197,6 +211,10 @@ export default function PlatformPackageOrdersPage() {
   const [forbidden, setForbidden] = useState(false);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<PackageOrdersStats | null>(null);
+  // Detail drawer. No GET /package-orders/{id} endpoint exists, so the "View"
+  // action opens a drawer populated from the already-loaded list row instead of
+  // navigating to a non-existent /[id] route (which 404'd). See TODO(backend).
+  const [detail, setDetail] = useState<PlatformPackageOrderRow | null>(null);
 
   const load = useCallback(async () => {
     if (!token || !allowed) return;
@@ -600,7 +618,7 @@ export default function PlatformPackageOrdersPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1.5">
-                          <IconButton as="link" href={`/platform/package-orders/${r.id}`} aria-label="View">
+                          <IconButton onClick={() => setDetail(r)} aria-label="View">
                             <Eye />
                           </IconButton>
                           {r.payment_status === "failed" ? (
@@ -633,6 +651,100 @@ export default function PlatformPackageOrdersPage() {
           </div>
         ) : null}
       </V2Card>
+
+      <V2Drawer
+        open={detail !== null}
+        onClose={() => setDetail(null)}
+        title={
+          detail
+            ? `${tx(t, "admin.package_orders.detail_title", "Package order")} ${detail.order_number}`
+            : undefined
+        }
+      >
+        {detail ? (
+          <>
+            <V2DrawerSection>{tx(t, "admin.package_orders.detail_order", "Order")}</V2DrawerSection>
+            <V2DrawerInfoRow
+              label={tx(t, "admin.invoices.col_id", "ID")}
+              value={`PO-${String(detail.id).padStart(4, "0")}`}
+            />
+            <V2DrawerInfoRow
+              label={tx(t, "admin.package_orders.col_order_number", "Order number")}
+              value={detail.order_number}
+            />
+            <V2DrawerInfoRow
+              label={tx(t, "admin.invoices.col_status", "Status")}
+              value={labelStatus(ORDER_STATUS_META, detail.status)}
+            />
+            <V2DrawerInfoRow
+              label={tx(t, "admin.package_orders.col_payment", "Payment")}
+              value={labelStatus(PAYMENT_STATUS_META, detail.payment_status)}
+            />
+            <V2DrawerInfoRow
+              label={tx(t, "admin.package_orders.col_total", "Total")}
+              value={formatMoney(detail.final_total_snapshot, lang, detail.currency)}
+            />
+            <V2DrawerInfoRow
+              label={tx(t, "admin.package_orders.travellers", "Travellers")}
+              value={`${detail.adults_count}A · ${detail.children_count}C · ${detail.infants_count}I`}
+            />
+            {detail.booking_channel ? (
+              <V2DrawerInfoRow
+                label={tx(t, "admin.package_orders.channel", "Channel")}
+                value={detail.booking_channel}
+              />
+            ) : null}
+            <V2DrawerInfoRow
+              label={tx(t, "admin.approvals.col_created", "Created")}
+              value={formatRelativeTime(detail.created_at)}
+            />
+
+            <V2DrawerSection>{tx(t, "admin.package_orders.col_package", "Package")}</V2DrawerSection>
+            <V2DrawerInfoRow
+              label={tx(t, "admin.package_orders.package_title", "Title")}
+              value={detail.package?.package_title ?? `#${detail.package_id}`}
+            />
+            {detail.package?.package_type ? (
+              <V2DrawerInfoRow
+                label={tx(t, "admin.package_orders.package_type", "Type")}
+                value={detail.package.package_type}
+              />
+            ) : null}
+            {detail.package?.duration_days ? (
+              <V2DrawerInfoRow
+                label={tx(t, "admin.package_orders.duration", "Duration")}
+                value={`${detail.package.duration_days} ${tx(t, "admin.package_orders.days", "days")}`}
+              />
+            ) : null}
+            {detail.package?.destination_city || detail.package?.destination_country ? (
+              <V2DrawerInfoRow
+                label={tx(t, "admin.package_orders.destination", "Destination")}
+                value={[detail.package?.destination_city, detail.package?.destination_country]
+                  .filter(Boolean)
+                  .join(", ")}
+              />
+            ) : null}
+
+            <V2DrawerSection>{tx(t, "admin.package_orders.col_buyer", "Buyer")}</V2DrawerSection>
+            <V2DrawerInfoRow
+              label={tx(t, "admin.package_orders.buyer_name", "Name")}
+              value={detail.user?.name ?? `#${detail.user_id}`}
+            />
+            {detail.user?.email ? (
+              <V2DrawerInfoRow
+                label={tx(t, "admin.package_orders.buyer_email", "Email")}
+                value={detail.user.email}
+              />
+            ) : null}
+
+            <V2DrawerSection>{tx(t, "admin.invoices.col_company", "Company")}</V2DrawerSection>
+            <V2DrawerInfoRow
+              label={tx(t, "admin.package_orders.company_name", "Name")}
+              value={detail.company?.name ?? `#${detail.company_id}`}
+            />
+          </>
+        ) : null}
+      </V2Drawer>
     </div>
   );
 }

@@ -123,6 +123,7 @@ export function AccountPane({ token, user, lang, registerAction, showToast }: My
   const [activity, setActivity] = useState<ActivityData | null>(null);
   const [pin, setPin] = useState<PinStatus | null>(null);
   const [storage, setStorage] = useState<StorageStats | null>(null);
+  const [sessionCount, setSessionCount] = useState<number | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [pwOpen, setPwOpen] = useState(false);
 
@@ -185,6 +186,21 @@ export function AccountPane({ token, user, lang, registerAction, showToast }: My
     return () => { cancelled = true; };
   }, [token]);
 
+  // active session count — Sessions tile (same source as the Sessions sub-tab)
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await apiListAccountSessions(token);
+        if (!cancelled) setSessionCount(res.data.length);
+      } catch {
+        /* non-fatal */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [token]);
+
   // PIN status — Security tab
   useEffect(() => {
     if (tab !== "security" || !token || pin !== null) return;
@@ -237,18 +253,20 @@ export function AccountPane({ token, user, lang, registerAction, showToast }: My
         </div>
       </div>
 
-      {/* tiles */}
+      {/* tiles — each label honestly matches its data source:
+          Actions = 30-day activity histogram sum · Files = storage file count ·
+          Active sessions = real session list length · Storage = bytes used. */}
       <div className="tile-grid">
         <div className="tile">
           <div className="tile-v">{totalActions || "—"}</div>
-          <div className="tile-l">{s.acTileLogins}</div>
+          <div className="tile-l">{s.acTileActions}</div>
         </div>
         <div className="tile">
           <div className="tile-v">{storage ? storage.total_count : "—"}</div>
-          <div className="tile-l">{s.acTileBookings}</div>
+          <div className="tile-l">{s.acTileFiles}</div>
         </div>
         <div className="tile">
-          <div className="tile-v">{user?.companies?.length ?? "—"}</div>
+          <div className="tile-v">{sessionCount ?? "—"}</div>
           <div className="tile-l">{s.acTileSessions}</div>
         </div>
         <div className="tile">

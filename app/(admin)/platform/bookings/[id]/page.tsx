@@ -374,7 +374,7 @@ export default function BookingDetailPage() {
                 label={trans("admin.bookings.detail.total", "Total")}
                 value={
                   total !== null && total !== undefined
-                    ? formatMoney(total, currency, lang)
+                    ? formatMoney(total, lang, currency)
                     : "—"
                 }
               />
