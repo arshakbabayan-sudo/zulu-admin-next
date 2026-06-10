@@ -40,7 +40,8 @@ type Props = {
 const ALL_ROLES: { value: CompanyEmployeeRole; label: string }[] = [
   { value: "company_viewer", label: "Company viewer (read-only)" },
   { value: "company_operator", label: "Company operator (edit access)" },
-  { value: "operator_admin", label: "Operator admin" },
+  // §7 — "Manager" (ղեկավար): full operational access, outranked only by the owner.
+  { value: "company_manager", label: "Manager (runs the company day-to-day)" },
   { value: "company_admin", label: "Company admin" },
 ];
 

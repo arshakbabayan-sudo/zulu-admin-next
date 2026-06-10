@@ -5029,7 +5029,7 @@ function rbBadgeTone(name: string): string {
   const n = name.toLowerCase();
   if (n === "super_admin" || n === "super admin") return "badge-danger";
   if (n === "platform_admin" || n === "platform admin") return "badge-primary";
-  if (n === "operator_admin" || n === "operator" || n === "operator admin") return "badge-info";
+  if (n === "operator_admin" || n === "operator" || n === "operator admin" || n === "company_manager") return "badge-info";
   if (n === "company_admin" || n === "company admin" || n === "admin" || n === "owner") return "badge-primary";
   if (n === "agent" || n === "booker") return "badge-success";
   return "badge-gray";
@@ -5049,6 +5049,7 @@ function rbRoleLabel(role: { name: string; display_name?: string | null }, s: Re
     case "platform_admin": return s.rbRoleStaff;
     case "company_admin": return s.rbRoleOwner;
     case "operator_admin": return s.rbRoleManager;
+    case "company_manager": return s.rbRoleManager;
     case "agent": return s.rbRoleAgent;
     default: return rbPretty(role.name);
   }

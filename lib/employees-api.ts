@@ -12,6 +12,7 @@ import { apiFetchJson } from "@/lib/api-client";
 export type CompanyEmployeeRole =
   | "company_admin"
   | "operator_admin"
+  | "company_manager"
   | "company_operator"
   | "company_viewer";
 
