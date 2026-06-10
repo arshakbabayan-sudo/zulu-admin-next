@@ -122,6 +122,11 @@ const EN = {
   tabContracts: "Contracts",
   tabTemplates: "Contract templates",
   tabLogs: "Logs",
+  // 2026-06-10 — link-tabs to standalone Management pages (roadmap §1 hidden
+  // pages). Rendered in the same strip but navigate out instead of switching
+  // an in-page pane.
+  tabPendingReview: "Pending review",
+  tabSubscriptions: "Subscriptions",
   subCompanies: "Platform partners — operators, agencies, airlines.",
   subApplications: "Review and approve marketplace seller requests.",
   subContracts: "Legal agreements with sellers and partners.",
@@ -702,6 +707,8 @@ const HY: Partial<Record<MgmtKey, string>> = {
   tabContracts: "Պայմանագրեր",
   tabTemplates: "Պայմանագրի ձևանմուշներ",
   tabLogs: "Մատյաններ",
+  tabPendingReview: "Ստուգման հերթ",
+  tabSubscriptions: "Բաժանորդագրություններ",
   subCompanies: "Հարթակի գործընկերներ՝ օպերատորներ, գործակալություններ, ավիաընկերություններ։",
   subApplications: "Դիտարկիր և հաստատիր վաճառողների հայտերը։",
   subContracts: "Իրավական պայմանագրեր վաճառողների և գործընկերների հետ։",
@@ -1258,6 +1265,8 @@ const RU: Partial<Record<MgmtKey, string>> = {
   tabContracts: "Договоры",
   tabTemplates: "Шаблоны договоров",
   tabLogs: "Журналы",
+  tabPendingReview: "Очередь модерации",
+  tabSubscriptions: "Подписки",
   subCompanies: "Партнёры платформы — операторы, агентства, авиакомпании.",
   subApplications: "Просматривайте и одобряйте заявки продавцов.",
   subContracts: "Юридические договоры с продавцами и партнёрами.",

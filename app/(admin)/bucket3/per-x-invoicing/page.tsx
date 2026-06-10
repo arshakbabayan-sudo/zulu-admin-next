@@ -11,9 +11,10 @@
  */
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
+import { FinanceSectionTabs } from "@/components/finance/FinanceSectionTabs";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { canAccessPlatformAdminNav } from "@/lib/access";
+import { canAccessSuperAdminOnlyPlatformNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import { formatMoney } from "@/lib/format";
 import type { ApiSuccessEnvelope } from "@/lib/api-envelope";
@@ -112,7 +113,11 @@ async function downloadStatement(token: string | null, companyId: number, month:
 export default function Bucket3PerXInvoicingPage() {
   const { token, user } = useAdminAuth();
   const { t, lang } = useLanguage();
-  const allowed = canAccessPlatformAdminNav(user);
+  // 2026-06-10 (roadmap §1) — tightened to super-only: this is a platform
+  // governance tool (cross-company invoice aggregates), and its Finance-strip
+  // tab only renders for super admins. Was canAccessPlatformAdminNav by
+  // mistake (subscriptions, its sibling, was already super-only).
+  const allowed = canAccessSuperAdminOnlyPlatformNav(user);
   const [groupBy, setGroupBy] = useState<GroupBy>("status");
   const [data, setData] = useState<AggregateResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -160,7 +165,7 @@ export default function Bucket3PerXInvoicingPage() {
       <V2PageHeader
         breadcrumb={[
           { label: "Home", href: "/dashboard" },
-          { label: "Management", href: "/platform/companies" },
+          { label: "Finance", href: "/platform/finance-summary" },
           { label: t("admin.bucket3.per_x_invoicing.title") },
         ]}
         title={t("admin.bucket3.per_x_invoicing.title")}
@@ -175,10 +180,10 @@ export default function Bucket3PerXInvoicingPage() {
         }
       />
 
-      {/* 2026-06-10 — stale "My company" SectionTabs strip removed. This page
-          moved into the Management nav group; the old 7-item strip pointed at
-          dissolved/relocated /bucket3 routes. The Management tab bar is the
-          sidebar group itself now. */}
+      {/* 2026-06-10 (roadmap §1) — this page lives in the FINANCE group now
+          (invoice analytics is finance, not company governance). The shared
+          Finance strip below includes the Per-X tab for super admins only. */}
+      <FinanceSectionTabs activeHref="/bucket3/per-x-invoicing" />
 
       <FilterCard>
         <FilterField label={t("admin.bucket3.per_x_invoicing.group_by")}>

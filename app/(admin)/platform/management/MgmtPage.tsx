@@ -146,6 +146,15 @@ const TAB_META: Record<
   unverified: { labelKey: "tabUnverified", subtitleKey: "subUnverified", icon: "ti-user-question" },
 };
 
+// 2026-06-10 (roadmap §1 hidden pages) — Management tabs that NAVIGATE to a
+// standalone page instead of switching an in-page pane. Pending review (offer
+// moderation) and Subscriptions (plan governance) keep their own page chrome;
+// the strip just has to make them findable.
+const MGMT_LINK_TABS: Array<{ href: string; labelKey: MgmtKey; icon: string }> = [
+  { href: "/platform/pending-review", labelKey: "tabPendingReview", icon: "ti-eye-check" },
+  { href: "/bucket3/subscriptions", labelKey: "tabSubscriptions", icon: "ti-credit-card" },
+];
+
 // Enum → dictionary key maps (resolved via mgmtStrings() at render).
 const TYPE_KEY: Record<string, MgmtKey> = {
   operator: "typeOperator",
@@ -1466,6 +1475,16 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                   </button>
                 );
               })}
+              {MGMT_LINK_TABS.map((l) => (
+                <button
+                  key={l.href}
+                  className="section-tab"
+                  onClick={() => router.push(l.href)}
+                >
+                  <i className={`ti ${l.icon}`} />
+                  {s[l.labelKey]}
+                </button>
+              ))}
             </div>
 
             {/* ───────── COMPANIES pane ───────── */}

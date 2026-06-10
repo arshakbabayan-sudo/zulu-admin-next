@@ -42,7 +42,6 @@ import {
   V2Button,
   IconButton,
 } from "@/components/ui/v2";
-import { MarketplaceOpsSectionTabs } from "@/components/marketplace/MarketplaceOpsSectionTabs";
 import { Download, Eye, Plus } from "lucide-react";
 
 const TYPE_FILTERS = ["", "hotel", "car", "transfer", "excursion", "flight", "package", "visa"] as const;
@@ -234,11 +233,10 @@ export default function PendingReviewPage() {
         }
       />
 
-      {/* Phase 2C step 4 (2026-05-31) — use the shared MarketplaceOpsSectionTabs
-          so this strip stays in sync with the Management group going forward
-          (no more drift between hardcoded strips and the canonical list). */}
-      <MarketplaceOpsSectionTabs activeHref="/platform/companies" />
-
+      {/* 2026-06-10 (roadmap §1) — stale MarketplaceOpsSectionTabs strip removed:
+          the Management surface is the unified MgmtPage now, whose tab strip
+          links HERE via MGMT_LINK_TABS. The old strip listed pre-restructure
+          routes (e.g. /platform/contracts, which moved to CRM). */}
       <FilterCard>
         <FilterField label={t("admin.pending_review.filter_type")}>
           <Select

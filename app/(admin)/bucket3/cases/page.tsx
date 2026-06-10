@@ -312,7 +312,7 @@ export default function Bucket3CasesPage() {
       <V2PageHeader
         breadcrumb={[
           { label: "Home", href: "/dashboard" },
-          { label: "My company", href: "/bucket3/employees" },
+          { label: "Inbox", href: "/admin-redesign/notifications" },
           { label: t("admin.bucket3.cases.title") },
         ]}
         title={t("admin.bucket3.cases.title")}

@@ -2,8 +2,7 @@
  * Bookings group — shared section tabs (v2 admin-redesign).
  *
  * Used by /platform/bookings (All bookings) and /platform/package-orders.
- * Mirrors components/finance/FinanceSectionTabs.tsx and
- * components/marketplace/MarketplaceOpsSectionTabs.tsx. The `counts` prop
+ * Mirrors components/finance/FinanceSectionTabs.tsx. The `counts` prop
  * is optional and per-tab — pages that haven't fetched their list yet may
  * omit the corresponding key.
  */

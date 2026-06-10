@@ -27,7 +27,6 @@ import {
 } from "@/components/ui";
 import {
   PageHeader as V2PageHeader,
-  SectionTabs,
   V2Button,
 } from "@/components/ui/v2";
 import { Download, Send } from "lucide-react";
@@ -144,7 +143,7 @@ export default function Bucket3BulkNotificationsPage() {
       <V2PageHeader
         breadcrumb={[
           { label: "Home", href: "/dashboard" },
-          { label: "My company", href: "/bucket3/employees" },
+          { label: "System notifications", href: "/platform/notifications" },
           { label: t("admin.bucket3.bulk_notifications.title") },
         ]}
         title={t("admin.bucket3.bulk_notifications.title")}
@@ -164,18 +163,10 @@ export default function Bucket3BulkNotificationsPage() {
         }
       />
 
-      <SectionTabs
-        activeHref="/bucket3/bulk-notifications"
-        items={[
-          { href: "/bucket3/employees", label: "Employees" },
-          { href: "/bucket3/payroll", label: "Payroll" },
-          { href: "/bucket3/non-service-hours", label: "Non-service hours" },
-          { href: "/bucket3/cases", label: "Cases" },
-          { href: "/bucket3/customers", label: "Customers" },
-          { href: "/bucket3/subscriptions", label: "Subscriptions" },
-          { href: "/bucket3/per-x-invoicing", label: "Per-X invoicing" },
-        ]}
-      />
+      {/* 2026-06-10 (roadmap §1) — stale "My company" 7-item SectionTabs strip
+          removed: it pointed at dissolved/relocated /bucket3 routes. This page
+          is reached from Settings → System notifications ("Bulk send" button)
+          and the super-admin button on /admin-redesign/notifications. */}
 
       <div className="space-y-6">
       {err && (

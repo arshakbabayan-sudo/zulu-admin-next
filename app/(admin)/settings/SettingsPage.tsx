@@ -3103,6 +3103,10 @@ const NOTIF_STATUSES = ["unread", "read"];
 
 function SysNotifPane({ token, lang }: { token: string | null; lang: string }) {
   const s = settingsStrings(lang);
+  const router = useRouter();
+  // 2026-06-10 (roadmap §1) — bulk broadcast lives on its own super-only page
+  // (/bucket3/bulk-notifications); this pane is its discoverable home.
+  const { user } = useAdminAuth();
   const [rows, setRows] = useState<PlatformNotificationRow[]>([]);
   const [stats, setStats] = useState<PlatformNotificationStats | null>(null);
   const [meta, setMeta] = useState<{ current_page: number; per_page: number; total: number; last_page: number } | null>(null);
@@ -3190,6 +3194,11 @@ function SysNotifPane({ token, lang }: { token: string | null; lang: string }) {
           <input type="search" placeholder={s.snSearchPh} value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { setPage(1); void load(); } }} />
         </div>
         <button className="btn" onClick={() => { setPage(1); void load(); }}><i className="ti ti-filter" />{s.apply}</button>
+        {user?.is_super_admin && (
+          <button className="btn btn-primary" onClick={() => router.push("/bucket3/bulk-notifications")}>
+            <i className="ti ti-send" />{s.snBulkSend}
+          </button>
+        )}
       </div>
       <div className="card" style={{ marginBottom: 0 }}>
         <div className="card-header"><div className="card-title">{s.snCardTitle}</div></div>

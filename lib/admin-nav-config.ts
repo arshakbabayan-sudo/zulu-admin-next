@@ -249,6 +249,10 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/platform/commissions", labelKey: "admin.nav.tab.commissions_ledger", moduleKey: "ops.finance" },
       { href: "/platform/finance", labelKey: "admin.nav.tab.transactions", moduleKey: "ops.finance" },
       { href: "/platform/vouchers", labelKey: "admin.nav.tab.vouchers", moduleKey: "ops.finance" },
+      // 2026-06-10 (roadmap §1) — Per-X invoicing moved here from Management:
+      // it's invoice ANALYTICS (finance), not company governance. Super-only;
+      // FinanceSectionTabs appends its tab for super admins only.
+      { href: "/bucket3/per-x-invoicing", labelKey: "admin.nav.tab.bucket3.per_x_invoicing", superAdminOnly: true },
       // NOTE: /operator/commission-settings intentionally removed from
       // Finance → moved under Settings → Pricing rules (8-IA spec).
     ],
@@ -314,14 +318,17 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       // Was a duplicate-data view of the audit-logs endpoint filtered by
       // category; absorbed into /platform/audit-logs via its Category
       // dropdown. Spec `Management_tab.md` TAB 5.
-      // 2026-06-10 — "My company" group DISSOLVED. Subscriptions + Per-X
-      // invoicing are super-admin-only governance tools (not own-company
-      // self-service), so they move here into Management. The own-company
+      // 2026-06-10 — "My company" group DISSOLVED. Subscriptions (plan
+      // governance) moved here into Management; Per-X invoicing moved to the
+      // Finance group above (it's invoice analytics). The own-company
       // self-service surfaces (Seller status + Payments) instead live under
       // CRM → My profile → "My company" pill; their standalone /bucket3 pages
       // are now thin redirects to /crm/my-company.
       { href: "/bucket3/subscriptions", labelKey: "admin.nav.tab.bucket3.subscriptions" },
-      { href: "/bucket3/per-x-invoicing", labelKey: "admin.nav.tab.bucket3.per_x_invoicing" },
+      // 2026-06-10 (roadmap §1) — Pending review (offer moderation) finally
+      // surfaced: MgmtPage's strip links to it via MGMT_LINK_TABS, and this
+      // entry keeps the sidebar highlight + page title resolving.
+      { href: "/platform/pending-review", labelKey: "admin.nav.tab.pending_review", labelFallback: "Pending review", superAdminOnly: true },
     ],
     visibility: "section_marketplace_ops",
   },
@@ -530,7 +537,6 @@ export const SETTINGS_SUBGROUPS: SettingsSubgroup[] = [
     label: "Content & CMS",
     hrefs: [
       "/pages",
-      "/platform/widgets",
       "/platform/banners",
       "/platform/notifications",
       "/platform/newsletter",

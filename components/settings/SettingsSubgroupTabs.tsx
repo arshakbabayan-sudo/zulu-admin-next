@@ -45,7 +45,6 @@ export const DEFAULT_TAB_LABELS: Record<string, string> = {
   "/localization/translations": "Content",
   "/localization/templates": "Email templates",
   "/pages": "CMS pages",
-  "/platform/widgets": "Widgets",
   "/platform/banners": "Banners",
   "/platform/notifications": "System notifications",
   "/platform/newsletter": "Newsletter",
