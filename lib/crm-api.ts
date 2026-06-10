@@ -74,7 +74,7 @@ export type CrmCompensation = {
 };
 
 export type CrmTeamRow = {
-  user: { id: number; name: string; email: string };
+  user: { id: number; name: string; email: string; status?: string; role_name?: string | null };
   orders_count: number;
   won_deals: number;
   revenue_by_currency: { currency: string; orders_count: number; revenue: number }[];

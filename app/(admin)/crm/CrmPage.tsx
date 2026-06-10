@@ -90,6 +90,7 @@ import { apiCrmCustomers, apiCrmCustomersStats, type CustomerRow, type CrmCustom
 import { apiShowPlatformUser, type PlatformAdminUserDetail } from "@/lib/platform-admin-api";
 import { apiBookings, type BookingRow } from "@/lib/bookings-api";
 import { AddEmployeeModal } from "@/components/employees/AddEmployeeModal";
+import { apiDeactivateEmployee, apiReactivateEmployee, apiRemoveEmployee } from "@/lib/employees-api";
 import { AccountPane, MyCompanyPane, MyAgentsPane } from "./MyProfilePanes";
 
 // ── helpers ────────────────────────────────────────────────────────
@@ -1679,6 +1680,45 @@ function TeamPane({
   const pageRows = rows.slice(start, start + PER_PAGE);
   const pageCount = Math.max(1, Math.ceil(total / PER_PAGE));
 
+  // §7 — employee lifecycle actions (deactivate / reactivate / remove).
+  // Self-row shows no actions (backend blocks self-ops anyway); rank ceiling +
+  // last-owner protection are server-side, surfaced here via the error banner.
+  const [actBusy, setActBusy] = useState<number | null>(null);
+
+  const toggleActive = async (r: CrmTeamRow) => {
+    if (!token || companyId == null) return;
+    const isActive = r.user.status !== "inactive";
+    if (isActive && typeof window !== "undefined" && !window.confirm(s.teamConfirmDeactivate)) return;
+    setActBusy(r.user.id);
+    setErr(null);
+    try {
+      if (isActive) await apiDeactivateEmployee(token, companyId, r.user.id);
+      else await apiReactivateEmployee(token, companyId, r.user.id);
+      showToast(isActive ? s.teamDeactivatedToast : s.teamReactivatedToast);
+      await load();
+    } catch (e) {
+      setErr(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setActBusy(null);
+    }
+  };
+
+  const removeEmployee = async (r: CrmTeamRow) => {
+    if (!token || companyId == null) return;
+    if (typeof window !== "undefined" && !window.confirm(s.teamConfirmRemove)) return;
+    setActBusy(r.user.id);
+    setErr(null);
+    try {
+      await apiRemoveEmployee(token, companyId, r.user.id);
+      showToast(s.teamRemovedToast);
+      await load();
+    } catch (e) {
+      setErr(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setActBusy(null);
+    }
+  };
+
   // header stat cards derived from the loaded rows
   const totalWon = rows.reduce((acc, r) => acc + r.won_deals, 0);
   const payByCurrency = useMemo(() => {
@@ -1760,7 +1800,12 @@ function TeamPane({
                         <span className="flex items-center gap-2">
                           <span className={`avatar sm ${avatarTone(r.user.id)}`}>{initials(r.user.name)}</span>
                           <span>
-                            <div className="font-semibold">{r.user.name}</div>
+                            <div className="font-semibold">
+                              {r.user.name}
+                              {r.user.status === "inactive" ? (
+                                <span className="pill-warn" style={{ marginLeft: 8 }}>{s.teamStatusInactive}</span>
+                              ) : null}
+                            </div>
                             <div className="text-sm cell-muted">{r.user.email}</div>
                           </span>
                         </span>
@@ -1775,11 +1820,31 @@ function TeamPane({
                       </td>
                       <td className="num-cell font-mono">{money(r.computed_pay, r.pay_currency)}</td>
                       <td style={{ textAlign: "right" }} onClick={(e) => e.stopPropagation()}>
-                        <div className="row-actions">
+                        <div className="row-actions" style={{ justifyContent: "flex-end" }}>
                           <button className="btn btn-sm" onClick={() => setEditRow(r)}>
                             <i className="ti ti-edit" />
                             {r.compensation ? s.teamEditPay : s.teamSetPay}
                           </button>
+                          {user?.id !== r.user.id ? (
+                            <>
+                              <button
+                                className="icon-btn"
+                                title={r.user.status === "inactive" ? s.teamActReactivate : s.teamActDeactivate}
+                                disabled={actBusy === r.user.id}
+                                onClick={() => void toggleActive(r)}
+                              >
+                                <i className={r.user.status === "inactive" ? "ti ti-user-check" : "ti ti-user-off"} />
+                              </button>
+                              <button
+                                className="icon-btn danger"
+                                title={s.teamActRemove}
+                                disabled={actBusy === r.user.id}
+                                onClick={() => void removeEmployee(r)}
+                              >
+                                <i className="ti ti-trash" />
+                              </button>
+                            </>
+                          ) : null}
                         </div>
                       </td>
                     </tr>

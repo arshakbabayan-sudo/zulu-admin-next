@@ -71,6 +71,33 @@ export async function apiDeactivateEmployee(
   });
 }
 
+/** §7 (2026-06-10) — restore a suspended employee. */
+export async function apiReactivateEmployee(
+  token: string,
+  companyId: number,
+  userId: number
+): Promise<{ success: boolean }> {
+  return apiFetchJson(`/companies/${companyId}/users/${userId}/reactivate`, {
+    method: "PATCH",
+    token,
+  });
+}
+
+/**
+ * §7 (2026-06-10) — detach an employee from the company. The user account and
+ * payroll history are kept on the backend (archive over erase).
+ */
+export async function apiRemoveEmployee(
+  token: string,
+  companyId: number,
+  userId: number
+): Promise<{ success: boolean }> {
+  return apiFetchJson(`/companies/${companyId}/users/${userId}`, {
+    method: "DELETE",
+    token,
+  });
+}
+
 // ─── Phase Գ.6 / Bucket D.4 — per-employee permission overrides ──────────
 
 export type EmployeePermissionRow = {
