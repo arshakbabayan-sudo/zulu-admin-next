@@ -34,7 +34,6 @@ import {
 } from "@/components/ui";
 import {
   PageHeader as V2PageHeader,
-  SectionTabs,
   V2Button,
 } from "@/components/ui/v2";
 import { Download } from "lucide-react";
@@ -256,7 +255,7 @@ export default function Bucket3SubscriptionsPage() {
       <V2PageHeader
         breadcrumb={[
           { label: "Home", href: "/dashboard" },
-          { label: "My company", href: "/bucket3/employees" },
+          { label: "Management", href: "/platform/companies" },
           { label: t("admin.bucket3.subscriptions.title") },
         ]}
         title={t("admin.bucket3.subscriptions.title")}
@@ -290,18 +289,10 @@ export default function Bucket3SubscriptionsPage() {
         }
       />
 
-      <SectionTabs
-        activeHref="/bucket3/subscriptions"
-        items={[
-          { href: "/bucket3/employees", label: "Employees" },
-          { href: "/bucket3/payroll", label: "Payroll" },
-          { href: "/bucket3/non-service-hours", label: "Non-service hours" },
-          { href: "/bucket3/cases", label: "Cases" },
-          { href: "/bucket3/customers", label: "Customers" },
-          { href: "/bucket3/subscriptions", label: "Subscriptions" },
-          { href: "/bucket3/per-x-invoicing", label: "Per-X invoicing" },
-        ]}
-      />
+      {/* 2026-06-10 — stale "My company" SectionTabs strip removed. This page
+          moved into the Management nav group; the old 7-item strip pointed at
+          dissolved/relocated /bucket3 routes. The Management tab bar is the
+          sidebar group itself now. */}
 
       <div className="space-y-6">
       {err && (

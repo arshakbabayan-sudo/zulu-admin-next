@@ -123,10 +123,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const notificationsRef = useRef<HTMLDivElement>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [recentNotifications, setRecentNotifications] = useState<NotificationRow[]>([]);
-  // v2 admin-redesign (2026-05-24) — pending-verification user count for Users
-  // sidebar badge. TODO: wire to /api/admin/users/pending-count once that
-  // endpoint exists (backend follow-up). For now stays at 0 so badge is hidden.
-  const [pendingUsersCount] = useState(0);
+  // 2026-06-10 — pendingUsersCount removed. It was permanently 0 (never wired to
+  // a real endpoint), and the "users_pending" badgeSource it fed has been dropped
+  // from the nav config, so no sidebar group consumed it.
   const [appsOpen, setAppsOpen] = useState(false);
   const appsRef = useRef<HTMLDivElement>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -538,7 +537,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 <div className="grid grid-cols-3 gap-1">
                   {[
                     { href: "/dashboard", label: t("admin.nav.dashboard"), icon: "ti-dashboard" },
-                    { href: "/platform/users", label: t("admin.nav.users"), icon: "ti-id-badge-2" },
+                    // 2026-06-10 — Users tile repointed /platform/users →
+                    // /platform/b2c-customers (the old /platform/users page is a
+                    // deprecated redirect stub; b2c-customers is its real default home).
+                    { href: "/platform/b2c-customers", label: t("admin.nav.users"), icon: "ti-id-badge-2" },
                     { href: "/platform/bookings", label: t("admin.nav.bookings"), icon: "ti-calendar-event" },
                     { href: "/platform/companies", label: t("admin.nav.platform_companies"), icon: "ti-building" },
                     { href: "/platform/finance", label: t("admin.nav.finance"), icon: "ti-coin" },
@@ -746,11 +748,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               const label = rawLabel === g.labelKey && g.labelFallback ? g.labelFallback : rawLabel;
               // v2 admin-redesign (2026-05-24) — sidebar badge resolution
               const badgeValue =
-                g.badgeSource === "notifications_unread"
-                  ? unreadCount
-                  : g.badgeSource === "users_pending"
-                  ? pendingUsersCount
-                  : 0;
+                g.badgeSource === "notifications_unread" ? unreadCount : 0;
               const showBadge = sidebarOpen && badgeValue > 0;
               const badgeBg =
                 g.badgeKind === "warn"
@@ -787,7 +785,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                     <span
                       className="ml-auto rounded-full px-[7px] py-[1px] text-[10px] font-semibold text-white"
                       style={{ backgroundColor: badgeBg }}
-                      aria-label={`${badgeValue} ${g.badgeSource === "notifications_unread" ? "unread" : "pending"}`}
+                      aria-label={`${badgeValue} unread`}
                     >
                       {badgeValue > 99 ? "99+" : badgeValue}
                     </span>

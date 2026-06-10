@@ -208,12 +208,9 @@ export function canAccessBookingsSection(user: AdminUser | null): boolean {
   return userHasPermission(user, "bookings.view");
 }
 
-/** Legacy sales-workspace group (no longer in the sidebar). Agents only. */
-export function canAccessSalesWorkspaceSection(user: AdminUser | null): boolean {
-  if (!user) return false;
-  if (user.is_super_admin) return true;
-  return user.roles?.includes("agent") ?? false;
-}
+// 2026-06-10 — canAccessSalesWorkspaceSection() removed (0 callers). The
+// Sales workspace sidebar group was retired 2026-05-28; this predicate had no
+// remaining consumers.
 
 export function canAccessFinanceSection(user: AdminUser | null): boolean {
   if (!user) return false;
@@ -221,26 +218,13 @@ export function canAccessFinanceSection(user: AdminUser | null): boolean {
   return userHasPermission(user, "finance.view");
 }
 
-/** My company pages (seller status, payments, subscriptions, per-X invoicing). */
-export function canAccessMyCompanySection(user: AdminUser | null): boolean {
-  if (!user) return false;
-  if (user.is_super_admin) return true;
-  return userHasPermission(user, "my_company.view");
-}
-
-/** HR pages (non-service hours, payroll). Separate gate from My company. */
-export function canAccessHrSection(user: AdminUser | null): boolean {
-  if (!user) return false;
-  if (user.is_super_admin) return true;
-  return userHasPermission(user, "hr.view");
-}
-
-/** "My company" SIDEBAR visibility — operator/agent only (super uses Management). */
-export function canSeeOwnCompanyNav(user: AdminUser | null): boolean {
-  if (!user) return false;
-  if (user.is_super_admin) return false;
-  return userHasPermission(user, "my_company.view");
-}
+// 2026-06-10 — canAccessMyCompanySection() + canAccessHrSection() +
+// canSeeOwnCompanyNav() removed (all 0 callers). The HR sidebar group was
+// folded into CRM (2026-06-06); the "My company" group was dissolved
+// (2026-06-10) — its self-service pages (seller-status/payments) are now thin
+// redirects into CRM → My profile → My company (MyCompanyPane gates via the
+// CRM section, not these predicates). The backend `my_company.view` / `hr.view`
+// permission strings are untouched; only dead frontend nav wiring is removed.
 
 /** Management (cross-tenant governance) — super or the management.view gate. */
 export function canAccessMarketplaceOpsSection(user: AdminUser | null): boolean {

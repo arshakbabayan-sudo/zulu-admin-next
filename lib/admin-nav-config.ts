@@ -68,10 +68,13 @@ export type AdminNavGroup = {
   /**
    * v2 admin-redesign (2026-05-24) — when present, the sidebar item renders
    * a small pill badge after the label. Source identifier resolved at runtime
-   * in AdminShell.tsx (e.g. "notifications_unread", "users_pending").
+   * in AdminShell.tsx (currently only "notifications_unread").
    * No badge when omitted.
+   *
+   * 2026-06-10 — "users_pending" removed: its count source in AdminShell was
+   * permanently 0 (never wired to a real endpoint), so no group ever showed it.
    */
-  badgeSource?: "notifications_unread" | "users_pending";
+  badgeSource?: "notifications_unread";
   /** Badge color variant — `primary` (purple) or `warn` (amber). Defaults to primary. */
   badgeKind?: "primary" | "warn";
   /** Visibility predicate name — wired in AdminShell.tsx. */
@@ -92,7 +95,6 @@ export type AdminNavGroup = {
     | "section_sales_workspace"
     | "section_finance"
     | "section_my_company"
-    | "section_own_company"
     | "section_marketplace_ops"
     | "section_settings"
     // 2026-05-31 — CRM as its own top-level section
@@ -253,36 +255,19 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     visibility: "section_finance",
   },
 
-  // 6 ── My company (per-company internal CRM, from Bucket3) ───────────
+  // 6 ── My company — GROUP DISSOLVED 2026-06-10 ───────────────────────
   //
-  // Phase 4E (2026-05-31) — Payroll and Non-service hours moved to the new
-  // top-level HR group below. Employees + Customers (redirect) + Subscriptions
-  // + Per-X invoicing stay here for now (Phase 4 follow-ups will consolidate
-  // them further into Directory + Finance).
-  {
-    key: "my_company",
-    labelKey: "admin.nav.section.my_company",
-    labelFallback: "My company",
-    // 2026-06-02 (Arshak) — "My company" used to default to /bucket3/employees,
-    // which redirects to the Directory people page → clicking My company showed
-    // "Directory", which was confusing/meaningless. Repointed to a real
-    // own-company page (Seller status). Employees moved OUT of here entirely —
-    // staff are now managed in CRM → Team (view + Add employee). The dead
-    // /bucket3/customers redirect tab was also dropped. What stays here is the
-    // operator/agent's OWN-company admin: seller status, Stripe payouts,
-    // subscriptions, per-X invoicing.
-    defaultHref: "/bucket3/seller-status",
-    tabs: [
-      // P0-3 (2026-06-02) — operator/agent's own seller status + become-a-seller.
-      { href: "/bucket3/seller-status", labelKey: "admin.nav.tab.bucket3.seller_status" },
-      // P0-1 step 1.1 (2026-06-01) — operator/agent's own Stripe Connect onboarding.
-      { href: "/bucket3/payments", labelKey: "admin.nav.tab.bucket3.payments" },
-      { href: "/bucket3/subscriptions", labelKey: "admin.nav.tab.bucket3.subscriptions" },
-      { href: "/bucket3/per-x-invoicing", labelKey: "admin.nav.tab.bucket3.per_x_invoicing" },
-    ],
-    // operator/agent only — hidden from super (super uses Management/Directory).
-    visibility: "section_own_company",
-  },
+  // The standalone "My company" sidebar group (4 tabs) is gone:
+  //   • Seller status + Payments  → rebuilt inside CRM → My profile →
+  //     "My company" pill (MyCompanyPane reuses SellerStatusCard +
+  //     StripeConnectCard). The old /bucket3/seller-status + /bucket3/payments
+  //     pages are now thin redirects to /crm/my-company (bookmarks still work).
+  //   • Subscriptions + Per-X invoicing  → MOVED into the Management group
+  //     above (super-admin-only governance), keeping their own page chrome.
+  // GROUP_MENU_PERMISSION["my_company"], SIDEBAR_TABLER_ICON["my_company"],
+  // the `section_own_company` visibility predicate, and canSeeOwnCompanyNav()
+  // were removed alongside this group. The backend `my_company.view`
+  // permission string is left intact.
 
   // 6b ── HR — REMOVED as a separate group 2026-06-06 (#4 CRM consolidation).
   // Work hours (/bucket3/non-service-hours) + Payroll (/bucket3/payroll) now
@@ -329,6 +314,14 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       // Was a duplicate-data view of the audit-logs endpoint filtered by
       // category; absorbed into /platform/audit-logs via its Category
       // dropdown. Spec `Management_tab.md` TAB 5.
+      // 2026-06-10 — "My company" group DISSOLVED. Subscriptions + Per-X
+      // invoicing are super-admin-only governance tools (not own-company
+      // self-service), so they move here into Management. The own-company
+      // self-service surfaces (Seller status + Payments) instead live under
+      // CRM → My profile → "My company" pill; their standalone /bucket3 pages
+      // are now thin redirects to /crm/my-company.
+      { href: "/bucket3/subscriptions", labelKey: "admin.nav.tab.bucket3.subscriptions" },
+      { href: "/bucket3/per-x-invoicing", labelKey: "admin.nav.tab.bucket3.per_x_invoicing" },
     ],
     visibility: "section_marketplace_ops",
   },
@@ -465,11 +458,10 @@ export const SIDEBAR_TABLER_ICON: Record<string, string> = {
   crm: "ti-users",
   chat: "ti-message-2",
   finance: "ti-coin",
-  my_company: "ti-building",
-  hr: "ti-clipboard-list",
+  // 2026-06-10 — `my_company` group dissolved; 2026-06-06 — `hr` + `file_manager`
+  // groups folded into CRM; 2026-06-04 — `directory` group deleted. None of these
+  // group keys exist in ADMIN_NAV_GROUPS anymore, so their icons are unreferenced.
   marketplace_ops: "ti-shield-check",
-  // 2026-06-04 — `directory` group deleted; its icon is no longer referenced.
-  file_manager: "ti-folder",
   my_profile: "ti-user",
   notifications_v2: "ti-inbox",
   settings: "ti-settings",
@@ -492,9 +484,11 @@ export const GROUP_MENU_PERMISSION: Record<string, string> = {
   crm: "crm.view",
   chat: "chat.view",
   finance: "finance.view",
-  my_company: "my_company.view",
-  // 2026-06-06 (#4) — `hr` + `file_manager` groups removed (folded into CRM).
-  // Their pages now gate on crm.view (see access.ts + SECTION_ALIAS_PREFIXES).
+  // 2026-06-10 — `my_company` group dissolved (Subscriptions/Per-X → Management;
+  // Seller status/Payments → CRM → My profile). 2026-06-06 (#4) — `hr` +
+  // `file_manager` groups removed (folded into CRM, gate on crm.view). The
+  // backend `my_company.view` permission string is kept; only the dead frontend
+  // nav wiring is removed here.
   marketplace_ops: "management.view",
   my_profile: "profile.view",
   notifications_v2: "inbox.view",
@@ -594,7 +588,6 @@ export const ADMIN_PLATFORM_LINKS: AdminPlatformNavLink[] = [
   { href: "/dashboard", labelKey: "admin.nav.dashboard" },
   { href: "/platform/company-applications", labelKey: "admin.nav.company_applications" },
   { href: "/platform/companies", labelKey: "admin.nav.platform_companies" },
-  { href: "/platform/approvals", labelKey: "admin.nav.approvals" },
   { href: "/platform/pending-review", labelKey: "admin.nav.pending_review", superAdminOnly: true },
   { href: "/platform/users", labelKey: "admin.nav.users" },
   { href: "/platform/seller-applications", labelKey: "admin.nav.seller_applications" },
@@ -607,7 +600,6 @@ export const ADMIN_PLATFORM_LINKS: AdminPlatformNavLink[] = [
   { href: "/platform/finance-summary", labelKey: "admin.nav.finance_summary" },
   { href: "/platform/packages", labelKey: "admin.nav.packages" },
   { href: "/platform/reviews", labelKey: "admin.nav.reviews" },
-  { href: "/platform/connections", labelKey: "admin.nav.platform_connections" },
   { href: "/platform/banners", labelKey: "admin.nav.banners", superAdminOnly: true },
   { href: "/platform/settings", labelKey: "admin.nav.settings" },
   { href: "/platform/locations", labelKey: "admin.nav.locations", superAdminOnly: true },

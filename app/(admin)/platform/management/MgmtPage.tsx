@@ -2006,7 +2006,9 @@ const LANG_FLAG: Record<string, string> = {
 // wrongly navigated straight to /dashboard.
 const APPS_QUICKLINKS: Array<{ href: string; icon: string; labelKey: MgmtKey }> = [
   { href: "/dashboard", icon: "ti-dashboard", labelKey: "navDashboard" },
-  { href: "/platform/users", icon: "ti-id-badge-2", labelKey: "navUsers" },
+  // 2026-06-10 — Users tile repointed /platform/users → /platform/b2c-customers
+  // (the old /platform/users page is a deprecated redirect stub).
+  { href: "/platform/b2c-customers", icon: "ti-id-badge-2", labelKey: "navUsers" },
   { href: "/platform/bookings", icon: "ti-calendar-event", labelKey: "navBookings" },
   { href: "/platform/companies", icon: "ti-building", labelKey: "navPlatformCompanies" },
   { href: "/platform/finance", icon: "ti-coin", labelKey: "navFinance" },
