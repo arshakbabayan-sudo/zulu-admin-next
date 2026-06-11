@@ -11,8 +11,9 @@
  * NAVIGATES to the existing working route.
  *
  * In-page so far (2026-06-07): Pipeline · Deals · Activities · Customers · Team ·
- * Options (all wired to the real CrmController endpoints), plus Leads/Segments
- * (coming-soon). Contracts / Work hours / Payroll / Files still navigate out to
+ * Options (all wired to the real CrmController endpoints). Leads + Segments went
+ * live 2026-06-12 (LeadsSegmentsPanes.tsx → /platform-admin/crm/leads +
+ * /crm/segments). Contracts / Work hours / Payroll / Files still navigate out to
  * their own routes until ported.
  *
  * Every user-facing string is routed through crm-i18n.ts (crmStrings(lang)).
@@ -92,6 +93,7 @@ import { apiBookings, type BookingRow } from "@/lib/bookings-api";
 import { AddEmployeeModal } from "@/components/employees/AddEmployeeModal";
 import { apiDeactivateEmployee, apiReactivateEmployee, apiRemoveEmployee } from "@/lib/employees-api";
 import { AccountPane, MyCompanyPane, MyAgentsPane } from "./MyProfilePanes";
+import { LeadsPane, SegmentsPane } from "./LeadsSegmentsPanes";
 
 // ── helpers ────────────────────────────────────────────────────────
 function money(amount: number | null | undefined, currency: string): string {
@@ -418,7 +420,7 @@ export function CrmPage({ initialPage = "pipeline" }: { initialPage?: CrmPageKey
             {/* In-page panes */}
             {page === "pipeline" && <PipelinePane token={token} lang={lang} />}
             {page === "leads" && (
-              <ComingSoonPane icon="ti-user-plus" title={s.pgLeads} sub={s.subLeads} />
+              <LeadsPane token={token} lang={lang} registerAction={setActionNode} showToast={showToast} />
             )}
             {page === "deals" && (
               <DealsPane token={token} lang={lang} registerAction={setActionNode} showToast={showToast} />
@@ -427,7 +429,7 @@ export function CrmPage({ initialPage = "pipeline" }: { initialPage?: CrmPageKey
               <ActivitiesPane token={token} lang={lang} registerAction={setActionNode} showToast={showToast} />
             )}
             {page === "segments" && (
-              <ComingSoonPane icon="ti-chart-dots" title={s.pgSegments} sub={s.subSegments} />
+              <SegmentsPane token={token} lang={lang} registerAction={setActionNode} showToast={showToast} />
             )}
             {page === "customers" && (
               <CustomersPane token={token} lang={lang} registerAction={setActionNode} showToast={showToast} />
@@ -4093,21 +4095,6 @@ function FilesPane({
           </div>
         </div>
       ) : null}
-    </div>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════
-// Coming-soon empty state (Leads / Segments)
-// ════════════════════════════════════════════════════════════════
-function ComingSoonPane({ icon, title, sub }: { icon: string; title: string; sub: string }) {
-  return (
-    <div className="empty-state">
-      <div className="es-icon">
-        <i className={`ti ${icon}`} />
-      </div>
-      <div className="es-title">{title}</div>
-      <div className="es-sub">{sub}</div>
     </div>
   );
 }
