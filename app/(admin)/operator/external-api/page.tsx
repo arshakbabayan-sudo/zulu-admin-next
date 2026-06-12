@@ -27,6 +27,7 @@ import {
   type SupplierImportSummary,
 } from "@/lib/supplier-connections-api";
 import { Button, FormField, Input } from "@/components/ui";
+import { InventorySectionTabs } from "@/components/inventory/InventorySectionTabs";
 import { PageHeader as V2PageHeader } from "@/components/ui/v2";
 import { useCallback, useEffect, useState } from "react";
 
@@ -181,6 +182,8 @@ export default function OperatorExternalApiPage() {
         title={t(`${K}.title`)}
         subtitle={t(`${K}.subtitle`)}
       />
+
+      <InventorySectionTabs activeHref="/operator/external-api" />
 
       <section className="admin-card p-4 space-y-3">
         <h2 className="text-base font-semibold">{t(`${K}.add_title`)}</h2>

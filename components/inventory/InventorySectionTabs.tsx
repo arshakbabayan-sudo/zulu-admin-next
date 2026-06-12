@@ -42,6 +42,7 @@ export function InventorySectionTabs({ activeHref, activeCount }: Props) {
     { href: "/operator/visas", key: "admin.nav.tab.visas", fallback: "Visas" },
     { href: "/operator/packages", key: "admin.nav.tab.packages", fallback: "Packages" },
     { href: "/operator/offers", key: "admin.nav.tab.offers", fallback: "Offers" },
+    { href: "/operator/external-api", key: "admin.nav.tab.external_api", fallback: "External API" },
   ];
   return (
     <SectionTabs
