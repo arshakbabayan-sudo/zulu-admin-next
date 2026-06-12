@@ -1492,12 +1492,26 @@ export type WebhookStats = {
 export type WebhookSubscriptionRow = {
   id: number;
   company_id: number;
-  url: string;
+  company: { id: number; name: string } | null;
+  target_url: string;
   events: string[];
-  status: string;
-  created_at: string;
-  company?: { id: number; name: string };
+  description: string | null;
+  active: boolean;
+  failure_count: number;
+  last_succeeded_at: string | null;
+  last_failed_at: string | null;
+  created_at: string | null;
+  /** Returned ONCE, on creation only. */
+  secret?: string;
 };
+
+export type WebhookSubPayload = Partial<{
+  company_id: number;
+  target_url: string;
+  events: string[];
+  description: string | null;
+  active: boolean;
+}>;
 
 export type WebhookDeliveryRow = {
   id: number;
@@ -1534,6 +1548,27 @@ export async function apiWebhookReplay(
   deliveryId: number
 ): Promise<ApiSuccessEnvelope<unknown>> {
   return apiFetchJson(`${PA}/webhooks/deliveries/${deliveryId}/replay`, { method: "POST", token });
+}
+
+// Subscription management (roadmap §4, 2026-06-12)
+export async function apiWebhookEvents(token: string): Promise<ApiSuccessEnvelope<string[]>> {
+  return apiFetchJson(`${PA}/webhooks/events`, { method: "GET", token });
+}
+export async function apiWebhookSubCreate(
+  token: string,
+  body: WebhookSubPayload
+): Promise<ApiSuccessEnvelope<WebhookSubscriptionRow>> {
+  return apiFetchJson(`${PA}/webhooks/subscriptions`, { method: "POST", token, body });
+}
+export async function apiWebhookSubUpdate(
+  token: string,
+  id: number,
+  body: WebhookSubPayload
+): Promise<ApiSuccessEnvelope<WebhookSubscriptionRow>> {
+  return apiFetchJson(`${PA}/webhooks/subscriptions/${id}`, { method: "PATCH", token, body });
+}
+export async function apiWebhookSubDelete(token: string, id: number): Promise<ApiSuccessEnvelope<null>> {
+  return apiFetchJson(`${PA}/webhooks/subscriptions/${id}`, { method: "DELETE", token });
 }
 
 export type PlatformBannerRow = {

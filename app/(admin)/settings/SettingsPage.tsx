@@ -117,6 +117,10 @@ import {
   apiWebhookSubscriptions,
   apiWebhookDeliveries,
   apiWebhookReplay,
+  apiWebhookEvents,
+  apiWebhookSubCreate,
+  apiWebhookSubUpdate,
+  apiWebhookSubDelete,
   type WebhookStats,
   type WebhookSubscriptionRow,
   type WebhookDeliveryRow,
@@ -4756,6 +4760,15 @@ function PlatformSettingsPane({ token, lang }: { token: string | null; lang: str
 // Webhooks pane (System cluster) — subscriptions + delivery attempts
 // ════════════════════════════════════════════════════════════════
 
+type WebhookSubDraft = {
+  id: number | null;
+  company_id: string;
+  target_url: string;
+  description: string;
+  events: string[];
+  active: boolean;
+};
+
 function WebhooksPane({ token, lang }: { token: string | null; lang: string }) {
   const s = settingsStrings(lang);
   const [stats, setStats] = useState<WebhookStats | null>(null);
@@ -4765,6 +4778,19 @@ function WebhooksPane({ token, lang }: { token: string | null; lang: string }) {
   const [statusFilter, setStatusFilter] = useState("");
   const [loading, setLoading] = useState(false);
   const [replayBusy, setReplayBusy] = useState<number | null>(null);
+  // Subscription CUD (roadmap §4, 2026-06-12)
+  const [eventCatalog, setEventCatalog] = useState<string[]>([]);
+  const [subDraft, setSubDraft] = useState<WebhookSubDraft | null>(null);
+  const [subSaving, setSubSaving] = useState(false);
+  const [subErr, setSubErr] = useState<string | null>(null);
+  const [subBusyId, setSubBusyId] = useState<number | null>(null);
+  const [newSecret, setNewSecret] = useState<string | null>(null);
+  const [subToast, setSubToast] = useState<string | null>(null);
+
+  const flash = (msg: string) => {
+    setSubToast(msg);
+    window.setTimeout(() => setSubToast(null), 3500);
+  };
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -4802,10 +4828,91 @@ function WebhooksPane({ token, lang }: { token: string | null; lang: string }) {
     }
   }
 
+  // Event catalog for the subscription form (server-defined, fetched once).
+  useEffect(() => {
+    if (!token) return;
+    apiWebhookEvents(token).then((res) => setEventCatalog(res.data ?? [])).catch(() => setEventCatalog([]));
+  }, [token]);
+
+  const openSubCreate = () => { setNewSecret(null); setSubErr(null); setSubDraft({ id: null, company_id: "", target_url: "", description: "", events: [], active: true }); };
+  const openSubEdit = (r: WebhookSubscriptionRow) => {
+    setNewSecret(null);
+    setSubErr(null);
+    setSubDraft({
+      id: r.id,
+      company_id: String(r.company_id),
+      target_url: r.target_url,
+      description: r.description ?? "",
+      events: r.events,
+      active: r.active,
+    });
+  };
+
+  const saveSub = async () => {
+    if (!token || !subDraft) return;
+    setSubSaving(true);
+    setSubErr(null);
+    try {
+      if (subDraft.id != null) {
+        await apiWebhookSubUpdate(token, subDraft.id, {
+          target_url: subDraft.target_url.trim(),
+          events: subDraft.events,
+          description: subDraft.description.trim() || null,
+          active: subDraft.active,
+        });
+        setSubDraft(null);
+        flash(s.whSubSavedToast);
+      } else {
+        const res = await apiWebhookSubCreate(token, {
+          company_id: Number(subDraft.company_id),
+          target_url: subDraft.target_url.trim(),
+          events: subDraft.events,
+          description: subDraft.description.trim() || null,
+          active: subDraft.active,
+        });
+        // Keep the drawer open to show the one-time signing secret.
+        setNewSecret(res.data.secret ?? null);
+        setSubDraft(null);
+        flash(s.whSubSavedToast);
+      }
+      await load();
+    } catch (e) {
+      setSubErr(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setSubSaving(false);
+    }
+  };
+
+  const toggleSubActive = async (r: WebhookSubscriptionRow) => {
+    if (!token) return;
+    setSubBusyId(r.id);
+    try {
+      await apiWebhookSubUpdate(token, r.id, { active: !r.active });
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setSubBusyId(null);
+    }
+  };
+
+  const removeSub = async (r: WebhookSubscriptionRow) => {
+    if (!token) return;
+    if (typeof window !== "undefined" && !window.confirm(s.whConfirmDeleteSub)) return;
+    setSubBusyId(r.id);
+    try {
+      await apiWebhookSubDelete(token, r.id);
+      flash(s.whSubDeletedToast);
+      await load();
+    } catch (e) {
+      alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setSubBusyId(null);
+    }
+  };
+
   const delTone = (st: string): string => (st === "success" ? "badge-success" : st === "pending" ? "badge-warning" : st === "failed" ? "badge-danger" : "badge-gray");
   const delLabel = (st: string): string => (st === "success" ? s.whStSuccess : st === "pending" ? s.whStPending : st === "failed" ? s.whStFailed : st);
-  const subTone = (st: string): string => (st === "active" ? "badge-success" : st === "disabled" || st === "paused" ? "badge-warning" : st === "error" ? "badge-danger" : "badge-gray");
-  const subLabel = (st: string): string => (st === "active" ? s.whSubActive : st === "disabled" ? s.whSubDisabled : st === "paused" ? s.whSubPaused : st === "error" ? s.whSubError : st);
   const httpTone = (code: number): string => (code >= 200 && code < 300 ? "badge-success" : code >= 300 && code < 400 ? "badge-info" : code >= 400 && code < 500 ? "badge-warning" : code >= 500 ? "badge-danger" : "badge-gray");
 
   return (
@@ -4883,6 +4990,23 @@ function WebhooksPane({ token, lang }: { token: string | null; lang: string }) {
         </>
       ) : (
         <div className="card" style={{ marginBottom: 0 }}>
+          <div className="card-header">
+            <div className="card-title">{s.whTabSubscriptions}</div>
+            <button className="btn btn-primary" onClick={openSubCreate}>
+              <i className="ti ti-plus" />{s.whNewSub}
+            </button>
+          </div>
+          {subToast ? <div className="alert" style={{ margin: "0 16px" }}><i className="ti ti-check" /><div>{subToast}</div></div> : null}
+          {newSecret ? (
+            <div className="alert" style={{ margin: "0 16px 12px" }}>
+              <i className="ti ti-key" />
+              <div>
+                <div style={{ fontWeight: 600 }}>{s.whSecretTitle}</div>
+                <div className="font-mono" style={{ wordBreak: "break-all", margin: "4px 0" }}>{newSecret}</div>
+                <div className="cell-muted text-sm">{s.whSecretOnce}</div>
+              </div>
+            </div>
+          ) : null}
           <div className="table-wrap">
             <table className="table">
               <thead>
@@ -4893,22 +5017,37 @@ function WebhooksPane({ token, lang }: { token: string | null; lang: string }) {
                   <th>{s.whColEvents}</th>
                   <th>{s.status}</th>
                   <th>{s.whColCreated}</th>
+                  <th style={{ textAlign: "right" }}>{s.colActions}</th>
                 </tr>
               </thead>
               <tbody>
                 {loading && subs.length === 0 ? (
-                  <tr><td colSpan={6} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.loading}</td></tr>
+                  <tr><td colSpan={7} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.loading}</td></tr>
                 ) : subs.length === 0 ? (
-                  <tr><td colSpan={6} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.whEmptySubscriptions}</td></tr>
+                  <tr><td colSpan={7} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.whEmptySubscriptions}</td></tr>
                 ) : (
                   subs.map((sub) => (
                     <tr key={sub.id}>
                       <td className="font-mono cell-muted">#{sub.id}</td>
                       <td>{sub.company?.name ?? `#${sub.company_id}`}</td>
-                      <td className="cell-muted text-sm" style={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={sub.url}>{sub.url}</td>
-                      <td className="cell-muted text-sm">{sub.events.join(", ")}</td>
-                      <td><span className={`badge ${subTone(sub.status)}`}>{subLabel(sub.status)}</span></td>
-                      <td className="cell-muted text-sm">{fmtDateTime(sub.created_at)}</td>
+                      <td className="cell-muted text-sm" style={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={sub.target_url}>{sub.target_url}</td>
+                      <td className="cell-muted text-sm" style={{ maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={sub.events.join(", ")}>{sub.events.join(", ")}</td>
+                      <td><span className={`badge ${sub.active ? "badge-success" : "badge-warning"}`}>{sub.active ? s.whSubActive : s.whSubPaused}</span></td>
+                      <td className="cell-muted text-sm">{sub.created_at ? fmtDateTime(sub.created_at) : "—"}</td>
+                      <td style={{ textAlign: "right" }}>
+                        <div className="row-actions" style={{ justifyContent: "flex-end" }}>
+                          <button className="icon-btn" title={s.whEditSub} disabled={subBusyId === sub.id} onClick={() => openSubEdit(sub)}><i className="ti ti-edit" /></button>
+                          <button
+                            className="icon-btn"
+                            title={sub.active ? s.whActPause : s.whActResume}
+                            disabled={subBusyId === sub.id}
+                            onClick={() => void toggleSubActive(sub)}
+                          >
+                            <i className={sub.active ? "ti ti-player-pause" : "ti ti-player-play"} />
+                          </button>
+                          <button className="icon-btn danger" title={s.delete} disabled={subBusyId === sub.id} onClick={() => void removeSub(sub)}><i className="ti ti-trash" /></button>
+                        </div>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -4917,6 +5056,74 @@ function WebhooksPane({ token, lang }: { token: string | null; lang: string }) {
           </div>
         </div>
       )}
+
+      <div className={`drawer-overlay ${subDraft ? "open" : ""}`} onClick={() => setSubDraft(null)} />
+      <div className={`drawer ${subDraft ? "open" : ""}`}>
+        <div className="drawer-header">
+          <div style={{ fontSize: 16, fontWeight: 600 }}>{subDraft?.id != null ? s.whEditSub : s.whNewSub}</div>
+          <button className="icon-btn" onClick={() => setSubDraft(null)}><i className="ti ti-x" /></button>
+        </div>
+        <div className="drawer-body">
+          {subDraft && (
+            <>
+              {subErr ? <div style={{ color: "var(--danger)", marginBottom: 10 }}>{subErr}</div> : null}
+              {subDraft.id == null ? (
+                <div className="fld" style={{ marginBottom: 12 }}>
+                  <label>{s.snFldCompanyId}</label>
+                  <input type="number" min={1} value={subDraft.company_id} onChange={(e) => setSubDraft({ ...subDraft, company_id: e.target.value })} />
+                </div>
+              ) : null}
+              <div className="fld" style={{ marginBottom: 12 }}>
+                <label>{s.whFldUrl}</label>
+                <input type="url" placeholder="https://" value={subDraft.target_url} onChange={(e) => setSubDraft({ ...subDraft, target_url: e.target.value })} />
+              </div>
+              <div className="fld" style={{ marginBottom: 12 }}>
+                <label>{s.whFldDescription}</label>
+                <input maxLength={255} value={subDraft.description} onChange={(e) => setSubDraft({ ...subDraft, description: e.target.value })} />
+              </div>
+              <div className="fld" style={{ marginBottom: 12 }}>
+                <label>{s.whFldEvents}</label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, paddingTop: 4 }}>
+                  {eventCatalog.map((ev) => (
+                    <label key={ev} className="switch-row" style={{ gap: 6 }}>
+                      <input
+                        type="checkbox"
+                        checked={subDraft.events.includes(ev)}
+                        onChange={() =>
+                          setSubDraft((d) => d && ({
+                            ...d,
+                            events: d.events.includes(ev) ? d.events.filter((x) => x !== ev) : [...d.events, ev],
+                          }))
+                        }
+                      />
+                      <span className="font-mono text-sm">{ev}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <label className="switch-row" style={{ gap: 8, marginBottom: 16 }}>
+                <input type="checkbox" checked={subDraft.active} onChange={(e) => setSubDraft({ ...subDraft, active: e.target.checked })} />
+                <span>{s.whFldActive}</span>
+              </label>
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                <button className="btn" disabled={subSaving} onClick={() => setSubDraft(null)}>{s.cancel}</button>
+                <button
+                  className="btn btn-primary"
+                  disabled={
+                    subSaving
+                    || subDraft.target_url.trim() === ""
+                    || subDraft.events.length === 0
+                    || (subDraft.id == null && subDraft.company_id.trim() === "")
+                  }
+                  onClick={() => void saveSub()}
+                >
+                  <i className="ti ti-device-floppy" />{s.save}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
