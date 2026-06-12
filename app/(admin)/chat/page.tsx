@@ -88,7 +88,7 @@ export default function ChatPage() {
   useEffect(() => {
     if (!allowed) return;
     void loadConvs();
-    const id = window.setInterval(() => void loadConvs(), 8000);
+    const id = window.setInterval(() => void loadConvs(), 5000);
     return () => window.clearInterval(id);
   }, [allowed, loadConvs]);
 
@@ -103,7 +103,7 @@ export default function ChatPage() {
   // Poll the open thread every 4s for new messages.
   useEffect(() => {
     if (activeId == null) return;
-    const id = window.setInterval(() => void loadMessages(activeId, true), 4000);
+    const id = window.setInterval(() => void loadMessages(activeId, true), 2500);
     return () => window.clearInterval(id);
   }, [activeId, loadMessages]);
 
@@ -212,6 +212,14 @@ export default function ChatPage() {
                             <span className="truncate text-[13px] font-medium" style={{ color: "var(--admin-text-primary)" }}>
                               {c.title}
                             </span>
+                            {c.is_customer ? (
+                              <span
+                                className="shrink-0 rounded-full px-[6px] py-px text-[10px] font-semibold"
+                                style={{ backgroundColor: "var(--admin-primary-soft)", color: "var(--admin-primary)" }}
+                              >
+                                {s.customerBadge}
+                              </span>
+                            ) : null}
                             {c.unread > 0 ? (
                               <span className="ml-auto rounded-full px-[6px] py-px text-[10px] font-bold text-white" style={{ backgroundColor: "var(--admin-primary)" }}>
                                 {c.unread}
@@ -242,8 +250,21 @@ export default function ChatPage() {
               />
             ) : (
               <>
-                <div className="border-b px-4 py-3" style={{ borderColor: "var(--admin-border)" }}>
+                <div className="flex items-center gap-2 border-b px-4 py-3" style={{ borderColor: "var(--admin-border)" }}>
                   <span className="text-[14px] font-semibold" style={{ color: "var(--admin-text-primary)" }}>{active.title}</span>
+                  {active.is_customer ? (
+                    <span
+                      className="rounded-full px-[6px] py-px text-[10px] font-semibold"
+                      style={{ backgroundColor: "var(--admin-primary-soft)", color: "var(--admin-primary)" }}
+                    >
+                      {s.customerBadge}
+                    </span>
+                  ) : null}
+                  {active.is_customer && active.customer?.email ? (
+                    <span className="text-[12px]" style={{ color: "var(--admin-text-secondary)" }}>
+                      {active.customer.email}
+                    </span>
+                  ) : null}
                 </div>
                 <div ref={threadRef} className="flex-1 overflow-y-auto px-4 py-3" style={{ backgroundColor: "var(--admin-bg-secondary)" }}>
                   {messages.length === 0 ? (

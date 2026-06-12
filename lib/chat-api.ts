@@ -9,10 +9,13 @@ export type ChatColleague = { id: number; name: string; email: string };
 
 export type ChatConversationRow = {
   id: number;
-  type: "direct" | "group";
+  type: "direct" | "group" | "customer";
   title: string;
-  company_id: number;
+  company_id: number | null;
   participants: { id: number; name: string }[];
+  /** Roadmap §4 — B2C customer ↔ platform support thread. */
+  is_customer?: boolean;
+  customer?: { id: number; name: string; email: string } | null;
   unread: number;
   last_message: { body: string; created_at: string | null } | null;
   last_message_at: string | null;
