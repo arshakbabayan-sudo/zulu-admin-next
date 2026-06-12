@@ -1314,6 +1314,61 @@ export async function apiPlatformNotificationStats(
   return apiFetchJson(`${PA}/notifications/stats`, { method: "GET", token });
 }
 
+// ─── Admin notices (Settings → System notifications CUD, roadmap §4) ──────
+export type AdminNoticeRow = {
+  id: number;
+  title: string;
+  message: string;
+  type: "maintenance" | "announcement" | "info";
+  audience: "everyone" | "all_b2c" | "all_staff" | "by_company";
+  company: { id: number; name: string } | null;
+  channels: string[];
+  priority: "low" | "normal" | "high";
+  scheduled_for: string | null;
+  is_active: boolean;
+  sent_at: string | null;
+  sent_count: number | null;
+  status: "draft" | "scheduled" | "paused" | "sent";
+  created_by: { id: number; name: string } | null;
+  created_at: string | null;
+};
+
+export type AdminNoticePayload = Partial<{
+  title: string;
+  message: string;
+  type: AdminNoticeRow["type"];
+  audience: AdminNoticeRow["audience"];
+  company_id: number | null;
+  channels: string[];
+  priority: AdminNoticeRow["priority"];
+  scheduled_for: string | null;
+  is_active: boolean;
+  send_now: boolean;
+}>;
+
+export async function apiAdminNotices(token: string): Promise<ApiSuccessEnvelope<AdminNoticeRow[]>> {
+  return apiFetchJson(`${PA}/notices`, { method: "GET", token });
+}
+export async function apiAdminNoticeCreate(
+  token: string,
+  body: AdminNoticePayload
+): Promise<ApiSuccessEnvelope<AdminNoticeRow>> {
+  return apiFetchJson(`${PA}/notices`, { method: "POST", token, body });
+}
+export async function apiAdminNoticeUpdate(
+  token: string,
+  id: number,
+  body: AdminNoticePayload
+): Promise<ApiSuccessEnvelope<AdminNoticeRow>> {
+  return apiFetchJson(`${PA}/notices/${id}`, { method: "PATCH", token, body });
+}
+export async function apiAdminNoticeSend(token: string, id: number): Promise<ApiSuccessEnvelope<AdminNoticeRow>> {
+  return apiFetchJson(`${PA}/notices/${id}/send`, { method: "POST", token });
+}
+export async function apiAdminNoticeDelete(token: string, id: number): Promise<ApiSuccessEnvelope<null>> {
+  return apiFetchJson(`${PA}/notices/${id}`, { method: "DELETE", token });
+}
+
 // ─── Loyalty oversight (platform-admin) ───────────────────────────────────
 export type LoyaltyAccountRow = {
   id: number;

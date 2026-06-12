@@ -71,6 +71,13 @@ import {
   apiDeleteNewsletterSubscription,
   apiPlatformNotifications,
   apiPlatformNotificationStats,
+  apiAdminNotices,
+  apiAdminNoticeCreate,
+  apiAdminNoticeUpdate,
+  apiAdminNoticeSend,
+  apiAdminNoticeDelete,
+  type AdminNoticeRow,
+  type AdminNoticePayload,
   type PlatformReviewRow,
   type PlatformBannerRow,
   type NewsletterSubscriptionRow,
@@ -3101,6 +3108,333 @@ const NOTIF_EVENT_TYPES = [
 const NOTIF_PRIORITIES = ["low", "normal", "high", "critical"];
 const NOTIF_STATUSES = ["unread", "read"];
 
+// ── Admin notices (Settings → System notifications CUD, roadmap §4) ──────
+type NoticeDraft = {
+  id: number | null;
+  title: string;
+  message: string;
+  type: AdminNoticeRow["type"];
+  audience: AdminNoticeRow["audience"];
+  company_id: string;
+  channels: string[];
+  priority: AdminNoticeRow["priority"];
+  scheduled_for: string;
+};
+
+const EMPTY_NOTICE: NoticeDraft = {
+  id: null,
+  title: "",
+  message: "",
+  type: "announcement",
+  audience: "everyone",
+  company_id: "",
+  channels: ["in_app"],
+  priority: "normal",
+  scheduled_for: "",
+};
+
+function NoticesSection({ token, lang }: { token: string; lang: string }) {
+  const s = settingsStrings(lang);
+  const [rows, setRows] = useState<AdminNoticeRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const [draft, setDraft] = useState<NoticeDraft | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [busyId, setBusyId] = useState<number | null>(null);
+
+  const flash = (msg: string) => {
+    setToast(msg);
+    window.setTimeout(() => setToast(null), 3500);
+  };
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setErr(null);
+    try {
+      const res = await apiAdminNotices(token);
+      setRows(res.data ?? []);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Error");
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+  useEffect(() => { void load(); }, [load]);
+
+  const typeTone = (t: string): string =>
+    t === "maintenance" ? "badge-warning" : t === "announcement" ? "badge-info" : "badge-gray";
+  const typeLabel = (t: string): string =>
+    t === "maintenance" ? s.snTypeMaintenance : t === "announcement" ? s.snTypeAnnouncement : s.snTypeInfo;
+  const audLabel = (n: AdminNoticeRow): string =>
+    n.audience === "everyone" ? s.snAudEveryone
+      : n.audience === "all_b2c" ? s.snAudB2c
+        : n.audience === "all_staff" ? s.snAudStaff
+          : n.company ? n.company.name : s.snAudCompany;
+  const statusTone = (st: string): string =>
+    st === "sent" ? "badge-success" : st === "scheduled" ? "badge-info" : st === "paused" ? "badge-warning" : "badge-gray";
+  const statusLabel = (st: string): string =>
+    st === "sent" ? s.snStSent : st === "scheduled" ? s.snStScheduled : st === "paused" ? s.snStPaused : s.snStDraft;
+
+  const openCreate = () => setDraft({ ...EMPTY_NOTICE });
+  const openEdit = (n: AdminNoticeRow) =>
+    setDraft({
+      id: n.id,
+      title: n.title,
+      message: n.message,
+      type: n.type,
+      audience: n.audience,
+      company_id: n.company ? String(n.company.id) : "",
+      channels: n.channels,
+      priority: n.priority,
+      scheduled_for: n.scheduled_for ? n.scheduled_for.slice(0, 16) : "",
+    });
+
+  const draftPayload = (d: NoticeDraft, sendNow: boolean): AdminNoticePayload => ({
+    title: d.title.trim(),
+    message: d.message.trim(),
+    type: d.type,
+    audience: d.audience,
+    company_id: d.audience === "by_company" && d.company_id.trim() !== "" ? Number(d.company_id) : null,
+    channels: d.channels.length > 0 ? d.channels : ["in_app"],
+    priority: d.priority,
+    scheduled_for: d.scheduled_for.trim() !== "" ? d.scheduled_for : null,
+    ...(sendNow ? { send_now: true } : {}),
+  });
+
+  const save = async (sendNow: boolean) => {
+    if (!draft) return;
+    setSaving(true);
+    setErr(null);
+    try {
+      if (draft.id != null) {
+        await apiAdminNoticeUpdate(token, draft.id, draftPayload(draft, false));
+        if (sendNow) await apiAdminNoticeSend(token, draft.id);
+      } else {
+        await apiAdminNoticeCreate(token, draftPayload(draft, sendNow));
+      }
+      flash(sendNow ? s.snNoticeSentToast : s.snNoticeSavedToast);
+      setDraft(null);
+      void load();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const sendRow = async (n: AdminNoticeRow) => {
+    if (!window.confirm(s.snConfirmSendNotice)) return;
+    setBusyId(n.id);
+    setErr(null);
+    try {
+      await apiAdminNoticeSend(token, n.id);
+      flash(s.snNoticeSentToast);
+      void load();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Error");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const toggleActive = async (n: AdminNoticeRow) => {
+    setBusyId(n.id);
+    setErr(null);
+    try {
+      await apiAdminNoticeUpdate(token, n.id, { is_active: !n.is_active });
+      void load();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Error");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const removeRow = async (n: AdminNoticeRow) => {
+    if (!window.confirm(s.snConfirmDeleteNotice)) return;
+    setBusyId(n.id);
+    setErr(null);
+    try {
+      await apiAdminNoticeDelete(token, n.id);
+      flash(s.snNoticeDeletedToast);
+      void load();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Error");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const toggleChannel = (ch: string) => {
+    setDraft((d) => {
+      if (!d) return d;
+      const has = d.channels.includes(ch);
+      return { ...d, channels: has ? d.channels.filter((c) => c !== ch) : [...d.channels, ch] };
+    });
+  };
+
+  const CHANNEL_OPTIONS: { value: string; label: string }[] = [
+    { value: "in_app", label: s.snChInApp },
+    { value: "email", label: s.snChEmail },
+    { value: "sms", label: s.snChSms },
+    { value: "push", label: s.snChPush },
+  ];
+
+  return (
+    <div className="card">
+      <div className="card-header">
+        <div>
+          <div className="card-title">{s.snNoticesTitle}</div>
+          <div className="card-subtitle">{s.snNoticesSub}</div>
+        </div>
+        <button className="btn btn-primary" onClick={openCreate}>
+          <i className="ti ti-plus" />{s.snNewNotice}
+        </button>
+      </div>
+      {toast ? <div className="alert" style={{ margin: "0 16px" }}><i className="ti ti-check" /><div>{toast}</div></div> : null}
+      {err ? <div style={{ color: "var(--danger)", padding: "8px 16px" }}>{err}</div> : null}
+      <div className="table-wrap">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>{s.snColMessage}</th>
+              <th>{s.snColType}</th>
+              <th>{s.snColAudience}</th>
+              <th>{s.status}</th>
+              <th>{s.snColActive}</th>
+              <th>{s.snColScheduled}</th>
+              <th style={{ textAlign: "right" }}>{s.colActions}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading && rows.length === 0 ? (
+              <tr><td colSpan={7} className="cell-muted" style={{ textAlign: "center", padding: 24 }}>{s.loading}</td></tr>
+            ) : rows.length === 0 ? (
+              <tr><td colSpan={7} className="cell-muted" style={{ textAlign: "center", padding: 24 }}>{s.snNoticesEmpty}</td></tr>
+            ) : (
+              rows.map((n) => (
+                <tr key={n.id}>
+                  <td className="font-semibold" style={{ maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={n.title}>{n.title}</td>
+                  <td><span className={`badge ${typeTone(n.type)}`}>{typeLabel(n.type)}</span></td>
+                  <td className="cell-muted">{audLabel(n)}</td>
+                  <td>
+                    <span className={`badge ${statusTone(n.status)}`}>{statusLabel(n.status)}</span>
+                    {n.status === "sent" && n.sent_count != null ? <span className="cell-muted text-sm" style={{ marginLeft: 6 }}>{n.sent_count}</span> : null}
+                  </td>
+                  <td>
+                    <label className="switch-row">
+                      <input
+                        type="checkbox"
+                        checked={n.is_active}
+                        disabled={n.status === "sent" || busyId === n.id}
+                        onChange={() => void toggleActive(n)}
+                      />
+                    </label>
+                  </td>
+                  <td className="cell-muted">{n.scheduled_for ? fmtDateTime(n.scheduled_for) : "—"}</td>
+                  <td style={{ textAlign: "right" }}>
+                    <div className="row-actions" style={{ justifyContent: "flex-end" }}>
+                      {n.status !== "sent" ? (
+                        <>
+                          <button className="icon-btn" title={s.snEditNotice} disabled={busyId === n.id} onClick={() => openEdit(n)}><i className="ti ti-edit" /></button>
+                          <button className="icon-btn" title={s.snSendNow} disabled={busyId === n.id} onClick={() => void sendRow(n)}><i className="ti ti-send" /></button>
+                        </>
+                      ) : null}
+                      <button className="icon-btn danger" title={s.delete} disabled={busyId === n.id} onClick={() => void removeRow(n)}><i className="ti ti-trash" /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <div className={`drawer-overlay ${draft ? "open" : ""}`} onClick={() => setDraft(null)} />
+      <div className={`drawer ${draft ? "open" : ""}`}>
+        <div className="drawer-header">
+          <div style={{ fontSize: 16, fontWeight: 600 }}>{draft?.id != null ? s.snEditNotice : s.snNewNotice}</div>
+          <button className="icon-btn" onClick={() => setDraft(null)}><i className="ti ti-x" /></button>
+        </div>
+        <div className="drawer-body">
+          {draft && (
+            <>
+              <div className="fld" style={{ marginBottom: 12 }}>
+                <label>{s.snFldTitle}</label>
+                <input value={draft.title} maxLength={255} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
+              </div>
+              <div className="fld" style={{ marginBottom: 12 }}>
+                <label>{s.snFldMessage}</label>
+                <textarea rows={5} maxLength={5000} value={draft.message} onChange={(e) => setDraft({ ...draft, message: e.target.value })} />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                <div className="fld">
+                  <label>{s.snColType}</label>
+                  <select value={draft.type} onChange={(e) => setDraft({ ...draft, type: e.target.value as NoticeDraft["type"] })}>
+                    <option value="announcement">{s.snTypeAnnouncement}</option>
+                    <option value="maintenance">{s.snTypeMaintenance}</option>
+                    <option value="info">{s.snTypeInfo}</option>
+                  </select>
+                </div>
+                <div className="fld">
+                  <label>{s.snColPriority}</label>
+                  <select value={draft.priority} onChange={(e) => setDraft({ ...draft, priority: e.target.value as NoticeDraft["priority"] })}>
+                    <option value="low">{s.snPriLow}</option>
+                    <option value="normal">{s.snPriNormal}</option>
+                    <option value="high">{s.snPriHigh}</option>
+                  </select>
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: draft.audience === "by_company" ? "1fr 1fr" : "1fr", gap: 12, marginBottom: 12 }}>
+                <div className="fld">
+                  <label>{s.snColAudience}</label>
+                  <select value={draft.audience} onChange={(e) => setDraft({ ...draft, audience: e.target.value as NoticeDraft["audience"] })}>
+                    <option value="everyone">{s.snAudEveryone}</option>
+                    <option value="all_b2c">{s.snAudB2c}</option>
+                    <option value="all_staff">{s.snAudStaff}</option>
+                    <option value="by_company">{s.snAudCompany}</option>
+                  </select>
+                </div>
+                {draft.audience === "by_company" ? (
+                  <div className="fld">
+                    <label>{s.snFldCompanyId}</label>
+                    <input type="number" min={1} value={draft.company_id} onChange={(e) => setDraft({ ...draft, company_id: e.target.value })} />
+                  </div>
+                ) : null}
+              </div>
+              <div className="fld" style={{ marginBottom: 12 }}>
+                <label>{s.snFldChannels}</label>
+                <div style={{ display: "flex", gap: 14, flexWrap: "wrap", paddingTop: 4 }}>
+                  {CHANNEL_OPTIONS.map((c) => (
+                    <label key={c.value} className="switch-row" style={{ gap: 6 }}>
+                      <input type="checkbox" checked={draft.channels.includes(c.value)} onChange={() => toggleChannel(c.value)} />
+                      <span>{c.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="fld" style={{ marginBottom: 16 }}>
+                <label>{s.snFldSchedule}</label>
+                <input type="datetime-local" value={draft.scheduled_for} onChange={(e) => setDraft({ ...draft, scheduled_for: e.target.value })} />
+              </div>
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                <button className="btn" disabled={saving} onClick={() => setDraft(null)}>{s.cancel}</button>
+                <button className="btn" disabled={saving || draft.title.trim() === "" || draft.message.trim() === ""} onClick={() => void save(false)}>
+                  <i className="ti ti-device-floppy" />{s.save}
+                </button>
+                <button className="btn btn-primary" disabled={saving || draft.title.trim() === "" || draft.message.trim() === ""} onClick={() => void save(true)}>
+                  <i className="ti ti-send" />{s.snSendNow}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SysNotifPane({ token, lang }: { token: string | null; lang: string }) {
   const s = settingsStrings(lang);
   const router = useRouter();
@@ -3155,6 +3489,7 @@ function SysNotifPane({ token, lang }: { token: string | null; lang: string }) {
 
   return (
     <div>
+      {user?.is_super_admin && token ? <NoticesSection token={token} lang={lang} /> : null}
       {stats && (
         <div className="stat-grid">
           <div className="stat-card c-primary"><div className="stat-header"><i className="ti ti-bell" /></div><div className="stat-value">{stats.total}</div><div className="stat-label">{s.snStatTotal}</div></div>
