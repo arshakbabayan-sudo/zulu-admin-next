@@ -75,6 +75,7 @@ import {
   apiUpdateCrmActivity,
   apiCrmStats,
   apiCrmTeam,
+  apiCrmTeamMemberStats,
   apiSetCrmCompensation,
   apiCrmSettings,
   apiUpdateCrmSettings,
@@ -85,14 +86,26 @@ import {
   type CrmActivityType,
   type CrmStats,
   type CrmTeamRow,
+  type CrmTeamMemberStats,
   type CrmCompModel,
 } from "@/lib/crm-api";
 import { apiCrmCustomers, apiCrmCustomersStats, type CustomerRow, type CrmCustomersStats } from "@/lib/customers-api";
 import { apiShowPlatformUser, type PlatformAdminUserDetail } from "@/lib/platform-admin-api";
 import { apiBookings, type BookingRow } from "@/lib/bookings-api";
 import { AddEmployeeModal } from "@/components/employees/AddEmployeeModal";
-import { apiDeactivateEmployee, apiReactivateEmployee, apiRemoveEmployee } from "@/lib/employees-api";
+import {
+  apiDeactivateEmployee,
+  apiReactivateEmployee,
+  apiRemoveEmployee,
+  apiUpdateEmployeeRole,
+  apiGetEmployeePermissions,
+  apiSyncEmployeePermissions,
+  apiSetEmployeeTwoFactorPolicy,
+  type CompanyEmployeeRole,
+  type EmployeePermissionRow,
+} from "@/lib/employees-api";
 import { AccountPane, MyCompanyPane, MyAgentsPane } from "./MyProfilePanes";
+import { MiniBars } from "./MiniBars";
 import { LeadsPane, SegmentsPane } from "./LeadsSegmentsPanes";
 
 // ── helpers ────────────────────────────────────────────────────────
@@ -1687,6 +1700,7 @@ function TeamPane({
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<CrmTeamRow | null>(null);
+  const [detailId, setDetailId] = useState<number | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [page, setPage] = useState(1);
   const PER_PAGE = 10;
@@ -1791,6 +1805,44 @@ function TeamPane({
   const sumLabel = (entries: Array<[string, number]>) =>
     entries.length === 0 ? "—" : entries.map(([cur, v]) => money(v, cur)).join(" · ");
 
+  // Detail view (roadmap §4, my-profile mock): the row object is looked up
+  // from the CURRENT rows so a reload (role change, lifecycle action) is
+  // reflected immediately; a removed member just falls back to the list.
+  const detailRow = detailId != null ? rows.find((r) => r.user.id === detailId) ?? null : null;
+  useEffect(() => {
+    if (detailId != null && !loading && rows.length > 0 && detailRow === null) setDetailId(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detailId, loading, rows]);
+
+  if (detailRow && token && companyId != null) {
+    return (
+      <div>
+        <TeamMemberDetail
+          row={detailRow}
+          companyId={companyId}
+          token={token}
+          lang={lang}
+          isSelf={user?.id === detailRow.user.id}
+          busy={actBusy === detailRow.user.id}
+          onBack={() => setDetailId(null)}
+          onEditPay={() => setEditRow(detailRow)}
+          onToggleActive={() => void toggleActive(detailRow)}
+          onRemove={() => void removeEmployee(detailRow)}
+          onChanged={() => void load()}
+          showToast={showToast}
+        />
+        <CompensationDrawer
+          row={editRow}
+          companyId={companyId}
+          lang={lang}
+          token={token}
+          onClose={() => setEditRow(null)}
+          onSaved={() => { setEditRow(null); showToast(s.compSavedToast); void load(); }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="alert">
@@ -1849,7 +1901,7 @@ function TeamPane({
                       ? "—"
                       : r.revenue_by_currency.map((rc) => money(rc.revenue, rc.currency)).join(" · ");
                   return (
-                    <tr key={r.user.id} onClick={() => setEditRow(r)}>
+                    <tr key={r.user.id} onClick={() => setDetailId(r.user.id)}>
                       <td>
                         <span className="flex items-center gap-2">
                           <span className={`avatar sm ${avatarTone(r.user.id)}`}>{initials(r.user.name)}</span>
@@ -1939,6 +1991,648 @@ function TeamPane({
           onSuccess={() => { setAddOpen(false); void load(); }}
         />
       ) : null}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// Team member detail — Profile / Performance / Pay / Permissions
+// (roadmap §4, my-profile mock's myteam-detail)
+// ════════════════════════════════════════════════════════════════
+const TEAM_ROLE_KEY: Record<string, CrmKey> = {
+  company_admin: "tmRoleOwner",
+  operator_admin: "tmRoleOwner",
+  company_manager: "tmRoleManager",
+  company_operator: "tmRoleStaff",
+  company_viewer: "tmRoleViewer",
+  agent: "tmRoleAgent",
+};
+const TEAM_ROLE_OPTIONS: CompanyEmployeeRole[] = [
+  "company_viewer",
+  "company_operator",
+  "company_manager",
+  "company_admin",
+];
+
+const TM_ACTION_KEY: Record<string, CrmKey> = {
+  view: "tmActView",
+  view_all: "tmActViewAll",
+  view_dashboard: "tmActViewDashboard",
+  create: "tmActCreate",
+  update: "tmActUpdate",
+  edit: "tmActEdit",
+  delete: "tmActDelete",
+  manage: "tmActManage",
+  publish: "tmActPublish",
+  archive: "tmActArchive",
+  cancel: "tmActCancel",
+  confirm: "tmActConfirm",
+  upload: "tmActUpload",
+  issue: "tmActIssue",
+  pay: "tmActPay",
+  capture: "tmActCapture",
+  fail: "tmActFail",
+  refund: "tmActRefund",
+  moderate: "tmActModerate",
+  update_profile: "tmActUpdateProfile",
+  edit_profile: "tmActEditProfile",
+  manage_components: "tmActManageComponents",
+  manage_seller_permissions: "tmActManageSellerPerms",
+};
+const TM_MODULE_KEY: Record<string, CrmKey> = {
+  account: "tmModAccount",
+  bookings: "tmModBookings",
+  cars: "tmModCars",
+  chat: "tmModChat",
+  commission_records: "tmModCommissionRecords",
+  commissions: "tmModCommissions",
+  companies: "tmModCompanies",
+  "company.users": "tmModCompanyUsers",
+  contracts: "tmModContracts",
+  crm: "tmModCrm",
+  dashboard: "tmModDashboard",
+  excursions: "tmModExcursions",
+  files: "tmModFiles",
+  finance: "tmModFinance",
+  "finance.entitlements": "tmModFinanceEntitlements",
+  "finance.settlements": "tmModFinanceSettlements",
+  flights: "tmModFlights",
+  hotels: "tmModHotels",
+  hr: "tmModHr",
+  imports: "tmModImports",
+  inbox: "tmModInbox",
+  inventory: "tmModInventory",
+  invoices: "tmModInvoices",
+  localization: "tmModLocalization",
+  management: "tmModManagement",
+  my_company: "tmModMyCompany",
+  offers: "tmModOffers",
+  package_orders: "tmModPackageOrders",
+  packages: "tmModPackages",
+  payments: "tmModPayments",
+  profile: "tmModProfile",
+  reviews: "tmModReviews",
+  saved_items: "tmModSavedItems",
+  seller_permissions: "tmModSellerPermissions",
+  settings: "tmModSettings",
+  transfers: "tmModTransfers",
+  visas: "tmModVisas",
+};
+
+function tmPretty(raw: string): string {
+  return raw.replace(/[._-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+function tmRoleLabel(role: string | null | undefined, s: Record<CrmKey, string>): string {
+  if (!role) return "—";
+  const key = TEAM_ROLE_KEY[role];
+  return key ? s[key] : tmPretty(role);
+}
+
+function TeamMemberDetail({
+  row,
+  companyId,
+  token,
+  lang,
+  isSelf,
+  busy,
+  onBack,
+  onEditPay,
+  onToggleActive,
+  onRemove,
+  onChanged,
+  showToast,
+}: {
+  row: CrmTeamRow;
+  companyId: number;
+  token: string;
+  lang: string;
+  isSelf: boolean;
+  busy: boolean;
+  onBack: () => void;
+  onEditPay: () => void;
+  onToggleActive: () => void;
+  onRemove: () => void;
+  onChanged: () => void;
+  showToast: (msg: string) => void;
+}) {
+  const s = crmStrings(lang);
+  const [tab, setTab] = useState<"profile" | "performance" | "pay" | "permissions">("profile");
+  const inactive = row.user.status === "inactive";
+
+  return (
+    <div>
+      <button className="btn btn-ghost detail-back" onClick={onBack}>
+        <i className="ti ti-arrow-left" />{s.tmBackToTeam}
+      </button>
+      <div className="hero-card">
+        <div className="hero-avatar">{initials(row.user.name)}</div>
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <div className="hero-name">
+            <span>{row.user.name}</span>
+            <span className="badge badge-primary">{tmRoleLabel(row.user.role_name, s)}</span>
+            <span className={`badge ${inactive ? "badge-warning" : "badge-success"}`}>
+              {inactive ? s.teamStatusInactive : s.tmStatusActive}
+            </span>
+          </div>
+          <div className="hero-meta">
+            <span><i className="ti ti-mail" style={{ fontSize: 14 }} /> {row.user.email}</span>
+            {row.user.phone ? (
+              <span><i className="ti ti-phone" style={{ fontSize: 14 }} /> {row.user.phone}</span>
+            ) : null}
+          </div>
+        </div>
+        {!isSelf ? (
+          <div className="hero-actions">
+            <button className="btn" disabled={busy} onClick={onToggleActive}>
+              <i className={inactive ? "ti ti-player-play" : "ti ti-player-pause"} />
+              {inactive ? s.teamActReactivate : s.teamActDeactivate}
+            </button>
+            <button className="btn btn-danger" disabled={busy} onClick={onRemove}>
+              <i className="ti ti-trash" />
+              {s.teamActRemove}
+            </button>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="sub-tabs">
+        <button className={`sub-tab ${tab === "profile" ? "active" : ""}`} onClick={() => setTab("profile")}>{s.tmTabProfile}</button>
+        <button className={`sub-tab ${tab === "performance" ? "active" : ""}`} onClick={() => setTab("performance")}>{s.tmTabPerformance}</button>
+        <button className={`sub-tab ${tab === "pay" ? "active" : ""}`} onClick={() => setTab("pay")}>{s.tmTabPay}</button>
+        <button className={`sub-tab ${tab === "permissions" ? "active" : ""}`} onClick={() => setTab("permissions")}>{s.tmTabPermissions}</button>
+      </div>
+
+      {tab === "profile" ? (
+        <TeamProfileTab row={row} companyId={companyId} token={token} s={s} isSelf={isSelf} onChanged={onChanged} showToast={showToast} />
+      ) : null}
+      {tab === "performance" ? (
+        <TeamPerformanceTab row={row} companyId={companyId} token={token} s={s} lang={lang} />
+      ) : null}
+      {tab === "pay" ? (
+        <div className="card" style={{ maxWidth: 680 }}>
+          <div className="card-header">
+            <div>
+              <div className="card-title">{s.tmPayTitle}</div>
+              <div className="card-subtitle">{s.tmPaySub}</div>
+            </div>
+            <button className="btn btn-sm btn-primary" onClick={onEditPay}>
+              <i className="ti ti-edit" />
+              {row.compensation ? s.teamEditPay : s.teamSetPay}
+            </button>
+          </div>
+          <div className="card-body">
+            <div className="info-grid">
+              <div className="info-row">
+                <span className="info-label">{s.compFldModel}</span>
+                <span className="info-value">
+                  <span className="pay-pill">
+                    {row.compensation ? s[TEAM_MODEL_KEY[row.compensation.model]] : s.teamPayNotSet}
+                  </span>
+                </span>
+              </div>
+              <div className="info-row">
+                <span className="info-label">{s.compFldBase}</span>
+                <span className="info-value font-mono">
+                  {row.compensation?.base_amount != null ? money(row.compensation.base_amount, row.pay_currency) : "—"}
+                </span>
+              </div>
+              <div className="info-row">
+                <span className="info-label">{s.compFldCommission}</span>
+                <span className="info-value font-mono">
+                  {row.compensation?.commission_percent != null ? `${row.compensation.commission_percent}%` : "—"}
+                </span>
+              </div>
+              <div className="info-row">
+                <span className="info-label">{s.compFldCurrency}</span>
+                <span className="info-value">{row.pay_currency}</span>
+              </div>
+              <div className="info-row">
+                <span className="info-label">{s.tmComputedMo}</span>
+                <span className="info-value font-mono" style={{ fontWeight: 600 }}>
+                  {money(row.computed_pay, row.pay_currency)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {tab === "permissions" ? (
+        <TeamPermissionsTab userId={row.user.id} companyId={companyId} token={token} s={s} showToast={showToast} />
+      ) : null}
+    </div>
+  );
+}
+
+function TeamProfileTab({
+  row,
+  companyId,
+  token,
+  s,
+  isSelf,
+  onChanged,
+  showToast,
+}: {
+  row: CrmTeamRow;
+  companyId: number;
+  token: string;
+  s: Record<CrmKey, string>;
+  isSelf: boolean;
+  onChanged: () => void;
+  showToast: (msg: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [roleDraft, setRoleDraft] = useState<CompanyEmployeeRole>(
+    (TEAM_ROLE_OPTIONS as string[]).includes(row.user.role_name ?? "")
+      ? (row.user.role_name as CompanyEmployeeRole)
+      : "company_viewer"
+  );
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const saveRole = async () => {
+    setSaving(true);
+    setErr(null);
+    try {
+      await apiUpdateEmployeeRole(token, companyId, row.user.id, roleDraft);
+      showToast(s.tmRoleSavedToast);
+      setEditing(false);
+      onChanged();
+    } catch (e) {
+      setErr(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const inactive = row.user.status === "inactive";
+
+  return (
+    <div className="card" style={{ maxWidth: 720 }}>
+      <div className="card-header">
+        <div className="card-title">{s.tmTabProfile}</div>
+        {!isSelf && !editing ? (
+          <button className="btn btn-sm" onClick={() => setEditing(true)}>
+            <i className="ti ti-edit" />{s.tmEditRole}
+          </button>
+        ) : null}
+      </div>
+      <div className="card-body">
+        {err ? <div style={{ color: "var(--danger)", marginBottom: 10 }}>{err}</div> : null}
+        <div className="info-grid">
+          <div className="info-row"><span className="info-label">{s.tmFldName}</span><span className="info-value">{row.user.name}</span></div>
+          <div className="info-row"><span className="info-label">{s.tmFldEmail}</span><span className="info-value">{row.user.email}</span></div>
+          <div className="info-row"><span className="info-label">{s.tmFldPhone}</span><span className="info-value">{row.user.phone ?? "—"}</span></div>
+          <div className="info-row">
+            <span className="info-label">{s.tmFldRole}</span>
+            <span className="info-value">
+              {editing ? (
+                <span className="flex items-center gap-2" style={{ flexWrap: "wrap" }}>
+                  <select value={roleDraft} onChange={(e) => setRoleDraft(e.target.value as CompanyEmployeeRole)} disabled={saving}>
+                    {TEAM_ROLE_OPTIONS.map((r) => (
+                      <option key={r} value={r}>{tmRoleLabel(r, s)}</option>
+                    ))}
+                  </select>
+                  <button className="btn btn-sm btn-primary" disabled={saving} onClick={() => void saveRole()}>{s.save}</button>
+                  <button className="btn btn-sm" disabled={saving} onClick={() => setEditing(false)}>{s.cancel}</button>
+                </span>
+              ) : (
+                tmRoleLabel(row.user.role_name, s)
+              )}
+            </span>
+          </div>
+          <div className="info-row">
+            <span className="info-label">{s.tmFldStatus}</span>
+            <span className="info-value">
+              <span className={`badge ${inactive ? "badge-warning" : "badge-success"}`}>
+                {inactive ? s.teamStatusInactive : s.tmStatusActive}
+              </span>
+            </span>
+          </div>
+          <div className="info-row"><span className="info-label">{s.tmFldJoined}</span><span className="info-value">{fmtDate(row.user.joined_at)}</span></div>
+          <div className="info-row"><span className="info-label">{s.tmFldLastLogin}</span><span className="info-value">{fmtDate(row.user.last_login_at)}</span></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TeamPerformanceTab({
+  row,
+  companyId,
+  token,
+  s,
+  lang,
+}: {
+  row: CrmTeamRow;
+  companyId: number;
+  token: string;
+  s: Record<CrmKey, string>;
+  lang: string;
+}) {
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const [month, setMonth] = useState(currentMonth);
+  const [periodRow, setPeriodRow] = useState<CrmTeamRow | null>(row);
+  const [stats, setStats] = useState<CrmTeamMemberStats | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  const monthOptions = useMemo(() => {
+    const locale = lang === "hy" ? "hy-AM" : lang === "ru" ? "ru-RU" : "en-GB";
+    const out: { value: string; label: string }[] = [];
+    const now = new Date();
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      out.push({
+        value: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+        label: d.toLocaleDateString(locale, { month: "long", year: "numeric" }),
+      });
+    }
+    return out;
+  }, [lang]);
+
+  // Stat cards re-resolve from the team endpoint for the picked month.
+  useEffect(() => {
+    let stale = false;
+    if (month === currentMonth) { setPeriodRow(row); return; }
+    setPeriodRow(null);
+    apiCrmTeam(token, { month, company_id: companyId })
+      .then((res) => {
+        if (stale) return;
+        setPeriodRow(res.data.find((r) => r.user.id === row.user.id) ?? null);
+      })
+      .catch((e) => { if (!stale) setErr(e instanceof ApiRequestError ? e.message : s.errGeneric); });
+    return () => { stale = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [month, row, token, companyId]);
+
+  useEffect(() => {
+    let stale = false;
+    apiCrmTeamMemberStats(token, row.user.id, companyId)
+      .then((res) => { if (!stale) setStats(res.data); })
+      .catch((e) => { if (!stale) setErr(e instanceof ApiRequestError ? e.message : s.errGeneric); });
+    return () => { stale = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, row.user.id, companyId]);
+
+  const revenueLabel =
+    periodRow == null
+      ? "…"
+      : periodRow.revenue_by_currency.length === 0
+        ? "—"
+        : periodRow.revenue_by_currency.map((rc) => money(rc.revenue, rc.currency)).join(" · ");
+  const avgDeal = (() => {
+    if (periodRow == null) return "…";
+    const first = periodRow.revenue_by_currency[0];
+    if (!first || periodRow.won_deals === 0) return "—";
+    return money(first.revenue / periodRow.won_deals, first.currency);
+  })();
+
+  // The bar chart plots the employee's dominant deal currency.
+  const chart = useMemo(() => {
+    if (!stats) return null;
+    const totals = new Map<string, number>();
+    stats.monthly.forEach((m) => m.revenue.forEach((r) => totals.set(r.currency, (totals.get(r.currency) ?? 0) + r.total)));
+    let currency: string | null = null;
+    let best = 0;
+    totals.forEach((v, k) => { if (v > best) { best = v; currency = k; } });
+    const bars = stats.monthly.map((m) => ({
+      month: m.month,
+      val: currency ? m.revenue.find((r) => r.currency === currency)?.total ?? 0 : 0,
+    }));
+    return { currency, bars, max: Math.max(...bars.map((b) => b.val), 1) };
+  }, [stats]);
+
+  return (
+    <div>
+      <div className="filter-card">
+        <div className="filter-field" style={{ maxWidth: 220 }}>
+          <span className="filter-label">{s.tmTabPerformance}</span>
+          <select value={month} onChange={(e) => setMonth(e.target.value)}>
+            {monthOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
+      </div>
+      {err ? <div className="card" style={{ padding: 16, color: "var(--danger)" }}>{err}</div> : null}
+      <div className="stat-grid">
+        <div className="stat-card c-primary"><div className="stat-header"><i className="ti ti-shopping-cart" /></div><div className="stat-value">{periodRow ? periodRow.direct_orders ?? 0 : "…"}</div><div className="stat-label">{s.tmStatSales}</div></div>
+        <div className="stat-card c-success"><div className="stat-header"><i className="ti ti-trophy" /></div><div className="stat-value">{periodRow ? periodRow.won_deals : "…"}</div><div className="stat-label">{s.tmStatWon}</div></div>
+        <div className="stat-card c-info"><div className="stat-header"><i className="ti ti-coin" /></div><div className="stat-value" style={{ fontSize: 18 }}>{revenueLabel}</div><div className="stat-label">{s.tmStatRevenue}</div></div>
+        <div className="stat-card c-warning"><div className="stat-header"><i className="ti ti-chart-line" /></div><div className="stat-value" style={{ fontSize: 18 }}>{avgDeal}</div><div className="stat-label">{s.tmStatAvgDeal}</div></div>
+      </div>
+      <div className="card">
+        <div className="card-header"><div className="card-title">{s.tmRevenueOverTime}{chart?.currency ? ` · ${chart.currency}` : ""}</div></div>
+        <div className="card-body">
+          {chart === null ? (
+            <span className="cell-muted">{s.loading}</span>
+          ) : chart.currency === null ? (
+            <span className="cell-muted">{s.agNoData}</span>
+          ) : (
+            <>
+              <div className="barchart tall">
+                {chart.bars.map((b) => (
+                  <span
+                    key={b.month}
+                    className="bc-bar"
+                    style={{ height: `${Math.max(3, Math.round((b.val / chart.max) * 100))}%` }}
+                    title={`${b.month}: ${money(b.val, chart.currency ?? "USD")}`}
+                  />
+                ))}
+              </div>
+              <div className="bc-axis">
+                <span>{chart.bars[0]?.month}</span>
+                <span>{chart.bars[chart.bars.length - 1]?.month}</span>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+      <div className="detail-card-grid">
+        <div className="card">
+          <div className="card-header"><div className="card-title">{s.agTopDestinations}</div></div>
+          <div className="card-body">
+            {stats === null ? (
+              <span className="cell-muted">{s.loading}</span>
+            ) : (
+              <MiniBars rows={stats.destinations.map((d) => ({ name: d.name, val: d.bookings }))} empty={s.agNoData} />
+            )}
+          </div>
+        </div>
+        <div className="card">
+          <div className="card-header"><div className="card-title">{s.agByService}</div></div>
+          <div className="card-body">
+            {stats === null ? (
+              <span className="cell-muted">{s.loading}</span>
+            ) : (
+              <MiniBars rows={stats.services.map((r) => ({ name: crmSvcLabel(r.type, s), val: r.bookings }))} empty={s.agNoData} />
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Same service-type labels the My-agents detail uses. */
+function crmSvcLabel(type: string, s: Record<CrmKey, string>): string {
+  const map: Record<string, string> = {
+    flight: s.agSvcFlight,
+    hotel: s.agSvcHotel,
+    transfer: s.agSvcTransfer,
+    car: s.agSvcCar,
+    excursion: s.agSvcExcursion,
+    visa: s.agSvcVisa,
+    insurance: s.agSvcInsurance,
+    package: s.agSvcPackage,
+  };
+  return map[type] ?? tmPretty(type);
+}
+
+function TeamPermissionsTab({
+  userId,
+  companyId,
+  token,
+  s,
+  showToast,
+}: {
+  userId: number;
+  companyId: number;
+  token: string;
+  s: Record<CrmKey, string>;
+  showToast: (msg: string) => void;
+}) {
+  const [rows, setRows] = useState<EmployeePermissionRow[] | null>(null);
+  const [draft, setDraft] = useState<Record<number, boolean>>({});
+  const [canEdit, setCanEdit] = useState(true);
+  const [twoFa, setTwoFa] = useState<boolean | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(() => {
+    setErr(null);
+    apiGetEmployeePermissions(token, companyId, userId)
+      .then((res) => {
+        setRows(res.data.permissions);
+        setCanEdit(res.data.can_edit !== false);
+        setTwoFa(res.data.user.two_factor_required);
+        setDraft(Object.fromEntries(res.data.permissions.map((p) => [p.permission_id, p.granted])));
+      })
+      .catch((e) => setErr(e instanceof ApiRequestError ? e.message : s.errGeneric));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, companyId, userId]);
+  useEffect(() => { load(); }, [load]);
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, EmployeePermissionRow[]>();
+    (rows ?? []).forEach((r) => {
+      const arr = map.get(r.module) ?? [];
+      arr.push(r);
+      map.set(r.module, arr);
+    });
+    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
+  }, [rows]);
+
+  const dirtyCount = useMemo(
+    () => (rows ?? []).reduce((n, r) => n + (draft[r.permission_id] !== r.granted ? 1 : 0), 0),
+    [rows, draft]
+  );
+
+  const save = async () => {
+    if (!rows) return;
+    const payload = rows
+      .filter((r) => draft[r.permission_id] !== r.granted)
+      .map((r) => ({ permission_id: r.permission_id, granted: draft[r.permission_id] === true }));
+    if (payload.length === 0) return;
+    setSaving(true);
+    setErr(null);
+    try {
+      await apiSyncEmployeePermissions(token, companyId, userId, payload);
+      showToast(s.tmPermsSavedToast);
+      load();
+    } catch (e) {
+      setErr(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleTwoFa = async (next: boolean) => {
+    const prev = twoFa;
+    setTwoFa(next);
+    try {
+      await apiSetEmployeeTwoFactorPolicy(token, companyId, userId, next);
+    } catch (e) {
+      setTwoFa(prev);
+      setErr(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    }
+  };
+
+  const moduleLabel = (m: string) => {
+    const key = TM_MODULE_KEY[m];
+    return key ? s[key] : tmPretty(m);
+  };
+  const actionLabel = (p: EmployeePermissionRow) => {
+    const key = TM_ACTION_KEY[p.action ?? ""];
+    return key ? s[key] : tmPretty(p.action || p.name);
+  };
+
+  return (
+    <div className="card" style={{ maxWidth: 860 }}>
+      <div className="card-header">
+        <div>
+          <div className="card-title">{s.tmTabPermissions}</div>
+          <div className="card-subtitle">{canEdit ? s.tmPermsSub : s.tmPermsReadOnly}</div>
+        </div>
+        {canEdit ? (
+          <button className="btn btn-sm btn-primary" disabled={saving || dirtyCount === 0} onClick={() => void save()}>
+            <i className="ti ti-check" />
+            {s.save}{dirtyCount > 0 ? ` (${dirtyCount})` : ""}
+          </button>
+        ) : null}
+      </div>
+      <div className="card-body">
+        {err ? <div style={{ color: "var(--danger)", marginBottom: 10 }}>{err}</div> : null}
+        {twoFa !== null ? (
+          <label className="switch-row" style={{ justifyContent: "space-between", paddingBottom: 12, marginBottom: 12, borderBottom: "1px solid var(--border-color)" }}>
+            <span>
+              <span style={{ display: "block", fontWeight: 600 }}><i className="ti ti-shield-lock" /> {s.tmForce2fa}</span>
+              <span className="text-sm cell-muted">{s.tmForce2faSub}</span>
+            </span>
+            <input type="checkbox" checked={twoFa} disabled={!canEdit} onChange={(e) => void toggleTwoFa(e.target.checked)} />
+          </label>
+        ) : null}
+        {rows === null ? (
+          <span className="cell-muted">{s.loading}</span>
+        ) : rows.length === 0 ? (
+          <span className="cell-muted">{s.tmPermsEmpty}</span>
+        ) : (
+          grouped.map(([moduleName, perms]) => (
+            <div key={moduleName} style={{ marginBottom: 14 }}>
+              <div className="section-label">{moduleLabel(moduleName)}</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 2 }}>
+                {perms.map((p) => {
+                  const checked = draft[p.permission_id] ?? p.granted;
+                  const changed = checked !== p.granted;
+                  return (
+                    <label key={p.permission_id} className="switch-row" style={{ justifyContent: "space-between", padding: "4px 6px" }} title={p.name}>
+                      <span style={changed ? { color: "var(--primary)", fontWeight: 600 } : undefined}>
+                        {actionLabel(p)}
+                        {!p.override && p.from_role ? (
+                          <span className="text-sm cell-muted" style={{ marginLeft: 6 }}>· {s.tmFromRole}</span>
+                        ) : null}
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        disabled={!canEdit}
+                        onChange={(e) => setDraft((d) => ({ ...d, [p.permission_id]: e.target.checked }))}
+                      />
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
     </div>
   );
 }

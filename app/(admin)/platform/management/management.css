@@ -601,6 +601,8 @@ html.dark .mgmt-page .super-tag { background:#3a2540; color:#e0b8d8; }
 .mgmt-page .barchart { display:flex; align-items:flex-end; gap:3px; height:120px; padding:6px 0 0; }
 .mgmt-page .barchart.tall { height:150px; }
 .mgmt-page .bc-axis { display:flex; justify-content:space-between; font-size:11px; color:var(--text-tertiary); margin-top:6px; }
+.mgmt-page .bc-bar { flex:1; min-width:0; background:var(--primary); opacity:.35; border-radius:3px 3px 0 0; transition:opacity .12s; }
+.mgmt-page .bc-bar:hover { opacity:1; }
 
 .mgmt-page .act-item { display:flex; gap:12px; align-items:flex-start; padding:10px 0; border-bottom:1px dashed var(--border-color); }
 .mgmt-page .act-item:last-child { border-bottom:none; }

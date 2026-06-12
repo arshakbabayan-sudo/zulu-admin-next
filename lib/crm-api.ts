@@ -74,9 +74,19 @@ export type CrmCompensation = {
 };
 
 export type CrmTeamRow = {
-  user: { id: number; name: string; email: string; status?: string; role_name?: string | null };
+  user: {
+    id: number;
+    name: string;
+    email: string;
+    status?: string;
+    role_name?: string | null;
+    phone?: string | null;
+    joined_at?: string | null;
+    last_login_at?: string | null;
+  };
   orders_count: number;
   won_deals: number;
+  direct_orders?: number;
   revenue_by_currency: { currency: string; orders_count: number; revenue: number }[];
   compensation: CrmCompensation | null;
   computed_pay: number | null;
@@ -84,6 +94,22 @@ export type CrmTeamRow = {
 };
 
 export type CrmTeamMeta = { company_id: number | null; month?: string };
+
+/** Per-employee breakdowns for the team-detail Performance tab. */
+export type CrmTeamMemberStats = {
+  monthly: { month: string; won: number; revenue: { currency: string; total: number }[] }[];
+  services: { type: string; bookings: number }[];
+  destinations: { name: string; bookings: number }[];
+};
+
+export async function apiCrmTeamMemberStats(
+  token: string,
+  userId: number,
+  companyId?: number | null,
+): Promise<ApiSuccessEnvelope<CrmTeamMemberStats>> {
+  const q = companyId != null && companyId > 0 ? `?company_id=${companyId}` : "";
+  return apiFetchJson(`/platform-admin/crm/team/${userId}/stats${q}`, { method: "GET", token });
+}
 
 function qs(params: Record<string, string | number | undefined>): string {
   const q = new URLSearchParams();

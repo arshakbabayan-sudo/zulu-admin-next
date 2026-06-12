@@ -53,6 +53,7 @@ import {
   type MyAgentDetailStats,
 } from "@/lib/my-agents-api";
 import { formatMoney } from "@/lib/format";
+import { MiniBars } from "./MiniBars";
 
 type MyProfilePaneProps = PaneProps & { user: TeamUser | null };
 
@@ -1175,23 +1176,6 @@ export function MyAgentsPane({ lang, token, user, registerAction }: MyProfilePan
           </table>
         </div>
       </div>
-    </div>
-  );
-}
-
-/** Bar widths are relative to the largest row so the top item is always 100%. */
-function MiniBars({ rows, empty }: { rows: { name: string; val: number }[]; empty: string }) {
-  if (rows.length === 0) return <span className="cell-muted">{empty}</span>;
-  const max = Math.max(...rows.map((r) => r.val), 1);
-  return (
-    <div className="mini-list">
-      {rows.map((r) => (
-        <div className="mini-row" key={r.name}>
-          <span className="mr-name">{r.name}</span>
-          <span className="mr-track"><span style={{ width: `${Math.round((r.val / max) * 100)}%` }} /></span>
-          <span className="mr-val">{r.val}</span>
-        </div>
-      ))}
     </div>
   );
 }
