@@ -492,9 +492,10 @@ export function CrmPage({ initialPage = "pipeline" }: { initialPage?: CrmPageKey
 }
 
 // ════════════════════════════════════════════════════════════════
-// Pipeline (kanban) — real deals grouped client-side by stage
+// Pipeline (kanban) — real deals grouped client-side by stage;
+// cards drag between columns (PATCH stage, optimistic + revert)
 // ════════════════════════════════════════════════════════════════
-const KANBAN_STAGES: CrmDealStage[] = ["new", "qualified", "proposal", "won", "lost"];
+const KANBAN_STAGES: CrmDealStage[] = ["new", "qualified", "proposal", "negotiation", "won", "lost"];
 const STAGE_LABEL_KEY: Record<CrmDealStage, CrmKey> = {
   new: "stageNew",
   qualified: "stageQualified",
@@ -509,6 +510,8 @@ function PipelinePane({ token, lang }: { token: string | null; lang: string }) {
   const [deals, setDeals] = useState<CrmDeal[]>([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [dragId, setDragId] = useState<number | null>(null);
+  const [overStage, setOverStage] = useState<CrmDealStage | null>(null);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -526,12 +529,32 @@ function PipelinePane({ token, lang }: { token: string | null; lang: string }) {
   }, [token]);
   useEffect(() => { void load(); }, [load]);
 
+  // Optimistic stage move: the card jumps immediately, reverts on API error.
+  const moveDeal = useCallback(
+    async (dealId: number, stage: CrmDealStage) => {
+      if (!token) return;
+      const current = deals.find((d) => d.id === dealId);
+      if (!current || current.stage === stage) return;
+      const prevStage = current.stage;
+      setErr(null);
+      setDeals((ds) => ds.map((d) => (d.id === dealId ? { ...d, stage } : d)));
+      try {
+        await apiUpdateCrmDeal(token, dealId, { stage });
+      } catch (e) {
+        setDeals((ds) => ds.map((d) => (d.id === dealId ? { ...d, stage: prevStage } : d)));
+        setErr(e instanceof ApiRequestError ? e.message : s.errGeneric);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [token, deals]
+  );
+
   return (
     <>
       <div className="alert">
         <i className="ti ti-info-circle" />
         <div>
-          {s.pipeAlert}{" "}
+          {s.pipeAlert} {s.pipeDragHint}{" "}
           <strong>
             {s.pipeAlertEmphasis} <span className="font-mono">crm.view_all</span>.
           </strong>
@@ -539,7 +562,8 @@ function PipelinePane({ token, lang }: { token: string | null; lang: string }) {
       </div>
       {err ? (
         <div className="card" style={{ padding: 16, color: "var(--danger)" }}>{err}</div>
-      ) : !loading && deals.length === 0 ? (
+      ) : null}
+      {!loading && deals.length === 0 ? (
         <div className="empty-state">
           <div className="es-icon"><i className="ti ti-businessplan" /></div>
           <div className="es-title">{s.pgPipeline}</div>
@@ -550,7 +574,22 @@ function PipelinePane({ token, lang }: { token: string | null; lang: string }) {
           {KANBAN_STAGES.map((st) => {
             const cards = deals.filter((d) => d.stage === st);
             return (
-              <div className="kanban-col" key={st}>
+              <div
+                className={`kanban-col${overStage === st ? " drag-over" : ""}`}
+                key={st}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                }}
+                onDragEnter={() => setOverStage(st)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const id = Number(e.dataTransfer.getData("text/plain"));
+                  setOverStage(null);
+                  setDragId(null);
+                  if (Number.isFinite(id) && id > 0) void moveDeal(id, st);
+                }}
+              >
                 <div className="kanban-col-head">
                   <span className="kanban-col-title">
                     <span className={`kdot ${st}`} />
@@ -560,7 +599,20 @@ function PipelinePane({ token, lang }: { token: string | null; lang: string }) {
                 </div>
                 <div className="kanban-body">
                   {cards.map((d) => (
-                    <div className="deal-card" key={d.id}>
+                    <div
+                      className={`deal-card${dragId === d.id ? " dragging" : ""}`}
+                      key={d.id}
+                      draggable
+                      onDragStart={(e) => {
+                        setDragId(d.id);
+                        e.dataTransfer.setData("text/plain", String(d.id));
+                        e.dataTransfer.effectAllowed = "move";
+                      }}
+                      onDragEnd={() => {
+                        setDragId(null);
+                        setOverStage(null);
+                      }}
+                    >
                       <div className="dc-title">{d.title}</div>
                       <div className="dc-customer">
                         <span className={`avatar sm ${avatarTone(d.customer?.id ?? d.id)}`}>
@@ -591,7 +643,7 @@ function PipelinePane({ token, lang }: { token: string | null; lang: string }) {
 // ════════════════════════════════════════════════════════════════
 type DealDrawerState = { mode: "create" } | { mode: "edit"; row: CrmDeal } | null;
 const DEAL_CURRENCIES = ["AMD", "USD", "EUR", "RUB", "GBP"];
-const CHIP_STAGES: Array<CrmDealStage | "all"> = ["all", "new", "qualified", "proposal", "won", "lost"];
+const CHIP_STAGES: Array<CrmDealStage | "all"> = ["all", "new", "qualified", "proposal", "negotiation", "won", "lost"];
 
 export type PaneProps = {
   token: string | null;

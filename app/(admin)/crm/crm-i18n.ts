@@ -85,6 +85,7 @@ const EN = {
 
   // ── pipeline (kanban) ─────────────────────────────────────────
   pipeAlert: "Deals are live; the board groups them by stage.",
+  pipeDragHint: "Drag a card between columns to change its stage.",
   pipeAlertEmphasis: "Employees see only their own deals unless granted",
   pipeEmpty: "No deals yet. Create your first deal to populate the board.",
 
@@ -803,6 +804,7 @@ const HY: Partial<Record<CrmKey, string>> = {
   allStages: "Բոլոր փուլերը",
 
   pipeAlert: "Գործարքները կենդանի են. տախտակը խմբավորում է դրանք ըստ փուլի։",
+  pipeDragHint: "Քարտը քաշիր սյունից սյուն՝ փուլը փոխելու համար։",
   pipeAlertEmphasis: "Աշխատակիցները տեսնում են միայն իրենց գործարքները, եթե չունեն",
   pipeEmpty: "Դեռ գործարքներ չկան։ Ստեղծիր առաջին գործարքը՝ տախտակը լրացնելու համար։",
 
@@ -1499,6 +1501,7 @@ const RU: Partial<Record<CrmKey, string>> = {
   allStages: "Все этапы",
 
   pipeAlert: "Сделки активны; доска группирует их по этапам.",
+  pipeDragHint: "Перетащите карточку между колонками, чтобы сменить этап.",
   pipeAlertEmphasis: "Сотрудники видят только свои сделки, если не выдано право",
   pipeEmpty: "Сделок пока нет. Создайте первую сделку, чтобы заполнить доску.",
 
