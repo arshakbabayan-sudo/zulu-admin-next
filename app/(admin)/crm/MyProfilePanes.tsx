@@ -20,9 +20,11 @@
  *                  applications) + <StripeConnectCard> (GET status / POST
  *                  onboarding-link)
  *   My agents    → GET /connections (active connections to agent agencies) +
+ *                  GET /platform-admin/crm/my-agents/stats (per-agent sales/
+ *                  revenue/commission aggregation) + GET .../my-agents/{id}/
+ *                  stats (cards, destinations, services, order history) +
  *                  <CompanyCommissionTab> (GET/PATCH operator commission-
- *                  settings + per-agent override). Per-agent stats are
- *                  placeholders pending a backend aggregation endpoint.
+ *                  settings + per-agent override).
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -43,6 +45,14 @@ import {
   type AccountSession,
 } from "@/lib/account-sessions-api";
 import { apiConnectionsList, type ConnectionRow } from "@/lib/connections-api";
+import {
+  apiMyAgentsStats,
+  apiMyAgentStatsDetail,
+  type MoneyByCurrency,
+  type MyAgentsStats,
+  type MyAgentDetailStats,
+} from "@/lib/my-agents-api";
+import { formatMoney } from "@/lib/format";
 
 type MyProfilePaneProps = PaneProps & { user: TeamUser | null };
 
@@ -941,10 +951,58 @@ type AgentRow = {
   since: string | null;
 };
 
+type CrmStrings = ReturnType<typeof crmStrings>;
+
+/** "1,200.00 USD · 35,000.00 AMD" — amounts are NEVER summed across currencies. */
+function fmtMoneyList(list: MoneyByCurrency[] | undefined, lang: string): string {
+  if (!list || list.length === 0) return "—";
+  return list.map((m) => formatMoney(m.total, lang, m.currency)).join(" · ");
+}
+
+function agentSvcLabel(type: string, s: CrmStrings): string {
+  const map: Record<string, string> = {
+    flight: s.agSvcFlight,
+    hotel: s.agSvcHotel,
+    transfer: s.agSvcTransfer,
+    car: s.agSvcCar,
+    excursion: s.agSvcExcursion,
+    visa: s.agSvcVisa,
+    insurance: s.agSvcInsurance,
+    package: s.agSvcPackage,
+  };
+  return map[type] ?? humanize(type);
+}
+
+function agentOrderStatusLabel(status: string, s: CrmStrings): string {
+  const map: Record<string, string> = {
+    pending_payment: s.optStatusPendingPayment,
+    paid: s.optStatusPaid,
+    confirmed: s.optStatusConfirmed,
+    completed: s.optStatusCompleted,
+    pending: s.optStatusPending,
+    cancelled: s.agStCancelled,
+    refunded: s.agStRefunded,
+    failed: s.agStFailed,
+  };
+  return map[status] ?? humanize(status);
+}
+
+const AGENT_ORDER_BADGE: Record<string, string> = {
+  paid: "badge-success",
+  confirmed: "badge-info",
+  completed: "badge-success",
+  pending: "badge-warning",
+  pending_payment: "badge-warning",
+  cancelled: "badge-danger",
+  refunded: "badge-gray",
+  failed: "badge-danger",
+};
+
 export function MyAgentsPane({ lang, token, user, registerAction }: MyProfilePaneProps) {
   const s = crmStrings(lang);
   const companyId = useMemo(() => resolveCompanyId(user), [user]);
   const [rows, setRows] = useState<ConnectionRow[]>([]);
+  const [stats, setStats] = useState<MyAgentsStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -956,20 +1014,31 @@ export function MyAgentsPane({ lang, token, user, registerAction }: MyProfilePan
     setLoading(true);
     setErr(null);
     try {
-      // TODO(backend): a dedicated GET /platform-admin/connections filtered to
-      // partner agent agencies would let us source owner/email/country/sales/
-      // revenue per agency directly. For now we list service connections and
-      // surface the connected counterpart company.
-      const res = await apiConnectionsList(token, { per_page: 200, company_id: companyId ?? undefined });
-      setRows(res.data);
-    } catch (e) {
-      setErr(e instanceof ApiRequestError ? e.message : s.errGeneric);
+      // Connection list (who my agents are) + per-agent aggregation (what
+      // they sold) load together; a stats failure must not blank the list.
+      const [connRes, statsRes] = await Promise.allSettled([
+        apiConnectionsList(token, { per_page: 200, company_id: companyId ?? undefined }),
+        apiMyAgentsStats(token, companyId),
+      ]);
+      if (connRes.status === "fulfilled") {
+        setRows(connRes.value.data);
+      } else {
+        const e = connRes.reason;
+        setErr(e instanceof ApiRequestError ? e.message : s.errGeneric);
+      }
+      setStats(statsRes.status === "fulfilled" ? statsRes.value.data : null);
     } finally {
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, companyId]);
   useEffect(() => { void load(); }, [load]);
+
+  const statsByAgency = useMemo(() => {
+    const map = new Map<number, MyAgentsStats["agents"][number]>();
+    (stats?.agents ?? []).forEach((a) => map.set(a.agent_company_id, a));
+    return map;
+  }, [stats]);
 
   // My agents has no page-header action button (filters + per-row actions live
   // in the pane). Clear any action the previous pane registered.
@@ -1017,8 +1086,6 @@ export function MyAgentsPane({ lang, token, user, registerAction }: MyProfilePan
     );
   }
 
-  const activeCount = agencies.filter((a) => a.status === "active" || a.status === "accepted").length;
-
   return (
     <div>
       <div className="alert"><i className="ti ti-info-circle" /><div>{s.agAlert}</div></div>
@@ -1031,12 +1098,14 @@ export function MyAgentsPane({ lang, token, user, registerAction }: MyProfilePan
         </div>
         <div className="stat-card c-info">
           <div className="stat-header"><i className="ti ti-coin" /></div>
-          <div className="stat-value">—</div>
+          <div className="stat-value" style={{ fontSize: stats && stats.summary.revenue.length > 0 ? 20 : undefined }}>
+            {fmtMoneyList(stats?.summary.revenue, lang)}
+          </div>
           <div className="stat-label">{s.agStatRevenue}</div>
         </div>
         <div className="stat-card c-success">
           <div className="stat-header"><i className="ti ti-calendar-check" /></div>
-          <div className="stat-value">{activeCount}</div>
+          <div className="stat-value">{stats ? stats.summary.bookings : "—"}</div>
           <div className="stat-label">{s.agStatBookings}</div>
         </div>
       </div>
@@ -1091,9 +1160,8 @@ export function MyAgentsPane({ lang, token, user, registerAction }: MyProfilePan
                       </span>
                     </td>
                     <td className="cell-muted">{fmtDate(a.since)}</td>
-                    {/* TODO(backend): per-agent stats aggregation */}
-                    <td className="num-cell font-mono"><span className="muted-dash">—</span></td>
-                    <td className="num-cell font-mono"><span className="muted-dash">—</span></td>
+                    <td className="num-cell font-mono">{statsByAgency.get(a.agencyId)?.sales ?? 0}</td>
+                    <td className="num-cell font-mono">{fmtMoneyList(statsByAgency.get(a.agencyId)?.revenue, lang)}</td>
                     <td style={{ textAlign: "right" }} onClick={(e) => e.stopPropagation()}>
                       <div className="row-actions">
                         <button className="icon-btn" title={s.agTabOverview} onClick={() => setDetail(a)}><i className="ti ti-eye" /></button>
@@ -1111,17 +1179,22 @@ export function MyAgentsPane({ lang, token, user, registerAction }: MyProfilePan
   );
 }
 
-const AG_MINI_DESTINATIONS = [
-  { name: "Yerevan", pct: 88, val: 9 },
-  { name: "Dilijan", pct: 60, val: 6 },
-  { name: "Tatev", pct: 40, val: 4 },
-  { name: "Sevan", pct: 20, val: 2 },
-];
-const AG_MINI_SERVICES = [
-  { name: "Hotels", pct: 76, val: 12 },
-  { name: "Excursions", pct: 44, val: 6 },
-  { name: "Transfers", pct: 20, val: 3 },
-];
+/** Bar widths are relative to the largest row so the top item is always 100%. */
+function MiniBars({ rows, empty }: { rows: { name: string; val: number }[]; empty: string }) {
+  if (rows.length === 0) return <span className="cell-muted">{empty}</span>;
+  const max = Math.max(...rows.map((r) => r.val), 1);
+  return (
+    <div className="mini-list">
+      {rows.map((r) => (
+        <div className="mini-row" key={r.name}>
+          <span className="mr-name">{r.name}</span>
+          <span className="mr-track"><span style={{ width: `${Math.round((r.val / max) * 100)}%` }} /></span>
+          <span className="mr-val">{r.val}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function MyAgentDetail({
   lang,
@@ -1138,6 +1211,23 @@ function MyAgentDetail({
 }) {
   const s = crmStrings(lang);
   const [tab, setTab] = useState<"stats" | "commission" | "bookings">("stats");
+  const [detail, setDetail] = useState<MyAgentDetailStats | null>(null);
+  const [detailErr, setDetailErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!token) return;
+    let stale = false;
+    setDetail(null);
+    setDetailErr(null);
+    apiMyAgentStatsDetail(token, agent.agencyId, companyId)
+      .then((res) => { if (!stale) setDetail(res.data); })
+      .catch((e) => {
+        if (!stale) setDetailErr(e instanceof ApiRequestError ? e.message : s.errGeneric);
+      });
+    return () => { stale = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, agent.agencyId, companyId]);
+
   return (
     <div>
       <button className="btn btn-ghost detail-back" onClick={onBack}>
@@ -1165,41 +1255,38 @@ function MyAgentDetail({
 
       {tab === "stats" ? (
         <div>
-          <div className="alert"><i className="ti ti-info-circle" /><div>{s.agPerfNote}</div></div>
+          {detailErr ? <div className="card" style={{ padding: 16, color: "var(--danger)" }}>{detailErr}</div> : null}
           <div className="stat-grid">
-            {/* TODO(backend): per-agent stats aggregation */}
-            <div className="stat-card c-primary"><div className="stat-header"><i className="ti ti-shopping-cart" /></div><div className="stat-value">—</div><div className="stat-label">{s.agStatSalesLbl}</div></div>
-            <div className="stat-card c-info"><div className="stat-header"><i className="ti ti-coin" /></div><div className="stat-value">—</div><div className="stat-label">{s.agStatRevenueLbl}</div></div>
-            <div className="stat-card c-success"><div className="stat-header"><i className="ti ti-percentage" /></div><div className="stat-value">—</div><div className="stat-label">{s.agStatCommissionPaid}</div></div>
-            <div className="stat-card c-warning"><div className="stat-header"><i className="ti ti-calendar-check" /></div><div className="stat-value">—</div><div className="stat-label">{s.agStatBookingsLbl}</div></div>
+            <div className="stat-card c-primary"><div className="stat-header"><i className="ti ti-shopping-cart" /></div><div className="stat-value">{detail ? detail.sales : "—"}</div><div className="stat-label">{s.agStatSalesLbl}</div></div>
+            <div className="stat-card c-info"><div className="stat-header"><i className="ti ti-coin" /></div><div className="stat-value" style={{ fontSize: detail && detail.revenue.length > 0 ? 20 : undefined }}>{fmtMoneyList(detail?.revenue, lang)}</div><div className="stat-label">{s.agStatRevenueLbl}</div></div>
+            <div className="stat-card c-success"><div className="stat-header"><i className="ti ti-percentage" /></div><div className="stat-value" style={{ fontSize: detail && detail.commission.length > 0 ? 20 : undefined }}>{fmtMoneyList(detail?.commission, lang)}</div><div className="stat-label">{s.agStatCommissionPaid}</div></div>
+            <div className="stat-card c-warning"><div className="stat-header"><i className="ti ti-calendar-check" /></div><div className="stat-value">{detail ? detail.bookings : "—"}</div><div className="stat-label">{s.agStatBookingsLbl}</div></div>
           </div>
           <div className="detail-card-grid">
             <div className="card">
               <div className="card-header"><div className="card-title">{s.agTopDestinations}</div></div>
               <div className="card-body">
-                <div className="mini-list">
-                  {AG_MINI_DESTINATIONS.map((m) => (
-                    <div className="mini-row" key={m.name}>
-                      <span className="mr-name">{m.name}</span>
-                      <span className="mr-track"><span style={{ width: `${m.pct}%` }} /></span>
-                      <span className="mr-val">{m.val}</span>
-                    </div>
-                  ))}
-                </div>
+                {detail === null ? (
+                  <span className="cell-muted">{s.loading}</span>
+                ) : (
+                  <MiniBars
+                    rows={detail.destinations.map((d) => ({ name: d.name, val: d.bookings }))}
+                    empty={s.agNoData}
+                  />
+                )}
               </div>
             </div>
             <div className="card">
               <div className="card-header"><div className="card-title">{s.agByService}</div></div>
               <div className="card-body">
-                <div className="mini-list">
-                  {AG_MINI_SERVICES.map((m) => (
-                    <div className="mini-row" key={m.name}>
-                      <span className="mr-name">{m.name}</span>
-                      <span className="mr-track"><span style={{ width: `${m.pct}%` }} /></span>
-                      <span className="mr-val">{m.val}</span>
-                    </div>
-                  ))}
-                </div>
+                {detail === null ? (
+                  <span className="cell-muted">{s.loading}</span>
+                ) : (
+                  <MiniBars
+                    rows={detail.services.map((r) => ({ name: agentSvcLabel(r.type, s), val: r.bookings }))}
+                    empty={s.agNoData}
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -1227,9 +1314,45 @@ function MyAgentDetail({
       {tab === "bookings" ? (
         <div className="card" style={{ marginBottom: 0 }}>
           <div className="card-header"><div className="card-title">{s.agBookingsTitle}</div></div>
-          <div className="card-body">
-            {/* TODO(backend): per-agent booking history endpoint */}
-            <span className="cell-muted">{s.agBookingsSoon}</span>
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>{s.agBkColDate}</th>
+                  <th>{s.agBkColCustomer}</th>
+                  <th>{s.agBkColService}</th>
+                  <th className="num-cell">{s.agBkColAmount}</th>
+                  <th>{s.agBkColStatus}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {detail === null ? (
+                  <tr><td colSpan={5} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{detailErr ?? s.loading}</td></tr>
+                ) : detail.orders.length === 0 ? (
+                  <tr><td colSpan={5} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{s.agBookingsEmpty}</td></tr>
+                ) : (
+                  detail.orders.map((o) => (
+                    <tr key={o.id}>
+                      <td className="cell-muted">{fmtDate(o.date)}</td>
+                      <td>{o.customer?.name ?? "—"}</td>
+                      <td>
+                        {o.services.length === 0
+                          ? "—"
+                          : o.services
+                              .map((sv) => (sv.count > 1 ? `${agentSvcLabel(sv.type, s)} ×${sv.count}` : agentSvcLabel(sv.type, s)))
+                              .join(", ")}
+                      </td>
+                      <td className="num-cell font-mono">{formatMoney(o.total, lang, o.currency)}</td>
+                      <td>
+                        <span className={`badge ${AGENT_ORDER_BADGE[o.status] ?? "badge-gray"}`}>
+                          {agentOrderStatusLabel(o.status, s)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       ) : null}
