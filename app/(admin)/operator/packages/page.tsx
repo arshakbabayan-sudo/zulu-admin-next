@@ -21,6 +21,7 @@ import {
   apiPackages,
   apiCreatePackage,
   apiUpdatePackage,
+  apiCustomFieldValues,
   apiDeletePackage,
   apiActivatePackage,
   apiDeactivatePackage,
@@ -52,6 +53,7 @@ import {
 import { InventorySectionTabs } from "@/components/inventory/InventorySectionTabs";
 import { Download, Plus, Edit3, Trash2, Power, Send } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { CustomFieldsRenderer } from "@/components/CustomFieldsRenderer";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const PACKAGE_TYPES = ["flight", "hotel", "transfer", "multi_service", "custom"];
@@ -68,6 +70,7 @@ export default function OperatorPackagesPage() {
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [form, setForm] = useState<PackagePayload | null>(null);
+  const [customFields, setCustomFields] = useState<Record<string, unknown>>({});
   const [editId, setEditId] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -116,6 +119,7 @@ export default function OperatorPackagesPage() {
       latitude: null,
       longitude: null,
     } as PackagePayload);
+    setCustomFields({});
     setFormErr(null);
   }
 
@@ -141,6 +145,8 @@ export default function OperatorPackagesPage() {
       latitude: r.latitude != null ? Number(r.latitude) : null,
       longitude: r.longitude != null ? Number(r.longitude) : null,
     } as PackagePayload);
+    setCustomFields({});
+    if (token) void apiCustomFieldValues(token, "package", r.id).then(setCustomFields).catch(() => {});
     setFormErr(null);
   }
 
@@ -155,8 +161,8 @@ export default function OperatorPackagesPage() {
     setBusy(true);
     setFormErr(null);
     try {
-      if (editId != null) await apiUpdatePackage(token, editId, form);
-      else await apiCreatePackage(token, form);
+      if (editId != null) await apiUpdatePackage(token, editId, { ...form, custom_fields: customFields });
+      else await apiCreatePackage(token, { ...form, custom_fields: customFields });
       closeForm();
       await load();
     } catch (e) {
@@ -546,6 +552,12 @@ export default function OperatorPackagesPage() {
               />
             </div>
           )}
+          <CustomFieldsRenderer
+            scope="package"
+            values={customFields}
+            onChange={setCustomFields}
+            className="mt-6"
+          />
           <div className="mt-4 flex gap-2">
             <Button size="sm" disabled={busy} onClick={() => void handleSubmit()}>
               {busy ? t("admin.crud.common.saving") : t("common.save")}

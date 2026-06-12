@@ -50,6 +50,7 @@ import { Edit3, Trash2 } from "lucide-react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { userHasPermission } from "@/lib/access";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
+import { CustomFieldsRenderer } from "@/components/CustomFieldsRenderer";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { formatDateTime } from "@/lib/format";
 import { ApiRequestError } from "@/lib/api-client";
@@ -62,6 +63,7 @@ import {
   apiFlight,
   apiCreateFlight,
   apiUpdateFlight,
+  apiCustomFieldValues,
   apiDeleteFlight,
   apiFlightCabins,
   apiCreateFlightCabin,
@@ -245,6 +247,7 @@ export default function OperatorFlightsPage() {
   const [forbidden, setForbidden] = useState(false);
 
   const [form, setForm] = useState<FlightFormPayload | null>(null);
+  const [customFields, setCustomFields] = useState<Record<string, unknown>>({});
   const [editId, setEditId] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [exportBusy, setExportBusy] = useState(false);
@@ -286,6 +289,7 @@ export default function OperatorFlightsPage() {
     setErr(null);
     setEditId(null);
     setForm({ ...EMPTY, cabins: [newFlightCabinFormRow({ cabin_class: "economy" })] });
+    setCustomFields({});
     setServerCabins(null);
     setFormErrLines([]);
     setFormLoading(false);
@@ -296,6 +300,7 @@ export default function OperatorFlightsPage() {
     setErr(null);
     setEditId(r.id);
     setForm(null);
+    setCustomFields({});
     setServerCabins(null);
     setFormErrLines([]);
     setFormLoading(true);
@@ -310,6 +315,7 @@ export default function OperatorFlightsPage() {
       };
       setForm(flightFormFromDetail(detailWithCabins));
       setServerCabins({ flightId: r.id, rows: cabinsRes.data ?? [] });
+      setCustomFields(await apiCustomFieldValues(token, "flight", r.id).catch(() => ({})));
     } catch (e) {
       setEditId(null);
       if (e instanceof ApiRequestError && e.status === 422 && e.body?.errors) {
@@ -377,10 +383,10 @@ export default function OperatorFlightsPage() {
     try {
       let flightId: number;
       if (editId != null) {
-        const res = await apiUpdateFlight(token, editId, flightUpdateBodyFromForm(form));
+        const res = await apiUpdateFlight(token, editId, { ...flightUpdateBodyFromForm(form), custom_fields: customFields });
         flightId = res.data?.id ?? editId;
       } else {
-        const res = await apiCreateFlight(token, flightCreateBodyFromForm(form));
+        const res = await apiCreateFlight(token, { ...flightCreateBodyFromForm(form), custom_fields: customFields });
         flightId = res.data?.id ?? 0;
       }
 
@@ -1221,6 +1227,12 @@ export default function OperatorFlightsPage() {
             </div>
           )}
 
+          <CustomFieldsRenderer
+            scope="flight"
+            values={customFields}
+            onChange={setCustomFields}
+            className="mt-6"
+          />
           <div className="mt-4 flex gap-2">
             <Button size="sm" disabled={busy} onClick={() => void handleSubmit()}>
               {busy ? t("admin.crud.common.saving") : t("common.save")}

@@ -21,6 +21,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { apiFetchJson } from "@/lib/api-client";
 import { Input, Select, Switch, FormField } from "@/components/ui";
 
@@ -48,6 +49,7 @@ type Props = {
 
 export function CustomFieldsRenderer({ scope, values, onChange, className }: Props) {
   const { token } = useAdminAuth();
+  const { t } = useLanguage();
   const [defs, setDefs] = useState<FieldDef[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,7 +65,7 @@ export function CustomFieldsRenderer({ scope, values, onChange, className }: Pro
         if (!cancelled) setDefs(res.data.fields ?? []);
       } catch (e) {
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : "Failed to load custom fields");
+          setError(e instanceof Error ? e.message : "load_failed");
           setDefs([]);
         }
       }
@@ -81,7 +83,9 @@ export function CustomFieldsRenderer({ scope, values, onChange, className }: Pro
 
   if (defs === null) {
     return (
-      <p className={`text-xs text-fg-t6 ${className ?? ""}`}>Loading custom fields…</p>
+      <p className={`text-xs text-fg-t6 ${className ?? ""}`}>
+        {t("admin.crud.custom_fields.loading")}
+      </p>
     );
   }
 
@@ -90,7 +94,7 @@ export function CustomFieldsRenderer({ scope, values, onChange, className }: Pro
       <div
         className={`rounded-md border border-error-100 bg-error-50 px-3 py-2 text-xs text-error-700 ${className ?? ""}`}
       >
-        {error}
+        {error === "load_failed" ? t("admin.crud.custom_fields.load_failed") : error}
       </div>
     );
   }
@@ -107,7 +111,7 @@ export function CustomFieldsRenderer({ scope, values, onChange, className }: Pro
   return (
     <div className={`space-y-3 ${className ?? ""}`}>
       <div className="text-[11px] uppercase tracking-[0.4px] text-fg-t6 font-semibold">
-        Custom fields
+        {t("admin.crud.custom_fields.section_title")}
       </div>
       {visibleDefs.map((def) => {
         const current = values[def.key];

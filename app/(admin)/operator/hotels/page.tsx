@@ -39,12 +39,14 @@ import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { ApiRequestError } from "@/lib/api-client";
 import { apiSubmitOfferForReview } from "@/lib/platform-admin-api";
 import type { ApiListMeta } from "@/lib/api-envelope";
+import { CustomFieldsRenderer } from "@/components/CustomFieldsRenderer";
 import {
   apiHotels,
   apiGetHotel,
   apiCreateHotel,
   apiUpdateHotel,
   apiDeleteHotel,
+  apiCustomFieldValues,
   hotelCreateBodyFromForm,
   hotelUpdateBodyFromForm,
   hotelFormFromDetail,
@@ -157,6 +159,7 @@ export default function OperatorHotelsPage() {
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [form, setForm] = useState<HotelFormPayload | null>(null);
+  const [customFields, setCustomFields] = useState<Record<string, unknown>>({});
   const [editId, setEditId] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
@@ -188,6 +191,7 @@ export default function OperatorHotelsPage() {
     setErr(null);
     setEditId(null);
     setForm({ ...EMPTY });
+    setCustomFields({});
     setFormErrLines([]);
     setFormLoading(false);
   }
@@ -197,11 +201,13 @@ export default function OperatorHotelsPage() {
     setErr(null);
     setEditId(r.id);
     setForm(null);
+    setCustomFields({});
     setFormLoading(true);
     setFormErrLines([]);
     try {
       const res = await apiGetHotel(token, r.id);
       setForm(hotelFormFromDetail(res.data));
+      setCustomFields(await apiCustomFieldValues(token, "hotel", r.id).catch(() => ({})));
     } catch (e) {
       setEditId(null);
       if (e instanceof ApiRequestError && e.status === 422 && e.body?.errors) {
@@ -233,9 +239,9 @@ export default function OperatorHotelsPage() {
     setFormErrLines([]);
     try {
       if (editId != null) {
-        await apiUpdateHotel(token, editId, hotelUpdateBodyFromForm(form));
+        await apiUpdateHotel(token, editId, { ...hotelUpdateBodyFromForm(form), custom_fields: customFields });
       } else {
-        await apiCreateHotel(token, hotelCreateBodyFromForm(form));
+        await apiCreateHotel(token, { ...hotelCreateBodyFromForm(form), custom_fields: customFields });
       }
       closeForm();
       await load();
@@ -1178,6 +1184,12 @@ export default function OperatorHotelsPage() {
               />
             </div>
           )}
+          <CustomFieldsRenderer
+            scope="hotel"
+            values={customFields}
+            onChange={setCustomFields}
+            className="mt-6"
+          />
           <div className="mt-4 flex gap-2">
             <Button size="sm" disabled={busy} onClick={() => void handleSubmit()}>
               {busy ? t("admin.crud.common.saving") : t("common.save")}

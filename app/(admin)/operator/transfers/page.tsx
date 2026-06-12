@@ -35,12 +35,14 @@ import { Edit3, Trash2, Send } from "lucide-react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { userHasPermission } from "@/lib/access";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
+import { CustomFieldsRenderer } from "@/components/CustomFieldsRenderer";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ApiRequestError } from "@/lib/api-client";
 import { apiSubmitOfferForReview } from "@/lib/platform-admin-api";
 import type { ApiListMeta } from "@/lib/api-envelope";
 import {
   apiCreateTransfer,
+  apiCustomFieldValues,
   apiDeleteTransfer,
   apiGetTransfer,
   apiTransfers,
@@ -258,6 +260,7 @@ export default function OperatorTransfersPage() {
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [form, setForm] = useState<TransferFormValues | null>(null);
+  const [customFields, setCustomFields] = useState<Record<string, unknown>>({});
   const [editId, setEditId] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [formErr, setFormErr] = useState<string | null>(null);
@@ -290,6 +293,7 @@ export default function OperatorTransfersPage() {
   function openCreate() {
     setEditId(null);
     setForm(emptyTransferOperatorForm());
+    setCustomFields({});
     setFormErr(null);
     setFieldErrs(null);
     setWizardStep("general");
@@ -306,6 +310,7 @@ export default function OperatorTransfersPage() {
       const res = await apiGetTransfer(token, r.id);
       const raw = (res.data ?? {}) as TransferRow;
       setForm(transferFormFromRow(raw));
+      setCustomFields(await apiCustomFieldValues(token, "transfer", r.id).catch(() => ({})));
       setWizardStep("general");
       setStepErrors([]);
     } catch (e) {
@@ -516,8 +521,8 @@ export default function OperatorTransfersPage() {
     setFormErr(null);
     setFieldErrs(null);
     try {
-      if (editId != null) await apiUpdateTransfer(token, editId, form);
-      else await apiCreateTransfer(token, form);
+      if (editId != null) await apiUpdateTransfer(token, editId, { ...form, custom_fields: customFields });
+      else await apiCreateTransfer(token, { ...form, custom_fields: customFields });
       closeForm();
       await load();
     } catch (e) {
@@ -811,6 +816,14 @@ export default function OperatorTransfersPage() {
             </div>
           )}
 
+          {wizardStep === "review" && (
+            <CustomFieldsRenderer
+              scope="transfer"
+              values={customFields}
+              onChange={setCustomFields}
+              className="mt-6"
+            />
+          )}
           <div className="mt-4 flex gap-2">
             <Button
               variant="outline"

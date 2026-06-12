@@ -40,6 +40,7 @@ import { Edit3, Trash2, Send } from "lucide-react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { userHasPermission } from "@/lib/access";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
+import { CustomFieldsRenderer } from "@/components/CustomFieldsRenderer";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ApiRequestError } from "@/lib/api-client";
 import { apiSubmitOfferForReview } from "@/lib/platform-admin-api";
@@ -51,6 +52,7 @@ import {
   apiCars,
   apiCreateCar,
   apiUpdateCar,
+  apiCustomFieldValues,
   apiDeleteCar,
   CAR_CHILD_SEAT_TYPES,
   CAR_SERVICE_KEYS,
@@ -539,6 +541,7 @@ export default function OperatorCarsPage() {
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [form, setForm] = useState<CarFormState | null>(null);
+  const [customFields, setCustomFields] = useState<Record<string, unknown>>({});
   const [editId, setEditId] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [formErr, setFormErr] = useState<string | null>(null);
@@ -648,6 +651,7 @@ export default function OperatorCarsPage() {
       company_id: cid != null ? Number(cid) : "",
       ...emptyCarForm(),
     });
+    setCustomFields({});
     setFormErr(null);
     setBusy(false);
   }
@@ -656,6 +660,8 @@ export default function OperatorCarsPage() {
     setEditId(r.id);
     setCarOffers(null);
     setForm(carFormFromRow(r));
+    setCustomFields({});
+    if (token) void apiCustomFieldValues(token, "car", r.id).then(setCustomFields).catch(() => {});
     setFormErr(null);
     setFieldErrs(null);
   }
@@ -702,9 +708,9 @@ export default function OperatorCarsPage() {
     setBusy(true);
     try {
       if (editId != null) {
-        await apiUpdateCar(token, editId, buildUpdatePayload(form));
+        await apiUpdateCar(token, editId, { ...buildUpdatePayload(form), custom_fields: customFields });
       } else {
-        await apiCreateCar(token, buildCreatePayload(form));
+        await apiCreateCar(token, { ...buildCreatePayload(form), custom_fields: customFields });
       }
       offersCache.current = null;
       closeForm();
@@ -1838,6 +1844,12 @@ export default function OperatorCarsPage() {
               />
             </div>
           )}
+          <CustomFieldsRenderer
+            scope="car"
+            values={customFields}
+            onChange={setCustomFields}
+            className="mt-6"
+          />
           <div className="mt-4 flex gap-2">
             <Button size="sm" disabled={busy} onClick={() => void handleSubmit()}>
               {busy ? t("admin.crud.common.saving") : t("common.save")}

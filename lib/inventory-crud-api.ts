@@ -149,7 +149,31 @@ export type FlightRow = {
   destination?: string | null;
 };
 
+// ─── Custom field values (roadmap §4) ───────────────────────────────────────
+export type CustomFieldEntityType =
+  | "hotel"
+  | "flight"
+  | "car"
+  | "transfer"
+  | "excursion"
+  | "visa"
+  | "package";
+
+/** Stored custom field values of one inventory entity as a {key: value} map. */
+export async function apiCustomFieldValues(
+  token: string,
+  entityType: CustomFieldEntityType,
+  entityId: number
+): Promise<Record<string, unknown>> {
+  const res = await apiFetchJson<ApiSuccessEnvelope<{ values: Record<string, unknown> | null }>>(
+    `/custom-field-values?entity_type=${entityType}&entity_id=${entityId}`,
+    { method: "GET", token }
+  );
+  return res.data?.values ?? {};
+}
+
 export type FlightPayload = {
+  custom_fields?: Record<string, unknown>;
   offer_id?: number | "";
   location_id?: number | "";
   departure_location_id?: number | "";
@@ -1339,6 +1363,7 @@ export function roomsPayloadFromForm(
 
 /** POST /hotels body (backend HotelService::create). */
 export type HotelCreateApiBody = {
+  custom_fields?: Record<string, unknown>;
   offer_id: number;
   location_id: number | null;
   source_lang: string;
@@ -1560,7 +1585,9 @@ export type TransferRow = {
   offer?: ModuleRowOfferSummary | null;
 };
 
-export type TransferPayload = TransferFormValues;
+export type TransferPayload = TransferFormValues & {
+  custom_fields?: Record<string, unknown>;
+};
 
 export async function apiTransfers(
   token: string,
@@ -1584,7 +1611,7 @@ export async function apiCreateTransfer(
   token: string,
   body: TransferPayload
 ): Promise<ApiSuccessEnvelope<TransferRow>> {
-  const createBody = transferCreateBodyFromForm(body);
+  const createBody = { ...transferCreateBodyFromForm(body), custom_fields: body.custom_fields };
   return apiFetchJson(`/transfers`, { method: "POST", token, body: createBody });
 }
 
@@ -1593,7 +1620,7 @@ export async function apiUpdateTransfer(
   id: number,
   body: TransferPayload
 ): Promise<ApiSuccessEnvelope<TransferRow>> {
-  const updateBody = transferUpdateBodyFromForm(body);
+  const updateBody = { ...transferUpdateBodyFromForm(body), custom_fields: body.custom_fields };
   return apiFetchJson(`/transfers/${id}`, { method: "PATCH", token, body: updateBody });
 }
 
@@ -1727,6 +1754,7 @@ export type CarExpandedWriteFields = {
 
 /** POST /cars — must match `CarController::store` validation. */
 export type CarCreatePayload = {
+  custom_fields?: Record<string, unknown>;
   offer_id: number;
   company_id: number;
   pickup_location: string;
@@ -1736,6 +1764,7 @@ export type CarCreatePayload = {
 
 /** PATCH /cars/{id} — `offer_id` / `company_id` are prohibited server-side. */
 export type CarUpdatePayload = {
+  custom_fields?: Record<string, unknown>;
   pickup_location?: string;
   dropoff_location?: string;
   vehicle_class?: string;
@@ -1858,6 +1887,7 @@ export type ExcursionExpandedWritePayload = {
 
 /** POST /excursions — must match `ExcursionController::store` validation. */
 export type ExcursionCreatePayload = {
+  custom_fields?: Record<string, unknown>;
   offer_id: number;
   company_id: number;
   location: string;
@@ -1867,6 +1897,7 @@ export type ExcursionCreatePayload = {
 
 /** PATCH /excursions/{id} — `offer_id` / `company_id` are prohibited server-side. */
 export type ExcursionUpdatePayload = {
+  custom_fields?: Record<string, unknown>;
   location?: string;
   duration?: string;
   group_size?: number;
@@ -1940,6 +1971,7 @@ export type VisaRow = {
  * `required_documents_text` is UI-only (one line per document); normalized to `required_documents` on submit.
  */
 export type VisaPayload = {
+  custom_fields?: Record<string, unknown>;
   /** Required on create (POST); omit on update (PATCH — server prohibits changes). */
   offer_id?: number;
   country?: string;
@@ -2037,6 +2069,7 @@ export type PackageRow = {
 };
 
 export type PackagePayload = {
+  custom_fields?: Record<string, unknown>;
   package_title?: string;
   package_subtitle?: string | null;
   package_type?: string;

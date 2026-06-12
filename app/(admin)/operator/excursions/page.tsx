@@ -58,6 +58,7 @@ import {
   apiExcursions,
   apiCreateExcursion,
   apiUpdateExcursion,
+  apiCustomFieldValues,
   apiDeleteExcursion,
   apiOffers,
   type ExcursionRow,
@@ -70,6 +71,7 @@ import {
   exportExcursionsCsv,
   runExcursionCsvImport,
 } from "@/lib/csv-import-export";
+import { CustomFieldsRenderer } from "@/components/CustomFieldsRenderer";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -169,6 +171,7 @@ export default function OperatorExcursionsPage() {
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [form, setForm] = useState<ExcursionWizardState | null>(null);
+  const [customFields, setCustomFields] = useState<Record<string, unknown>>({});
   const [excursionOffers, setExcursionOffers] = useState<OfferRow[] | null>(null);
   const [editId, setEditId] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
@@ -275,6 +278,7 @@ export default function OperatorExcursionsPage() {
       company_id: cid != null ? Number(cid) : "",
       ...emptyExcursionWizardTail(),
     });
+    setCustomFields({});
     resetToFirstStep();
     setFormErr(null);
     setBusy(false);
@@ -284,6 +288,8 @@ export default function OperatorExcursionsPage() {
     setEditId(r.id);
     setExcursionOffers(null);
     setForm(excursionWizardFromRow(r));
+    setCustomFields({});
+    if (token) void apiCustomFieldValues(token, "excursion", r.id).then(setCustomFields).catch(() => {});
     setFormErr(null);
     setFieldErrs(null);
     resetToFirstStep();
@@ -349,6 +355,7 @@ export default function OperatorExcursionsPage() {
         await apiUpdateExcursion(token, editId, {
           ...core,
           ...expanded,
+          custom_fields: customFields,
         });
       } else {
         await apiCreateExcursion(token, {
@@ -356,6 +363,7 @@ export default function OperatorExcursionsPage() {
           company_id: Number(form.company_id),
           ...core,
           ...expanded,
+          custom_fields: customFields,
         });
       }
       offersCache.current = null;
@@ -1079,6 +1087,14 @@ export default function OperatorExcursionsPage() {
                 ]}
               />
             </div>
+          )}
+          {step === 5 && (
+            <CustomFieldsRenderer
+              scope="excursion"
+              values={customFields}
+              onChange={setCustomFields}
+              className="mt-6"
+            />
           )}
           <div className="mt-4 flex flex-wrap gap-2">
             {step > 1 && (

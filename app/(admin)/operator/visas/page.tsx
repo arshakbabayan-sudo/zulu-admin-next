@@ -56,6 +56,7 @@ import {
   apiGetVisa,
   apiCreateVisa,
   apiUpdateVisa,
+  apiCustomFieldValues,
   apiDeleteVisa,
   type VisaRow,
   type VisaPayload,
@@ -66,6 +67,7 @@ import {
   visaMoneyCell,
   visaNumberFromApi,
 } from "@/lib/visa-ui";
+import { CustomFieldsRenderer } from "@/components/CustomFieldsRenderer";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -395,6 +397,7 @@ export default function OperatorVisasPage() {
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [form, setForm] = useState<VisaPayload | null>(null);
+  const [customFields, setCustomFields] = useState<Record<string, unknown>>({});
   const [editId, setEditId] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [formErrLines, setFormErrLines] = useState<string[]>([]);
@@ -445,6 +448,7 @@ export default function OperatorVisasPage() {
       currency: "",
       offer_status: undefined,
     });
+    setCustomFields({});
     setFormErrLines([]);
     setFormLoading(false);
   }
@@ -455,9 +459,11 @@ export default function OperatorVisasPage() {
     setForm(null);
     setFormLoading(true);
     setFormErrLines([]);
+    setCustomFields({});
     try {
       const res = await apiGetVisa(token, r.id);
       setForm(visaFormFromApiRow(res.data));
+      setCustomFields(await apiCustomFieldValues(token, "visa", r.id).catch(() => ({})));
     } catch {
       setForm(visaFormFromApiRow(r));
     } finally {
@@ -484,9 +490,9 @@ export default function OperatorVisasPage() {
     setFormErrLines([]);
     try {
       if (isCreate) {
-        await apiCreateVisa(token, bodyFromForm(form, "create"));
+        await apiCreateVisa(token, { ...bodyFromForm(form, "create"), custom_fields: customFields });
       } else {
-        await apiUpdateVisa(token, editId, bodyFromForm(form, "update"));
+        await apiUpdateVisa(token, editId, { ...bodyFromForm(form, "update"), custom_fields: customFields });
       }
       closeForm();
       await load();
@@ -828,6 +834,12 @@ export default function OperatorVisasPage() {
               />
             </div>
           )}
+          <CustomFieldsRenderer
+            scope="visa"
+            values={customFields}
+            onChange={setCustomFields}
+            className="mt-6"
+          />
           <div className="mt-6 flex flex-wrap gap-2">
             <Button size="sm" disabled={busy} onClick={() => void handleSubmit()}>
               {busy ? t("admin.crud.common.saving") : t("common.save")}
