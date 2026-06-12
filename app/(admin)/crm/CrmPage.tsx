@@ -2336,17 +2336,20 @@ function TeamPerformanceTab({
   const [err, setErr] = useState<string | null>(null);
 
   const monthOptions = useMemo(() => {
-    const locale = lang === "hy" ? "hy-AM" : lang === "ru" ? "ru-RU" : "en-GB";
+    // Month names come from our own dictionary — Intl silently falls back to
+    // the OS locale (e.g. Russian) in browsers without Armenian ICU data.
     const out: { value: string; label: string }[] = [];
     const now = new Date();
     for (let i = 0; i < 6; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthName = s[`tmMonth${d.getMonth() + 1}` as CrmKey];
       out.push({
         value: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
-        label: d.toLocaleDateString(locale, { month: "long", year: "numeric" }),
+        label: `${monthName} ${d.getFullYear()}`,
       });
     }
     return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lang]);
 
   // Stat cards re-resolve from the team endpoint for the picked month.
