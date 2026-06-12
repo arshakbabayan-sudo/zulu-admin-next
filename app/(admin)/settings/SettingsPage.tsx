@@ -3133,6 +3133,14 @@ const EMPTY_NOTICE: NoticeDraft = {
   scheduled_for: "",
 };
 
+/** ISO timestamp → the local-time string a datetime-local input expects. */
+function isoToLocalInput(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function NoticesSection({ token, lang }: { token: string; lang: string }) {
   const s = settingsStrings(lang);
   const [rows, setRows] = useState<AdminNoticeRow[]>([]);
@@ -3187,7 +3195,7 @@ function NoticesSection({ token, lang }: { token: string; lang: string }) {
       company_id: n.company ? String(n.company.id) : "",
       channels: n.channels,
       priority: n.priority,
-      scheduled_for: n.scheduled_for ? n.scheduled_for.slice(0, 16) : "",
+      scheduled_for: n.scheduled_for ? isoToLocalInput(n.scheduled_for) : "",
     });
 
   const draftPayload = (d: NoticeDraft, sendNow: boolean): AdminNoticePayload => ({
@@ -3198,7 +3206,9 @@ function NoticesSection({ token, lang }: { token: string; lang: string }) {
     company_id: d.audience === "by_company" && d.company_id.trim() !== "" ? Number(d.company_id) : null,
     channels: d.channels.length > 0 ? d.channels : ["in_app"],
     priority: d.priority,
-    scheduled_for: d.scheduled_for.trim() !== "" ? d.scheduled_for : null,
+    // datetime-local is the ADMIN'S local wall-clock — send a real ISO
+    // timestamp so the backend doesn't read 10:00 Yerevan as 10:00 UTC.
+    scheduled_for: d.scheduled_for.trim() !== "" ? new Date(d.scheduled_for).toISOString() : null,
     ...(sendNow ? { send_now: true } : {}),
   });
 
