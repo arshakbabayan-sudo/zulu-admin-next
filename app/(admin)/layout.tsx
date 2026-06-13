@@ -43,11 +43,8 @@ const MGMT_PREFIXES = [
   "/localization/templates",
   // 2026-06-05 pt3 — Content cluster migration. Banners / system notifications /
   // newsletter have NO sub-routes, so they are safe as startsWith prefixes.
-  // CMS pages list "/pages" stays in MGMT_EXACT. 2026-06-13 redesign — the editor
-  // "/pages/{id}/edit" was restyled to mount the magenta mgmt shell itself, so it
-  // must now BYPASS AdminShell too (else double chrome). The "/pages/" prefix
-  // matches the editor (and any future /pages/* sub-route) but NOT the bare list.
-  "/pages/",
+  // CMS pages (/pages) is handled by MGMT_EXACT instead: a bare "/pages" prefix
+  // would also swallow the /pages/[id]/edit editor, which must keep AdminShell.
   "/platform/banners",
   "/platform/notifications",
   "/platform/newsletter",
