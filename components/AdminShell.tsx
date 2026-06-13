@@ -151,33 +151,12 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         }`}
         style={{ borderColor: "var(--admin-border)", backgroundColor: "var(--admin-surface)" }}
       >
-        {/* v2 admin-redesign — sidebar brand block (logo + ZULU label +
-            "Admin panel" subtitle). Per docs/zulu-admin-v2.html lines 234-241.
-            Hidden when sidebar collapsed to icon-only on desktop. */}
-        {sidebarOpen ? (
-          <div
-            className="flex items-center gap-2.5 border-b px-3 py-3"
-            style={{ borderColor: "var(--admin-border)" }}
-          >
-            <div
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] font-bold text-white"
-              style={{ backgroundColor: "var(--admin-primary)" }}
-              aria-hidden
-            >
-              Z
-            </div>
-            <div className="min-w-0">
-              <div className="text-[14px] font-semibold leading-tight" style={{ color: "var(--admin-text-primary)" }}>
-                ZULU
-              </div>
-              <div className="text-[11px] leading-tight" style={{ color: "var(--admin-text-secondary)" }}>
-                {t("admin.shell.brand_subtitle") !== "admin.shell.brand_subtitle"
-                  ? t("admin.shell.brand_subtitle")
-                  : "Admin panel"}
-              </div>
-            </div>
-          </div>
-        ) : null}
+        {/* 2026-06-13 (Arshak) — removed the redundant sidebar brand block
+            ("Z ZULU / Admin panel"). The ZULU wordmark already lives in
+            AdminHeader, and this block only existed on AdminShell pages (the mgmt
+            shells never had it), so the left-menu items started ~57px lower here
+            than on CRM/Settings/Management — the menus visibly jumped when
+            switching sections. Dropping it aligns the menu start across all shells. */}
         <nav className="flex flex-col gap-1.5 px-3 py-3 text-sm">
           {(() => {
             // Sidebar group visibility is now driven SOLELY by the per-group
