@@ -2113,7 +2113,7 @@ export function Header({
 }: {
   collapsed: boolean;
   onHamburger: () => void;
-  user: { name?: string | null; email?: string | null; context?: { world?: string } } | null;
+  user: { name?: string | null; email?: string | null; avatar?: string | null; context?: { world?: string } } | null;
   token: string | null;
   lang: string;
   languageOptions: Array<{ code: string; label: string }>;
@@ -2341,7 +2341,14 @@ export function Header({
             onClick={() => setUserMenuOpen((v) => !v)}
             title={s.accountMenu}
           >
-            <span className="user-avatar">{(user?.name ?? "?").slice(0, 1).toUpperCase()}</span>
+            <span className="user-avatar">
+              {user?.avatar ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={user.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+              ) : (
+                (user?.name ?? "?").slice(0, 1).toUpperCase()
+              )}
+            </span>
             <div>
               <div style={{ fontSize: 13, fontWeight: 500 }}>{user?.name ?? s.userFallback}</div>
               <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>{user?.context?.world || user?.email || ""}</div>
