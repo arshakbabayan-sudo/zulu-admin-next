@@ -539,74 +539,74 @@ function SliderWidgetForm({
   }
 
   return (
-    <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-fg-t7">{t("admin.widget_form.hero_slides")}</p>
+    <div className="cms-wf-panel">
+      <div className="cms-wf-head">
+        <p className="cms-wf-section-title">{t("admin.widget_form.hero_slides")}</p>
         <button
           type="button"
           onClick={addSlide}
-          className="rounded border border-default bg-white px-2.5 py-1 text-xs"
+          className="btn btn-sm"
         >
           {t("admin.widget_form.add_new_slide")}
         </button>
       </div>
 
-      {uploadErr ? <p className="mt-2 text-xs text-error-600">{uploadErr}</p> : null}
+      {uploadErr ? <p className="cms-wf-err">{uploadErr}</p> : null}
 
-      <div className="mt-3 space-y-3">
+      <div className="cms-wf-list" style={{ marginTop: 12 }}>
         {slides.length === 0 ? (
-          <p className="rounded border border-dashed border-default px-3 py-4 text-center text-xs text-fg-t6">
+          <p className="cms-wf-empty">
             {t("admin.widget_form.no_slides")}
           </p>
         ) : (
           slides.map((slide, index) => (
-            <div key={`slide-${index}`} className="rounded border border-default bg-white p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <p className="text-xs font-semibold text-fg-t11">{`${t("admin.widget_form.slide")} #${index + 1}`}</p>
+            <div key={`slide-${index}`} className="cms-wf-item">
+              <div className="cms-wf-head" style={{ marginBottom: 8 }}>
+                <p className="cms-wf-section-title">{`${t("admin.widget_form.slide")} #${index + 1}`}</p>
                 <button
                   type="button"
                   onClick={() => removeSlide(index)}
-                  className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-error-700"
+                  className="btn btn-danger btn-sm"
                 >
                   {t("admin.widget_form.remove_slide")}
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                <label className="text-xs text-fg-t7">
+              <div className="cms-wf-grid2">
+                <label className="fld cms-wf-fld">
                   {t("admin.widget_form.title")}
                   <input
                     value={slide.title}
                     onChange={(e) => updateSlide(index, { title: e.target.value })}
-                    className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm"
+                    className="cms-wf-input"
                   />
                 </label>
-                <label className="text-xs text-fg-t7">
+                <label className="fld cms-wf-fld">
                   {t("admin.widget_form.location")}
                   <input
                     value={slide.location}
                     onChange={(e) => updateSlide(index, { location: e.target.value })}
                     placeholder={t("admin.widget_form.location_placeholder")}
-                    className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm"
+                    className="cms-wf-input"
                   />
                 </label>
-                <label className="text-xs text-fg-t7">
+                <label className="fld cms-wf-fld">
                   {t("admin.widget_form.button_text")}
                   <input
                     value={slide.button_text}
                     onChange={(e) => updateSlide(index, { button_text: e.target.value })}
-                    className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm"
+                    className="cms-wf-input"
                   />
                 </label>
-                <label className="text-xs text-fg-t7">
+                <label className="fld cms-wf-fld">
                   {t("admin.widget_form.button_url")}
                   <input
                     value={slide.button_url}
                     onChange={(e) => updateSlide(index, { button_url: e.target.value })}
-                    className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm"
+                    className="cms-wf-input"
                   />
                 </label>
-                <label className="text-xs text-fg-t7">
+                <label className="fld cms-wf-fld">
                   {t("admin.widget_form.rating")}
                   <input
                     type="number"
@@ -616,10 +616,10 @@ function SliderWidgetForm({
                     onChange={(e) =>
                       updateSlide(index, { rating: normalizeRating(e.target.value) })
                     }
-                    className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm"
+                    className="cms-wf-input"
                   />
                 </label>
-                <label className="text-xs text-fg-t7">
+                <label className="fld cms-wf-fld">
                   {t("admin.widget_form.background_image")}
                   <input
                     type="file"
@@ -630,24 +630,24 @@ function SliderWidgetForm({
                       void uploadImage(index, file);
                       e.currentTarget.value = "";
                     }}
-                    className="mt-1 block w-full text-xs"
+                    className="cms-wf-file"
                   />
                   {uploadingIndex === index ? (
-                    <span className="mt-1 block text-xs text-fg-t6">{t("admin.widget_form.uploading")}</span>
+                    <span className="cms-wf-hint">{t("admin.widget_form.uploading")}</span>
                   ) : null}
                   {slide.img ? (
-                    <span className="mt-1 block text-[11px] text-fg-t6">{t("admin.widget_form.saved_file")}: {slide.img}</span>
+                    <span className="cms-wf-hint">{t("admin.widget_form.saved_file")}: {slide.img}</span>
                   ) : null}
                 </label>
               </div>
 
-              <label className="mt-2 block text-xs text-fg-t7">
+              <label className="fld cms-wf-fld">
                 {t("admin.widget_form.description")}
                 <textarea
                   value={slide.description}
                   onChange={(e) => updateSlide(index, { description: e.target.value })}
                   rows={3}
-                  className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm"
+                  className="cms-wf-input"
                 />
               </label>
             </div>
@@ -655,12 +655,12 @@ function SliderWidgetForm({
         )}
       </div>
 
-      <div className="mt-3 flex justify-end">
+      <div className="cms-wf-save">
         <button
           type="button"
           disabled={saving}
           onClick={() => void onSave()}
-          className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+          className="btn btn-primary btn-sm"
         >
           {saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}
         </button>
@@ -679,23 +679,16 @@ function SwitchField({
   label: string;
 }) {
   return (
-    <label className="flex items-center justify-between gap-3 rounded border border-default bg-white px-3 py-2 text-sm text-fg-t7">
+    <label className="cms-wf-switch-field">
       <span>{label}</span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        onClick={() => onChange(!checked)}
-        className={`relative h-6 w-11 rounded-full transition ${
-          checked ? "bg-primary-500" : "bg-slate-300"
-        }`}
-      >
-        <span
-          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ${
-            checked ? "left-[22px]" : "left-0.5"
-          }`}
+      <span className="switch">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked)}
         />
-      </button>
+        <span className="switch-slider" />
+      </span>
     </label>
   );
 }
@@ -718,9 +711,9 @@ function SearchWidgetForm({
   }
 
   return (
-    <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
-      <p className="text-xs font-medium text-fg-t7">{t("admin.widget_form.search_modules")}</p>
-      <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
+    <div className="cms-wf-panel">
+      <p className="cms-wf-section-title">{t("admin.widget_form.search_modules")}</p>
+      <div className="cms-wf-grid2" style={{ marginTop: 8 }}>
         <SwitchField
           checked={searchOptions.flights}
           onChange={(v) => setOption("flights", v)}
@@ -752,12 +745,12 @@ function SearchWidgetForm({
           label={t("admin.widget_form.enable_package_search")}
         />
       </div>
-      <div className="mt-3 flex justify-end">
+      <div className="cms-wf-save">
         <button
           type="button"
           disabled={saving}
           onClick={() => void onSave()}
-          className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+          className="btn btn-primary btn-sm"
         >
           {saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}
         </button>
@@ -820,35 +813,35 @@ function AboutUsWidgetForm({
   }
 
   return (
-    <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-        <label className="text-xs text-fg-t7">
+    <div className="cms-wf-panel">
+      <div className="cms-wf-grid2">
+        <label className="fld cms-wf-fld">
           {t("admin.widget_form.widget_title")}
           <input
             value={value.widget_title}
             onChange={(e) => patch({ widget_title: e.target.value })}
-            className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm"
+            className="cms-wf-input"
           />
         </label>
-        <label className="text-xs text-fg-t7">
+        <label className="fld cms-wf-fld">
           {t("admin.widget_form.main_title")}
           <input
             value={value.main_title}
             onChange={(e) => patch({ main_title: e.target.value })}
-            className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm"
+            className="cms-wf-input"
           />
         </label>
-        <label className="text-xs text-fg-t7">
+        <label className="fld cms-wf-fld">
           {t("admin.widget_form.customer_count")}
           <input
             type="number"
             min={0}
             value={value.customer_count}
             onChange={(e) => patch({ customer_count: normalizeCount(e.target.value) })}
-            className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm"
+            className="cms-wf-input"
           />
         </label>
-        <label className="text-xs text-fg-t7">
+        <label className="fld cms-wf-fld">
           {t("admin.widget_form.about_image")}
           <input
             type="file"
@@ -859,89 +852,89 @@ function AboutUsWidgetForm({
               void uploadAboutImage(file);
               e.currentTarget.value = "";
             }}
-            className="mt-1 block w-full text-xs"
+            className="cms-wf-file"
           />
-          {uploading ? <span className="mt-1 block text-xs text-fg-t6">{t("admin.widget_form.uploading")}</span> : null}
+          {uploading ? <span className="cms-wf-hint">{t("admin.widget_form.uploading")}</span> : null}
           {value.about_image ? (
-            <span className="mt-1 block text-[11px] text-fg-t6">{t("admin.widget_form.saved_file")}: {value.about_image}</span>
+            <span className="cms-wf-hint">{t("admin.widget_form.saved_file")}: {value.about_image}</span>
           ) : null}
-          {uploadErr ? <span className="mt-1 block text-xs text-error-600">{uploadErr}</span> : null}
+          {uploadErr ? <span className="cms-wf-err">{uploadErr}</span> : null}
         </label>
-        <label className="text-xs text-fg-t7">
+        <label className="fld cms-wf-fld">
           {t("admin.widget_form.button_text")}
           <input
             value={value.button_text}
             onChange={(e) => patch({ button_text: e.target.value })}
-            className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm"
+            className="cms-wf-input"
           />
         </label>
-        <label className="text-xs text-fg-t7">
+        <label className="fld cms-wf-fld">
           {t("admin.widget_form.button_url")}
           <input
             value={value.button_url}
             onChange={(e) => patch({ button_url: e.target.value })}
-            className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm"
+            className="cms-wf-input"
           />
         </label>
       </div>
 
-      <label className="mt-2 block text-xs text-fg-t7">
+      <label className="fld cms-wf-fld">
         {t("admin.widget_form.description")}
         <textarea
           value={value.description}
           onChange={(e) => patch({ description: e.target.value })}
           rows={4}
-          className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm"
+          className="cms-wf-input"
         />
       </label>
 
-      <div className="mt-3 rounded border border-default bg-white p-3">
-        <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold text-fg-t11">{t("admin.widget_form.tabs")}</p>
+      <div className="cms-wf-item" style={{ marginTop: 12 }}>
+        <div className="cms-wf-head">
+          <p className="cms-wf-section-title">{t("admin.widget_form.tabs")}</p>
           <button
             type="button"
             onClick={addTab}
-            className="rounded border border-default bg-white px-2.5 py-1 text-xs"
+            className="btn btn-sm"
           >
             Add Tab
           </button>
         </div>
 
-        <div className="mt-2 space-y-2">
+        <div className="cms-wf-list" style={{ marginTop: 8 }}>
           {value.tabs.length === 0 ? (
-            <p className="text-xs text-fg-t6">{t("admin.widget_form.no_tabs")}</p>
+            <p className="cms-wf-muted">{t("admin.widget_form.no_tabs")}</p>
           ) : (
             value.tabs.map((tab, index) => (
-              <div key={`about-tab-${index}`} className="rounded border border-default p-2">
-                <div className="mb-2 flex items-center justify-between">
-                  <p className="text-xs font-medium text-fg-t7">{`${t("admin.widget_form.tab")} #${index + 1}`}</p>
+              <div key={`about-tab-${index}`} className="cms-wf-item">
+                <div className="cms-wf-head" style={{ marginBottom: 8 }}>
+                  <p className="cms-wf-section-title">{`${t("admin.widget_form.tab")} #${index + 1}`}</p>
                   <button
                     type="button"
                     onClick={() => removeTab(index)}
-                    className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-error-700"
+                    className="btn btn-danger btn-sm"
                   >
                     Remove
                   </button>
                 </div>
-                <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                  <label className="text-xs text-fg-t7">
+                <div className="cms-wf-grid2">
+                  <label className="fld cms-wf-fld">
                     {t("admin.widget_form.tab_name")}
                     <input
                       value={tab.tab_name}
                       onChange={(e) => updateTab(index, { tab_name: e.target.value })}
-                      className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm"
+                      className="cms-wf-input"
                     />
                   </label>
-                  <label className="text-xs text-fg-t7">
+                  <label className="fld cms-wf-fld">
                     {t("admin.widget_form.tab_icon")}
                     <input
                       value={tab.tab_icon}
                       onChange={(e) => updateTab(index, { tab_icon: e.target.value })}
-                      className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm"
+                      className="cms-wf-input"
                     />
                   </label>
                 </div>
-                <label className="mt-2 block text-xs text-fg-t7">
+                <label className="fld cms-wf-fld">
                   {t("admin.widget_form.tab_description")}
                   <textarea
                     value={tab.tab_description}
@@ -949,7 +942,7 @@ function AboutUsWidgetForm({
                       updateTab(index, { tab_description: e.target.value })
                     }
                     rows={3}
-                    className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm"
+                    className="cms-wf-input"
                   />
                 </label>
               </div>
@@ -958,12 +951,12 @@ function AboutUsWidgetForm({
         </div>
       </div>
 
-      <div className="mt-3 flex justify-end">
+      <div className="cms-wf-save">
         <button
           type="button"
           disabled={saving}
           onClick={() => void onSave()}
-          className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+          className="btn btn-primary btn-sm"
         >
           {saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}
         </button>
@@ -990,35 +983,35 @@ function FeaturesWidgetForm({
     onItemsChange(items.map((item, i) => (i === index ? { ...item, ...patch } : item)));
   }
   return (
-    <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-fg-t7">{title}</p>
-        <button type="button" onClick={() => onItemsChange([...items, { ...DEFAULT_FEATURE_ITEM }])} className="rounded border border-default bg-white px-2.5 py-1 text-xs">
+    <div className="cms-wf-panel">
+      <div className="cms-wf-head">
+        <p className="cms-wf-section-title">{title}</p>
+        <button type="button" onClick={() => onItemsChange([...items, { ...DEFAULT_FEATURE_ITEM }])} className="btn btn-sm">
           Add
         </button>
       </div>
-      <div className="mt-2 space-y-2">
+      <div className="cms-wf-list" style={{ marginTop: 8 }}>
         {items.map((item, index) => (
-          <div key={`feature-${index}`} className="rounded border border-default bg-white p-2">
-            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-              <label className="text-xs text-fg-t7">{t("admin.widget_form.icon")}
-                <input value={item.icon} onChange={(e) => updateItem(index, { icon: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+          <div key={`feature-${index}`} className="cms-wf-item">
+            <div className="cms-wf-grid2">
+              <label className="fld cms-wf-fld">{t("admin.widget_form.icon")}
+                <input value={item.icon} onChange={(e) => updateItem(index, { icon: e.target.value })} className="cms-wf-input" />
               </label>
-              <label className="text-xs text-fg-t7">{t("admin.widget_form.title")}
-                <input value={item.title} onChange={(e) => updateItem(index, { title: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+              <label className="fld cms-wf-fld">{t("admin.widget_form.title")}
+                <input value={item.title} onChange={(e) => updateItem(index, { title: e.target.value })} className="cms-wf-input" />
               </label>
             </div>
-            <label className="mt-2 block text-xs text-fg-t7">{t("admin.widget_form.description")}
-              <textarea value={item.description} onChange={(e) => updateItem(index, { description: e.target.value })} rows={3} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+            <label className="fld cms-wf-fld">{t("admin.widget_form.description")}
+              <textarea value={item.description} onChange={(e) => updateItem(index, { description: e.target.value })} rows={3} className="cms-wf-input" />
             </label>
-            <div className="mt-2 flex justify-end">
-              <button type="button" onClick={() => onItemsChange(items.filter((_, i) => i !== index))} className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-error-700">{t("admin.widget_form.remove")}</button>
+            <div className="cms-wf-save">
+              <button type="button" onClick={() => onItemsChange(items.filter((_, i) => i !== index))} className="btn btn-danger btn-sm">{t("admin.widget_form.remove")}</button>
             </div>
           </div>
         ))}
       </div>
-      <div className="mt-3 flex justify-end">
-        <button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button>
+      <div className="cms-wf-save">
+        <button type="button" disabled={saving} onClick={() => void onSave()} className="btn btn-primary btn-sm">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button>
       </div>
     </div>
   );
@@ -1040,32 +1033,32 @@ function FunFactsWidgetForm({
     onItemsChange(items.map((item, i) => (i === index ? { ...item, ...patch } : item)));
   }
   return (
-    <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-fg-t7">{t("admin.widget_form.fun_facts")}</p>
-        <button type="button" onClick={() => onItemsChange([...items, { ...DEFAULT_FUN_FACT_ITEM }])} className="rounded border border-default bg-white px-2.5 py-1 text-xs">{t("common.add")}</button>
+    <div className="cms-wf-panel">
+      <div className="cms-wf-head">
+        <p className="cms-wf-section-title">{t("admin.widget_form.fun_facts")}</p>
+        <button type="button" onClick={() => onItemsChange([...items, { ...DEFAULT_FUN_FACT_ITEM }])} className="btn btn-sm">{t("common.add")}</button>
       </div>
-      <div className="mt-2 space-y-2">
+      <div className="cms-wf-list" style={{ marginTop: 8 }}>
         {items.map((item, index) => (
-          <div key={`fun-${index}`} className="rounded border border-default bg-white p-2">
-            <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-              <label className="text-xs text-fg-t7">{t("admin.widget_form.icon")}
-                <input value={item.icon} onChange={(e) => updateItem(index, { icon: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+          <div key={`fun-${index}`} className="cms-wf-item">
+            <div className="cms-wf-grid3">
+              <label className="fld cms-wf-fld">{t("admin.widget_form.icon")}
+                <input value={item.icon} onChange={(e) => updateItem(index, { icon: e.target.value })} className="cms-wf-input" />
               </label>
-              <label className="text-xs text-fg-t7">{t("admin.widget_form.number")}
-                <input value={item.number} onChange={(e) => updateItem(index, { number: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+              <label className="fld cms-wf-fld">{t("admin.widget_form.number")}
+                <input value={item.number} onChange={(e) => updateItem(index, { number: e.target.value })} className="cms-wf-input" />
               </label>
-              <label className="text-xs text-fg-t7">{t("admin.widget_form.label")}
-                <input value={item.label} onChange={(e) => updateItem(index, { label: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+              <label className="fld cms-wf-fld">{t("admin.widget_form.label")}
+                <input value={item.label} onChange={(e) => updateItem(index, { label: e.target.value })} className="cms-wf-input" />
               </label>
             </div>
-            <div className="mt-2 flex justify-end">
-              <button type="button" onClick={() => onItemsChange(items.filter((_, i) => i !== index))} className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-error-700">{t("admin.widget_form.remove")}</button>
+            <div className="cms-wf-save">
+              <button type="button" onClick={() => onItemsChange(items.filter((_, i) => i !== index))} className="btn btn-danger btn-sm">{t("admin.widget_form.remove")}</button>
             </div>
           </div>
         ))}
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
+      <div className="cms-wf-save"><button type="button" disabled={saving} onClick={() => void onSave()} className="btn btn-primary btn-sm">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1086,25 +1079,25 @@ function FaqWidgetForm({
     onItemsChange(items.map((item, i) => (i === index ? { ...item, ...patch } : item)));
   }
   return (
-    <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-fg-t7">{t("admin.widget_form.faq")}</p>
-        <button type="button" onClick={() => onItemsChange([...items, { ...DEFAULT_FAQ_ITEM }])} className="rounded border border-default bg-white px-2.5 py-1 text-xs">{t("common.add")}</button>
+    <div className="cms-wf-panel">
+      <div className="cms-wf-head">
+        <p className="cms-wf-section-title">{t("admin.widget_form.faq")}</p>
+        <button type="button" onClick={() => onItemsChange([...items, { ...DEFAULT_FAQ_ITEM }])} className="btn btn-sm">{t("common.add")}</button>
       </div>
-      <div className="mt-2 space-y-2">
+      <div className="cms-wf-list" style={{ marginTop: 8 }}>
         {items.map((item, index) => (
-          <div key={`faq-${index}`} className="rounded border border-default bg-white p-2">
-            <label className="block text-xs text-fg-t7">{t("admin.widget_form.question")}
-              <input value={item.question} onChange={(e) => updateItem(index, { question: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+          <div key={`faq-${index}`} className="cms-wf-item">
+            <label className="fld cms-wf-fld">{t("admin.widget_form.question")}
+              <input value={item.question} onChange={(e) => updateItem(index, { question: e.target.value })} className="cms-wf-input" />
             </label>
-            <label className="mt-2 block text-xs text-fg-t7">{t("admin.widget_form.answer")}
-              <textarea value={item.answer} onChange={(e) => updateItem(index, { answer: e.target.value })} rows={3} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+            <label className="fld cms-wf-fld">{t("admin.widget_form.answer")}
+              <textarea value={item.answer} onChange={(e) => updateItem(index, { answer: e.target.value })} rows={3} className="cms-wf-input" />
             </label>
-            <div className="mt-2 flex justify-end"><button type="button" onClick={() => onItemsChange(items.filter((_, i) => i !== index))} className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-error-700">{t("admin.widget_form.remove")}</button></div>
+            <div className="cms-wf-save"><button type="button" onClick={() => onItemsChange(items.filter((_, i) => i !== index))} className="btn btn-danger btn-sm">{t("admin.widget_form.remove")}</button></div>
           </div>
         ))}
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
+      <div className="cms-wf-save"><button type="button" disabled={saving} onClick={() => void onSave()} className="btn btn-primary btn-sm">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1140,38 +1133,38 @@ function TestimonialsWidgetForm({
   }
 
   return (
-    <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-fg-t7">{t("admin.widget_form.testimonials")}</p>
-        <button type="button" onClick={() => onItemsChange([...items, { ...DEFAULT_TESTIMONIAL_ITEM }])} className="rounded border border-default bg-white px-2.5 py-1 text-xs">{t("common.add")}</button>
+    <div className="cms-wf-panel">
+      <div className="cms-wf-head">
+        <p className="cms-wf-section-title">{t("admin.widget_form.testimonials")}</p>
+        <button type="button" onClick={() => onItemsChange([...items, { ...DEFAULT_TESTIMONIAL_ITEM }])} className="btn btn-sm">{t("common.add")}</button>
       </div>
-      <div className="mt-2 space-y-2">
+      <div className="cms-wf-list" style={{ marginTop: 8 }}>
         {items.map((item, index) => (
-          <div key={`testimonial-${index}`} className="rounded border border-default bg-white p-2">
-            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-              <label className="text-xs text-fg-t7">{t("admin.widget_form.author_name")}
-                <input value={item.author_name} onChange={(e) => updateItem(index, { author_name: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+          <div key={`testimonial-${index}`} className="cms-wf-item">
+            <div className="cms-wf-grid2">
+              <label className="fld cms-wf-fld">{t("admin.widget_form.author_name")}
+                <input value={item.author_name} onChange={(e) => updateItem(index, { author_name: e.target.value })} className="cms-wf-input" />
               </label>
-              <label className="text-xs text-fg-t7">{t("admin.widget_form.date")}
-                <input value={item.date} onChange={(e) => updateItem(index, { date: e.target.value })} placeholder={t("admin.widget_form.date_placeholder")} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+              <label className="fld cms-wf-fld">{t("admin.widget_form.date")}
+                <input value={item.date} onChange={(e) => updateItem(index, { date: e.target.value })} placeholder={t("admin.widget_form.date_placeholder")} className="cms-wf-input" />
               </label>
-              <label className="text-xs text-fg-t7">{t("admin.widget_form.rating")}
-                <input type="number" min={1} max={5} value={item.rating} onChange={(e) => updateItem(index, { rating: normalizeRating(e.target.value) })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+              <label className="fld cms-wf-fld">{t("admin.widget_form.rating")}
+                <input type="number" min={1} max={5} value={item.rating} onChange={(e) => updateItem(index, { rating: normalizeRating(e.target.value) })} className="cms-wf-input" />
               </label>
-              <label className="text-xs text-fg-t7">{t("admin.widget_form.profile_image")}
-                <input type="file" accept="image/jpeg,image/png,image/jpg,image/webp,image/gif,image/svg+xml" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; void uploadProfileImage(index, file); e.currentTarget.value = ""; }} className="mt-1 block w-full text-xs" />
-                {uploadingIndex === index ? <span className="mt-1 block text-xs text-fg-t6">{t("admin.widget_form.uploading")}</span> : null}
-                {item.profile_image ? <span className="mt-1 block text-[11px] text-fg-t6">{t("admin.widget_form.saved_file")}: {item.profile_image}</span> : null}
+              <label className="fld cms-wf-fld">{t("admin.widget_form.profile_image")}
+                <input type="file" accept="image/jpeg,image/png,image/jpg,image/webp,image/gif,image/svg+xml" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; void uploadProfileImage(index, file); e.currentTarget.value = ""; }} className="cms-wf-file" />
+                {uploadingIndex === index ? <span className="cms-wf-hint">{t("admin.widget_form.uploading")}</span> : null}
+                {item.profile_image ? <span className="cms-wf-hint">{t("admin.widget_form.saved_file")}: {item.profile_image}</span> : null}
               </label>
             </div>
-            <label className="mt-2 block text-xs text-fg-t7">{t("admin.widget_form.review_text")}
-              <textarea value={item.review_text} onChange={(e) => updateItem(index, { review_text: e.target.value })} rows={3} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+            <label className="fld cms-wf-fld">{t("admin.widget_form.review_text")}
+              <textarea value={item.review_text} onChange={(e) => updateItem(index, { review_text: e.target.value })} rows={3} className="cms-wf-input" />
             </label>
-            <div className="mt-2 flex justify-end"><button type="button" onClick={() => onItemsChange(items.filter((_, i) => i !== index))} className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-error-700">{t("admin.widget_form.remove")}</button></div>
+            <div className="cms-wf-save"><button type="button" onClick={() => onItemsChange(items.filter((_, i) => i !== index))} className="btn btn-danger btn-sm">{t("admin.widget_form.remove")}</button></div>
           </div>
         ))}
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
+      <div className="cms-wf-save"><button type="button" disabled={saving} onClick={() => void onSave()} className="btn btn-primary btn-sm">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1189,19 +1182,19 @@ function LatestOffersWidgetForm({
 }) {
   const { t } = useLanguage();
   return (
-    <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-        <label className="text-xs text-fg-t7">{t("admin.widget_form.widget_title")}
-          <input value={value.widget_title} onChange={(e) => onChange({ ...value, widget_title: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+    <div className="cms-wf-panel">
+      <div className="cms-wf-grid3">
+        <label className="fld cms-wf-fld">{t("admin.widget_form.widget_title")}
+          <input value={value.widget_title} onChange={(e) => onChange({ ...value, widget_title: e.target.value })} className="cms-wf-input" />
         </label>
-        <label className="text-xs text-fg-t7">{t("admin.widget_form.show_count")}
-          <input type="number" min={1} value={value.show_count} onChange={(e) => onChange({ ...value, show_count: Math.max(1, normalizeCount(e.target.value)) })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+        <label className="fld cms-wf-fld">{t("admin.widget_form.show_count")}
+          <input type="number" min={1} value={value.show_count} onChange={(e) => onChange({ ...value, show_count: Math.max(1, normalizeCount(e.target.value)) })} className="cms-wf-input" />
         </label>
-        <label className="text-xs text-fg-t7">{t("admin.widget_form.filter_by_category")}
-          <input value={value.category_filter} onChange={(e) => onChange({ ...value, category_filter: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+        <label className="fld cms-wf-fld">{t("admin.widget_form.filter_by_category")}
+          <input value={value.category_filter} onChange={(e) => onChange({ ...value, category_filter: e.target.value })} className="cms-wf-input" />
         </label>
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
+      <div className="cms-wf-save"><button type="button" disabled={saving} onClick={() => void onSave()} className="btn btn-primary btn-sm">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1222,43 +1215,43 @@ function ContactUsWidgetForm({
     onChange({ ...value, ...p });
   }
   return (
-    <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-        <label className="text-xs text-fg-t7">{t("admin.widget_form.widget_title")}
-          <input value={value.widget_title} onChange={(e) => patch({ widget_title: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+    <div className="cms-wf-panel">
+      <div className="cms-wf-grid2">
+        <label className="fld cms-wf-fld">{t("admin.widget_form.widget_title")}
+          <input value={value.widget_title} onChange={(e) => patch({ widget_title: e.target.value })} className="cms-wf-input" />
         </label>
-        <label className="text-xs text-fg-t7">{t("admin.widget_form.map_embed_url")}
-          <input value={value.map_embed_url} onChange={(e) => patch({ map_embed_url: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+        <label className="fld cms-wf-fld">{t("admin.widget_form.map_embed_url")}
+          <input value={value.map_embed_url} onChange={(e) => patch({ map_embed_url: e.target.value })} className="cms-wf-input" />
         </label>
       </div>
-      <label className="mt-2 block text-xs text-fg-t7">{t("admin.widget_form.address")}
-        <textarea value={value.address} onChange={(e) => patch({ address: e.target.value })} rows={2} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+      <label className="fld cms-wf-fld">{t("admin.widget_form.address")}
+        <textarea value={value.address} onChange={(e) => patch({ address: e.target.value })} rows={2} className="cms-wf-input" />
       </label>
-      <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-        <div className="rounded border border-default bg-white p-2">
-          <div className="flex items-center justify-between"><p className="text-xs font-semibold">{t("admin.widget_form.phones")}</p><button type="button" onClick={() => patch({ phones: [...value.phones, ""] })} className="rounded border border-default bg-white px-2 py-1 text-xs">{t("common.add")}</button></div>
-          <div className="mt-2 space-y-2">
+      <div className="cms-wf-grid2" style={{ marginTop: 12 }}>
+        <div className="cms-wf-item">
+          <div className="cms-wf-head"><p className="cms-wf-section-title">{t("admin.widget_form.phones")}</p><button type="button" onClick={() => patch({ phones: [...value.phones, ""] })} className="btn btn-sm">{t("common.add")}</button></div>
+          <div className="cms-wf-list" style={{ marginTop: 8 }}>
             {value.phones.map((phone, idx) => (
-              <div key={`phone-${idx}`} className="flex items-center gap-2">
-                <input value={phone} onChange={(e) => patch({ phones: value.phones.map((p, i) => i === idx ? e.target.value : p) })} className="w-full rounded border border-default px-2 py-1.5 text-sm" />
-                <button type="button" onClick={() => patch({ phones: value.phones.filter((_, i) => i !== idx) })} className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-error-700">{t("admin.widget_form.remove")}</button>
+              <div key={`phone-${idx}`} className="cms-wf-inline-row">
+                <input value={phone} onChange={(e) => patch({ phones: value.phones.map((p, i) => i === idx ? e.target.value : p) })} className="cms-wf-input" />
+                <button type="button" onClick={() => patch({ phones: value.phones.filter((_, i) => i !== idx) })} className="btn btn-danger btn-sm">{t("admin.widget_form.remove")}</button>
               </div>
             ))}
           </div>
         </div>
-        <div className="rounded border border-default bg-white p-2">
-          <div className="flex items-center justify-between"><p className="text-xs font-semibold">{t("admin.widget_form.emails")}</p><button type="button" onClick={() => patch({ emails: [...value.emails, ""] })} className="rounded border border-default bg-white px-2 py-1 text-xs">{t("common.add")}</button></div>
-          <div className="mt-2 space-y-2">
+        <div className="cms-wf-item">
+          <div className="cms-wf-head"><p className="cms-wf-section-title">{t("admin.widget_form.emails")}</p><button type="button" onClick={() => patch({ emails: [...value.emails, ""] })} className="btn btn-sm">{t("common.add")}</button></div>
+          <div className="cms-wf-list" style={{ marginTop: 8 }}>
             {value.emails.map((email, idx) => (
-              <div key={`email-${idx}`} className="flex items-center gap-2">
-                <input value={email} onChange={(e) => patch({ emails: value.emails.map((m, i) => i === idx ? e.target.value : m) })} className="w-full rounded border border-default px-2 py-1.5 text-sm" />
-                <button type="button" onClick={() => patch({ emails: value.emails.filter((_, i) => i !== idx) })} className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-error-700">{t("admin.widget_form.remove")}</button>
+              <div key={`email-${idx}`} className="cms-wf-inline-row">
+                <input value={email} onChange={(e) => patch({ emails: value.emails.map((m, i) => i === idx ? e.target.value : m) })} className="cms-wf-input" />
+                <button type="button" onClick={() => patch({ emails: value.emails.filter((_, i) => i !== idx) })} className="btn btn-danger btn-sm">{t("admin.widget_form.remove")}</button>
               </div>
             ))}
           </div>
         </div>
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
+      <div className="cms-wf-save"><button type="button" disabled={saving} onClick={() => void onSave()} className="btn btn-primary btn-sm">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1288,27 +1281,27 @@ function CtaWidgetForm({
     }
   }
   return (
-    <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-        <label className="text-xs text-fg-t7">{t("admin.widget_form.title")}
-          <input value={value.title} onChange={(e) => onChange({ ...value, title: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+    <div className="cms-wf-panel">
+      <div className="cms-wf-grid2">
+        <label className="fld cms-wf-fld">{t("admin.widget_form.title")}
+          <input value={value.title} onChange={(e) => onChange({ ...value, title: e.target.value })} className="cms-wf-input" />
         </label>
-        <label className="text-xs text-fg-t7">{t("admin.widget_form.subtitle")}
-          <input value={value.subtitle} onChange={(e) => onChange({ ...value, subtitle: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+        <label className="fld cms-wf-fld">{t("admin.widget_form.subtitle")}
+          <input value={value.subtitle} onChange={(e) => onChange({ ...value, subtitle: e.target.value })} className="cms-wf-input" />
         </label>
-        <label className="text-xs text-fg-t7">{t("admin.widget_form.button_text")}
-          <input value={value.button_text} onChange={(e) => onChange({ ...value, button_text: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+        <label className="fld cms-wf-fld">{t("admin.widget_form.button_text")}
+          <input value={value.button_text} onChange={(e) => onChange({ ...value, button_text: e.target.value })} className="cms-wf-input" />
         </label>
-        <label className="text-xs text-fg-t7">{t("admin.widget_form.button_url")}
-          <input value={value.button_url} onChange={(e) => onChange({ ...value, button_url: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+        <label className="fld cms-wf-fld">{t("admin.widget_form.button_url")}
+          <input value={value.button_url} onChange={(e) => onChange({ ...value, button_url: e.target.value })} className="cms-wf-input" />
         </label>
-        <label className="text-xs text-fg-t7">{t("admin.widget_form.background_image")}
-          <input type="file" accept="image/jpeg,image/png,image/jpg,image/webp,image/gif,image/svg+xml" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; void uploadBackground(file); e.currentTarget.value = ""; }} className="mt-1 block w-full text-xs" />
-          {uploading ? <span className="mt-1 block text-xs text-fg-t6">{t("admin.widget_form.uploading")}</span> : null}
-          {value.background_image ? <span className="mt-1 block text-[11px] text-fg-t6">{t("admin.widget_form.saved_file")}: {value.background_image}</span> : null}
+        <label className="fld cms-wf-fld">{t("admin.widget_form.background_image")}
+          <input type="file" accept="image/jpeg,image/png,image/jpg,image/webp,image/gif,image/svg+xml" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; void uploadBackground(file); e.currentTarget.value = ""; }} className="cms-wf-file" />
+          {uploading ? <span className="cms-wf-hint">{t("admin.widget_form.uploading")}</span> : null}
+          {value.background_image ? <span className="cms-wf-hint">{t("admin.widget_form.saved_file")}: {value.background_image}</span> : null}
         </label>
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
+      <div className="cms-wf-save"><button type="button" disabled={saving} onClick={() => void onSave()} className="btn btn-primary btn-sm">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1343,28 +1336,28 @@ function HomeHeroWidgetForm({
   }
 
   return (
-    <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-        <label className="text-xs text-fg-t7">{t("admin.widget_form.headline")}
-          <input value={value.headline} onChange={(e) => onChange({ ...value, headline: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+    <div className="cms-wf-panel">
+      <div className="cms-wf-grid2">
+        <label className="fld cms-wf-fld">{t("admin.widget_form.headline")}
+          <input value={value.headline} onChange={(e) => onChange({ ...value, headline: e.target.value })} className="cms-wf-input" />
         </label>
-        <label className="text-xs text-fg-t7">{t("admin.widget_form.subheadline")}
-          <input value={value.subheadline} onChange={(e) => onChange({ ...value, subheadline: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+        <label className="fld cms-wf-fld">{t("admin.widget_form.subheadline")}
+          <input value={value.subheadline} onChange={(e) => onChange({ ...value, subheadline: e.target.value })} className="cms-wf-input" />
         </label>
-        <label className="text-xs text-fg-t7">{t("admin.widget_form.button_text")}
-          <input value={value.button_text} onChange={(e) => onChange({ ...value, button_text: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+        <label className="fld cms-wf-fld">{t("admin.widget_form.button_text")}
+          <input value={value.button_text} onChange={(e) => onChange({ ...value, button_text: e.target.value })} className="cms-wf-input" />
         </label>
-        <label className="text-xs text-fg-t7">{t("admin.widget_form.button_url")}
-          <input value={value.button_url} onChange={(e) => onChange({ ...value, button_url: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+        <label className="fld cms-wf-fld">{t("admin.widget_form.button_url")}
+          <input value={value.button_url} onChange={(e) => onChange({ ...value, button_url: e.target.value })} className="cms-wf-input" />
         </label>
-        <label className="text-xs text-fg-t7">{t("admin.widget_form.background_image")}
-          <input type="file" accept="image/jpeg,image/png,image/jpg,image/webp,image/gif,image/svg+xml" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; void uploadBackground(file); e.currentTarget.value = ""; }} className="mt-1 block w-full text-xs" />
-          {uploading ? <span className="mt-1 block text-xs text-fg-t6">{t("admin.widget_form.uploading")}</span> : null}
-          {value.background_image ? <span className="mt-1 block text-[11px] text-fg-t6">{t("admin.widget_form.saved_file")}: {value.background_image}</span> : null}
-          {uploadErr ? <span className="mt-1 block text-xs text-error-600">{uploadErr}</span> : null}
+        <label className="fld cms-wf-fld">{t("admin.widget_form.background_image")}
+          <input type="file" accept="image/jpeg,image/png,image/jpg,image/webp,image/gif,image/svg+xml" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; void uploadBackground(file); e.currentTarget.value = ""; }} className="cms-wf-file" />
+          {uploading ? <span className="cms-wf-hint">{t("admin.widget_form.uploading")}</span> : null}
+          {value.background_image ? <span className="cms-wf-hint">{t("admin.widget_form.saved_file")}: {value.background_image}</span> : null}
+          {uploadErr ? <span className="cms-wf-err">{uploadErr}</span> : null}
         </label>
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
+      <div className="cms-wf-save"><button type="button" disabled={saving} onClick={() => void onSave()} className="btn btn-primary btn-sm">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1382,24 +1375,24 @@ function HomeSpecialOffersWidgetForm({
 }) {
   const { t } = useLanguage();
   return (
-    <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-        <label className="text-xs text-fg-t7">{t("admin.widget_form.section_title")}
-          <input value={value.section_title} onChange={(e) => onChange({ ...value, section_title: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+    <div className="cms-wf-panel">
+      <div className="cms-wf-grid2">
+        <label className="fld cms-wf-fld">{t("admin.widget_form.section_title")}
+          <input value={value.section_title} onChange={(e) => onChange({ ...value, section_title: e.target.value })} className="cms-wf-input" />
         </label>
-        <label className="text-xs text-fg-t7">{t("admin.widget_form.section_subtitle")}
-          <input value={value.section_subtitle} onChange={(e) => onChange({ ...value, section_subtitle: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+        <label className="fld cms-wf-fld">{t("admin.widget_form.section_subtitle")}
+          <input value={value.section_subtitle} onChange={(e) => onChange({ ...value, section_subtitle: e.target.value })} className="cms-wf-input" />
         </label>
       </div>
-      <div className="mt-3 rounded border border-info-200 bg-info-50 p-2 text-xs text-info-800">
-        <p className="font-medium">Auto-driven from packages</p>
-        <p className="mt-1 text-info-700">
+      <div className="cms-wf-info">
+        <p className="cms-wf-info-title">Auto-driven from packages</p>
+        <p className="cms-wf-info-sub">
           Items appear here automatically when you tag a package as
           «Special offers» via <code>Platform → Packages → Homepage feature</code>.
           The legacy items[] editor was removed.
         </p>
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
+      <div className="cms-wf-save"><button type="button" disabled={saving} onClick={() => void onSave()} className="btn btn-primary btn-sm">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1417,19 +1410,19 @@ function HomePopularDestinationsWidgetForm({
 }) {
   const { t } = useLanguage();
   return (
-    <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
-      <label className="text-xs text-fg-t7">{t("admin.widget_form.section_title")}
-        <input value={value.section_title} onChange={(e) => onChange({ ...value, section_title: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+    <div className="cms-wf-panel">
+      <label className="fld cms-wf-fld">{t("admin.widget_form.section_title")}
+        <input value={value.section_title} onChange={(e) => onChange({ ...value, section_title: e.target.value })} className="cms-wf-input" />
       </label>
-      <div className="mt-3 rounded border border-info-200 bg-info-50 p-2 text-xs text-info-800">
-        <p className="font-medium">Auto-driven from packages</p>
-        <p className="mt-1 text-info-700">
+      <div className="cms-wf-info">
+        <p className="cms-wf-info-title">Auto-driven from packages</p>
+        <p className="cms-wf-info-sub">
           Items appear here automatically when you tag a package as
           «Popular destinations» via <code>Platform → Packages → Homepage feature</code>.
           The legacy items[] editor was removed.
         </p>
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
+      <div className="cms-wf-save"><button type="button" disabled={saving} onClick={() => void onSave()} className="btn btn-primary btn-sm">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1445,16 +1438,16 @@ function HomePartnersWidgetForm({
 }) {
   const { t } = useLanguage();
   return (
-    <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
-      <div className="rounded border border-info-200 bg-info-50 p-2 text-xs text-info-800">
-        <p className="font-medium">Auto-driven from companies</p>
-        <p className="mt-1 text-info-700">
+    <div className="cms-wf-panel">
+      <div className="cms-wf-info">
+        <p className="cms-wf-info-title">Auto-driven from companies</p>
+        <p className="cms-wf-info-sub">
           Partner logos appear here automatically for operator companies with
           <code> Partner: ON </code> + a logo (set via <code>Platform → Companies → Partner</code>).
           The legacy items[] editor was removed.
         </p>
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
+      <div className="cms-wf-save"><button type="button" disabled={saving} onClick={() => void onSave()} className="btn btn-primary btn-sm">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1489,25 +1482,25 @@ function HomeNewsletterWidgetForm({
   }
 
   return (
-    <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-        <label className="text-xs text-fg-t7">{t("admin.widget_form.title")}
-          <input value={value.title} onChange={(e) => onChange({ ...value, title: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+    <div className="cms-wf-panel">
+      <div className="cms-wf-grid2">
+        <label className="fld cms-wf-fld">{t("admin.widget_form.title")}
+          <input value={value.title} onChange={(e) => onChange({ ...value, title: e.target.value })} className="cms-wf-input" />
         </label>
-        <label className="text-xs text-fg-t7">{t("admin.widget_form.subtitle")}
-          <input value={value.subtitle} onChange={(e) => onChange({ ...value, subtitle: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+        <label className="fld cms-wf-fld">{t("admin.widget_form.subtitle")}
+          <input value={value.subtitle} onChange={(e) => onChange({ ...value, subtitle: e.target.value })} className="cms-wf-input" />
         </label>
-        <label className="text-xs text-fg-t7">{t("admin.widget_form.button_text")}
-          <input value={value.button_text} onChange={(e) => onChange({ ...value, button_text: e.target.value })} className="mt-1 w-full rounded border border-default px-2 py-1.5 text-sm" />
+        <label className="fld cms-wf-fld">{t("admin.widget_form.button_text")}
+          <input value={value.button_text} onChange={(e) => onChange({ ...value, button_text: e.target.value })} className="cms-wf-input" />
         </label>
-        <label className="text-xs text-fg-t7">{t("admin.widget_form.background_image")}
-          <input type="file" accept="image/jpeg,image/png,image/jpg,image/webp,image/gif,image/svg+xml" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; void uploadBackground(file); e.currentTarget.value = ""; }} className="mt-1 block w-full text-xs" />
-          {uploading ? <span className="mt-1 block text-xs text-fg-t6">{t("admin.widget_form.uploading")}</span> : null}
-          {value.bg_image ? <span className="mt-1 block text-[11px] text-fg-t6">{t("admin.widget_form.saved_file")}: {value.bg_image}</span> : null}
-          {uploadErr ? <span className="mt-1 block text-xs text-error-600">{uploadErr}</span> : null}
+        <label className="fld cms-wf-fld">{t("admin.widget_form.background_image")}
+          <input type="file" accept="image/jpeg,image/png,image/jpg,image/webp,image/gif,image/svg+xml" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; void uploadBackground(file); e.currentTarget.value = ""; }} className="cms-wf-file" />
+          {uploading ? <span className="cms-wf-hint">{t("admin.widget_form.uploading")}</span> : null}
+          {value.bg_image ? <span className="cms-wf-hint">{t("admin.widget_form.saved_file")}: {value.bg_image}</span> : null}
+          {uploadErr ? <span className="cms-wf-err">{uploadErr}</span> : null}
         </label>
       </div>
-      <div className="mt-3 flex justify-end"><button type="button" disabled={saving} onClick={() => void onSave()} className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
+      <div className="cms-wf-save"><button type="button" disabled={saving} onClick={() => void onSave()} className="btn btn-primary btn-sm">{saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}</button></div>
     </div>
   );
 }
@@ -1710,21 +1703,21 @@ export function WidgetForm({ widget, activeLanguage, saving = false, onSave }: P
 
   if (widget.widget_slug === "text-editor") {
     return (
-      <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
-        <label className="block text-xs font-medium text-fg-t7">{t("admin.widget_form.text_content")}</label>
-        <div className="mt-1">
+      <div className="cms-wf-panel">
+        <label className="cms-wf-section-title">{t("admin.widget_form.text_content")}</label>
+        <div style={{ marginTop: 6 }}>
           <RichTextEditor
             value={textValue}
             onChange={setTextValue}
             placeholder={t("admin.widget_form.enter_text_content")}
           />
         </div>
-        <div className="mt-2 flex justify-end">
+        <div className="cms-wf-save">
           <button
             type="button"
             disabled={saving}
             onClick={() => void handleSaveTextEditor()}
-            className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+            className="btn btn-primary btn-sm"
           >
             {saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}
           </button>
@@ -1894,14 +1887,14 @@ export function WidgetForm({ widget, activeLanguage, saving = false, onSave }: P
 
   if (widget.widget_slug === "home-hero-settings") {
     return (
-      <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
-        <div className="rounded border border-info-200 bg-info-50 p-3 text-xs text-info-800">
-          <p className="font-medium">Hero tabs configuration</p>
-          <p className="mt-1 text-info-700">
+      <div className="cms-wf-panel">
+        <div className="cms-wf-info">
+          <p className="cms-wf-info-title">Hero tabs configuration</p>
+          <p className="cms-wf-info-sub">
             Hero tab labels, order, and visibility are managed centrally —
-            open <a className="underline" href="/platform/settings">Platform → Settings → Hero tabs</a>.
+            open <a className="cms-wf-link" href="/platform/settings">Platform → Settings → Hero tabs</a>.
           </p>
-          <p className="mt-2 text-info-700">
+          <p className="cms-wf-info-sub">
             Used endpoint: <code>PATCH /api/platform-admin/site-settings/hero-tabs</code>.
           </p>
         </div>
@@ -1911,21 +1904,22 @@ export function WidgetForm({ widget, activeLanguage, saving = false, onSave }: P
 
   if (widget.widget_slug === "code-editor") {
     return (
-      <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
-        <label className="block text-xs font-medium text-fg-t7">{t("admin.widget_form.html_code")}</label>
+      <div className="cms-wf-panel">
+        <label className="cms-wf-section-title">{t("admin.widget_form.html_code")}</label>
         <textarea
           value={codeValue}
           onChange={(e) => setCodeValue(e.target.value)}
           rows={9}
-          className="mt-1 w-full rounded border border-default px-2 py-2 font-mono text-sm"
+          className="cms-wf-input font-mono"
+          style={{ marginTop: 6 }}
           placeholder="<section>...</section>"
         />
-        <div className="mt-2 flex justify-end">
+        <div className="cms-wf-save">
           <button
             type="button"
             disabled={saving}
             onClick={() => void handleSaveCodeEditor()}
-            className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+            className="btn btn-primary btn-sm"
           >
             {saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}
           </button>
@@ -1946,24 +1940,25 @@ export function WidgetForm({ widget, activeLanguage, saving = false, onSave }: P
   }
 
   return (
-    <div className="mt-3 rounded border border-default bg-figma-bg-1 p-3">
-      <p className="text-xs text-fg-t6">
+    <div className="cms-wf-panel">
+      <p className="cms-wf-muted">
         {t("admin.widget_form.no_dedicated_form")} <span className="font-mono">{widget.widget_slug}</span>.{" "}
         {t("admin.widget_form.use_raw_json_editor")}.
       </p>
-      {err ? <p className="mt-2 text-xs text-error-600">{err}</p> : null}
+      {err ? <p className="cms-wf-err" style={{ marginTop: 8 }}>{err}</p> : null}
       <textarea
         value={rawJson}
         onChange={(e) => setRawJson(e.target.value)}
         rows={10}
-        className="mt-2 w-full rounded border border-default px-2 py-2 font-mono text-xs"
+        className="cms-wf-input font-mono"
+        style={{ marginTop: 8 }}
       />
-      <div className="mt-2 flex justify-end">
+      <div className="cms-wf-save">
         <button
           type="button"
           disabled={saving}
           onClick={() => void handleSaveFallbackJson()}
-          className="rounded bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+          className="btn btn-primary btn-sm"
         >
           {saving ? t("admin.widget_form.saving") : t("admin.widget_form.save_widget")}
         </button>

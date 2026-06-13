@@ -1,19 +1,22 @@
 "use client";
 
 /**
- * Phase-2 migration to shared @/components/ui primitives + brand cleanup.
+ * admin v3 — CMS page editor restyled onto the magenta "mgmt" design system.
  *
- * Replaces the violet-* Triprex palette this file inherited with ZULU primary
- * tokens via Button / Switch / Checkbox / FormField primitives.
+ * Mounts the same self-contained chrome as Settings (sidebar + header from
+ * MgmtPage, `.mgmt-page-host` window-lock), and swaps the old Tailwind/v2
+ * primitives (admin-card / FormField / Button / Switch / StatusPill / lucide)
+ * for the magenta component classes (.card / .fld / .btn / .switch / .badge /
+ * ti icons). The powerful widget builder (18 widget types, language tabs, page
+ * meta + SEO, canvas) is unchanged — only its surface is restyled.
  */
 
-import Link from "next/link";
-import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { canAccessPlatformAdminNav } from "@/lib/access";
+import { canAccessNotificationsNav, canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
+import { apiNotificationsUnreadCount } from "@/lib/notifications-api";
 import {
   apiAddAdminPageWidget,
   apiAdminPage,
@@ -25,17 +28,9 @@ import {
   type AdminWidgetContentRow,
 } from "@/lib/pages-api";
 import { apiAdminLanguages, type LocalizationLanguageRow } from "@/lib/localization-api";
-import {
-  Button,
-  Checkbox,
-  FormField,
-  Input,
-  StatusPill,
-  Switch,
-} from "@/components/ui";
-import { PageHeader as V2PageHeader, V2Button } from "@/components/ui/v2";
-import { ArrowLeft } from "lucide-react";
-import { useParams } from "next/navigation";
+import "../../../platform/management/management.css";
+import { Sidebar, Header } from "../../../platform/management/MgmtPage";
+import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { WidgetForm } from "./WidgetForm";
 
@@ -99,12 +94,16 @@ function isValidWidgetContentPayload(value: unknown): value is Record<string, un
 }
 
 export default function AdminPageEditorLayoutPage() {
-  const { token, user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { token, user, logout } = useAdminAuth();
+  const { t, lang, setLang, languageOptions } = useLanguage();
+  const router = useRouter();
   const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(user);
   const params = useParams<{ id: string }>();
   const pageId = Number(params?.id ?? 0);
+
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const [page, setPage] = useState<AdminPageDetailRow | null>(null);
   const [loading, setLoading] = useState(false);
@@ -183,6 +182,23 @@ export default function AdminPageEditorLayoutPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Header notification badge (non-critical chrome) — mirrors SettingsPage.
+  useEffect(() => {
+    if (!token || !canAccessNotificationsNav(user)) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await apiNotificationsUnreadCount(token);
+        if (!cancelled) setUnreadCount(res.data.unread_count ?? 0);
+      } catch {
+        /* badge is non-critical chrome */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, user]);
 
   useEffect(() => {
     if (!page) return;
@@ -421,152 +437,195 @@ export default function AdminPageEditorLayoutPage() {
     void saveWidgetContent(widgetId, source.widget_content ?? {});
   }
 
-  const backLink = (
-    <Link
-      href="/pages"
-      className="inline-flex items-center gap-1 text-xs text-primary-500 hover:underline"
-    >
-      <ArrowLeft className="h-3 w-3" />
-      {t("admin.pages.back_to_pages")}
-    </Link>
-  );
+  const editorTitle = page?.page_name ?? t("admin.pages.editor.title");
+  const published = page?.status === 1;
+
+  // Shared mgmt chrome (sidebar + header + window-locked host), mirroring
+  // SettingsPage. Every render path returns through this shell so the editor
+  // lives inside the same magenta surface as the rest of Settings.
+  function shell(body: React.ReactNode, header?: React.ReactNode) {
+    return (
+      <div className="mgmt-page mgmt-page-host">
+        <div className={`layout ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
+          <Sidebar collapsed={sidebarCollapsed} unreadCount={unreadCount} />
+          <div className="main">
+            <Header
+              collapsed={sidebarCollapsed}
+              onHamburger={() => setSidebarCollapsed((v) => !v)}
+              user={user ?? null}
+              token={token}
+              lang={lang}
+              languageOptions={languageOptions}
+              onSetLang={setLang}
+              unreadCount={unreadCount}
+              onLogout={() => void logout().then(() => router.push("/login"))}
+              onNavigate={(href) => router.push(href)}
+            />
+            <div className="page">
+              <div className="page-header">
+                <div>
+                  <div className="breadcrumb">
+                    <a onClick={() => router.push("/dashboard")}>Home</a>
+                    <i className="ti ti-chevron-right" />
+                    <a onClick={() => router.push("/pages")}>Settings</a>
+                    <i className="ti ti-chevron-right" />
+                    <a onClick={() => router.push("/pages")}>CMS pages</a>
+                    <i className="ti ti-chevron-right" />
+                    <span className="breadcrumb-current">{editorTitle}</span>
+                  </div>
+                  <h1 className="page-title">
+                    <span>{editorTitle}</span>
+                  </h1>
+                  <div className="page-subtitle">{t("admin.pages.editor.title")}</div>
+                </div>
+                {header ? (
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                    {header}
+                  </div>
+                ) : null}
+              </div>
+              {body}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!allowed || forbidden) {
-    return (
-      <div className="space-y-4">
-        {backLink}
-        <h1 className="admin-page-title">{t("admin.pages.editor.title")}</h1>
-        <div className="admin-card p-4">
-          <ForbiddenNotice />
+    return shell(
+      <div className="card">
+        <div className="card-body">
+          <p className="font-semibold" style={{ marginBottom: 4 }}>
+            {t("admin.forbidden.title")}
+          </p>
+          <p className="text-secondary text-sm">{t("admin.forbidden.default_detail")}</p>
         </div>
       </div>
     );
   }
 
   if (!Number.isFinite(pageId) || pageId <= 0) {
-    return (
-      <div className="space-y-3">
-        {backLink}
-        <p className="text-sm text-error-600">Invalid page id.</p>
+    return shell(
+      <div className="alert" style={{ background: "var(--danger-light)", color: "var(--danger-dark)" }}>
+        <i className="ti ti-alert-triangle" />
+        Invalid page id.
       </div>
     );
   }
 
-  return (
-    <div>
-      <V2PageHeader
-        breadcrumb={[
-          { label: "Home", href: "/dashboard" },
-          { label: "Settings", href: "/pages" },
-          { label: "CMS pages", href: "/pages" },
-          { label: page?.page_name ?? t("admin.pages.editor.title") },
-        ]}
-        title={page?.page_name ?? t("admin.pages.editor.title")}
-        subtitle={t("admin.pages.editor.title")}
-        actions={
-          <>
-            <V2Button
-              onClick={() => void togglePublished()}
-              disabled={busyAction === "published" || page == null}
-              variant="primary"
-            >
-              {page?.status === 1
-                ? t("admin.pages.editor.published_btn")
-                : t("admin.pages.editor.draft_btn")}
-            </V2Button>
-            <V2Button
-              disabled={!slugName}
-              onClick={() => window.open(`/${slugName}`, "_blank", "noopener,noreferrer")}
-            >
-              {t("admin.pages.editor.view_page")}
-            </V2Button>
-          </>
-        }
-      />
-      <div className="space-y-5">
+  const headerActions = (
+    <>
+      <button
+        className="btn btn-primary"
+        onClick={() => void togglePublished()}
+        disabled={busyAction === "published" || page == null}
+      >
+        <i className={`ti ${published ? "ti-circle-check" : "ti-circle-dashed"}`} />
+        {published
+          ? t("admin.pages.editor.published_btn")
+          : t("admin.pages.editor.draft_btn")}
+      </button>
+      <button
+        className="btn"
+        disabled={!slugName}
+        onClick={() => window.open(`/${slugName}`, "_blank", "noopener,noreferrer")}
+      >
+        <i className="ti ti-external-link" />
+        {t("admin.pages.editor.view_page")}
+      </button>
+    </>
+  );
 
-      <div className="admin-card p-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            {languages.map((lang) => {
+  return shell(
+    <>
+      {/* Language tabs + editing indicator */}
+      <div className="card">
+        <div className="card-body" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+          <div className="lang-seg">
+            {languages.map((langRow) => {
               const isActive =
-                normalizeLangCode(lang.code) === normalizeLangCode(activeLanguage);
+                normalizeLangCode(langRow.code) === normalizeLangCode(activeLanguage);
               return (
                 <button
-                  key={lang.code}
+                  key={langRow.code}
                   type="button"
-                  onClick={() => setActiveLanguage(lang.code)}
-                  className={
-                    isActive
-                      ? "rounded-full border border-primary-200 bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-600"
-                      : "rounded-full border border-default bg-white px-3 py-1 text-xs font-medium text-fg-t7 hover:border-primary-200"
-                  }
+                  className={isActive ? "active" : ""}
+                  onClick={() => setActiveLanguage(langRow.code)}
                 >
-                  {lang.code.toUpperCase()}
+                  {langRow.code.toUpperCase()}
                 </button>
               );
             })}
           </div>
-          <div className="flex items-center gap-2 text-xs">
-            <span className="rounded bg-figma-bg-1 px-2 py-1 text-fg-t6">
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span className="badge badge-gray">
               {t("admin.pages.editor.editing")}: {activeLanguage.toUpperCase()}
             </span>
             {!isDefaultLanguage && !hasPageTranslation ? (
-              <Button variant="outline" size="sm" onClick={copyPageFieldsFromDefault}>
+              <button className="btn btn-sm" onClick={copyPageFieldsFromDefault}>
                 {t("admin.pages.editor.copy_default")}
-              </Button>
+              </button>
             ) : null}
           </div>
         </div>
       </div>
 
       {err && (
-        <div className="rounded-zulu border border-error-100 bg-error-50 px-4 py-2 text-sm text-error-700">
+        <div className="alert" style={{ background: "var(--danger-light)", color: "var(--danger-dark)" }}>
+          <i className="ti ti-alert-triangle" />
           {err}
         </div>
       )}
 
       <section
-        className={`admin-card p-4 transition-opacity ${
-          loading ? "pointer-events-none opacity-60" : "opacity-100"
-        }`}
+        className="card"
+        style={loading ? { pointerEvents: "none", opacity: 0.6 } : undefined}
       >
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <FormField label={t("admin.pages.editor.menu_name")} htmlFor="pe-menu">
-            <Input
+        <div className="card-header">
+          <div className="card-title">{t("admin.pages.editor.title")}</div>
+        </div>
+        <div className="card-body">
+        <div className="form-grid">
+          <div className="fld">
+            <label className="fld-label" htmlFor="pe-menu">
+              {t("admin.pages.editor.menu_name")}
+            </label>
+            <input
               id="pe-menu"
               value={menuName}
               onChange={(e) => setMenuName(e.target.value)}
               onBlur={() => void saveHeaderPatch({ page_name: menuName })}
             />
-          </FormField>
-          <FormField label={t("admin.pages.editor.slug_name")} htmlFor="pe-slug">
-            <Input
+          </div>
+          <div className="fld">
+            <label className="fld-label" htmlFor="pe-slug">
+              {t("admin.pages.editor.slug_name")}
+            </label>
+            <input
               id="pe-slug"
+              className="font-mono"
               value={slugName}
               onChange={(e) => setSlugName(e.target.value)}
               onBlur={() => void saveHeaderPatch({ page_slug: slugName })}
-              className="font-mono"
             />
-          </FormField>
-          <FormField
-            label={t("admin.pages.editor.meta_title")}
-            htmlFor="pe-mt"
-            className="md:col-span-2"
-          >
-            <Input
+          </div>
+          <div className="fld span-2">
+            <label className="fld-label" htmlFor="pe-mt">
+              {t("admin.pages.editor.meta_title")}
+            </label>
+            <input
               id="pe-mt"
               value={metaTitle}
               onChange={(e) => setMetaTitle(e.target.value)}
               onBlur={() => void saveHeaderPatch({ meta_title: metaTitle })}
             />
-          </FormField>
-          <FormField
-            label={t("admin.pages.editor.meta_keywords")}
-            htmlFor="pe-mk"
-            className="md:col-span-2"
-          >
-            <Input
+          </div>
+          <div className="fld span-2">
+            <label className="fld-label" htmlFor="pe-mk">
+              {t("admin.pages.editor.meta_keywords")}
+            </label>
+            <input
               id="pe-mk"
               value={metaKeywords}
               onChange={(e) => setMetaKeywords(e.target.value)}
@@ -579,181 +638,189 @@ export default function AdminPageEditorLayoutPage() {
                 })
               }
             />
-          </FormField>
-          <FormField
-            label={t("admin.pages.editor.meta_description")}
-            htmlFor="pe-md"
-            className="md:col-span-2"
-          >
-            <Input
+          </div>
+          <div className="fld span-2">
+            <label className="fld-label" htmlFor="pe-md">
+              {t("admin.pages.editor.meta_description")}
+            </label>
+            <textarea
               id="pe-md"
-              as="textarea"
               rows={3}
               value={metaDescription}
               onChange={(e) => setMetaDescription(e.target.value)}
               onBlur={() => void saveHeaderPatch({ meta_description: metaDescription })}
             />
-          </FormField>
+          </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-5">
-          <label className="inline-flex items-center gap-2 text-sm text-fg-t7">
-            <Checkbox
-              checked={enableSeo}
-              onChange={(e) => {
-                const checked = e.target.checked;
-                setEnableSeo(checked);
-                void saveHeaderPatch({ enable_seo: checked });
-              }}
-            />
-            {t("admin.pages.editor.allow_seo")}
+        <div style={{ marginTop: 16, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 20 }}>
+          <label className="switch-row">
+            <span className="switch">
+              <input
+                type="checkbox"
+                checked={enableSeo}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setEnableSeo(checked);
+                  void saveHeaderPatch({ enable_seo: checked });
+                }}
+              />
+              <span className="switch-slider" />
+            </span>
+            <span className="text-sm">{t("admin.pages.editor.allow_seo")}</span>
           </label>
-          <label className="inline-flex items-center gap-2 text-sm text-fg-t7">
-            <Checkbox
-              checked={breadCrumb}
-              onChange={(e) => {
-                const checked = e.target.checked;
-                setBreadCrumb(checked);
-                void saveHeaderPatch({ is_bread_crumb: checked });
-              }}
-            />
-            {t("admin.pages.editor.breadcrumb")}
+          <label className="switch-row">
+            <span className="switch">
+              <input
+                type="checkbox"
+                checked={breadCrumb}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setBreadCrumb(checked);
+                  void saveHeaderPatch({ is_bread_crumb: checked });
+                }}
+              />
+              <span className="switch-slider" />
+            </span>
+            <span className="text-sm">{t("admin.pages.editor.breadcrumb")}</span>
           </label>
+        </div>
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <aside className="admin-card p-4 lg:col-span-1">
-          <h2 className="text-base font-semibold text-fg-t11">Widgets</h2>
-          <p className="mt-1 text-xs text-fg-t6">
-            Click a widget to add it to the canvas.
-          </p>
-
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            {AVAILABLE_WIDGETS.map((widget) => (
-              <button
-                key={widget.slug}
-                type="button"
-                disabled={busyAction === `add:${widget.slug}`}
-                onClick={() => void addWidget(widget.slug)}
-                className="rounded-zulu border border-default bg-figma-bg-1 p-2 text-left transition-colors hover:border-primary-200 hover:bg-primary-50 disabled:opacity-50"
-              >
-                <span className="flex items-center gap-2">
-                  <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-primary-50 text-[10px] font-semibold text-primary-600">
-                    {widget.icon}
-                  </span>
-                  <span className="text-xs font-medium text-fg-t11">{widget.name}</span>
-                </span>
-              </button>
-            ))}
+      {/* Content = the widget builder (widgets palette + canvas) */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }} className="cms-builder-grid">
+        <aside className="card">
+          <div className="card-header">
+            <div>
+              <div className="card-title">Widgets</div>
+              <div className="card-subtitle">Click a widget to add it to the canvas.</div>
+            </div>
+          </div>
+          <div className="card-body">
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {AVAILABLE_WIDGETS.map((widget) => (
+                <button
+                  key={widget.slug}
+                  type="button"
+                  className="cms-widget-add"
+                  disabled={busyAction === `add:${widget.slug}`}
+                  onClick={() => void addWidget(widget.slug)}
+                >
+                  <span className="cms-widget-ico">{widget.icon}</span>
+                  <span className="cms-widget-name">{widget.name}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </aside>
 
-        <div className="admin-card p-4 lg:col-span-2">
-          <h2 className="text-base font-semibold text-fg-t11">Canvas</h2>
-          <p className="mt-1 text-xs text-fg-t6">
-            Added widgets appear here in page order. Edit details in Step 4.2.
-          </p>
-
-          <div className="mt-4 space-y-3">
+        <div className="card">
+          <div className="card-header">
+            <div>
+              <div className="card-title">Canvas</div>
+              <div className="card-subtitle">Added widgets appear here in page order.</div>
+            </div>
+          </div>
+          <div className="card-body">
             {widgets.length === 0 ? (
-              <div className="rounded-zulu border border-dashed border-default p-6 text-center text-sm text-fg-t6">
-                No widgets added yet.
+              <div className="empty-state">
+                <i className="ti ti-layout-board" />
+                <div>No widgets added yet.</div>
               </div>
             ) : (
-              widgets.map((widget) => {
-                const active = widget.status === 1;
-                const isOpen = openWidgetId === widget.id;
-                const hasWidgetTranslation = !!getWidgetTranslatedContent(
-                  widget,
-                  activeLanguage
-                );
-                return (
-                  <div
-                    key={widget.id}
-                    className="rounded-zulu border border-default bg-white p-3"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <div className="text-sm font-semibold text-fg-t11">
-                          {widgetLabel(widget.widget_slug)}
-                        </div>
-                        <div className="text-xs text-fg-t6">
-                          Card: {widget.ui_card_number} | Position: {widget.position}
-                        </div>
-                        {!isDefaultLanguage ? (
-                          <div className="mt-1 text-[11px]">
-                            {hasWidgetTranslation ? (
-                              <span className="rounded bg-success-50 px-1.5 py-0.5 text-success-700">
-                                {activeLanguage.toUpperCase()} translation
-                              </span>
-                            ) : (
-                              <span className="rounded bg-warning-50 px-1.5 py-0.5 text-warning-700">
-                                No {activeLanguage.toUpperCase()} translation
-                              </span>
-                            )}
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {widgets.map((widget) => {
+                  const active = widget.status === 1;
+                  const isOpen = openWidgetId === widget.id;
+                  const hasWidgetTranslation = !!getWidgetTranslatedContent(
+                    widget,
+                    activeLanguage
+                  );
+                  return (
+                    <div key={widget.id} className="cms-widget-row">
+                      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                        <div>
+                          <div className="font-semibold" style={{ fontSize: 13 }}>
+                            {widgetLabel(widget.widget_slug)}
                           </div>
+                          <div className="text-secondary text-sm">
+                            Card: {widget.ui_card_number} | Position: {widget.position}
+                          </div>
+                          {!isDefaultLanguage ? (
+                            <div style={{ marginTop: 4 }}>
+                              {hasWidgetTranslation ? (
+                                <span className="badge badge-success">
+                                  {activeLanguage.toUpperCase()} translation
+                                </span>
+                              ) : (
+                                <span className="badge badge-warning">
+                                  No {activeLanguage.toUpperCase()} translation
+                                </span>
+                              )}
+                            </div>
+                          ) : null}
+                        </div>
+                        <span className={`badge ${active ? "badge-success" : "badge-gray"}`}>
+                          {active ? "Active" : "Inactive"}
+                        </span>
+                      </div>
+
+                      <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+                        <label className="switch" aria-label="Toggle widget status">
+                          <input
+                            type="checkbox"
+                            checked={active}
+                            disabled={busyAction === `widget-status:${widget.id}`}
+                            onChange={() => void toggleWidgetStatus(widget)}
+                          />
+                          <span className="switch-slider" />
+                        </label>
+                        <button
+                          className="btn btn-sm"
+                          onClick={() =>
+                            setOpenWidgetId((prev) => (prev === widget.id ? null : widget.id))
+                          }
+                        >
+                          {isOpen ? "Close" : "Edit"}
+                        </button>
+                        <button
+                          className="btn btn-sm btn-danger"
+                          disabled={busyAction === `widget-delete:${widget.id}`}
+                          onClick={() => void deleteWidget(widget)}
+                        >
+                          Delete
+                        </button>
+                        {!isDefaultLanguage ? (
+                          <button
+                            className="btn btn-sm"
+                            onClick={() => copyWidgetFromDefault(widget.id)}
+                          >
+                            Copy from default
+                          </button>
                         ) : null}
                       </div>
-                      <StatusPill status={active ? "active" : "inactive"}>
-                        {active ? "Active" : "Inactive"}
-                      </StatusPill>
-                    </div>
 
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <Switch
-                        checked={active}
-                        disabled={busyAction === `widget-status:${widget.id}`}
-                        onCheckedChange={() => void toggleWidgetStatus(widget)}
-                        aria-label="Toggle widget status"
-                      />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          setOpenWidgetId((prev) => (prev === widget.id ? null : widget.id))
-                        }
-                      >
-                        {isOpen ? "Close" : "Edit"}
-                      </Button>
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        disabled={busyAction === `widget-delete:${widget.id}`}
-                        onClick={() => void deleteWidget(widget)}
-                      >
-                        Delete
-                      </Button>
-                      {!isDefaultLanguage ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => copyWidgetFromDefault(widget.id)}
-                        >
-                          Copy from default
-                        </Button>
+                      {isOpen ? (
+                        <WidgetForm
+                          key={`${widget.id}-${activeLanguage}`}
+                          widget={widget}
+                          activeLanguage={activeLanguage}
+                          saving={savingWidgetId === widget.id}
+                          onSave={async (payload) => {
+                            await saveWidgetContent(widget.id, payload);
+                          }}
+                        />
                       ) : null}
                     </div>
-
-                    {isOpen ? (
-                      <WidgetForm
-                        key={`${widget.id}-${activeLanguage}`}
-                        widget={widget}
-                        activeLanguage={activeLanguage}
-                        saving={savingWidgetId === widget.id}
-                        onSave={async (payload) => {
-                          await saveWidgetContent(widget.id, payload);
-                        }}
-                      />
-                    ) : null}
-                  </div>
-                );
-              })
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>
-      </section>
       </div>
-    </div>
+    </>,
+    headerActions
   );
 }

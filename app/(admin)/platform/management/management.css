@@ -659,3 +659,47 @@ html.dark .mgmt-page .super-tag { background:#3a2540; color:#e0b8d8; }
 /* dark mode: --primary-dark is not overridden globally, so pair it per
    element (same convention as .hero-avatar / .super-tag). */
 html.dark .mgmt-page .seg-ico { color:#e0b8d8; }
+
+/* ── CMS page editor (pages/[id]/edit) — widget-builder palette + canvas.
+   The editor reuses .card / .fld / .btn / .switch; these few extra classes
+   skin the widget palette buttons, the canvas rows, and the two-column
+   builder grid (palette | canvas) on wide screens. ──────────────────────── */
+.mgmt-page .cms-builder-grid { grid-template-columns:1fr; }
+@media (min-width:1024px){ .mgmt-page .cms-builder-grid { grid-template-columns:340px 1fr; } }
+.mgmt-page .cms-widget-add { display:flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-secondary); color:var(--text-primary); cursor:pointer; text-align:left; font-family:inherit; transition:all .12s; }
+.mgmt-page .cms-widget-add:hover { border-color:var(--primary); background:var(--primary-soft); }
+.mgmt-page .cms-widget-add:disabled { opacity:.5; cursor:not-allowed; }
+.mgmt-page .cms-widget-ico { display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:var(--radius-sm); background:var(--primary-light); color:var(--primary-dark); font-size:10px; font-weight:600; flex-shrink:0; }
+.mgmt-page .cms-widget-name { font-size:12px; font-weight:500; }
+.mgmt-page .cms-widget-row { border:1px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-primary); padding:14px; }
+html.dark .mgmt-page .cms-widget-ico { color:#e0b8d8; }
+
+/* ── CMS widget-builder inner forms (WidgetForm.tsx) — the per-widget edit
+   panels that expand under a canvas row. Reuses .fld for label+input pairs;
+   these classes skin the panel chrome, grids, item cards, save rows, info
+   callouts, file inputs and hints. ──────────────────────────────────────── */
+.mgmt-page .cms-wf-panel { margin-top:12px; border:1px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-secondary); padding:14px; }
+.mgmt-page .cms-wf-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.mgmt-page .cms-wf-section-title { font-size:12px; font-weight:600; color:var(--text-secondary); }
+.mgmt-page .cms-wf-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.mgmt-page .cms-wf-grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+@media (max-width:680px){ .mgmt-page .cms-wf-grid2, .mgmt-page .cms-wf-grid3 { grid-template-columns:1fr; } }
+.mgmt-page .cms-wf-list { display:flex; flex-direction:column; gap:8px; }
+.mgmt-page .cms-wf-item { border:1px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-primary); padding:12px; }
+.mgmt-page .cms-wf-save { margin-top:12px; display:flex; justify-content:flex-end; }
+/* the .fld label text in widget forms is a bare text node before the input —
+   tint it like .fld-label so it reads as a field caption */
+.mgmt-page .cms-wf-fld { font-size:12px; color:var(--text-secondary); font-weight:500; }
+.mgmt-page .cms-wf-input { width:100%; font-size:13px; border:1px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-primary); font-family:inherit; outline:none; color:var(--text-primary); padding:8px 10px; margin-top:4px; }
+.mgmt-page .cms-wf-input:focus { border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-light); }
+.mgmt-page .cms-wf-file { display:block; width:100%; font-size:12px; margin-top:4px; }
+.mgmt-page .cms-wf-hint { display:block; font-size:11px; color:var(--text-tertiary); margin-top:4px; }
+.mgmt-page .cms-wf-err { font-size:12px; color:var(--danger-dark); }
+.mgmt-page .cms-wf-muted { font-size:12px; color:var(--text-secondary); }
+.mgmt-page .cms-wf-empty { border:1px dashed var(--border-color); border-radius:var(--radius-md); padding:16px; text-align:center; font-size:12px; color:var(--text-secondary); }
+.mgmt-page .cms-wf-info { border:1px solid var(--info); background:var(--info-light); color:var(--info-dark); border-radius:var(--radius-md); padding:10px 12px; font-size:12px; margin-top:12px; }
+.mgmt-page .cms-wf-info-title { font-weight:600; }
+.mgmt-page .cms-wf-info-sub { margin-top:4px; color:var(--info-dark); opacity:.9; }
+.mgmt-page .cms-wf-link { color:var(--info-dark); text-decoration:underline; }
+.mgmt-page .cms-wf-inline-row { display:flex; align-items:center; gap:8px; }
+.mgmt-page .cms-wf-switch-field { display:flex; align-items:center; justify-content:space-between; gap:12px; border:1px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-primary); padding:8px 12px; font-size:13px; color:var(--text-secondary); }
