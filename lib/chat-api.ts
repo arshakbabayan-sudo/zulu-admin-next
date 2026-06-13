@@ -10,7 +10,8 @@ export type ChatColleague = { id: number; name: string; email: string };
 export type ChatConversationRow = {
   id: number;
   type: "direct" | "group" | "customer";
-  title: string;
+  /** null for a customer thread whose account was deleted — render a localized fallback. */
+  title: string | null;
   company_id: number | null;
   participants: { id: number; name: string }[];
   /** Roadmap §4 — B2C customer ↔ platform support thread. */

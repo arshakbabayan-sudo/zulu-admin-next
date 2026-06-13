@@ -210,7 +210,7 @@ export default function ChatPage() {
                         <span className="min-w-0 flex-1">
                           <span className="flex items-center gap-1.5">
                             <span className="truncate text-[13px] font-medium" style={{ color: "var(--admin-text-primary)" }}>
-                              {c.title}
+                              {c.title || (c.is_customer ? s.customerBadge : "")}
                             </span>
                             {c.is_customer ? (
                               <span
@@ -251,7 +251,7 @@ export default function ChatPage() {
             ) : (
               <>
                 <div className="flex items-center gap-2 border-b px-4 py-3" style={{ borderColor: "var(--admin-border)" }}>
-                  <span className="text-[14px] font-semibold" style={{ color: "var(--admin-text-primary)" }}>{active.title}</span>
+                  <span className="text-[14px] font-semibold" style={{ color: "var(--admin-text-primary)" }}>{active.title || (active.is_customer ? s.customerBadge : "")}</span>
                   {active.is_customer ? (
                     <span
                       className="rounded-full px-[6px] py-px text-[10px] font-semibold"
