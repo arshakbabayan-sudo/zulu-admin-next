@@ -557,10 +557,15 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               aria-expanded={userMenuOpen}
             >
               <span
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold"
+                className="inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-full text-xs font-semibold"
                 style={{ backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" }}
               >
-                {(user?.name ?? t("admin.user.fallback_initial")).slice(0, 1).toUpperCase()}
+                {user?.avatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={user.avatar} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  (user?.name ?? t("admin.user.fallback_initial")).slice(0, 1).toUpperCase()
+                )}
               </span>
               {/* v2 admin-redesign — name on top, role label below */}
               <div className="hidden max-w-[160px] flex-col text-left leading-tight md:flex">
