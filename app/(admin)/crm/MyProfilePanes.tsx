@@ -239,7 +239,14 @@ export function AccountPane({ token, user, lang, registerAction, showToast }: My
     <div className="ac-pane-host">
       {/* hero */}
       <div className="hero-card">
-        <div className="hero-avatar">{initials(displayName)}</div>
+        <div className="hero-avatar">
+          {user?.avatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={user.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+          ) : (
+            initials(displayName)
+          )}
+        </div>
         <div style={{ flex: 1, minWidth: 200 }}>
           <div className="hero-name">
             <span>{displayName}</span>
