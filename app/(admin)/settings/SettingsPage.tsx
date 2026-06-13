@@ -225,6 +225,10 @@ type PageMeta = {
   // When set, the page renders in-page; otherwise clicking the pill navigates here.
   inPage?: boolean;
   href?: string;
+  // 2026-06-13 redesign — page relocated OUT of Settings (→ Inbox / CRM). Hidden
+  // from the Settings nav; its pane + route stay reachable until the target
+  // section is rebuilt and absorbs it (see docs/admin_redesign_cleanup_checklist.md).
+  moved?: boolean;
 };
 
 const PAGES: Record<SettingsPageKey, PageMeta> = {
@@ -235,40 +239,51 @@ const PAGES: Record<SettingsPageKey, PageMeta> = {
   "languages":         { cluster: "localization", labelKey: "pgLanguages", subKey: "subLanguages", super: true, inPage: true, href: "/localization/languages" },
   "ui-strings":        { cluster: "localization", labelKey: "pgUiStrings", subKey: "subUiStrings", super: true, inPage: true, href: "/localization/ui-translations" },
   "content-tr":        { cluster: "localization", labelKey: "pgContentTr", subKey: "subContentTr", super: false, inPage: true, href: "/localization/translations" },
-  "email-tpl":         { cluster: "localization", labelKey: "pgEmailTpl", subKey: "subEmailTpl", super: false, inPage: true, href: "/localization/templates" },
+  // moved → Inbox (hidden from Settings nav, pane/route kept until Inbox rebuild)
+  "email-tpl":         { cluster: "localization", labelKey: "pgEmailTpl", subKey: "subEmailTpl", super: false, inPage: true, href: "/localization/templates", moved: true },
   "cms-pages":         { cluster: "content", labelKey: "pgCmsPages", subKey: "subCmsPages", super: true, inPage: true, href: "/pages" },
   "banners":           { cluster: "content", labelKey: "pgBanners", subKey: "subBanners", super: true, inPage: true, href: "/platform/banners" },
-  "sys-notif":         { cluster: "content", labelKey: "pgSysNotif", subKey: "subSysNotif", super: true, inPage: true, href: "/platform/notifications" },
-  "newsletter":        { cluster: "content", labelKey: "pgNewsletter", subKey: "subNewsletter", super: false, inPage: true, href: "/platform/newsletter" },
-  "header-menu":       { cluster: "layout", labelKey: "pgHeaderMenu", subKey: "subHeaderMenu", super: true, inPage: true, href: "/platform/settings/header-menu" },
-  "footer":            { cluster: "layout", labelKey: "pgFooter", subKey: "subFooter", super: true, inPage: true, href: "/platform/settings/footer" },
-  "brand":             { cluster: "layout", labelKey: "pgBrand", subKey: "subBrand", super: true, inPage: true, href: "/platform/settings/brand" },
+  // moved → Inbox
+  "sys-notif":         { cluster: "content", labelKey: "pgSysNotif", subKey: "subSysNotif", super: true, inPage: true, href: "/platform/notifications", moved: true },
+  // 2026-06-13 redesign — Newsletter moved into the Marketing cluster (with Loyalty).
+  "newsletter":        { cluster: "marketing", labelKey: "pgNewsletter", subKey: "subNewsletter", super: false, inPage: true, href: "/platform/newsletter" },
+  // 2026-06-13 redesign — the old "Layout" cluster is gone; these fold into Content & CMS.
+  "header-menu":       { cluster: "content", labelKey: "pgHeaderMenu", subKey: "subHeaderMenu", super: true, inPage: true, href: "/platform/settings/header-menu" },
+  "footer":            { cluster: "content", labelKey: "pgFooter", subKey: "subFooter", super: true, inPage: true, href: "/platform/settings/footer" },
+  "brand":             { cluster: "content", labelKey: "pgBrand", subKey: "subBrand", super: true, inPage: true, href: "/platform/settings/brand" },
   "loyalty":           { cluster: "marketing", labelKey: "pgLoyalty", subKey: "subLoyalty", super: false, inPage: true, href: "/platform/loyalty" },
   "security":          { cluster: "system", labelKey: "pgSecurity", subKey: "subSecurity", super: true, inPage: true, href: "/platform/security" },
   "webhooks":          { cluster: "system", labelKey: "pgWebhooks", subKey: "subWebhooks", super: true, inPage: true, href: "/platform/webhooks" },
   "locations":         { cluster: "system", labelKey: "pgLocations", subKey: "subLocations", super: true, inPage: true, href: "/platform/locations" },
   "api-docs":          { cluster: "system", labelKey: "pgApiDocs", subKey: "subApiDocs", super: true, inPage: true, href: "/platform/api-docs" },
-  "connections":       { cluster: "system", labelKey: "pgConnections", subKey: "subConnections", super: false, inPage: true, href: "/connections" },
+  // moved → CRM
+  "connections":       { cluster: "system", labelKey: "pgConnections", subKey: "subConnections", super: false, inPage: true, href: "/connections", moved: true },
   "platform-settings": { cluster: "system", labelKey: "pgPlatformSettings", subKey: "subPlatformSettings", super: true, inPage: true, href: "/platform/settings" },
-  "support-tickets":   { cluster: "support", labelKey: "pgSupportTickets", subKey: "subSupportTickets", super: false, inPage: true, href: "/support/tickets" },
-  "reviews":           { cluster: "support", labelKey: "pgReviews", subKey: "subReviews", super: true, inPage: true, href: "/platform/reviews" },
+  // moved → Inbox
+  "support-tickets":   { cluster: "support", labelKey: "pgSupportTickets", subKey: "subSupportTickets", super: false, inPage: true, href: "/support/tickets", moved: true },
+  "reviews":           { cluster: "support", labelKey: "pgReviews", subKey: "subReviews", super: true, inPage: true, href: "/platform/reviews", moved: true },
 };
 
+// 2026-06-13 redesign — 6 clusters (was 8). "Layout" folded into Content & CMS;
+// "Support" removed (Reviews + Support tickets relocated to Inbox). Icons match
+// the settings.html mock (docs/admin_designe/files/settings.html).
 const CLUSTERS: Array<{ key: ClusterKey; labelKey: SettingsKey; icon: string }> = [
   { key: "money", labelKey: "clMoney", icon: "ti-coin" },
-  { key: "permissions", labelKey: "clPermissions", icon: "ti-lock-access" },
+  { key: "permissions", labelKey: "clPermissions", icon: "ti-shield-lock" },
   { key: "localization", labelKey: "clLocalization", icon: "ti-language" },
-  { key: "content", labelKey: "clContent", icon: "ti-article" },
-  { key: "layout", labelKey: "clLayout", icon: "ti-layout-2" },
+  { key: "content", labelKey: "clContent", icon: "ti-layout-grid" },
   { key: "marketing", labelKey: "clMarketing", icon: "ti-speakerphone" },
   { key: "system", labelKey: "clSystem", icon: "ti-server-cog" },
-  { key: "support", labelKey: "clSupport", icon: "ti-lifebuoy" },
 ];
 
 const PAGES_BY_CLUSTER: Record<ClusterKey, SettingsPageKey[]> = (() => {
   const m = {} as Record<ClusterKey, SettingsPageKey[]>;
   for (const c of CLUSTERS) m[c.key] = [];
-  (Object.keys(PAGES) as SettingsPageKey[]).forEach((k) => m[PAGES[k].cluster].push(k));
+  (Object.keys(PAGES) as SettingsPageKey[]).forEach((k) => {
+    const meta = PAGES[k];
+    if (meta.moved) return; // relocated out of Settings → not shown in the nav
+    if (m[meta.cluster]) m[meta.cluster].push(k); // skip any cluster no longer in the strip
+  });
   return m;
 })();
 
@@ -348,6 +363,10 @@ export function SettingsPage({ initialPage = "exchange-rates" }: { initialPage?:
 
   const title = s[meta.labelKey];
   const subtitle = meta.subKey ? s[meta.subKey] : "";
+  // A relocated ("moved") page opened via its own route can carry a cluster that
+  // is no longer in the 6-cluster strip — degrade gracefully instead of crashing.
+  const activeClusterMeta = CLUSTERS.find((c) => c.key === activeCluster) ?? null;
+  const activePills = PAGES_BY_CLUSTER[activeCluster] ?? [];
 
   return (
     <div className="mgmt-page mgmt-page-host">
@@ -372,8 +391,12 @@ export function SettingsPage({ initialPage = "exchange-rates" }: { initialPage?:
                 <div className="breadcrumb">
                   <a onClick={() => router.push("/dashboard")}>{s.breadcrumbHome}</a>
                   <i className="ti ti-chevron-right" />
-                  <span>{s[CLUSTERS.find((c) => c.key === activeCluster)!.labelKey]}</span>
-                  <i className="ti ti-chevron-right" />
+                  {activeClusterMeta ? (
+                    <>
+                      <span>{s[activeClusterMeta.labelKey]}</span>
+                      <i className="ti ti-chevron-right" />
+                    </>
+                  ) : null}
                   <span className="breadcrumb-current">{title}</span>
                 </div>
                 <h1 className="page-title">
@@ -406,7 +429,7 @@ export function SettingsPage({ initialPage = "exchange-rates" }: { initialPage?:
 
             {/* Level 2 — page pills for the active cluster */}
             <div className="pills-row">
-              {PAGES_BY_CLUSTER[activeCluster].map((k) => (
+              {activePills.map((k) => (
                 <button
                   key={k}
                   className={`sub-tab ${k === page ? "active" : ""}`}
