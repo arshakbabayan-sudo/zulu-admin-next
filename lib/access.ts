@@ -15,7 +15,12 @@ export function canAccessSuperAdminOnlyPlatformNav(user: AdminUser | null): bool
 }
 
 export function canAccessOperatorStatisticsNav(user: AdminUser | null): boolean {
-  return user?.operator_statistics_platform_scope === true;
+  // Super / platform-scope: cross-company drill-down. Own-scope (§11): a tenant
+  // operator-admin sees their own company's statistics (scoped server-side).
+  return (
+    user?.operator_statistics_platform_scope === true ||
+    user?.operator_statistics_own_scope === true
+  );
 }
 
 /** Support JSON: super admin or at least one company role (mirrors `UserResource.roles`). */

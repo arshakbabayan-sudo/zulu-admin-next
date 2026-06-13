@@ -20,7 +20,7 @@
 
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
-import { canAccessDashboardSection, canAccessPlatformAdminNav } from "@/lib/access";
+import { canAccessDashboardSection, canAccessOperatorStatisticsNav, canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError, apiFetchJson } from "@/lib/api-client";
 import { apiPlatformStats, type PlatformStats } from "@/lib/platform-admin-api";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -974,8 +974,9 @@ export default function DashboardPage() {
         actions={
           <>
             {/* Phase Ա.9 — Detailed stats surfaced here (admin uses per-page
-                nav, not group-config tabs). Super-admin → /statistics. */}
-            {user?.is_super_admin ? (
+                nav, not group-config tabs). Super → cross-company drill-down;
+                §11 — a tenant operator-admin → their own company's charts. */}
+            {canAccessOperatorStatisticsNav(user) ? (
               <V2Button as="link" href="/statistics">
                 {tx(t, "admin.nav.tab.detailed_stats", "Detailed stats")}
               </V2Button>

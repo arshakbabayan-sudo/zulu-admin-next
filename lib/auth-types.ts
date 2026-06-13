@@ -21,6 +21,8 @@ export type AdminUserContext = {
   is_super_admin: boolean;
   is_platform_admin?: boolean;
   operator_statistics_platform_scope: boolean;
+  /** §11 — tenant operator-admin sees their own company's statistics page. */
+  operator_statistics_own_scope?: boolean;
   is_statistics_elevated_only: boolean;
 };
 
@@ -43,6 +45,8 @@ export type AdminUser = {
   permissions?: string[];
   is_super_admin: boolean;
   operator_statistics_platform_scope: boolean;
+  /** §11 — tenant operator-admin sees their own company's statistics page. */
+  operator_statistics_own_scope?: boolean;
   is_statistics_elevated_only: boolean;
   companies: { id: number; name: string; seller_service_types?: SellerServiceType[]; profile_completed?: boolean }[];
   context: AdminUserContext;
