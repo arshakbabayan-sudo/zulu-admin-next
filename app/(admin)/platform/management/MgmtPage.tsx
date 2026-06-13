@@ -22,11 +22,12 @@
 
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import "./management.css";
 import { mgmtStrings, type MgmtKey } from "./management-i18n";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { AdminHeader } from "@/components/AdminHeader";
 import {
   ADMIN_NAV_GROUPS,
   type AdminNavGroup,
@@ -34,11 +35,7 @@ import {
   GROUP_MENU_PERMISSION,
   SIDEBAR_TABLER_ICON,
 } from "@/lib/admin-nav-config";
-import {
-  apiNotificationsUnreadCount,
-  apiNotificationsPaginated,
-  type NotificationRow,
-} from "@/lib/notifications-api";
+import { apiNotificationsUnreadCount } from "@/lib/notifications-api";
 import {
   canAccessPlatformAdminNav,
   canAccessNotificationsNav,
@@ -2074,42 +2071,10 @@ export function Sidebar({ collapsed: _c, unreadCount }: { collapsed: boolean; un
   );
 }
 
-const HEADER_FRONTEND_URL =
-  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_FRONTEND_URL) || "https://zulu.am";
-
-// Dominant flag assets (Arshak 2026-06-04) — public/flags/{GB,AM,RU}.png.
-// Used for the active-language flag in the header and the language dropdown.
-const LANG_FLAG: Record<string, string> = {
-  en: "/flags/GB.png",
-  hy: "/flags/AM.png",
-  ru: "/flags/RU.png",
-};
-
-// Header apps-launcher (grid-dots) quick links — rendered as the 3-col grid
-// dropdown (mirrors AdminShell). Replaces the old behaviour where the icon
-// wrongly navigated straight to /dashboard.
-const APPS_QUICKLINKS: Array<{ href: string; icon: string; labelKey: MgmtKey }> = [
-  { href: "/dashboard", icon: "ti-dashboard", labelKey: "navDashboard" },
-  // 2026-06-10 — Users tile repointed /platform/users → /platform/b2c-customers
-  // (the old /platform/users page is a deprecated redirect stub).
-  { href: "/platform/b2c-customers", icon: "ti-id-badge-2", labelKey: "navUsers" },
-  { href: "/platform/bookings", icon: "ti-calendar-event", labelKey: "navBookings" },
-  { href: "/platform/companies", icon: "ti-building", labelKey: "navPlatformCompanies" },
-  { href: "/platform/finance", icon: "ti-coin", labelKey: "navFinance" },
-  { href: "/platform/settings", icon: "ti-settings", labelKey: "navSettings" },
-];
-
 export function Header({
-  collapsed: _c,
+  collapsed,
   onHamburger,
-  user,
-  token,
-  lang,
-  languageOptions,
-  onSetLang,
   unreadCount,
-  onLogout,
-  onNavigate,
 }: {
   collapsed: boolean;
   onHamburger: () => void;
@@ -2122,270 +2087,22 @@ export function Header({
   onLogout: () => void;
   onNavigate: (href: string) => void;
 }) {
-  const s = mgmtStrings(lang);
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [langMenuOpen, setLangMenuOpen] = useState(false);
-  const [appsMenuOpen, setAppsMenuOpen] = useState(false);
-  const [notifMenuOpen, setNotifMenuOpen] = useState(false);
-  const [recentNotifications, setRecentNotifications] = useState<NotificationRow[]>([]);
-  const langRef = useRef<HTMLDivElement>(null);
-  const appsRef = useRef<HTMLDivElement>(null);
-  const notifRef = useRef<HTMLDivElement>(null);
-  const userRef = useRef<HTMLDivElement>(null);
-  // Close any open header dropdown on an outside click or Escape (Arshak:
-  // the avatar menu wouldn't close when clicking elsewhere).
-  useEffect(() => {
-    const onDown = (e: MouseEvent) => {
-      const t = e.target as Node;
-      if (langRef.current && !langRef.current.contains(t)) setLangMenuOpen(false);
-      if (appsRef.current && !appsRef.current.contains(t)) setAppsMenuOpen(false);
-      if (notifRef.current && !notifRef.current.contains(t)) setNotifMenuOpen(false);
-      if (userRef.current && !userRef.current.contains(t)) setUserMenuOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setLangMenuOpen(false);
-        setAppsMenuOpen(false);
-        setNotifMenuOpen(false);
-        setUserMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, []);
-  // Lazy-load recent notifications the first time the bell dropdown opens.
-  useEffect(() => {
-    if (!notifMenuOpen || !token) return;
-    let cancelled = false;
-    void (async () => {
-      try {
-        const res = await apiNotificationsPaginated(token, { page: 1, per_page: 5 });
-        if (!cancelled) setRecentNotifications(res.data ?? []);
-      } catch {
-        if (!cancelled) setRecentNotifications([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [notifMenuOpen, token]);
-  useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem("zulu_admin_theme");
-      if (stored === "dark") {
-        setTheme("dark");
-        document.documentElement.classList.add("dark");
-      }
-    } catch {
-      /* ignore */
-    }
-  }, []);
-  function toggleTheme() {
-    setTheme((prev) => {
-      const next = prev === "dark" ? "light" : "dark";
-      if (next === "dark") document.documentElement.classList.add("dark");
-      else document.documentElement.classList.remove("dark");
-      try {
-        window.localStorage.setItem("zulu_admin_theme", next);
-      } catch {
-        /* ignore */
-      }
-      return next;
-    });
-  }
-  // Open the public website carrying the admin's token through web's /sso
-  // handoff so the operator lands already logged in (same as AdminShell).
-  const websiteHref = token
-    ? `${HEADER_FRONTEND_URL}/sso?${new URLSearchParams({ token, next: "/" }).toString()}`
-    : HEADER_FRONTEND_URL;
+  // The two admin shells now share ONE header implementation (AdminHeader,
+  // roadmap 2026-06-13 §1). This thin wrapper keeps the original prop
+  // signature so MgmtPage / CrmPage / SettingsPage call-sites stay untouched;
+  // only `collapsed`, `onHamburger` and `unreadCount` actually drive the
+  // shared header. user / token / language / logout / navigation are sourced
+  // by AdminHeader from the auth + language contexts directly.
+  // `fixed` makes it `position:fixed` full-width at top, slotting into the
+  // existing `.mgmt-page .layout { padding-top:56px }` model unchanged.
   return (
-    <header className="header">
-      <div className="header-brand">
-        {/* ZULU SPIN wordmark — dominant asset public/logo_1.png (Arshak 2026-06-04) */}
-        <img className="brand-logo-svg" src="/logo_1.png" alt="ZULU" />
-        {/* Collapsed icon-only mark — public/logo_icon.png */}
-        <img className="brand-logo-icon" src="/logo_icon.png" alt="ZULU" />
-      </div>
-      <button className="header-hamburger" onClick={onHamburger} title={s.toggleSidebar}>
-        <i className="ti ti-menu-2" />
-      </button>
-      <div className="header-search">
-        <i className="ti ti-search" />
-        <input type="search" placeholder={s.searchPlaceholder} />
-      </div>
-      <div className="header-actions">
-        <div ref={langRef} style={{ position: "relative" }}>
-          <button className="header-lang" title={languageOptions.find((o) => o.code === lang)?.label ?? "Language"} onClick={() => setLangMenuOpen((v) => !v)}>
-            {/* Active-language flag — dominant assets public/flags/{GB,AM,RU}.png (Arshak 2026-06-04) */}
-            <img className="header-lang-flag" src={LANG_FLAG[lang] ?? LANG_FLAG.en} alt="" />
-            {(languageOptions.find((o) => o.code === lang)?.code ?? lang).toUpperCase()}
-          </button>
-          {langMenuOpen && (
-            <div className="row-menu open" style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, minWidth: 160 }}>
-              {languageOptions.map((o) => (
-                <button
-                  key={o.code}
-                  className="menu-item"
-                  onClick={() => {
-                    onSetLang(o.code);
-                    setLangMenuOpen(false);
-                  }}
-                  style={o.code === lang ? { color: "var(--primary)", fontWeight: 600 } : undefined}
-                >
-                  {LANG_FLAG[o.code] ? (
-                    <img className="header-lang-flag" src={LANG_FLAG[o.code]} alt="" />
-                  ) : null}
-                  <span style={{ textTransform: "uppercase", fontSize: 11, fontWeight: 600, minWidth: 22 }}>
-                    {o.code}
-                  </span>
-                  <span>{o.label}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        <a
-          className="header-icon-btn"
-          href={websiteHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          title={s.openWebsite}
-        >
-          <i className="ti ti-external-link" />
-        </a>
-        <button
-          className="header-icon-btn"
-          onClick={toggleTheme}
-          title={theme === "dark" ? s.themeLight : s.themeDark}
-        >
-          <i className={theme === "dark" ? "ti ti-sun" : "ti ti-moon"} />
-        </button>
-        <div ref={notifRef} style={{ position: "relative" }}>
-          <button className="header-icon-btn" onClick={() => setNotifMenuOpen((v) => !v)} title={s.notifications}>
-            <i className="ti ti-bell" />
-            {unreadCount > 0 && <span className="dot" />}
-          </button>
-          {notifMenuOpen && (
-            <div className="notif-pop">
-              <div className="notif-pop-head">
-                <span className="notif-pop-title">
-                  {s.notifications}
-                  {unreadCount > 0 && <span className="notif-pop-badge">{unreadCount > 99 ? "99+" : unreadCount}</span>}
-                </span>
-                <a
-                  className="notif-pop-seeall"
-                  onClick={() => {
-                    onNavigate("/admin-redesign/notifications");
-                    setNotifMenuOpen(false);
-                  }}
-                >
-                  {s.seeAll}
-                </a>
-              </div>
-              <div className="notif-pop-body">
-                {recentNotifications.length === 0 ? (
-                  <div className="notif-pop-empty">{s.noNotifications}</div>
-                ) : (
-                  recentNotifications.map((n) => (
-                    <button
-                      key={n.id}
-                      className="notif-pop-item"
-                      onClick={() => {
-                        onNavigate("/admin-redesign/notifications");
-                        setNotifMenuOpen(false);
-                      }}
-                    >
-                      <div className="notif-pop-item-title">{n.title}</div>
-                      <div className="notif-pop-item-msg">{n.message}</div>
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-        <div ref={appsRef} style={{ position: "relative" }}>
-          <button className="header-icon-btn" onClick={() => setAppsMenuOpen((v) => !v)} title={s.apps}>
-            <i className="ti ti-grid-dots" />
-          </button>
-          {appsMenuOpen && (
-            <div className="apps-pop">
-              <div className="apps-pop-title">{s.appsHeader}</div>
-              <div className="apps-grid">
-                {APPS_QUICKLINKS.map((a) => (
-                  <button
-                    key={a.href}
-                    className="apps-grid-item"
-                    onClick={() => {
-                      onNavigate(a.href);
-                      setAppsMenuOpen(false);
-                    }}
-                  >
-                    <i className={`ti ${a.icon}`} />
-                    <span>{s[a.labelKey]}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-        <div className="header-divider" />
-        <div ref={userRef} style={{ position: "relative" }}>
-          <div
-            className="header-user"
-            onClick={() => setUserMenuOpen((v) => !v)}
-            title={s.accountMenu}
-          >
-            <span className="user-avatar">
-              {user?.avatar ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={user.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
-              ) : (
-                (user?.name ?? "?").slice(0, 1).toUpperCase()
-              )}
-            </span>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 500 }}>{user?.name ?? s.userFallback}</div>
-              <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>{user?.context?.world || user?.email || ""}</div>
-            </div>
-            <i
-              className="ti ti-chevron-down"
-              style={{
-                fontSize: 15,
-                color: "var(--text-secondary)",
-                transform: userMenuOpen ? "rotate(180deg)" : "none",
-                transition: "transform .15s",
-              }}
-            />
-          </div>
-          {userMenuOpen && (
-            <div className="row-menu open" style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, minWidth: 200 }}>
-              {user && (
-                <div style={{ padding: "8px 12px", borderBottom: "1px solid var(--border-color)" }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>{user.name}</div>
-                  <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>{user.email}</div>
-                </div>
-              )}
-              <button
-                className="menu-item danger"
-                onClick={() => {
-                  setUserMenuOpen(false);
-                  onLogout();
-                }}
-              >
-                <i className="ti ti-logout" />
-                <span>{s.logout}</span>
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    </header>
+    <AdminHeader
+      fixed
+      sidebarOpen={!collapsed}
+      unreadCount={unreadCount}
+      onToggleSidebar={onHamburger}
+      onToggleMobileDrawer={onHamburger}
+    />
   );
 }
 
