@@ -273,7 +273,7 @@ export function AdminHeader({
             down under the header; outside-click / Escape close it. Ports
             dashboard.html .header-search-btn + .header.search-open .header-search.
             NOT positioned itself (the panel anchors to the relative/fixed header). */}
-        <div ref={searchRef} className="flex items-center lg:hidden">
+        <div ref={searchRef} className="flex items-center lg:!hidden">
           <TopIconButton
             label={searchLabel}
             onClick={() => {
