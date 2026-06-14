@@ -4,16 +4,15 @@
  * Admin dashboard — 4-tab, role-scoped (regen 2026-06-14).
  *
  * One section-tab strip drives four panes; only the tabs the signed-in user is
- * entitled to render, and the first entitled one is the default. The `overview`
- * pane is the original rich platform dashboard (kept verbatim) — the three new
- * panes are wired straight to the documented backend endpoints.
+ * entitled to render, and the first entitled one is the default. Every pane is
+ * wired straight to the documented backend endpoints (no mock data).
  *
  *   overview        (super)    → platform-admin/statistics/* + finance/* + approvals/stats
  *   platform-stats  (super)    → finance-summary/v2 + statistics/* + finance/revenue-by-service
  *   operator-stats  (operator) → operator/statistics (company-scoped, currency-aware)
  *   agent           (agent)    → crm/* + seller/contracts
  *
- * Blueprint: docs/admin_designe/files (2)/{dashboard.html,INTEGRATION.md}.
+ * Blueprint: docs/admin_designe/dashboard/{dashboard.html,INTEGRATION.md}.
  * Cells without a real API render a graceful "—"/empty state.
  */
 
@@ -30,9 +29,11 @@ import { apiPlatformStats, type PlatformStats } from "@/lib/platform-admin-api";
 import {
   apiFinanceSummaryV2,
   apiRevenueByService,
+  apiRecentTransactions,
   type FinanceRange,
   type FinanceSummaryV2,
   type RevenueByServiceRow,
+  type RecentTransactionRow,
 } from "@/lib/finance-stats-api";
 import { apiCrmStats, type CrmStats } from "@/lib/crm-api";
 import { apiCrmCustomersStats, apiCrmCustomers, type CrmCustomersStats, type CustomerRow } from "@/lib/customers-api";
@@ -41,7 +42,7 @@ import { apiSellerContracts } from "@/lib/contracts-api";
 import type { ContractRow } from "@/lib/contracts-api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useDocumentTitle } from "@/lib/use-document-title";
-import { formatNumber } from "@/lib/format";
+import { formatNumber, formatDateTime } from "@/lib/format";
 import { exportRowsAsCsv } from "@/lib/export-csv";
 import { Table, THead, TBody, TR, TH, TD, TEmpty, Badge, type BadgeTone } from "@/components/ui";
 import { PageHeader as V2PageHeader, V2Button, SuperAdminTag } from "@/components/ui/v2";
@@ -49,7 +50,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   Briefcase,
-  Building2,
   DollarSign,
   TrendingUp,
   TrendingDown,
@@ -59,7 +59,6 @@ import {
   PieChart,
   ArrowRight,
   Layers,
-  CheckCircle2,
   BarChart3,
   Store,
   Users,
@@ -68,6 +67,15 @@ import {
   Tag,
   FileText,
   Search,
+  CalendarDays,
+  Coins,
+  Clock,
+  Info,
+  ArrowDownLeft,
+  Receipt,
+  Undo2,
+  Banknote,
+  Ticket,
 } from "lucide-react";
 
 function formatValue(n: number | undefined | null, lang: string = "en"): string {
@@ -253,39 +261,6 @@ function WidgetCard({
   );
 }
 
-/** Horizontal progress bar row used inside the overview widgets. */
-function ProgressRow({
-  label,
-  value,
-  pct,
-  color,
-}: {
-  label: string;
-  value: string | number;
-  pct: number;
-  color: string;
-}) {
-  const safePct = Math.max(0, Math.min(100, pct));
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between text-xs">
-        <div className="flex items-center gap-2 text-fg-t7">
-          <span className="size-2 rounded-full" style={{ backgroundColor: color }} aria-hidden />
-          <span className="font-medium">{value}</span>
-          <span className="text-fg-t6">{label}</span>
-        </div>
-        <span className="tabular-nums text-fg-t7">{safePct.toFixed(1)}%</span>
-      </div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-figma-bg-1">
-        <div
-          className="h-full rounded-full transition-[width]"
-          style={{ width: `${safePct}%`, backgroundColor: color }}
-        />
-      </div>
-    </div>
-  );
-}
-
 /**
  * BreakdownRow — labeled horizontal bar (mockup `.bd-row` → `.bd-fill width:%`).
  * Shared by the by-service / by-currency / pipeline-by-stage / destinations
@@ -361,85 +336,6 @@ function CssBarChart({
   );
 }
 
-/** Donut chart for Monthly earnings goal. Pure SVG, no chart lib. */
-function DonutGoal({ pct, label }: { pct: number; label: string }) {
-  const safe = Math.max(0, Math.min(100, pct));
-  const radius = 52;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference * (1 - safe / 100);
-  return (
-    <div className="relative flex size-32 items-center justify-center">
-      <svg viewBox="0 0 120 120" className="size-32 -rotate-90">
-        <circle cx="60" cy="60" r={radius} fill="none" stroke="var(--admin-primary-soft)" strokeWidth="12" />
-        <circle
-          cx="60"
-          cy="60"
-          r={radius}
-          fill="none"
-          stroke="var(--admin-primary)"
-          strokeWidth="12"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          className="transition-[stroke-dashoffset] duration-500"
-        />
-      </svg>
-      <div className="absolute flex flex-col items-center">
-        <span className="text-xl font-semibold tabular-nums text-fg-t11">{safe.toFixed(0)}%</span>
-        <span className="text-[10px] uppercase tracking-wide text-fg-t6">{label}</span>
-      </div>
-    </div>
-  );
-}
-
-/** Donut summary used for Order summary card — multi-segment. */
-function MultiDonut({
-  segments,
-  centerLabel,
-  centerValue,
-}: {
-  segments: { label: string; value: number; color: string }[];
-  centerLabel: string;
-  centerValue: string;
-}) {
-  const total = segments.reduce((acc, s) => acc + s.value, 0) || 1;
-  const radius = 52;
-  const circumference = 2 * Math.PI * radius;
-  let cumulative = 0;
-  return (
-    <div className="relative flex size-36 items-center justify-center">
-      <svg viewBox="0 0 120 120" className="size-36 -rotate-90">
-        <circle cx="60" cy="60" r={radius} fill="none" stroke="var(--admin-primary-soft)" strokeWidth="12" />
-        {segments.map((s) => {
-          const fraction = s.value / total;
-          const segLen = circumference * fraction;
-          const dashArray = `${segLen} ${circumference - segLen}`;
-          const dashOffset = -circumference * cumulative;
-          cumulative += fraction;
-          return (
-            <circle
-              key={s.label}
-              cx="60"
-              cy="60"
-              r={radius}
-              fill="none"
-              stroke={s.color}
-              strokeWidth="12"
-              strokeDasharray={dashArray}
-              strokeDashoffset={dashOffset}
-              strokeLinecap="butt"
-            />
-          );
-        })}
-      </svg>
-      <div className="absolute flex flex-col items-center">
-        <span className="text-2xl font-semibold tabular-nums text-fg-t11">{centerValue}</span>
-        <span className="text-[10px] uppercase tracking-wide text-fg-t6">{centerLabel}</span>
-      </div>
-    </div>
-  );
-}
-
 /** KPI card used on the platform-stats pane (ported from statistics/page.tsx). */
 function Kpi({
   label,
@@ -472,201 +368,9 @@ function statusTone(status: string | null | undefined): BadgeTone {
   return "gray";
 }
 
-/* ─── overview pane (kept verbatim from the prior dashboard) ─────────── */
+/* ─── overview pane (super_admin — marketplace snapshot, mockup-matched) ── */
 
-function BookingOverview({ stats }: { stats: PlatformStats }) {
-  const { t, lang } = useLanguage();
-  const total = stats.bookings_total ?? 0;
-  const paid = stats.package_orders_paid ?? 0;
-  const pending = stats.package_orders_pending_payment ?? 0;
-  const packageTotal = stats.package_orders_total ?? 0;
-
-  const rows = [
-    { label: t("admin.dashboard.bookings_legacy"), value: total, color: "#3B82F6", pct: total === 0 ? 0 : 100 },
-    { label: t("admin.dashboard.package_orders_pending"), value: pending, color: "#F59E0B", pct: packageTotal === 0 ? 0 : (pending / packageTotal) * 100 },
-    { label: t("admin.dashboard.package_orders_paid"), value: paid, color: "#10B981", pct: packageTotal === 0 ? 0 : (paid / packageTotal) * 100 },
-  ];
-
-  return (
-    <div className="space-y-4">
-      {rows.map((r) => (
-        <ProgressRow key={r.label} label={r.label} value={formatValue(r.value, lang)} pct={r.pct} color={r.color} />
-      ))}
-    </div>
-  );
-}
-
-function MonthlyEarnings({ token, allowed, days }: { token: string | null; allowed: boolean; days: number }) {
-  const { t, lang } = useLanguage();
-  const [current, setCurrent] = useState<number | null>(null);
-  const [previous, setPrevious] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!allowed || !token) return;
-    let cancelled = false;
-    void (async () => {
-      try {
-        const [c, p] = await Promise.all([
-          apiFetchJson<{ success: boolean; data: { revenue: { total: number } } }>(
-            `/platform-admin/statistics/dashboard?days=${days}`,
-            { token }
-          ),
-          apiFetchJson<{ success: boolean; data: { revenue: { total: number } } }>(
-            `/platform-admin/statistics/dashboard?days=${days * 2}`,
-            { token }
-          ),
-        ]);
-        if (cancelled) return;
-        const cur = c.data?.revenue?.total ?? 0;
-        const totalDouble = p.data?.revenue?.total ?? 0;
-        const prev = Math.max(0, totalDouble - cur);
-        setCurrent(cur);
-        setPrevious(prev);
-      } catch {
-        if (!cancelled) {
-          setCurrent(0);
-          setPrevious(0);
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [allowed, token, days]);
-
-  const valueStr = current == null ? "—" : `$${formatValue(current, lang)}`;
-  const pct =
-    previous == null || current == null || previous === 0 ? null : ((current - previous) / previous) * 100;
-  const sign: "up" | "down" | "flat" = pct == null || pct === 0 ? "flat" : pct > 0 ? "up" : "down";
-  const pctStr = pct == null ? "—" : `${pct > 0 ? "+" : ""}${pct.toFixed(1)}%`;
-  const goalPct =
-    current == null || previous == null || previous + current === 0
-      ? 0
-      : Math.min(100, Math.round((current / Math.max(previous, current, 1)) * 100));
-
-  return (
-    <div className="flex items-center justify-between gap-4">
-      <div>
-        <p className="text-xs text-fg-t6">{t("admin.dashboard.this_month")}</p>
-        <p className="mt-1 text-3xl font-semibold tabular-nums text-fg-t11">{valueStr}</p>
-        <p
-          className={`mt-2 inline-flex items-center gap-1 text-xs font-medium ${
-            sign === "up" ? "text-success-700" : sign === "down" ? "text-error-600" : "text-fg-t6"
-          }`}
-        >
-          <TrendingUp className="size-3" aria-hidden />
-          {pctStr}
-          <span className="text-fg-t6">{t("admin.dashboard.vs_previous")}</span>
-        </p>
-        <Link
-          href="/platform/statistics"
-          className="mt-4 inline-flex items-center gap-1 rounded-full border border-default px-3 py-1.5 text-xs font-medium text-fg-t11 hover:bg-figma-bg-1"
-        >
-          {t("admin.dashboard.view_more")}
-          <ArrowRight className="size-3" aria-hidden />
-        </Link>
-      </div>
-      <DonutGoal pct={goalPct} label={t("admin.dashboard.goal")} />
-    </div>
-  );
-}
-
-function ApprovalsProgress({ stats }: { stats: PlatformStats }) {
-  const { t, lang } = useLanguage();
-  const total = (stats.companies_active ?? 0) + (stats.companies_suspended ?? 0);
-  const rows = [
-    { label: t("admin.dashboard.active_companies"), value: stats.companies_active ?? 0, color: "#10B981", pct: total === 0 ? 0 : ((stats.companies_active ?? 0) / total) * 100 },
-    { label: t("admin.dashboard.suspended"), value: stats.companies_suspended ?? 0, color: "#F59E0B", pct: total === 0 ? 0 : ((stats.companies_suspended ?? 0) / total) * 100 },
-    { label: t("admin.dashboard.sellers_operators"), value: stats.companies_sellers ?? 0, color: "var(--admin-primary)", pct: total === 0 ? 0 : ((stats.companies_sellers ?? 0) / total) * 100 },
-  ];
-  return (
-    <>
-      <div className="mb-5 flex flex-col items-center">
-        <span className="text-3xl font-semibold tabular-nums text-fg-t11">{formatValue(total, lang)}</span>
-        <span className="text-xs text-fg-t6">{t("admin.dashboard.total_companies")}</span>
-      </div>
-      <div className="space-y-3.5">
-        {rows.map((r) => (
-          <ProgressRow key={r.label} label={r.label} value={formatValue(r.value, lang)} pct={r.pct} color={r.color} />
-        ))}
-      </div>
-    </>
-  );
-}
-
-function OrderSummaryDonut({ stats }: { stats: PlatformStats }) {
-  const { t, lang } = useLanguage();
-  const paid = stats.package_orders_paid ?? 0;
-  const pending = stats.package_orders_pending_payment ?? 0;
-  const total = stats.package_orders_total ?? 0;
-  const other = Math.max(0, total - paid - pending);
-
-  const segments = [
-    { label: t("admin.dashboard.paid"), value: paid, color: "#10B981" },
-    { label: t("admin.dashboard.pending_payment"), value: pending, color: "#F59E0B" },
-    { label: t("admin.dashboard.other_draft"), value: other, color: "#94A3B8" },
-  ];
-  const totalLabel = formatValue(total, lang);
-  return (
-    <div className="flex flex-col items-center gap-5 md:flex-row md:items-center md:justify-around">
-      <MultiDonut segments={segments} centerLabel={t("admin.dashboard.orders")} centerValue={totalLabel} />
-      <ul className="space-y-2 text-xs">
-        {segments.map((s) => (
-          <li key={s.label} className="flex items-center gap-2.5">
-            <span className="size-2.5 rounded-full" style={{ backgroundColor: s.color }} aria-hidden />
-            <span className="text-fg-t7">{s.label}</span>
-            <span className="ml-auto tabular-nums text-fg-t11">{formatValue(s.value, lang)}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-type AuditLogRow = {
-  id: string;
-  category: string;
-  actor_name_snapshot: string | null;
-  subject_type: string | null;
-  subject_id: string | null;
-  action: string;
-  created_at: string;
-};
-
-/** Friendly relative-time formatter. */
-function timeAgo(iso: string): string {
-  const t = Date.parse(iso);
-  if (!Number.isFinite(t)) return "—";
-  const sec = Math.max(0, Math.floor((Date.now() - t) / 1000));
-  if (sec < 60) return `${sec} sec ago`;
-  const min = Math.floor(sec / 60);
-  if (min < 60) return `${min} min${min > 1 ? "s" : ""} ago`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr} hour${hr > 1 ? "s" : ""} ago`;
-  const day = Math.floor(hr / 24);
-  if (day < 30) return `${day} day${day > 1 ? "s" : ""} ago`;
-  const month = Math.floor(day / 30);
-  if (month < 12) return `${month} month${month > 1 ? "s" : ""} ago`;
-  return `${Math.floor(month / 12)} year${Math.floor(month / 12) > 1 ? "s" : ""} ago`;
-}
-
-function categoryTone(cat: string): BadgeTone {
-  switch (cat) {
-    case "auth":
-    case "data_change":
-      return "info";
-    case "approval":
-    case "admin_actions":
-      return "primary";
-    case "financial":
-      return "success";
-    case "security":
-      return "danger";
-    default:
-      return "gray";
-  }
-}
-
+/** Initials avatar fallback (kept — also used by the agent pane). */
 function actorInitials(name: string | null | undefined): string {
   const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
   const first = parts[0];
@@ -676,123 +380,7 @@ function actorInitials(name: string | null | undefined): string {
   return `${first[0] ?? ""}${second?.[0] ?? ""}`.toUpperCase() || first.slice(0, 2).toUpperCase();
 }
 
-function RecentActivity({ token, allowed }: { token: string | null; allowed: boolean }) {
-  const { t } = useLanguage();
-  const [rows, setRows] = useState<AuditLogRow[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!allowed || !token) return;
-    let cancelled = false;
-    void (async () => {
-      try {
-        const res = await apiFetchJson<{ success: boolean; data: AuditLogRow[] }>(
-          "/platform-admin/audit-logs?per_page=5",
-          { token }
-        );
-        if (!cancelled) setRows((res.data ?? []).slice(0, 5));
-      } catch (e) {
-        if (cancelled) return;
-        if (e instanceof ApiRequestError && e.status === 404) {
-          setRows([]);
-        } else {
-          setError(e instanceof Error ? e.message : "load failed");
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [token, allowed]);
-
-  if (rows === null && !error) {
-    return (
-      <Table>
-        <THead>
-          <TR>
-            <TH>{tx(t, "admin.dashboard.activity_col_user", "Օգտատեր")}</TH>
-            <TH>{tx(t, "admin.dashboard.activity_col_action", "Գործողություն")}</TH>
-            <TH>{tx(t, "admin.dashboard.activity_col_resource", "Ռեսուրս")}</TH>
-            <TH>{tx(t, "admin.dashboard.activity_col_time", "Ժամանակ")}</TH>
-            <TH align="right">{tx(t, "admin.dashboard.activity_col_status", "Կարգավիճակ")}</TH>
-          </TR>
-        </THead>
-        <TBody>
-          {[1, 2, 3, 4].map((i) => (
-            <TR key={i}>
-              <TD>
-                <div className="flex items-center gap-2.5">
-                  <span className="size-8 shrink-0 animate-pulse rounded-full bg-slate-100" aria-hidden />
-                  <div className="space-y-1.5">
-                    <div className="h-3 w-24 animate-pulse rounded bg-slate-100" aria-hidden />
-                    <div className="h-2.5 w-32 animate-pulse rounded bg-slate-100" aria-hidden />
-                  </div>
-                </div>
-              </TD>
-              <TD><div className="h-3 w-20 animate-pulse rounded bg-slate-100" aria-hidden /></TD>
-              <TD><div className="h-3 w-28 animate-pulse rounded bg-slate-100" aria-hidden /></TD>
-              <TD><div className="h-3 w-16 animate-pulse rounded bg-slate-100" aria-hidden /></TD>
-              <TD align="right"><div className="ml-auto h-4 w-14 animate-pulse rounded bg-slate-100" aria-hidden /></TD>
-            </TR>
-          ))}
-        </TBody>
-      </Table>
-    );
-  }
-
-  if (error) {
-    return <p className="text-sm text-error-600">{tx(t, "admin.dashboard.activity_load_failed", "Չհաջողվեց բեռնել ակտիվությունը։")}</p>;
-  }
-
-  if (rows && rows.length === 0) {
-    return <p className="py-2 text-sm text-fg-t6">{tx(t, "admin.dashboard.activity_empty", "Դեռ ակտիվություն չկա։")}</p>;
-  }
-
-  return (
-    <Table>
-      <THead>
-        <TR>
-          <TH>{tx(t, "admin.dashboard.activity_col_user", "Օգտատեր")}</TH>
-          <TH>{tx(t, "admin.dashboard.activity_col_action", "Գործողություն")}</TH>
-          <TH>{tx(t, "admin.dashboard.activity_col_resource", "Ռեսուրս")}</TH>
-          <TH>{tx(t, "admin.dashboard.activity_col_time", "Ժամանակ")}</TH>
-          <TH align="right">{tx(t, "admin.dashboard.activity_col_status", "Կարգավիճակ")}</TH>
-        </TR>
-      </THead>
-      <TBody>
-        {rows!.map((row) => {
-          const tone = categoryTone(row.category);
-          const subject = row.subject_type
-            ? `${row.subject_type}${row.subject_id ? ` #${row.subject_id}` : ""}`
-            : "—";
-          return (
-            <TR key={row.id}>
-              <TD>
-                <div className="flex items-center gap-2.5">
-                  <span
-                    className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-50 text-[11px] font-semibold text-primary-900"
-                    aria-hidden
-                  >
-                    {actorInitials(row.actor_name_snapshot)}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-fg-t11">{row.actor_name_snapshot || "system"}</p>
-                    <p className="truncate text-xs capitalize text-fg-t6">{row.category.replace(/_/g, " ")}</p>
-                  </div>
-                </div>
-              </TD>
-              <TD className="text-fg-t7">{row.action.replace(/_/g, " ")}</TD>
-              <TD className="text-fg-t7">{subject}</TD>
-              <TD className="text-fg-t6">{timeAgo(row.created_at)}</TD>
-              <TD align="right"><Badge tone={tone}>{row.category.replace(/_/g, " ")}</Badge></TD>
-            </TR>
-          );
-        })}
-      </TBody>
-    </Table>
-  );
-}
-
+/** Top-seller row shape (kept — shared with the platform-stats pane). */
 type TopSellerRow = {
   company_id: number;
   company_name?: string | null;
@@ -803,218 +391,366 @@ type TopSellerRow = {
   orders?: number;
 };
 
-function TopOperatorsByRevenue({ token, allowed, days }: { token: string | null; allowed: boolean; days: number }) {
-  const { t, lang } = useLanguage();
-  const [sellers, setSellers] = useState<TopSellerRow[] | null>(null);
+/** Service-key → Armenian label for the by-service breakdown. */
+const SERVICE_LABELS: Record<string, string> = {
+  flight: "Ավիատոմս",
+  flights: "Թռիչքներ",
+  hotel: "Հյուրանոցներ",
+  hotels: "Հյուրանոցներ",
+  package: "Փաթեթներ",
+  packages: "Փաթեթներ",
+  transfer: "Փոխադրումներ",
+  transfers: "Փոխադրումներ",
+  excursion: "Էքսկուրսիաներ",
+  excursions: "Էքսկուրսիաներ",
+  visa: "Վիզա",
+  insurance: "Ապահովագրություն",
+  other: "Այլ",
+};
 
-  useEffect(() => {
-    if (!allowed || !token) return;
-    let cancelled = false;
-    void (async () => {
-      try {
-        const res = await apiFetchJson<{ success: boolean; data: TopSellerRow[] }>(
-          `/platform-admin/statistics/sellers?days=${days}&limit=5`,
-          { token }
-        );
-        if (!cancelled) setSellers(res.data ?? []);
-      } catch {
-        if (!cancelled) setSellers([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [allowed, token, days]);
-
-  if (sellers === null) {
-    return (
-      <div className="flex h-48 items-center justify-center rounded-xl border border-default bg-white">
-        <p className="text-xs text-fg-t6">{tx(t, "common.loading", "Բեռնվում է…")}</p>
-      </div>
-    );
-  }
-
-  if (sellers.length === 0) {
-    return (
-      <div className="flex h-48 items-center justify-center rounded-xl border border-dashed border-default bg-figma-bg-1">
-        <div className="text-center">
-          <PieChart className="mx-auto size-8 text-fg-t6" aria-hidden />
-          <p className="mt-2 text-sm font-medium text-fg-t11">{tx(t, "admin.dashboard.revenue_chart_pending", "Տվյալներ դեռ չկան")}</p>
-          <p className="mt-1 max-w-xs px-4 text-xs text-fg-t6">{tx(t, "admin.dashboard.top_operators_chart_hint", "Վարկանիշը կհայտնվի առաջին վճարված պատվերներից հետո։")}</p>
-        </div>
-      </div>
-    );
-  }
-
-  const max = Math.max(...sellers.map((s) => s.total_revenue ?? s.revenue ?? 0), 1);
+/**
+ * OverviewKpi — toned KPI card matching the mockup `.kpi-card .c-{tone}`
+ * (left accent + soft icon chip + signed delta pill + sub caption).
+ */
+function OverviewKpi({
+  label,
+  value,
+  icon: Icon,
+  tone,
+  delta,
+  sub,
+  note,
+}: {
+  label: string;
+  value: string;
+  icon: typeof Briefcase;
+  tone: "primary" | "success" | "info" | "warning";
+  delta?: { sign: "up" | "down" | "flat"; text: string } | null;
+  sub?: string;
+  /** Small metric caption (e.g. "Պատվեր-հիմք"), rendered with an info dot. */
+  note?: string;
+}) {
+  const accent = {
+    primary: "var(--admin-primary)",
+    success: "#318137",
+    info: "#1770D0",
+    warning: "#FFA000",
+  }[tone];
+  const soft = {
+    primary: "var(--admin-primary-soft)",
+    success: "rgba(49,129,55,0.12)",
+    info: "rgba(23,112,208,0.12)",
+    warning: "rgba(255,160,0,0.14)",
+  }[tone];
+  const TrendIcon =
+    delta?.sign === "down" ? TrendingDown : delta?.sign === "flat" ? Minus : TrendingUp;
+  const deltaColor =
+    delta?.sign === "up" ? "text-success-700" : delta?.sign === "down" ? "text-error-600" : "text-fg-t6";
   return (
-    <div className="space-y-3">
-      {sellers.map((s, i) => {
-        const rev = s.total_revenue ?? s.revenue ?? 0;
-        const orders = s.order_count ?? s.orders ?? 0;
-        const pct = (rev / max) * 100;
-        return (
-          <div key={s.company_id} className="flex items-center gap-3">
-            <span
-              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
-              style={{ backgroundColor: "var(--admin-primary-light)", color: "var(--admin-primary-dark)" }}
-            >
-              {i + 1}
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between gap-2">
-                <Link
-                  href={`/platform/companies/${s.company_id}`}
-                  className="truncate text-sm font-medium text-fg-t11 hover:underline"
-                >
-                  {s.company_name ?? s.name ?? `#${s.company_id}`}
-                </Link>
-                <span className="text-xs font-semibold tabular-nums text-fg-t11">${formatValue(rev, lang)}</span>
-              </div>
-              <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-figma-bg-1">
-                <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: "var(--admin-primary)" }} />
-              </div>
-              <div className="mt-0.5 text-[11px] text-fg-t6">{orders} {tx(t, "admin.dashboard.orders", "պատվեր")}</div>
-            </div>
-          </div>
-        );
-      })}
+    <div
+      className="relative overflow-hidden rounded-2xl border border-default bg-white p-5 shadow-zulu-card"
+      style={{ borderInlineStartWidth: 3, borderInlineStartColor: accent }}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <span className="inline-flex items-center gap-2 text-sm font-medium text-fg-t6">
+          <span
+            className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg"
+            style={{ backgroundColor: soft, color: accent }}
+            aria-hidden
+          >
+            <Icon className="size-4" />
+          </span>
+          <span>{label}</span>
+        </span>
+        {delta ? (
+          <span className={`inline-flex items-center gap-0.5 text-xs font-semibold tabular-nums ${deltaColor}`}>
+            <TrendIcon className="size-3" aria-hidden />
+            {delta.text}
+          </span>
+        ) : null}
+      </div>
+      <div className="mt-3 text-3xl font-semibold tabular-nums text-fg-t11">{value}</div>
+      {note ? (
+        <div className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-fg-t6">
+          <Info className="size-3" aria-hidden />
+          {note}
+        </div>
+      ) : sub ? (
+        <div className="mt-1.5 truncate text-[11px] text-fg-t6">{sub}</div>
+      ) : null}
     </div>
   );
 }
 
-function ActiveOffers({ stats }: { stats: PlatformStats }) {
-  const { t, lang } = useLanguage();
-  const published = stats.offers_published ?? 0;
-  const total = stats.offers_total ?? 0;
-  const draft = Math.max(0, total - published);
-  return (
-    <>
-      <div className="mb-5 flex flex-col items-center">
-        <span className="text-3xl font-semibold tabular-nums text-fg-t11">{formatValue(total, lang)}</span>
-        <span className="text-xs text-fg-t6">{t("admin.dashboard.total_offers")}</span>
-      </div>
-      <div className="space-y-3.5">
-        <ProgressRow
-          label={t("admin.dashboard.published")}
-          value={formatValue(published, lang)}
-          pct={total === 0 ? 0 : (published / total) * 100}
-          color="#10B981"
-        />
-        <ProgressRow
-          label={t("admin.dashboard.draft_archived")}
-          value={formatValue(draft, lang)}
-          pct={total === 0 ? 0 : (draft / total) * 100}
-          color="#94A3B8"
-        />
-      </div>
-    </>
-  );
+/** Signed-percent delta between a current value and the previous window. */
+function pctDelta(current: number, previous: number): { sign: "up" | "down" | "flat"; text: string } {
+  if (previous <= 0) return { sign: "flat", text: "—" };
+  const pct = ((current - previous) / previous) * 100;
+  if (!Number.isFinite(pct) || pct === 0) return { sign: "flat", text: "0%" };
+  return { sign: pct > 0 ? "up" : "down", text: `${pct > 0 ? "+" : ""}${pct.toFixed(1)}%` };
 }
 
-function OverviewPane({
-  stats,
-  token,
-  allowed,
-  allowedPlatformStats,
-  rangeDays,
-}: {
-  stats: PlatformStats;
-  token: string | null;
-  allowed: boolean;
-  allowedPlatformStats: boolean;
-  rangeDays: number;
-}) {
+type DashboardSnapshot = {
+  orders: { total_in_window: number };
+  revenue: { total: number };
+  sellers: { total: number };
+};
+
+type OvRevenuePoint = { date: string; revenue: number; orders: number };
+
+/** Type → translated label + icon tone for the recent-activity table. */
+const TX_TYPE_META: Record<string, { key: string; fallback: string; color: string; icon: typeof Briefcase }> = {
+  payment_in: { key: "admin.dash2.ov.tx_payment_in", fallback: "Մուտքային վճարում", color: "#318137", icon: ArrowDownLeft },
+  commission: { key: "admin.dash2.ov.tx_commission", fallback: "Միջնորդավճար", color: "var(--admin-primary)", icon: Receipt },
+  refund: { key: "admin.dash2.ov.tx_refund", fallback: "Վերադարձ", color: "#BC3436", icon: Undo2 },
+  payout: { key: "admin.dash2.ov.tx_payout", fallback: "Վճարում դուրս", color: "#6B7280", icon: Banknote },
+  voucher_issued: { key: "admin.dash2.ov.tx_voucher", fallback: "Վաուչեր", color: "#1770D0", icon: Ticket },
+};
+
+function OverviewPane({ token, days }: { token: string; days: number }) {
   const { t, lang } = useLanguage();
+  const range = rangeFromDays(days);
+
+  const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
+  const [prevSnapshot, setPrevSnapshot] = useState<DashboardSnapshot | null>(null);
+  const [pendingApprovals, setPendingApprovals] = useState<number | null>(null);
+  const [revenueSeries, setRevenueSeries] = useState<OvRevenuePoint[]>([]);
+  const [byService, setByService] = useState<RevenueByServiceRow[]>([]);
+  const [recentTx, setRecentTx] = useState<RecentTransactionRow[]>([]);
+  const [topOperators, setTopOperators] = useState<TopSellerRow[]>([]);
+  const [forbidden, setForbidden] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    setLoading(true);
+    setForbidden(false);
+    void (async () => {
+      // allSettled so one missing endpoint doesn't blank the whole pane.
+      const [snapR, prevR, apprR, revR, svcR, txR, opR] = await Promise.allSettled([
+        apiFetchJson<{ success: boolean; data: DashboardSnapshot }>(`/platform-admin/statistics/dashboard?days=${days}`, { token }),
+        apiFetchJson<{ success: boolean; data: DashboardSnapshot }>(`/platform-admin/statistics/dashboard?days=${days * 2}`, { token }),
+        apiFetchJson<{ success: boolean; data: { total_pending: number } }>(`/platform-admin/approvals/stats`, { token }),
+        apiFetchJson<{ success: boolean; data: OvRevenuePoint[] }>(`/platform-admin/statistics/revenue-series?days=${days}`, { token }),
+        apiRevenueByService(token, range),
+        apiRecentTransactions(token, 8),
+        apiFetchJson<{ success: boolean; data: TopSellerRow[] }>(`/platform-admin/statistics/sellers?days=${days}&limit=5`, { token }),
+      ]);
+      if (cancelled) return;
+
+      // The dashboard snapshot is the primary call — a 403 there means no access.
+      if (snapR.status === "rejected" && snapR.reason instanceof ApiRequestError && snapR.reason.status === 403) {
+        setForbidden(true);
+        setLoading(false);
+        return;
+      }
+
+      if (snapR.status === "fulfilled") setSnapshot(snapR.value.data);
+      if (prevR.status === "fulfilled") setPrevSnapshot(prevR.value.data);
+      if (apprR.status === "fulfilled") setPendingApprovals(apprR.value.data?.total_pending ?? 0);
+      if (revR.status === "fulfilled") setRevenueSeries(revR.value.data ?? []);
+      if (svcR.status === "fulfilled") setByService(svcR.value.data ?? []);
+      if (txR.status === "fulfilled") setRecentTx(txR.value.data ?? []);
+      if (opR.status === "fulfilled") setTopOperators(opR.value.data ?? []);
+      setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, days, range]);
+
+  if (forbidden) return <div className="admin-card p-4"><ForbiddenNotice /></div>;
+  if (loading && !snapshot) return <p className="text-sm text-fg-t6">{tx(t, "admin.dash2.loading", "Բեռնվում է…")}</p>;
+
+  const bookings = snapshot?.orders?.total_in_window ?? 0;
+  const revenue = snapshot?.revenue?.total ?? 0;
+  const operators = snapshot?.sellers?.total ?? 0;
+
+  // Previous-window values = (2N total) − (N total), per the INTEGRATION.md spec.
+  const prevBookings = Math.max(0, (prevSnapshot?.orders?.total_in_window ?? 0) - bookings);
+  const prevRevenue = Math.max(0, (prevSnapshot?.revenue?.total ?? 0) - revenue);
+  const bookingsDelta = prevSnapshot ? pctDelta(bookings, prevBookings) : null;
+  const revenueDelta = prevSnapshot ? pctDelta(revenue, prevRevenue) : null;
+
+  const maxRevenue = Math.max(...revenueSeries.map((p) => p.revenue), 1);
+  const maxSvc = Math.max(...byService.map((s) => s.amount), 1);
+  const maxOpRev = Math.max(...topOperators.map((s) => s.revenue ?? s.total_revenue ?? 0), 1);
+
+  const vsPrev = `${tx(t, "admin.dash2.ov.vs_prev", "նախորդ {n} օրվա համեմատ").replace("{n}", String(days))}`;
+
   return (
     <div className="space-y-5">
-      <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
-        <HeroStatCard
+      {/* 1 ── KPI grid (4 toned cards) ── */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <OverviewKpi
           tone="primary"
-          label={t("admin.dashboard.total_bookings")}
-          value={formatValue((stats.bookings_total ?? 0) + (stats.package_orders_total ?? 0), lang)}
-          icon={Briefcase}
-          subRow={{
-            left: { label: t("admin.dashboard.bookings_legacy"), value: formatValue(stats.bookings_total, lang) },
-            right: { label: t("admin.dashboard.package_orders"), value: formatValue(stats.package_orders_total, lang) },
-          }}
+          icon={CalendarDays}
+          label={tx(t, "admin.dash2.ov.total_bookings", "Ընդհանուր ամրագրումներ")}
+          value={formatValue(bookings, lang)}
+          delta={bookingsDelta}
+          sub={vsPrev}
         />
-        <HeroStatCard
+        <OverviewKpi
           tone="success"
-          label={t("admin.dashboard.total_operators")}
-          value={formatValue(stats.companies_total, lang)}
-          icon={Building2}
-          subRow={{
-            left: { label: t("admin.dashboard.active"), value: formatValue(stats.companies_active, lang) },
-            right: { label: t("admin.dashboard.sellers"), value: formatValue(stats.companies_sellers, lang) },
-          }}
+          icon={Coins}
+          label={tx(t, "admin.dash2.ov.gross_revenue", "Համախառն եկամուտ")}
+          value={curLabel("AMD", revenue, lang)}
+          delta={revenueDelta}
+          note={tx(t, "admin.dash2.ov.order_based", "Պատվեր-հիմք")}
         />
-        <HeroStatCard
+        <OverviewKpi
+          tone="info"
+          icon={Store}
+          label={tx(t, "admin.dash2.ov.active_operators", "Ակտիվ օպերատորներ")}
+          value={formatValue(operators, lang)}
+          sub={tx(t, "admin.dash2.ov.across_marketplace", "ամբողջ շուկայում")}
+        />
+        <OverviewKpi
           tone="warning"
-          label={t("admin.dashboard.daily_revenue")}
-          value="$0"
-          icon={DollarSign}
-          subRow={{
-            left: { label: t("admin.dashboard.vs_yesterday"), value: "—" },
-            right: { label: t("admin.dashboard.monthly_avg"), value: "—" },
-          }}
+          icon={Clock}
+          label={tx(t, "admin.dash2.ov.pending_approvals", "Սպասվող հաստատումներ")}
+          value={pendingApprovals == null ? "—" : formatValue(pendingApprovals, lang)}
+          delta={{ sign: "flat", text: "0" }}
+          sub={tx(t, "admin.dash2.ov.approvals_sub", "ընկերություններ · վաճառողներ · առաջարկներ · կարծիքներ")}
         />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
-        <WidgetCard title={t("admin.dashboard.booking_overview")} icon={Layers}>
-          <BookingOverview stats={stats} />
+      {/* 2 ── two-column row: booking overview chart + orders by service ── */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <WidgetCard
+          title={tx(t, "admin.dash2.ov.booking_overview", "Ամրագրումների ակնարկ")}
+          subtitle={`${tx(t, "admin.dash2.ov.daily_revenue", "Օրական եկամուտ")} · ${tx(t, "admin.dash2.ov.last_n_days", "վերջին {n} օր").replace("{n}", String(days))}`}
+          icon={BarChart3}
+        >
+          <CssBarChart
+            points={revenueSeries.map((p) => ({
+              key: p.date.slice(-2),
+              value: p.revenue,
+              title: `${p.date}: ${curLabel("AMD", p.revenue, lang)} · ${formatNumber(p.orders, lang)}`,
+            }))}
+            maxLabel={`${tx(t, "admin.dash2.max", "Առավելագույն")}: ${curLabel("AMD", maxRevenue, lang)}`}
+          />
         </WidgetCard>
-        <WidgetCard title={t("admin.dashboard.monthly_earnings")} icon={DollarSign}>
-          <MonthlyEarnings token={token} allowed={allowedPlatformStats} days={rangeDays} />
-        </WidgetCard>
-        <WidgetCard title={t("admin.dashboard.companies_on_platform")} icon={CheckCircle2}>
-          <ApprovalsProgress stats={stats} />
+        <WidgetCard
+          title={tx(t, "admin.dash2.ov.orders_by_service", "Պատվերներն ըստ ծառայության")}
+          subtitle={tx(t, "admin.dash2.ov.share_of_revenue", "Բաժին ընդհանուր եկամտից")}
+          icon={Layers}
+        >
+          {byService.length === 0 ? (
+            <p className="py-2 text-sm text-fg-t6">{tx(t, "admin.dash2.no_data", "Տվյալներ չկան")}</p>
+          ) : (
+            <div className="space-y-3">
+              {byService.map((s) => (
+                <BreakdownRow
+                  key={s.service}
+                  label={tx(t, `admin.dash2.service.${s.service}`, SERVICE_LABELS[s.service.toLowerCase()] ?? s.service)}
+                  pct={(s.amount / maxSvc) * 100}
+                  value={`${curLabel("AMD", s.amount, lang)} ${s.pct}%`}
+                  color={SERVICE_TONES[s.service.toLowerCase()] ?? "var(--admin-primary)"}
+                />
+              ))}
+            </div>
+          )}
         </WidgetCard>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
-        <div className="min-w-0">
-          <WidgetCard title={t("admin.dashboard.order_summary")} icon={PieChart}>
-            <OrderSummaryDonut stats={stats} />
-          </WidgetCard>
-        </div>
-        <div className="min-w-0 lg:col-span-2">
-          <WidgetCard
-            title={t("admin.dashboard.recent_activity")}
-            icon={Activity}
-            bodyClassName="p-0"
-            action={
-              <Link
-                href="/platform/audit-logs"
-                className="inline-flex items-center gap-0.5 text-xs font-medium text-primary-600 hover:text-primary-800"
-              >
-                {t("admin.dashboard.view_all")}
-                <ArrowRight className="size-3" aria-hidden />
-              </Link>
-            }
+      {/* 3 ── recent activity ── */}
+      <WidgetCard
+        title={tx(t, "admin.dash2.ov.recent_activity", "Վերջին ակտիվությունը")}
+        subtitle={tx(t, "admin.dash2.ov.recent_activity_sub", "Վերջին վճարումներ, վերադարձներ, միջնորդավճարներ")}
+        icon={Activity}
+        bodyClassName="p-0"
+        action={
+          <Link
+            href="/platform/finance"
+            className="inline-flex items-center gap-1 rounded-md border border-default px-2.5 py-1.5 text-xs font-medium text-fg-t11 transition hover:bg-figma-bg-1"
           >
-            <RecentActivity token={token} allowed={allowed} />
-          </WidgetCard>
-        </div>
-      </div>
+            {tx(t, "admin.dash2.ov.open_finance", "Բացել ֆինանսները")}
+            <ArrowRight className="size-3" aria-hidden />
+          </Link>
+        }
+      >
+        <Table>
+          <THead>
+            <TR>
+              <TH>{tx(t, "admin.dash2.ov.col_type", "Տեսակ")}</TH>
+              <TH>{tx(t, "admin.dash2.ov.col_company", "Ընկերություն")}</TH>
+              <TH align="right">{tx(t, "admin.dash2.ov.col_amount", "Գումար")}</TH>
+              <TH>{tx(t, "admin.dash2.ov.col_time", "Ժամ")}</TH>
+              <TH align="right">{tx(t, "admin.dash2.ov.col_status", "Կարգավիճակ")}</TH>
+            </TR>
+          </THead>
+          <TBody>
+            {recentTx.length === 0 ? (
+              <TEmpty colSpan={5}>{tx(t, "admin.dash2.no_data", "Տվյալներ չկան")}</TEmpty>
+            ) : (
+              recentTx.map((row) => {
+                const meta = TX_TYPE_META[row.type] ?? { key: "", fallback: row.type, color: "var(--admin-primary)", icon: Activity };
+                const TxIcon = meta.icon;
+                return (
+                  <TR key={row.id}>
+                    <TD>
+                      <span className="inline-flex items-center gap-1.5 font-medium text-fg-t11">
+                        <TxIcon className="size-3.5" style={{ color: meta.color }} aria-hidden />
+                        {meta.key ? tx(t, meta.key, meta.fallback) : meta.fallback}
+                      </span>
+                    </TD>
+                    <TD className="text-fg-t7">{row.company?.name ?? "—"}</TD>
+                    <TD align="right" className="font-mono tabular-nums">{curLabel(row.currency, row.amount, lang)}</TD>
+                    <TD className="text-fg-t6">{formatDateTime(row.when, lang)}</TD>
+                    <TD align="right"><Badge tone={statusTone(row.status)}>{row.status}</Badge></TD>
+                  </TR>
+                );
+              })
+            )}
+          </TBody>
+        </Table>
+      </WidgetCard>
 
-      <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
-        <div className="min-w-0 lg:col-span-2">
-          <WidgetCard
-            title={t("admin.dashboard.top_operators_by_revenue")}
-            icon={ArrowUpRight}
-            action={<span className="text-xs text-fg-t6">{t("admin.dashboard.total_revenue_placeholder")}</span>}
-          >
-            <TopOperatorsByRevenue token={token} allowed={allowedPlatformStats} days={rangeDays} />
-          </WidgetCard>
-        </div>
-        <div className="min-w-0">
-          <WidgetCard title={t("admin.dashboard.active_offers")} icon={Layers}>
-            <ActiveOffers stats={stats} />
-          </WidgetCard>
-        </div>
-      </div>
+      {/* 4 ── top operators ── */}
+      <WidgetCard
+        title={tx(t, "admin.dash2.ov.top_operators", "Լավագույն օպերատորներ")}
+        subtitle={tx(t, "admin.dash2.ov.top_operators_sub", "Ըստ ընդհանուր եկամտի այս ժամանակահատվածում")}
+        icon={ArrowUpRight}
+        bodyClassName="p-0"
+      >
+        <Table>
+          <THead>
+            <TR>
+              <TH>#</TH>
+              <TH>{tx(t, "admin.dash2.ov.col_operator", "Օպերատոր")}</TH>
+              <TH align="right">{tx(t, "admin.dash2.ov.col_revenue", "Եկամուտ")}</TH>
+              <TH align="right">{tx(t, "admin.dash2.ov.col_orders", "Պատվերներ")}</TH>
+            </TR>
+          </THead>
+          <TBody>
+            {topOperators.length === 0 ? (
+              <TEmpty colSpan={4}>{tx(t, "admin.dash2.no_data", "Տվյալներ չկան")}</TEmpty>
+            ) : (
+              topOperators.map((s, i) => {
+                const rev = s.revenue ?? s.total_revenue ?? 0;
+                const orders = s.orders ?? s.order_count ?? 0;
+                return (
+                  <TR key={s.company_id}>
+                    <TD className="font-mono tabular-nums text-fg-t6">{i + 1}</TD>
+                    <TD>
+                      <Link href={`/platform/companies/${s.company_id}`} className="font-medium text-fg-t11 hover:underline">
+                        {s.name ?? s.company_name ?? `#${s.company_id}`}
+                      </Link>
+                      <div className="mt-1 h-1.5 w-full max-w-[160px] overflow-hidden rounded-full bg-figma-bg-1">
+                        <div className="h-full rounded-full" style={{ width: `${(rev / maxOpRev) * 100}%`, backgroundColor: "var(--admin-primary)" }} />
+                      </div>
+                    </TD>
+                    <TD align="right" className="font-mono font-semibold tabular-nums">{curLabel("AMD", rev, lang)}</TD>
+                    <TD align="right" className="font-mono tabular-nums">{formatNumber(orders, lang)}</TD>
+                  </TR>
+                );
+              })
+            )}
+          </TBody>
+        </Table>
+      </WidgetCard>
     </div>
   );
 }
@@ -1579,7 +1315,6 @@ export default function DashboardPage() {
   useDocumentTitle(t("admin.dashboard.title"));
   const { token, user } = useAdminAuth();
   const [stats, setStats] = useState<PlatformStats | null>(null);
-  const [err, setErr] = useState<string | null>(null);
   const [rangeDays, setRangeDays] = useState(30);
   const [exportToast, setExportToast] = useState<string | null>(null);
 
@@ -1631,8 +1366,9 @@ export default function DashboardPage() {
     setExportToast(tx(t, "admin.dashboard.export_done", "Ցուցանիշներն արտահանվեցին։"));
   }
 
-  // Overview KPIs come from the all-purpose /platform-admin/stats endpoint.
-  // Only fetch it when the overview tab is entitled (super/platform staff).
+  // The full /platform-admin/stats snapshot now powers ONLY the Export CSV
+  // button (the overview pane fetches its own widget data). Failures are
+  // swallowed — export is a no-op while `stats` is null.
   useEffect(() => {
     if (!allowedPlatformStats || !token) return;
     let cancelled = false;
@@ -1641,17 +1377,14 @@ export default function DashboardPage() {
         const range = rangeDays === 7 ? "7d" : rangeDays === 90 ? "90d" : "30d";
         const res = await apiPlatformStats(token, range);
         if (!cancelled) setStats(res.data);
-      } catch (e) {
-        if (!cancelled) {
-          if (e instanceof ApiRequestError && e.status === 403) setErr("forbidden");
-          else setErr(e instanceof Error ? e.message : t("admin.dashboard.load_failed"));
-        }
+      } catch {
+        if (!cancelled) setStats(null);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [allowedPlatformStats, token, t, rangeDays]);
+  }, [allowedPlatformStats, token, rangeDays]);
 
   const greeting = user?.name ? `${t("admin.dashboard.title")} — ${user.name}` : t("admin.dashboard.title");
   const activeDef = tabs.find((tab) => tab.key === activeTab) ?? null;
@@ -1756,33 +1489,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ── active pane ── */}
-      {activeTab === "overview" ? (
-        err === "forbidden" ? (
-          <div className="admin-card p-4"><ForbiddenNotice /></div>
-        ) : err ? (
-          <p className="text-sm text-error-600">{err}</p>
-        ) : !stats ? (
-          <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="rounded-2xl border border-default bg-white p-5 sm:p-6">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-9 animate-pulse rounded-lg bg-slate-100" />
-                  <div className="h-4 w-32 animate-pulse rounded bg-slate-100" />
-                </div>
-                <div className="mt-4 h-8 w-24 animate-pulse rounded bg-slate-100" />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <OverviewPane
-            stats={stats}
-            token={token}
-            allowed={allowed}
-            allowedPlatformStats={allowedPlatformStats}
-            rangeDays={rangeDays}
-          />
-        )
-      ) : null}
+      {activeTab === "overview" && token ? <OverviewPane token={token} days={rangeDays} /> : null}
 
       {activeTab === "platform-stats" && token ? <PlatformStatsPane token={token} days={rangeDays} /> : null}
       {activeTab === "operator-stats" && token ? <OperatorStatsPane token={token} /> : null}
