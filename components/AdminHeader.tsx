@@ -130,6 +130,11 @@ export function AdminHeader({
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const [adminTheme, setAdminTheme] = useState<AdminTheme>("light");
+  // Mobile search — the inline GlobalSearchBox is hidden below `lg`; this slides
+  // a full-width search bar down under the header (ports dashboard.html's
+  // .header-search-btn / toggleSearch() so search is reachable on phones/tablets).
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
 
   // Initialize admin theme from localStorage / system preference, then keep <html> in sync.
   useEffect(() => {
@@ -168,9 +173,21 @@ export function AdminHeader({
       if (userMenuRef.current && !userMenuRef.current.contains(target)) {
         setUserMenuOpen(false);
       }
+      if (searchRef.current && !searchRef.current.contains(target)) {
+        setSearchOpen(false);
+      }
     };
     document.addEventListener("mousedown", handleOutsideClick);
     return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
+  // Escape closes the mobile search bar (mockup parity).
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSearchOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
   }, []);
 
   const showNotifications = canAccessNotificationsNav(user);
@@ -192,10 +209,15 @@ export function AdminHeader({
     }
   }, [notificationsOpen, loadRecentNotifications]);
 
+  const searchLabel =
+    t("admin.header.search_placeholder") !== "admin.header.search_placeholder"
+      ? t("admin.header.search_placeholder")
+      : "Որոնում";
+
   return (
     <header
-      className={`z-20 flex h-14 shrink-0 items-center justify-between border-b px-4 text-slate-800${
-        fixed ? " fixed left-0 right-0 top-0" : ""
+      className={`z-20 flex h-14 shrink-0 items-center justify-between border-b px-4 text-slate-800 ${
+        fixed ? "fixed left-0 right-0 top-0" : "relative"
       }`}
       style={{ backgroundColor: "var(--admin-header-bg)", borderColor: "var(--admin-border)" }}
     >
@@ -246,6 +268,42 @@ export function AdminHeader({
         <GlobalSearchBox />
       </div>
       <div className="flex items-center gap-1.5">
+        {/* Mobile search toggle — only below `lg` (where the inline
+            GlobalSearchBox is hidden). Tapping it slides a full-width search bar
+            down under the header; outside-click / Escape close it. Ports
+            dashboard.html .header-search-btn + .header.search-open .header-search.
+            NOT positioned itself (the panel anchors to the relative/fixed header). */}
+        <div ref={searchRef} className="flex items-center lg:hidden">
+          <TopIconButton
+            label={searchLabel}
+            onClick={() => {
+              setSearchOpen((o) => {
+                const next = !o;
+                if (next) {
+                  setTimeout(() => {
+                    searchRef.current?.querySelector<HTMLInputElement>("input")?.focus();
+                  }, 60);
+                }
+                return next;
+              });
+            }}
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" />
+              <path d="m20 20-3.5-3.5" />
+            </svg>
+          </TopIconButton>
+          <div
+            className={`absolute left-0 right-0 top-full z-30 border-b px-3 py-2 shadow-sm transition-all duration-150 ${
+              searchOpen ? "translate-y-0 opacity-100" : "pointer-events-none -translate-y-2 opacity-0"
+            }`}
+            style={{ backgroundColor: "var(--admin-header-bg)", borderColor: "var(--admin-border)" }}
+          >
+            <div className="mx-auto w-full max-w-[480px]">
+              <GlobalSearchBox />
+            </div>
+          </div>
+        </div>
         {/* Single language switcher — controls admin chrome.
             For catalog content preview language, see ContentLanguagePill on each list page. */}
         <div ref={languageRef} className="relative flex items-center">
