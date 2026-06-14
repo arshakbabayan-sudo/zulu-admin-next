@@ -1418,7 +1418,7 @@ function AgentPane({ token }: { token: string }) {
     { route: "/crm/pipeline", label: tx(t, "admin.dash2.agent.tile_deal", "Նոր գործարք"), sub: tx(t, "admin.dash2.agent.tile_deal_sub", "Բացել խողովակը"), icon: Target },
     { route: "/crm/customers", label: tx(t, "admin.dash2.agent.tile_customers", "Հաճախորդներ"), sub: tx(t, "admin.dash2.agent.tile_customers_sub", "Կառավարել ցանկը"), icon: Users },
     { route: "/crm/leads", label: tx(t, "admin.dash2.agent.tile_leads", "Հնարավոր հաճախորդներ"), sub: tx(t, "admin.dash2.agent.tile_leads_sub", "Հետևել"), icon: UserPlus },
-    { route: "/inventory", label: tx(t, "admin.dash2.agent.tile_inventory", "Որոնել գույքագրում"), sub: tx(t, "admin.dash2.agent.tile_inventory_sub", "Գտնել առաջարկներ"), icon: Search },
+    { route: "/inventory/hotels", label: tx(t, "admin.dash2.agent.tile_inventory", "Որոնել գույքագրում"), sub: tx(t, "admin.dash2.agent.tile_inventory_sub", "Գտնել առաջարկներ"), icon: Search },
     { route: "/agent/contracts", label: tx(t, "admin.dash2.agent.tile_contracts", "Իմ պայմանագրերը"), sub: tx(t, "admin.dash2.agent.tile_contracts_sub", "Դիտել համաձայնագրերը"), icon: FileText },
   ];
 
