@@ -102,6 +102,10 @@ const MGMT_PREFIXES = [
  *  sub-routes must keep AdminShell). */
 const MGMT_EXACT = [
   "/pages",
+  // 2026-06-14 — Dashboard rebuilt 1:1 from dashboard.html: it renders its OWN
+  // mgmt chrome (Sidebar/Header/management.css), so bypass AdminShell. EXACT
+  // match only — there are no /dashboard/* sub-routes.
+  "/dashboard",
   "/crm/customers",
   // 2026-06-07 — CRM consolidation WORK cluster: Contracts. The list route shows
   // the in-pane CrmPage (Work → Contracts), but the /operator/contracts/[id] and

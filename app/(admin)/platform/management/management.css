@@ -659,3 +659,100 @@ html.dark .mgmt-page .super-tag { background:#3a2540; color:#e0b8d8; }
 /* dark mode: --primary-dark is not overridden globally, so pair it per
    element (same convention as .hero-avatar / .super-tag). */
 html.dark .mgmt-page .seg-ico { color:#e0b8d8; }
+
+/* ===== Dashboard widgets (ported from dashboard.html) =====
+   1:1 from docs/admin_designe/dashboard/dashboard.html <style> "DASHBOARD
+   ADDITIONS" block. Scoped under .mgmt-page (the chrome host) and only the
+   classes NOT already present above are added. Base classes (.card, .btn,
+   .section-tabs, .table, .badge, .stat-card, .page-header, .muted-dash) are
+   reused from PART A above. The mockup's quick-action `.tile` is scoped to
+   `.tiles .tile` so it does NOT collide with the existing stat `.tile`
+   (.tile-grid > .tile, used by MyProfilePanes). var(--…) tokens kept as-is. */
+
+/* ---- KPI card: card frame + a delta badge in the header ---- */
+.mgmt-page .kpi-grid { display:grid; gap:12px; margin-bottom:16px; grid-template-columns:repeat(4,1fr); }
+@media (max-width:900px){ .mgmt-page .kpi-grid{ grid-template-columns:1fr 1fr; } }
+@media (max-width:560px){ .mgmt-page .kpi-grid{ grid-template-columns:1fr; } }
+.mgmt-page .kpi-card { background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:18px; }
+.mgmt-page .kpi-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; }
+.mgmt-page .kpi-label { font-size:12px; color:var(--text-secondary); font-weight:500; display:flex; align-items:center; gap:7px; }
+.mgmt-page .kpi-label i { font-size:18px; }
+.mgmt-page .kpi-card.c-primary .kpi-label i{ color:var(--primary); }
+.mgmt-page .kpi-card.c-success .kpi-label i{ color:var(--success); }
+.mgmt-page .kpi-card.c-warning .kpi-label i{ color:var(--warning); }
+.mgmt-page .kpi-card.c-info .kpi-label i{ color:var(--info); }
+.mgmt-page .kpi-card.c-danger .kpi-label i{ color:var(--danger); }
+.mgmt-page .kpi-value { font-size:26px; font-weight:600; letter-spacing:-0.01em; }
+.mgmt-page .kpi-sub { font-size:12px; color:var(--text-tertiary); margin-top:3px; }
+.mgmt-page .kpi-delta { font-size:11px; font-weight:600; padding:2px 7px; border-radius:999px; display:inline-flex; align-items:center; gap:2px; white-space:nowrap; }
+.mgmt-page .kpi-delta i { font-size:13px; }
+.mgmt-page .kpi-delta.up { background:var(--success-light); color:var(--success-dark); }
+.mgmt-page .kpi-delta.down { background:var(--danger-light); color:var(--danger-dark); }
+.mgmt-page .kpi-delta.flat { background:var(--bg-tertiary); color:var(--text-secondary); }
+/* per-currency KPIs: primary value + secondary chips (never summed) */
+.mgmt-page .cur-chips { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+.mgmt-page .cur-chip { font-size:11px; font-weight:500; padding:2px 8px; border-radius:999px; background:var(--bg-tertiary); color:var(--text-secondary); font-family:ui-monospace,SFMono-Regular,monospace; }
+
+/* ---- two cards side-by-side on wide screens ---- */
+.mgmt-page .dash-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+@media (max-width:1100px){ .mgmt-page .dash-grid-2 { grid-template-columns:1fr; } }
+
+/* ---- vertical CSS-bar chart (placeholder) ---- */
+.mgmt-page .chart { padding:6px 2px 0; }
+.mgmt-page .chart-bars { display:flex; align-items:flex-end; gap:6px; height:180px; }
+.mgmt-page .chart-bar { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px; height:100%; min-width:0; }
+.mgmt-page .chart-bar .bar { width:100%; max-width:34px; background:var(--primary-200); border-radius:var(--radius-sm) var(--radius-sm) 0 0; transition:height .3s, background .12s; }
+.mgmt-page .chart-bar .bar.alt { background:var(--info-light); }
+.mgmt-page .chart-bar:hover .bar { background:var(--primary); }
+.mgmt-page .chart-bar:hover .bar.alt { background:var(--info); }
+.mgmt-page .chart-xlabel { font-size:10px; color:var(--text-tertiary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+.mgmt-page .chart-legend { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:14px; }
+.mgmt-page .legend-item { font-size:12px; color:var(--text-secondary); display:flex; align-items:center; gap:6px; }
+.mgmt-page .legend-dot { width:10px; height:10px; border-radius:3px; flex-shrink:0; }
+
+/* ---- horizontal breakdown list (by service / by currency / by stage …) ---- */
+.mgmt-page .breakdown { display:flex; flex-direction:column; gap:13px; }
+.mgmt-page .bd-row { display:grid; grid-template-columns:140px 1fr auto; gap:14px; align-items:center; }
+.mgmt-page .bd-label { font-size:13px; color:var(--text-primary); display:flex; align-items:center; gap:8px; min-width:0; }
+.mgmt-page .bd-label i { font-size:16px; color:var(--text-tertiary); flex-shrink:0; }
+.mgmt-page .bd-track { height:8px; border-radius:999px; background:var(--bg-tertiary); overflow:hidden; }
+.mgmt-page .bd-fill { height:100%; border-radius:999px; background:var(--primary); }
+.mgmt-page .bd-fill.tone-info { background:var(--info); }
+.mgmt-page .bd-fill.tone-success { background:var(--success); }
+.mgmt-page .bd-fill.tone-warning { background:var(--warning); }
+.mgmt-page .bd-fill.tone-light { background:var(--primary-300); }
+.mgmt-page .bd-val { font-size:13px; font-weight:600; text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.mgmt-page .bd-val .bd-pct { font-size:11px; color:var(--text-tertiary); font-weight:500; margin-left:6px; }
+@media (max-width:560px){ .mgmt-page .bd-row { grid-template-columns:1fr auto; } .mgmt-page .bd-row .bd-track { grid-column:1 / -1; order:3; } }
+
+/* ---- 2-slice stacked split (commission split: platform vs agent) ---- */
+.mgmt-page .split-bar { display:flex; height:16px; border-radius:999px; overflow:hidden; margin-bottom:16px; }
+.mgmt-page .split-seg { height:100%; }
+.mgmt-page .split-seg.platform { background:var(--primary); }
+.mgmt-page .split-seg.agent { background:var(--info); }
+
+/* ---- quick-action tiles (scoped to .tiles to avoid the stat .tile above) ---- */
+.mgmt-page .tiles { display:grid; grid-template-columns:repeat(auto-fill,minmax(155px,1fr)); gap:12px; }
+.mgmt-page .tiles .tile { display:flex; flex-direction:column; gap:8px; padding:16px; border:1px solid var(--border-color); border-radius:var(--radius-lg); background:var(--bg-primary); cursor:pointer; text-decoration:none; color:var(--text-primary); transition:all .12s; font-family:inherit; text-align:left; }
+.mgmt-page .tiles .tile:hover { border-color:var(--primary); background:var(--primary-soft); }
+.mgmt-page .tiles .tile i { font-size:22px; color:var(--primary); }
+.mgmt-page .tile-label { font-size:13px; font-weight:600; }
+.mgmt-page .tile-sub { font-size:11px; color:var(--text-tertiary); }
+
+/* ---- header range select + dual-rev note ---- */
+.mgmt-page .range-select { height:36px; padding:0 12px; border:1px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-primary); font-size:13px; font-family:inherit; color:var(--text-primary); cursor:pointer; outline:none; }
+.mgmt-page .range-select:focus { border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-light); }
+.mgmt-page .metric-note { font-size:11px; color:var(--text-tertiary); display:inline-flex; align-items:center; gap:4px; }
+.mgmt-page .metric-note i { font-size:13px; }
+
+/* ---- dashboard-specific MOBILE rules ---- */
+@media (max-width:768px){
+  .mgmt-page .kpi-grid { grid-template-columns:1fr 1fr; }
+  .mgmt-page .dash-grid-2 { grid-template-columns:1fr; }
+  .mgmt-page .tiles { grid-template-columns:1fr 1fr; }
+  .mgmt-page .chart-bars { gap:3px; }
+  .mgmt-page .chart-bar .bar { max-width:none; }
+  .mgmt-page .bd-row { grid-template-columns:1fr auto; }
+  .mgmt-page .bd-row .bd-track { grid-column:1 / -1; order:3; }
+}
+@media (max-width:560px){ .mgmt-page .kpi-grid { grid-template-columns:1fr; } }
