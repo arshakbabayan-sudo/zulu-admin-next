@@ -211,6 +211,11 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       // 2026-06-06 (Arshak) — "/crm/staff" REMOVED (it listed all companies'
       // owners platform-wide as "staff" — wrong; operators/agents are companies
       // in Management). The per-company employee view is "Team" (scoped).
+      // 2026-06-13 redesign — Connections MOVED here from Settings. Service
+      // connections between agents/operators are a CRM "Work" surface (it sits
+      // in the CRM page's Work cluster, next to Contracts/Files). Listed just
+      // before Options so the sidebar highlights CRM on /connections.
+      { href: "/connections", labelKey: "admin.nav.tab.connections", moduleKey: "ops.connections" },
       { href: "/crm/options", labelKey: "admin.nav.tab.crm.options" },
     ],
     visibility: "section_crm",
@@ -373,8 +378,17 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   //                        Notifications sidebar group's defaultHref)
   //   • Requests          /bucket3/requests             (was a My company tab)
   //   • Cases             /bucket3/cases                (was a My company tab)
-  // Each page now also renders a per-page Inbox-strip with the three siblings,
+  // Each page now also renders a per-page Inbox-strip with the siblings,
   // so the group switch is one click regardless of which page you land on.
+  //
+  // 2026-06-13 redesign — Inbox absorbs four pages relocated OUT of Settings:
+  //   System notifications (/platform/notifications), Email templates
+  //   (/localization/templates), Reviews (/platform/reviews) and Support
+  //   tickets (/support/tickets). They join the existing My notifications /
+  //   Requests / Cases trio for the full 7-tab "things that arrive / need a
+  //   reply" surface. The pages still render via SettingsPage panes (routes
+  //   unchanged); listing them here as Inbox tabs makes the sidebar highlight
+  //   Inbox (findActiveGroup matches the explicit tab.href) instead of Settings.
   {
     key: "notifications_v2",
     labelKey: "admin.nav.section.inbox",
@@ -384,6 +398,10 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/admin-redesign/notifications", labelKey: "admin.nav.tab.my_notifications" },
       { href: "/bucket3/requests", labelKey: "admin.nav.tab.bucket3.requests" },
       { href: "/bucket3/cases", labelKey: "admin.nav.tab.bucket3.cases" },
+      { href: "/platform/notifications", labelKey: "admin.nav.tab.system_notifications" },
+      { href: "/localization/templates", labelKey: "admin.nav.tab.email_templates" },
+      { href: "/platform/reviews", labelKey: "admin.nav.tab.reviews", moduleKey: "ops.reviews" },
+      { href: "/support/tickets", labelKey: "admin.nav.tab.support" },
     ],
     visibility: "always",
     badgeSource: "notifications_unread",
@@ -396,11 +414,15 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     labelKey: "admin.nav.section.settings",
     labelFallback: "Settings",
     defaultHref: "/settings/pricing-rules",
-    // Tabs grouped logically per Bucket B audit: Pricing & money → Permissions
-    // → Localization → Content/CMS → Layout → Promotions → Inventory config →
-    // System integrations → Support. Order is what the sidebar renders top-down.
+    // 2026-06-13 redesign (docs/blueprints/html-handoff/Settings_tab.md) —
+    // Settings cleaned to exactly 6 clusters / 19 pages. Five pages relocated
+    // OUT of Settings: System notifications, Email templates, Reviews, Support
+    // tickets → Inbox; Connections → CRM. The old "Layout" cluster folded into
+    // Content & CMS (header-menu / footer / brand); the old "Support" cluster
+    // is gone. Newsletter joined Marketing (with Loyalty). Order below is what
+    // the sidebar renders top-down, cluster by cluster.
     tabs: [
-      // ── Pricing & money ───────────────────────────────────────────────
+      // ── Money ─────────────────────────────────────────────────────────
       { href: "/settings/pricing-rules", labelKey: "admin.nav.tab.pricing_rules" },
       { href: "/settings/money-flow", labelKey: "admin.nav.tab.money_flow", superAdminOnly: true },
       { href: "/settings/exchange-rates", labelKey: "admin.nav.tab.exchange_rates" },
@@ -413,36 +435,34 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/localization/languages", labelKey: "admin.nav.tab.languages", superAdminOnly: true },
       { href: "/localization/ui-translations", labelKey: "admin.nav.tab.ui_strings", superAdminOnly: true },
       { href: "/localization/translations", labelKey: "admin.nav.tab.content_translations" },
-      { href: "/localization/templates", labelKey: "admin.nav.tab.email_templates" },
 
       // ── Content & CMS ─────────────────────────────────────────────────
+      // (folds in the former "Layout" cluster: Header menu / Footer / Brand)
       { href: "/pages", labelKey: "admin.nav.tab.cms_pages" },
       { href: "/platform/banners", labelKey: "admin.nav.tab.banners", superAdminOnly: true },
-      { href: "/platform/notifications", labelKey: "admin.nav.tab.system_notifications" },
-      { href: "/platform/newsletter", labelKey: "admin.nav.tab.newsletter", moduleKey: "ops.newsletter" },
-
-      // ── Layout (storefront chrome) ────────────────────────────────────
       { href: "/platform/settings/header-menu", labelKey: "admin.nav.tab.header_menu", superAdminOnly: true },
       { href: "/platform/settings/footer", labelKey: "admin.nav.tab.footer", superAdminOnly: true },
       { href: "/platform/settings/brand", labelKey: "admin.nav.tab.brand_settings", superAdminOnly: true },
 
-      // ── Promotions ────────────────────────────────────────────────────
+      // ── Marketing ─────────────────────────────────────────────────────
       { href: "/platform/loyalty", labelKey: "admin.nav.tab.loyalty_programs", moduleKey: "ops.loyalty" },
+      { href: "/platform/newsletter", labelKey: "admin.nav.tab.newsletter", moduleKey: "ops.newsletter" },
 
       // Phase 2 (2026-05-31) — Inventory configuration tabs MOVED OUT of
       // Settings into the Inventory section. Block dates / Custom fields /
       // Service catalog are now listed under the Inventory group above.
 
-      // ── System (integrations, security, geography) ────────────────────
+      // ── System (integrations, security, geography, platform settings) ──
       { href: "/platform/security", labelKey: "admin.nav.tab.security", superAdminOnly: true },
-      { href: "/platform/webhooks", labelKey: "admin.nav.tab.webhooks", superAdminOnly: true },
       { href: "/platform/locations", labelKey: "admin.nav.tab.locations", superAdminOnly: true },
+      { href: "/platform/webhooks", labelKey: "admin.nav.tab.webhooks", superAdminOnly: true },
       { href: "/platform/api-docs", labelKey: "admin.nav.tab.api_docs", superAdminOnly: true },
-      { href: "/connections", labelKey: "admin.nav.tab.connections", moduleKey: "ops.connections" },
-
-      // ── Support & feedback ────────────────────────────────────────────
-      { href: "/support/tickets", labelKey: "admin.nav.tab.support" },
-      { href: "/platform/reviews", labelKey: "admin.nav.tab.reviews", moduleKey: "ops.reviews" },
+      {
+        href: "/platform/settings",
+        labelKey: "admin.nav.tab.platform_settings",
+        labelFallback: "Platform settings",
+        superAdminOnly: true,
+      },
     ],
     visibility: "section_settings",
   },
@@ -515,6 +535,11 @@ export type SettingsSubgroup = {
   hrefs: string[];
 };
 
+// 2026-06-13 redesign — exactly 6 clusters / 19 hrefs (was 8 clusters). Matches
+// the Settings tabs[] above and SettingsPage.tsx's own PAGES/CLUSTERS config.
+// "Layout" folded into Content & CMS; "Support" deleted; Newsletter → Marketing;
+// the 5 relocated pages (notifications/templates/reviews/support tickets →
+// Inbox; connections → CRM) are NOT listed here.
 export const SETTINGS_SUBGROUPS: SettingsSubgroup[] = [
   {
     label: "Money",
@@ -530,7 +555,6 @@ export const SETTINGS_SUBGROUPS: SettingsSubgroup[] = [
       "/localization/languages",
       "/localization/ui-translations",
       "/localization/translations",
-      "/localization/templates",
     ],
   },
   {
@@ -538,13 +562,6 @@ export const SETTINGS_SUBGROUPS: SettingsSubgroup[] = [
     hrefs: [
       "/pages",
       "/platform/banners",
-      "/platform/notifications",
-      "/platform/newsletter",
-    ],
-  },
-  {
-    label: "Layout",
-    hrefs: [
       "/platform/settings/header-menu",
       "/platform/settings/footer",
       "/platform/settings/brand",
@@ -552,21 +569,17 @@ export const SETTINGS_SUBGROUPS: SettingsSubgroup[] = [
   },
   {
     label: "Marketing",
-    hrefs: ["/platform/loyalty"],
+    hrefs: ["/platform/loyalty", "/platform/newsletter"],
   },
   {
     label: "System",
     hrefs: [
       "/platform/security",
-      "/platform/webhooks",
       "/platform/locations",
+      "/platform/webhooks",
       "/platform/api-docs",
-      "/connections",
+      "/platform/settings",
     ],
-  },
-  {
-    label: "Support",
-    hrefs: ["/support/tickets", "/platform/reviews"],
   },
 ];
 

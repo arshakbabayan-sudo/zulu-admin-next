@@ -22,25 +22,23 @@ import {
   ShieldCheck,
   Languages,
   Palette,
-  LayoutGrid,
   Megaphone,
   Server,
-  LifeBuoy,
   type LucideIcon,
 } from "lucide-react";
 import { SETTINGS_SUBGROUPS } from "@/lib/admin-nav-config";
 import { DEFAULT_TAB_LABELS } from "@/components/settings/SettingsSubgroupTabs";
 
-/** Group label → lucide icon (mirrors the mock's Tabler `gico` per group). */
+/** Group label → lucide icon (mirrors the mock's Tabler `gico` per group).
+ *  2026-06-13 redesign — 6 clusters (Layout folded into Content & CMS, Support
+ *  deleted), so the old LayoutGrid / LifeBuoy entries are gone. */
 const GROUP_ICON: Record<string, LucideIcon> = {
   Money: Coins,
   Permissions: ShieldCheck,
   Localization: Languages,
   "Content & CMS": Palette,
-  Layout: LayoutGrid,
   Marketing: Megaphone,
   System: Server,
-  Support: LifeBuoy,
 };
 
 function humaniseSlug(href: string): string {

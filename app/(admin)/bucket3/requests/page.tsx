@@ -54,9 +54,9 @@ import {
 } from "@/components/ui";
 import {
   PageHeader as V2PageHeader,
-  SectionTabs,
   V2Button,
 } from "@/components/ui/v2";
+import { InboxSectionTabs } from "@/components/inbox/InboxSectionTabs";
 import { Download, Plus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -218,7 +218,7 @@ export default function Bucket3RequestsPage() {
       <V2PageHeader
         breadcrumb={[
           { label: "Home", href: "/dashboard" },
-          { label: "Management", href: "/platform/companies" },
+          { label: "Inbox", href: "/admin-redesign/notifications" },
           { label: t("admin.bucket3.requests.title") },
         ]}
         title={t("admin.bucket3.requests.title")}
@@ -262,19 +262,9 @@ export default function Bucket3RequestsPage() {
         }
       />
 
-      {/* Phase 4F (2026-05-31) — Inbox group strip.
-          Replaces the prior Marketplace-ops strip this page rendered (which
-          surfaced Approval queue / Companies access / etc. — wrong context
-          for a Requests page). Inbox now sits as one top-level sidebar
-          group and these three pages are siblings in it. */}
-      <SectionTabs
-        activeHref="/bucket3/requests"
-        items={[
-          { href: "/admin-redesign/notifications", label: "My notifications" },
-          { href: "/bucket3/requests", label: "Requests" },
-          { href: "/bucket3/cases", label: "Cases" },
-        ]}
-      />
+      {/* Inbox group strip (2026-06-13 IA — 7 siblings). Shared component so
+          every Inbox page renders the same strip. */}
+      <InboxSectionTabs activeHref="/bucket3/requests" />
 
       <div className="space-y-6">
 

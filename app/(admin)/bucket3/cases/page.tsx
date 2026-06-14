@@ -37,11 +37,11 @@ import {
 } from "@/components/ui";
 import {
   PageHeader as V2PageHeader,
-  SectionTabs,
   V2Card,
   V2Button,
   IconButton,
 } from "@/components/ui/v2";
+import { InboxSectionTabs } from "@/components/inbox/InboxSectionTabs";
 import { Download, Eye, Plus } from "lucide-react";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useCallback, useEffect, useState } from "react";
@@ -351,17 +351,12 @@ export default function Bucket3CasesPage() {
         }
       />
 
-      {/* Phase 4F (2026-05-31) — Inbox group strip.
-          Replaces the prior My-company strip this page rendered. Inbox is
-          the new sidebar group hosting Notifications + Requests + Cases —
-          the three "things waiting for me" surfaces. */}
-      <SectionTabs
+      {/* Inbox group strip (2026-06-13 IA — 7 siblings). Shared component so
+          every Inbox page renders the same strip; pass the Cases total as a
+          count on its own tab. */}
+      <InboxSectionTabs
         activeHref="/bucket3/cases"
-        items={[
-          { href: "/admin-redesign/notifications", label: "My notifications" },
-          { href: "/bucket3/requests", label: "Requests" },
-          { href: "/bucket3/cases", label: "Cases", count: meta?.total },
-        ]}
+        counts={{ "/bucket3/cases": meta?.total }}
       />
 
       <div className="space-y-6">

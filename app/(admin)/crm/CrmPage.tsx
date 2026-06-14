@@ -208,7 +208,7 @@ type ClusterKey = "sales" | "people" | "work" | "myprofile" | "options";
 export type CrmPageKey =
   | "pipeline" | "leads" | "deals" | "activities" | "segments"
   | "customers" | "team"
-  | "contracts" | "workhours" | "payroll" | "files"
+  | "contracts" | "workhours" | "payroll" | "files" | "connections"
   | "account" | "mycompany" | "myteam" | "myagents"
   | "options";
 
@@ -253,6 +253,10 @@ export function CrmPage({ initialPage = "pipeline" }: { initialPage?: CrmPageKey
     workhours:  { cluster: "work",    labelKey: "pgWorkhours",  subKey: "subWorkhours",  inPage: true,  href: "/bucket3/non-service-hours" },
     payroll:    { cluster: "work",    labelKey: "pgPayroll",    subKey: "subPayroll",    inPage: true,  href: "/bucket3/payroll" },
     files:      { cluster: "work",    labelKey: "pgFiles",      subKey: "subFiles",      inPage: true,  href: "/admin-redesign/files" },
+    // 2026-06-13 redesign — Connections relocated from Settings → CRM Work. Its
+    // pane still lives in SettingsPage at /connections, so this pill NAVIGATES
+    // out (inPage:false) rather than rendering in-page here.
+    connections:{ cluster: "work",    labelKey: "pgConnections",subKey: "subConnections",inPage: false, href: "/connections" },
     account:    { cluster: "myprofile", labelKey: "pgAccount",   subKey: "subAccount",    inPage: true,  href: "/crm/account" },
     mycompany:  { cluster: "myprofile", labelKey: "pgMyCompany", subKey: "subMyCompany",  inPage: true,  href: "/crm/my-company" },
     myteam:     { cluster: "myprofile", labelKey: "pgMyTeam",    subKey: "subMyTeam",     inPage: true,  href: "/crm/my-team" },

@@ -203,6 +203,10 @@ import {
 } from "@/lib/connections-api";
 import { RbacMenuTree } from "@/components/rbac/RbacMenuTree";
 import { PinPromptDialog } from "@/components/PinPromptDialog";
+import { InboxSectionTabs } from "@/components/inbox/InboxSectionTabs";
+import { SectionTabs } from "@/components/ui/v2";
+import { canAccessPlatformAdminNav } from "@/lib/access";
+import { crmStrings } from "../crm/crm-i18n";
 
 // ── Page catalogue ──────────────────────────────────────────────
 export type SettingsPageKey =
@@ -288,6 +292,56 @@ const PAGES_BY_CLUSTER: Record<ClusterKey, SettingsPageKey[]> = (() => {
   return m;
 })();
 
+// 2026-06-13 redesign — the relocated ("moved") pages still render through their
+// SettingsPage panes (routes unchanged), but when opened via their own route the
+// page belongs to a DIFFERENT section now. Instead of the Settings two-level
+// cluster strip (wrong context), render that destination section's on-page strip
+// so the breadcrumb/nav match the sidebar (which already highlights Inbox / CRM
+// via ADMIN_NAV_GROUPS). Each entry maps the moved page → { section, activeHref }.
+const MOVED_PAGE_SECTION: Partial<Record<SettingsPageKey, { section: "inbox" | "crm"; href: string }>> = {
+  "sys-notif": { section: "inbox", href: "/platform/notifications" },
+  "email-tpl": { section: "inbox", href: "/localization/templates" },
+  reviews: { section: "inbox", href: "/platform/reviews" },
+  "support-tickets": { section: "inbox", href: "/support/tickets" },
+  connections: { section: "crm", href: "/connections" },
+};
+
+/**
+ * CRM "Work" cluster strip — rendered on /connections (relocated from Settings →
+ * CRM Work). Mirrors the CrmPage Work cluster: Contracts · Work hours · Payroll
+ * · Files · Connections. Contracts is role-routed exactly like CrmPage (super →
+ * all companies; agent → own; operator → own). Labels reuse crm-i18n; Connections
+ * reuses the settings-i18n label. Keeps /connections in CRM context instead of
+ * the Settings cluster strip.
+ */
+function CrmWorkSectionTabs({
+  activeHref,
+  lang,
+  isSuper,
+  isAgent,
+}: {
+  activeHref: string;
+  lang: string;
+  isSuper: boolean;
+  isAgent: boolean;
+}) {
+  const cs = crmStrings(lang);
+  const ss = settingsStrings(lang);
+  const contractsHref = isSuper ? "/platform/contracts" : isAgent ? "/agent/contracts" : "/operator/contracts";
+  return (
+    <SectionTabs
+      activeHref={activeHref}
+      items={[
+        { href: contractsHref, label: cs.pgContracts },
+        { href: "/bucket3/non-service-hours", label: cs.pgWorkhours },
+        { href: "/bucket3/payroll", label: cs.pgPayroll },
+        { href: "/admin-redesign/files", label: cs.pgFiles },
+        { href: "/connections", label: ss.pgConnections },
+      ]}
+    />
+  );
+}
+
 function fmtDateTime(iso: string | null | undefined): string {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -369,6 +423,20 @@ export function SettingsPage({ initialPage = "exchange-rates" }: { initialPage?:
   const activeClusterMeta = CLUSTERS.find((c) => c.key === activeCluster) ?? null;
   const activePills = PAGES_BY_CLUSTER[activeCluster] ?? [];
 
+  // 2026-06-13 redesign — when a relocated page is opened via its own route,
+  // render its DESTINATION section's strip (Inbox / CRM) + breadcrumb instead of
+  // the Settings cluster strip, so the on-page nav matches the sidebar.
+  const movedSection = meta.moved ? MOVED_PAGE_SECTION[page] ?? null : null;
+  const isSuper = !!(user?.is_super_admin || canAccessPlatformAdminNav(user));
+  const isAgent = !!user?.roles?.includes("agent");
+  const sectionCrumb = movedSection
+    ? movedSection.section === "inbox"
+      ? "Inbox"
+      : "CRM"
+    : activeClusterMeta
+      ? s[activeClusterMeta.labelKey]
+      : null;
+
   return (
     <div className="mgmt-page mgmt-page-host">
       <div className={layoutClass}>
@@ -393,9 +461,9 @@ export function SettingsPage({ initialPage = "exchange-rates" }: { initialPage?:
                 <div className="breadcrumb">
                   <a onClick={() => router.push("/dashboard")}>{s.breadcrumbHome}</a>
                   <i className="ti ti-chevron-right" />
-                  {activeClusterMeta ? (
+                  {sectionCrumb ? (
                     <>
-                      <span>{s[activeClusterMeta.labelKey]}</span>
+                      <span>{sectionCrumb}</span>
                       <i className="ti ti-chevron-right" />
                     </>
                   ) : null}
@@ -415,32 +483,50 @@ export function SettingsPage({ initialPage = "exchange-rates" }: { initialPage?:
               <div style={{ display: "flex", gap: 8, alignItems: "center" }} id="action-slot" />
             </div>
 
-            {/* Level 1 — cluster strip */}
-            <div className="section-tabs">
-              {CLUSTERS.map((c) => (
-                <button
-                  key={c.key}
-                  className={`section-tab ${c.key === activeCluster ? "active" : ""}`}
-                  onClick={() => goCluster(c.key)}
-                >
-                  <i className={`ti ${c.icon}`} />
-                  {s[c.labelKey]}
-                </button>
-              ))}
-            </div>
+            {/* 2026-06-13 redesign — relocated page opened via its own route:
+                show the DESTINATION section's strip (Inbox / CRM Work) instead
+                of the Settings two-level cluster strip. */}
+            {movedSection ? (
+              movedSection.section === "inbox" ? (
+                <InboxSectionTabs activeHref={movedSection.href} />
+              ) : (
+                <CrmWorkSectionTabs
+                  activeHref={movedSection.href}
+                  lang={lang}
+                  isSuper={isSuper}
+                  isAgent={isAgent}
+                />
+              )
+            ) : (
+              <>
+                {/* Level 1 — cluster strip */}
+                <div className="section-tabs">
+                  {CLUSTERS.map((c) => (
+                    <button
+                      key={c.key}
+                      className={`section-tab ${c.key === activeCluster ? "active" : ""}`}
+                      onClick={() => goCluster(c.key)}
+                    >
+                      <i className={`ti ${c.icon}`} />
+                      {s[c.labelKey]}
+                    </button>
+                  ))}
+                </div>
 
-            {/* Level 2 — page pills for the active cluster */}
-            <div className="pills-row">
-              {activePills.map((k) => (
-                <button
-                  key={k}
-                  className={`sub-tab ${k === page ? "active" : ""}`}
-                  onClick={() => showPage(k)}
-                >
-                  {s[PAGES[k].labelKey]}
-                </button>
-              ))}
-            </div>
+                {/* Level 2 — page pills for the active cluster */}
+                <div className="pills-row">
+                  {activePills.map((k) => (
+                    <button
+                      key={k}
+                      className={`sub-tab ${k === page ? "active" : ""}`}
+                      onClick={() => showPage(k)}
+                    >
+                      {s[PAGES[k].labelKey]}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
 
             {/* In-page panes */}
             {page === "pricing-rules" && <PricingRulesPane token={token} lang={lang} />}

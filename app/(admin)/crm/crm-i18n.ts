@@ -52,6 +52,7 @@ const EN = {
   pgWorkhours: "Work hours",
   pgPayroll: "Payroll",
   pgFiles: "Files",
+  pgConnections: "Connections",
   pgOptions: "Options",
 
   // ── page subtitles ────────────────────────────────────────────
@@ -66,6 +67,7 @@ const EN = {
   subWorkhours: "Employee shifts and time off.",
   subPayroll: "Monthly payroll ledger.",
   subFiles: "Store contracts, payment receipts, and documents.",
+  subConnections: "Service connections between agents and operators.",
   subOptions: "CRM settings for your company.",
 
   // ── action buttons ────────────────────────────────────────────
@@ -888,6 +890,7 @@ const HY: Partial<Record<CrmKey, string>> = {
   pgWorkhours: "Աշխատաժամեր",
   pgPayroll: "Աշխատավարձ",
   pgFiles: "Ֆայլեր",
+  pgConnections: "Կապեր",
   pgOptions: "Կարգավորումներ",
 
   subPipeline: "Քո գործարքներն ըստ փուլի։",
@@ -901,6 +904,7 @@ const HY: Partial<Record<CrmKey, string>> = {
   subWorkhours: "Աշխատակիցների հերթափոխեր և հանգստյան օրեր։",
   subPayroll: "Ամսական աշխատավարձի մատյան։",
   subFiles: "Պահիր պայմանագրեր, վճարման անդորրագրեր ու փաստաթղթեր։",
+  subConnections: "Ագենտների և օպերատորների միջև ծառայության-կապերը։",
   subOptions: "Քո ընկերության CRM կարգավորումները։",
 
   actNewDeal: "Նոր գործարք",
@@ -1693,6 +1697,7 @@ const RU: Partial<Record<CrmKey, string>> = {
   pgWorkhours: "Рабочие часы",
   pgPayroll: "Зарплата",
   pgFiles: "Файлы",
+  pgConnections: "Связи",
   pgOptions: "Настройки",
 
   subPipeline: "Ваши сделки по этапам.",
@@ -1706,6 +1711,7 @@ const RU: Partial<Record<CrmKey, string>> = {
   subWorkhours: "Смены и выходные сотрудников.",
   subPayroll: "Ежемесячный реестр зарплат.",
   subFiles: "Храните договоры, квитанции об оплате и документы.",
+  subConnections: "Сервисные связи между агентами и операторами.",
   subOptions: "Настройки CRM вашей компании.",
 
   actNewDeal: "Новая сделка",
