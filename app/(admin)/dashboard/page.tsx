@@ -24,6 +24,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import "../platform/management/management.css";
 import { Sidebar, Header } from "../platform/management/MgmtPage";
+import { useMgmtMobileNav } from "@/lib/use-mgmt-mobile-nav";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import {
@@ -958,7 +959,7 @@ export default function DashboardPage() {
   const { t, lang, setLang, languageOptions } = useLanguage();
   const { token, user, logout } = useAdminAuth();
   const [rangeDays, setRangeDays] = useState(30);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { sidebarCollapsed, onHamburger, closeNav, layoutClass } = useMgmtMobileNav();
   const [unreadCount, setUnreadCount] = useState(0);
 
   const allowed = canAccessDashboardSection(user);
@@ -1017,12 +1018,13 @@ export default function DashboardPage() {
   // ── mgmt chrome wrapper (copied from CrmPage) ──
   return (
     <div className="mgmt-page mgmt-page-host">
-      <div className={`layout ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
+      <div className={layoutClass}>
         <Sidebar collapsed={sidebarCollapsed} unreadCount={unreadCount} />
+        <div className="nav-overlay" onClick={closeNav} />
         <div className="main">
           <Header
             collapsed={sidebarCollapsed}
-            onHamburger={() => setSidebarCollapsed((v) => !v)}
+            onHamburger={onHamburger}
             user={user ?? null}
             token={token}
             lang={lang}

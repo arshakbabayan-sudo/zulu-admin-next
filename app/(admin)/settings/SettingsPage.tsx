@@ -19,6 +19,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import "../platform/management/management.css";
 import { Sidebar, Header } from "../platform/management/MgmtPage";
+import { useMgmtMobileNav } from "@/lib/use-mgmt-mobile-nav";
 import { settingsStrings, type SettingsKey } from "./settings-i18n";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -311,7 +312,7 @@ export function SettingsPage({ initialPage = "exchange-rates" }: { initialPage?:
   const s = settingsStrings(lang);
 
   const [page, setPage] = useState<SettingsPageKey>(initialPage);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { sidebarCollapsed, onHamburger, closeNav, layoutClass } = useMgmtMobileNav();
   const [unreadCount, setUnreadCount] = useState(0);
   useEffect(() => {
     setPage(initialPage);
@@ -370,12 +371,13 @@ export function SettingsPage({ initialPage = "exchange-rates" }: { initialPage?:
 
   return (
     <div className="mgmt-page mgmt-page-host">
-      <div className={`layout ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
+      <div className={layoutClass}>
         <Sidebar collapsed={sidebarCollapsed} unreadCount={unreadCount} />
+        <div className="nav-overlay" onClick={closeNav} />
         <div className="main">
           <Header
             collapsed={sidebarCollapsed}
-            onHamburger={() => setSidebarCollapsed((v) => !v)}
+            onHamburger={onHamburger}
             user={user ?? null}
             token={token}
             lang={lang}

@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import "../platform/management/management.css";
 import { Sidebar, Header } from "../platform/management/MgmtPage";
+import { useMgmtMobileNav } from "@/lib/use-mgmt-mobile-nav";
 import { crmStrings, type CrmKey } from "./crm-i18n";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -268,7 +269,7 @@ export function CrmPage({ initialPage = "pipeline" }: { initialPage?: CrmPageKey
   }, [PAGES]);
 
   const [page, setPage] = useState<CrmPageKey>(initialPage);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { sidebarCollapsed, onHamburger, closeNav, layoutClass } = useMgmtMobileNav();
   const [unreadCount, setUnreadCount] = useState(0);
   const [actionNode, setActionNode] = useState<ReactNode>(null);
   const [toasts, setToasts] = useState<Array<{ id: number; msg: string }>>([]);
@@ -361,12 +362,13 @@ export function CrmPage({ initialPage = "pipeline" }: { initialPage?: CrmPageKey
 
   return (
     <div className="mgmt-page mgmt-page-host">
-      <div className={`layout ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
+      <div className={layoutClass}>
         <Sidebar collapsed={sidebarCollapsed} unreadCount={unreadCount} />
+        <div className="nav-overlay" onClick={closeNav} />
         <div className="main">
           <Header
             collapsed={sidebarCollapsed}
-            onHamburger={() => setSidebarCollapsed((v) => !v)}
+            onHamburger={onHamburger}
             user={user ?? null}
             token={token}
             lang={lang}

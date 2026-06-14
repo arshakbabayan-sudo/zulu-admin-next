@@ -25,6 +25,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import "./management.css";
 import { mgmtStrings, type MgmtKey } from "./management-i18n";
+import { useMgmtMobileNav } from "@/lib/use-mgmt-mobile-nav";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { AdminHeader } from "@/components/AdminHeader";
@@ -345,7 +346,7 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
 
   // ───────────────── Top-level state ─────────────────
   const [tab, setTab] = useState<MgmtTab>(initialTab);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { sidebarCollapsed, onHamburger, closeNav, layoutClass } = useMgmtMobileNav();
   // Unread notification count — single source for the header bell dot AND the
   // Inbox sidebar badge (mirrors AdminShell). Fetched once on mount.
   const [unreadCount, setUnreadCount] = useState(0);
@@ -1269,12 +1270,13 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
 
   return (
     <div className="mgmt-page mgmt-page-host">
-      <div className={`layout ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
+      <div className={layoutClass}>
         <Sidebar collapsed={sidebarCollapsed} unreadCount={unreadCount} />
+        <div className="nav-overlay" onClick={closeNav} />
         <div className="main">
           <Header
             collapsed={sidebarCollapsed}
-            onHamburger={() => setSidebarCollapsed((v) => !v)}
+            onHamburger={onHamburger}
             user={user ?? null}
             token={token}
             lang={lang}
