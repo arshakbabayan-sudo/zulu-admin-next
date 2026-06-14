@@ -21,7 +21,7 @@
  */
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "../platform/management/management.css";
 import { Sidebar, Header } from "../platform/management/MgmtPage";
 import { useMgmtMobileNav } from "@/lib/use-mgmt-mobile-nav";
@@ -50,8 +50,9 @@ import { apiCrmCustomersStats, apiCrmCustomers, type CrmCustomersStats, type Cus
 import { apiCrmLeadsStats, type CrmLeadsStats } from "@/lib/crm-leads-api";
 import { apiSellerContracts, type ContractRow } from "@/lib/contracts-api";
 import { formatNumber, formatDateTime } from "@/lib/format";
+import { dashStrings } from "./dashboard-i18n";
 
-/* ─── shared formatting / i18n helpers (kept from the previous build) ─── */
+/* ─── shared formatting helpers (kept from the previous build) ───────── */
 
 function formatValue(n: number | undefined | null, lang: string = "en"): string {
   if (n == null || !Number.isFinite(n)) return "—";
@@ -60,13 +61,26 @@ function formatValue(n: number | undefined | null, lang: string = "en"): string 
   return formatNumber(n, lang);
 }
 
-/**
- * Translation helper — returns the translated string, or the Armenian fallback
- * when the key isn't in the bundle (t() returns the key itself in that case).
- */
-function tx(t: (k: string) => string, key: string, fallback: string): string {
-  const r = t(key);
-  return r === key ? fallback : r;
+/** Quote a single CSV cell per RFC 4180 (wrap + double internal quotes). */
+function csvCell(v: string | number): string {
+  const s = String(v ?? "");
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+/** Build a CSV string from rows and trigger a client-side Blob download. */
+function downloadCsv(filenameBase: string, rows: (string | number)[][]): void {
+  if (typeof window === "undefined") return;
+  const body = rows.map((r) => r.map(csvCell).join(",")).join("\r\n");
+  // BOM so Excel reads UTF-8 (Armenian/Russian headers) correctly.
+  const blob = new Blob(["﻿" + body], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${filenameBase}-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 /** Map the documented FinanceRange string from the rangeDays selector. */
@@ -130,33 +144,35 @@ function actorInitials(name: string | null | undefined): string {
 
 /* ─── service / stage label + tone maps (mockup uses tabler icons + bd-fill tones) ── */
 
-type ServiceMeta = { key: string; fallback: string; icon: string; tone: string };
+/* The label for each service/stage now comes from the dict (d.service[code] /
+ * d.stage[code]); these maps only keep the icon + bd-fill tone. */
+type ServiceMeta = { icon: string; tone: string };
 const SERVICE_META: Record<string, ServiceMeta> = {
-  flight: { key: "admin.dash2.service.flight", fallback: "Թռիչքներ", icon: "ti-plane", tone: "" },
-  flights: { key: "admin.dash2.service.flights", fallback: "Թռիչքներ", icon: "ti-plane", tone: "" },
-  hotel: { key: "admin.dash2.service.hotel", fallback: "Հյուրանոցներ", icon: "ti-bed", tone: "tone-info" },
-  hotels: { key: "admin.dash2.service.hotels", fallback: "Հյուրանոցներ", icon: "ti-bed", tone: "tone-info" },
-  package: { key: "admin.dash2.service.package", fallback: "Փաթեթներ", icon: "ti-map-pin", tone: "tone-success" },
-  packages: { key: "admin.dash2.service.packages", fallback: "Փաթեթներ", icon: "ti-map-pin", tone: "tone-success" },
-  transfer: { key: "admin.dash2.service.transfer", fallback: "Փոխադրումներ", icon: "ti-car", tone: "tone-light" },
-  transfers: { key: "admin.dash2.service.transfers", fallback: "Փոխադրումներ", icon: "ti-car", tone: "tone-light" },
-  excursion: { key: "admin.dash2.service.excursion", fallback: "Էքսկուրսիաներ", icon: "ti-compass", tone: "tone-warning" },
-  excursions: { key: "admin.dash2.service.excursions", fallback: "Էքսկուրսիաներ", icon: "ti-compass", tone: "tone-warning" },
-  visa: { key: "admin.dash2.service.visa", fallback: "Վիզա", icon: "ti-id-badge-2", tone: "" },
-  insurance: { key: "admin.dash2.service.insurance", fallback: "Ապահովագրություն", icon: "ti-shield-half", tone: "tone-info" },
-  other: { key: "admin.dash2.service.other", fallback: "Այլ", icon: "ti-dots", tone: "" },
+  flight: { icon: "ti-plane", tone: "" },
+  flights: { icon: "ti-plane", tone: "" },
+  hotel: { icon: "ti-bed", tone: "tone-info" },
+  hotels: { icon: "ti-bed", tone: "tone-info" },
+  package: { icon: "ti-map-pin", tone: "tone-success" },
+  packages: { icon: "ti-map-pin", tone: "tone-success" },
+  transfer: { icon: "ti-car", tone: "tone-light" },
+  transfers: { icon: "ti-car", tone: "tone-light" },
+  excursion: { icon: "ti-compass", tone: "tone-warning" },
+  excursions: { icon: "ti-compass", tone: "tone-warning" },
+  visa: { icon: "ti-id-badge-2", tone: "" },
+  insurance: { icon: "ti-shield-half", tone: "tone-info" },
+  other: { icon: "ti-dots", tone: "" },
 };
 function serviceMeta(service: string): ServiceMeta {
-  return SERVICE_META[(service ?? "").toLowerCase()] ?? { key: `admin.dash2.service.${service}`, fallback: service, icon: "ti-dots", tone: "" };
+  return SERVICE_META[(service ?? "").toLowerCase()] ?? { icon: "ti-dots", tone: "" };
 }
 
-const STAGE_META: Record<string, { key: string; fallback: string; tone: string }> = {
-  new: { key: "admin.dash2.stage.new", fallback: "Նոր", tone: "" },
-  qualified: { key: "admin.dash2.stage.qualified", fallback: "Որակավորված", tone: "" },
-  proposal: { key: "admin.dash2.stage.proposal", fallback: "Առաջարկ", tone: "" },
-  negotiation: { key: "admin.dash2.stage.negotiation", fallback: "Բանակցություն", tone: "" },
-  won: { key: "admin.dash2.stage.won", fallback: "Շահված", tone: "tone-success" },
-  lost: { key: "admin.dash2.stage.lost", fallback: "Կորցրած", tone: "" },
+const STAGE_META: Record<string, { tone: string }> = {
+  new: { tone: "" },
+  qualified: { tone: "" },
+  proposal: { tone: "" },
+  negotiation: { tone: "" },
+  won: { tone: "tone-success" },
+  lost: { tone: "" },
 };
 
 /* ─── tiny widgets reused by panes (all in mockup classes) ─────────── */
@@ -238,17 +254,18 @@ type DashboardSnapshot = {
 
 type OvRevenuePoint = { date: string; revenue: number; orders: number };
 
-/** type → translated label + icon + color (recent-activity table). */
-const TX_TYPE_META: Record<string, { key: string; fallback: string; icon: string; color: string }> = {
-  payment_in: { key: "admin.dash2.ov.tx_payment_in", fallback: "Մուտքային վճարում", icon: "ti-arrow-down-left", color: "var(--success)" },
-  commission: { key: "admin.dash2.ov.tx_commission", fallback: "Միջնորդավճար", icon: "ti-receipt-2", color: "var(--primary)" },
-  refund: { key: "admin.dash2.ov.tx_refund", fallback: "Վերադարձ", icon: "ti-arrow-back-up", color: "var(--danger)" },
-  payout: { key: "admin.dash2.ov.tx_payout", fallback: "Վճարում դուրս", icon: "ti-cash-banknote", color: "var(--text-secondary)" },
-  voucher_issued: { key: "admin.dash2.ov.tx_voucher", fallback: "Վաուչեր", icon: "ti-ticket", color: "var(--info)" },
+/** type → icon + color (recent-activity table). Label comes from d.txType[type]. */
+const TX_TYPE_META: Record<string, { icon: string; color: string }> = {
+  payment_in: { icon: "ti-arrow-down-left", color: "var(--success)" },
+  commission: { icon: "ti-receipt-2", color: "var(--primary)" },
+  refund: { icon: "ti-arrow-back-up", color: "var(--danger)" },
+  payout: { icon: "ti-cash-banknote", color: "var(--text-secondary)" },
+  voucher_issued: { icon: "ti-ticket", color: "var(--info)" },
 };
 
-function OverviewPane({ token, days }: { token: string; days: number }) {
-  const { t, lang } = useLanguage();
+function OverviewPane({ token, days, onExportReady }: { token: string; days: number; onExportReady?: (fn: (() => void) | null) => void }) {
+  const { lang } = useLanguage();
+  const d = dashStrings(lang);
   const range = rangeFromDays(days);
 
   const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
@@ -297,8 +314,24 @@ function OverviewPane({ token, days }: { token: string; days: number }) {
     };
   }, [token, days, range]);
 
-  if (forbidden) return <div className="card" style={{ padding: 16 }}>{tx(t, "admin.forbidden.dashboard_stats", "Հասանելի չէ")}</div>;
-  if (loading && !snapshot) return <div className="card cell-muted" style={{ padding: 16 }}>{tx(t, "admin.dash2.loading", "Բեռնվում է…")}</div>;
+  // expose a CSV export of the top-operators table to the page shell
+  useEffect(() => {
+    if (!onExportReady) return;
+    const fn = () => {
+      const rows = topOperators.map((s, i) => [
+        i + 1,
+        s.name ?? s.company_name ?? `#${s.company_id}`,
+        s.revenue ?? s.total_revenue ?? 0,
+        s.orders ?? s.order_count ?? 0,
+      ]);
+      downloadCsv("dashboard-top-operators", [["#", d.ovColOperator, d.ovColRevenue, d.ovColOrders], ...rows]);
+    };
+    onExportReady(fn);
+    return () => onExportReady(null);
+  }, [onExportReady, topOperators, d]);
+
+  if (forbidden) return <div className="card" style={{ padding: 16 }}>{d.forbidden}</div>;
+  if (loading && !snapshot) return <div className="card cell-muted" style={{ padding: 16 }}>{d.loading}</div>;
 
   const bookings = snapshot?.orders?.total_in_window ?? 0;
   const revenue = snapshot?.revenue?.total ?? 0;
@@ -316,34 +349,34 @@ function OverviewPane({ token, days }: { token: string; days: number }) {
       <div className="kpi-grid">
         <div className="kpi-card c-primary">
           <div className="kpi-head">
-            <span className="kpi-label"><i className="ti ti-calendar-event" />{tx(t, "admin.dash2.ov.total_bookings", "Ընդհանուր ամրագրումներ")}</span>
+            <span className="kpi-label"><i className="ti ti-calendar-event" />{d.ovTotalBookings}</span>
             <span className={`kpi-delta ${deltaClass(bookingsDelta.sign)}`}><i className={`ti ${deltaIcon(bookingsDelta.sign)}`} />{bookingsDelta.text}</span>
           </div>
           <div className="kpi-value">{formatValue(bookings, lang)}</div>
-          <div className="kpi-sub">{tx(t, "admin.dash2.ov.vs_prev", "նախորդ {n} օրվա համեմատ").replace("{n}", String(days))}</div>
+          <div className="kpi-sub">{d.ovVsPrev.replace("{n}", String(days))}</div>
         </div>
         <div className="kpi-card c-success">
           <div className="kpi-head">
-            <span className="kpi-label"><i className="ti ti-coin" />{tx(t, "admin.dash2.ov.gross_revenue", "Համախառն եկամուտ")}</span>
+            <span className="kpi-label"><i className="ti ti-coin" />{d.ovGrossRevenue}</span>
             <span className={`kpi-delta ${deltaClass(revenueDelta.sign)}`}><i className={`ti ${deltaIcon(revenueDelta.sign)}`} />{revenueDelta.text}</span>
           </div>
           <div className="kpi-value">{curLabel("AMD", revenue, lang)}</div>
-          <div className="kpi-sub"><span className="metric-note"><i className="ti ti-info-circle" />{tx(t, "admin.dash2.ov.order_based", "Պատվեր-հիմք")}</span></div>
+          <div className="kpi-sub"><span className="metric-note"><i className="ti ti-info-circle" />{d.ovOrderBased}</span></div>
         </div>
         <div className="kpi-card c-info">
           <div className="kpi-head">
-            <span className="kpi-label"><i className="ti ti-building-store" />{tx(t, "admin.dash2.ov.active_operators", "Ակտիվ օպերատորներ")}</span>
+            <span className="kpi-label"><i className="ti ti-building-store" />{d.ovActiveOperators}</span>
           </div>
           <div className="kpi-value">{formatValue(operators, lang)}</div>
-          <div className="kpi-sub">{tx(t, "admin.dash2.ov.across_marketplace", "ամբողջ շուկայում")}</div>
+          <div className="kpi-sub">{d.ovAcrossMarketplace}</div>
         </div>
         <div className="kpi-card c-warning">
           <div className="kpi-head">
-            <span className="kpi-label"><i className="ti ti-clock-hour-4" />{tx(t, "admin.dash2.ov.pending_approvals", "Սպասվող հաստատումներ")}</span>
+            <span className="kpi-label"><i className="ti ti-clock-hour-4" />{d.ovPendingApprovals}</span>
             <span className="kpi-delta flat"><i className="ti ti-minus" />0</span>
           </div>
           <div className="kpi-value">{pendingApprovals == null ? "—" : formatValue(pendingApprovals, lang)}</div>
-          <div className="kpi-sub">{tx(t, "admin.dash2.ov.approvals_sub", "ընկերություններ · վաճառողներ · առաջարկներ · կարծիքներ")}</div>
+          <div className="kpi-sub">{d.ovApprovalsSub}</div>
         </div>
       </div>
 
@@ -351,8 +384,8 @@ function OverviewPane({ token, days }: { token: string; days: number }) {
         <div className="card">
           <div className="card-header">
             <div>
-              <div className="card-title">{tx(t, "admin.dash2.ov.booking_overview", "Ամրագրումների ակնարկ")}</div>
-              <div className="card-subtitle">{tx(t, "admin.dash2.ov.daily_revenue", "Օրական եկամուտ")} · {tx(t, "admin.dash2.ov.last_n_days", "վերջին {n} օր").replace("{n}", String(days))}</div>
+              <div className="card-title">{d.ovBookingOverview}</div>
+              <div className="card-subtitle">{d.ovDailyRevenue} · {d.ovLastNDays.replace("{n}", String(days))}</div>
             </div>
             <span className={`badge ${deltaClass(revenueDelta.sign) === "down" ? "badge-danger" : "badge-success"}`}><i className={`ti ${deltaIcon(revenueDelta.sign)}`} style={{ fontSize: 13 }} />{revenueDelta.text}</span>
           </div>
@@ -367,10 +400,10 @@ function OverviewPane({ token, days }: { token: string; days: number }) {
           </div>
         </div>
         <div className="card">
-          <div className="card-header"><div><div className="card-title">{tx(t, "admin.dash2.ov.orders_by_service", "Պատվերներն ըստ ծառայության")}</div><div className="card-subtitle">{tx(t, "admin.dash2.ov.share_of_revenue", "Բաժին ընդհանուր եկամտից")}</div></div></div>
+          <div className="card-header"><div><div className="card-title">{d.ovOrdersByService}</div><div className="card-subtitle">{d.ovShareOfRevenue}</div></div></div>
           <div className="card-body">
             {byService.length === 0 ? (
-              <div className="cell-muted">{tx(t, "admin.dash2.no_data", "Տվյալներ չկան")}</div>
+              <div className="cell-muted">{d.noData}</div>
             ) : (
               <div className="breakdown">
                 {byService.map((s) => {
@@ -378,7 +411,7 @@ function OverviewPane({ token, days }: { token: string; days: number }) {
                   return (
                     <BreakdownRow
                       key={s.service}
-                      label={tx(t, m.key, m.fallback)}
+                      label={d.service[(s.service ?? "").toLowerCase()] ?? s.service}
                       icon={m.icon}
                       tone={m.tone}
                       pct={(s.amount / maxSvc) * 100}
@@ -395,20 +428,20 @@ function OverviewPane({ token, days }: { token: string; days: number }) {
 
       <div className="card">
         <div className="card-header">
-          <div><div className="card-title">{tx(t, "admin.dash2.ov.recent_activity", "Վերջին ակտիվությունը")}</div><div className="card-subtitle">{tx(t, "admin.dash2.ov.recent_activity_sub", "Վերջին վճարումներ, վերադարձներ, միջնորդավճարներ")}</div></div>
+          <div><div className="card-title">{d.ovRecentActivity}</div><div className="card-subtitle">{d.ovRecentActivitySub}</div></div>
         </div>
         <div className="table-wrap">
           <table className="table">
-            <thead><tr><th>{tx(t, "admin.dash2.ov.col_type", "Տեսակ")}</th><th>{tx(t, "admin.dash2.ov.col_company", "Ընկերություն")}</th><th>{tx(t, "admin.dash2.ov.col_amount", "Գումար")}</th><th>{tx(t, "admin.dash2.ov.col_time", "Ժամ")}</th><th>{tx(t, "admin.dash2.ov.col_status", "Կարգավիճակ")}</th></tr></thead>
+            <thead><tr><th>{d.ovColType}</th><th>{d.ovColCompany}</th><th>{d.ovColAmount}</th><th>{d.ovColTime}</th><th>{d.ovColStatus}</th></tr></thead>
             <tbody>
               {recentTx.length === 0 ? (
-                <tr><td colSpan={5} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{tx(t, "admin.dash2.no_data", "Տվյալներ չկան")}</td></tr>
+                <tr><td colSpan={5} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{d.noData}</td></tr>
               ) : (
                 recentTx.map((row) => {
-                  const meta = TX_TYPE_META[row.type] ?? { key: "", fallback: row.type, icon: "ti-activity", color: "var(--primary)" };
+                  const meta = TX_TYPE_META[row.type] ?? { icon: "ti-activity", color: "var(--primary)" };
                   return (
                     <tr key={row.id}>
-                      <td><span className="bd-label"><i className={`ti ${meta.icon}`} style={{ color: meta.color }} />{meta.key ? tx(t, meta.key, meta.fallback) : meta.fallback}</span></td>
+                      <td><span className="bd-label"><i className={`ti ${meta.icon}`} style={{ color: meta.color }} />{d.txType[row.type] ?? row.type}</span></td>
                       <td>{row.company?.name ?? "—"}</td>
                       <td className="font-mono">{curLabel(row.currency, row.amount, lang)}</td>
                       <td className="cell-muted">{formatDateTime(row.when, lang)}</td>
@@ -423,13 +456,13 @@ function OverviewPane({ token, days }: { token: string; days: number }) {
       </div>
 
       <div className="card">
-        <div className="card-header"><div><div className="card-title">{tx(t, "admin.dash2.ov.top_operators", "Լավագույն օպերատորներ")}</div><div className="card-subtitle">{tx(t, "admin.dash2.ov.top_operators_sub", "Ըստ ընդհանուր եկամտի այս ժամանակահատվածում")}</div></div></div>
+        <div className="card-header"><div><div className="card-title">{d.ovTopOperators}</div><div className="card-subtitle">{d.ovTopOperatorsSub}</div></div></div>
         <div className="table-wrap">
           <table className="table">
-            <thead><tr><th>#</th><th>{tx(t, "admin.dash2.ov.col_operator", "Օպերատոր")}</th><th>{tx(t, "admin.dash2.ov.col_revenue", "Եկամուտ")}</th><th>{tx(t, "admin.dash2.ov.col_orders", "Պատվերներ")}</th></tr></thead>
+            <thead><tr><th>#</th><th>{d.ovColOperator}</th><th>{d.ovColRevenue}</th><th>{d.ovColOrders}</th></tr></thead>
             <tbody>
               {topOperators.length === 0 ? (
-                <tr><td colSpan={4} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{tx(t, "admin.dash2.no_data", "Տվյալներ չկան")}</td></tr>
+                <tr><td colSpan={4} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{d.noData}</td></tr>
               ) : (
                 topOperators.map((s, i) => {
                   const rev = s.revenue ?? s.total_revenue ?? 0;
@@ -457,8 +490,9 @@ function OverviewPane({ token, days }: { token: string; days: number }) {
 type RevenuePoint = { date: string; revenue: number; orders: number };
 type OrdersPoint = { date: string; total: number; by_status: Record<string, number> };
 
-function PlatformStatsPane({ token, days }: { token: string; days: number }) {
-  const { t, lang } = useLanguage();
+function PlatformStatsPane({ token, days, onExportReady }: { token: string; days: number; onExportReady?: (fn: (() => void) | null) => void }) {
+  const { lang } = useLanguage();
+  const d = dashStrings(lang);
   const range = rangeFromDays(days);
 
   const [summary, setSummary] = useState<FinanceSummaryV2 | null>(null);
@@ -501,8 +535,23 @@ function PlatformStatsPane({ token, days }: { token: string; days: number }) {
     };
   }, [token, days, range]);
 
-  if (forbidden) return <div className="card" style={{ padding: 16 }}>{tx(t, "admin.forbidden.dashboard_stats", "Հասանելի չէ")}</div>;
-  if (loading && !summary) return <div className="card cell-muted" style={{ padding: 16 }}>{tx(t, "admin.dash2.loading", "Բեռնվում է…")}</div>;
+  // expose a CSV export of the top-sellers table to the page shell
+  useEffect(() => {
+    if (!onExportReady) return;
+    const fn = () => {
+      const rows = sellers.map((s) => [
+        s.name ?? s.company_name ?? `#${s.company_id}`,
+        s.revenue ?? s.total_revenue ?? 0,
+        s.orders ?? s.order_count ?? 0,
+      ]);
+      downloadCsv("dashboard-top-sellers", [[d.psSeller, d.psRevenue, d.psOrders], ...rows]);
+    };
+    onExportReady(fn);
+    return () => onExportReady(null);
+  }, [onExportReady, sellers, d]);
+
+  if (forbidden) return <div className="card" style={{ padding: 16 }}>{d.forbidden}</div>;
+  if (loading && !summary) return <div className="card cell-muted" style={{ padding: 16 }}>{d.loading}</div>;
 
   const avgOrder = summary && summary.payments_count_paid > 0 ? summary.total_payments_paid / summary.payments_count_paid : 0;
   const split = summary?.commission_split ?? { platform: 0, agent: 0 };
@@ -517,36 +566,36 @@ function PlatformStatsPane({ token, days }: { token: string; days: number }) {
     <>
       <div className="kpi-grid">
         <div className="kpi-card c-success">
-          <div className="kpi-head"><span className="kpi-label"><i className="ti ti-cash" />{tx(t, "admin.dash2.pstats.total_revenue", "Ընդհանուր եկամուտ")}</span></div>
+          <div className="kpi-head"><span className="kpi-label"><i className="ti ti-cash" />{d.psTotalRevenue}</span></div>
           <div className="kpi-value">{curLabel("AMD", summary?.total_payments_paid ?? 0, lang)}</div>
-          <div className="kpi-sub"><span className="metric-note"><i className="ti ti-info-circle" />{tx(t, "admin.dash2.pstats.payments_based", "Վճարումների հիման վրա")}</span></div>
+          <div className="kpi-sub"><span className="metric-note"><i className="ti ti-info-circle" />{d.psPaymentsBased}</span></div>
         </div>
         <div className="kpi-card c-primary">
-          <div className="kpi-head"><span className="kpi-label"><i className="ti ti-receipt-2" />{tx(t, "admin.dash2.pstats.commission_earned", "Վաստակած միջնորդավճար")}</span></div>
+          <div className="kpi-head"><span className="kpi-label"><i className="ti ti-receipt-2" />{d.psCommissionEarned}</span></div>
           <div className="kpi-value">{curLabel("AMD", summary?.total_commission_accrued ?? 0, lang)}</div>
-          <div className="kpi-sub">{tx(t, "admin.dash2.pstats.accrued_ledger", "Հաշվեգրված մուտքերի մատյանից")}</div>
+          <div className="kpi-sub">{d.psAccruedLedger}</div>
         </div>
         <div className="kpi-card c-warning">
-          <div className="kpi-head"><span className="kpi-label"><i className="ti ti-clock-pause" />{tx(t, "admin.dash2.pstats.pending_payouts", "Սպասվող վճարումներ")}</span></div>
+          <div className="kpi-head"><span className="kpi-label"><i className="ti ti-clock-pause" />{d.psPendingPayouts}</span></div>
           <div className="kpi-value">{curLabel("AMD", summary?.total_commission_pending ?? 0, lang)}</div>
-          <div className="kpi-sub">{tx(t, "admin.dash2.pstats.awaiting", "Սպասում են օպերատորներին փոխանցմանը")}</div>
+          <div className="kpi-sub">{d.psAwaiting}</div>
         </div>
         <div className="kpi-card c-info">
-          <div className="kpi-head"><span className="kpi-label"><i className="ti ti-calculator" />{tx(t, "admin.dash2.pstats.avg_order", "Միջին պատվերի արժեք")}</span></div>
+          <div className="kpi-head"><span className="kpi-label"><i className="ti ti-calculator" />{d.psAvgOrder}</span></div>
           <div className="kpi-value">{curLabel("AMD", avgOrder, lang)}</div>
-          <div className="kpi-sub"><span className="metric-note"><i className="ti ti-info-circle" />{tx(t, "admin.dash2.pstats.avg_formula", "Հաշվարկ՝ վճարումներ ÷ քանակ")}</span></div>
+          <div className="kpi-sub"><span className="metric-note"><i className="ti ti-info-circle" />{d.psAvgFormula}</span></div>
         </div>
       </div>
 
       <div className="dash-grid-2">
         <div className="card">
-          <div className="card-header"><div><div className="card-title">{tx(t, "admin.dash2.pstats.revenue_series", "Եկամտի շարք")}</div><div className="card-subtitle">{tx(t, "admin.dash2.pstats.daily_revenue", "Օրական եկամուտ")}</div></div></div>
+          <div className="card-header"><div><div className="card-title">{d.psRevenueSeries}</div><div className="card-subtitle">{d.psDailyRevenue}</div></div></div>
           <div className="card-body">
             <CssBarChart points={revenueSeries.map((p) => ({ key: p.date.slice(-2), value: p.revenue, title: `${p.date}: ${curLabel("AMD", p.revenue, lang)} · ${p.orders}` }))} />
           </div>
         </div>
         <div className="card">
-          <div className="card-header"><div><div className="card-title">{tx(t, "admin.dash2.pstats.orders_series", "Պատվերների շարք")}</div><div className="card-subtitle">{tx(t, "admin.dash2.pstats.daily_orders", "Օրական պատվերներ")}</div></div></div>
+          <div className="card-header"><div><div className="card-title">{d.psOrdersSeries}</div><div className="card-subtitle">{d.psDailyOrders}</div></div></div>
           <div className="card-body">
             <CssBarChart alt points={ordersSeries.map((p) => ({ key: p.date.slice(-2), value: p.total, title: `${p.date}: ${p.total}` }))} />
           </div>
@@ -555,17 +604,17 @@ function PlatformStatsPane({ token, days }: { token: string; days: number }) {
 
       <div className="dash-grid-2">
         <div className="card">
-          <div className="card-header"><div><div className="card-title">{tx(t, "admin.dash2.pstats.commission_split", "Միջնորդավճարի բաշխում")}</div><div className="card-subtitle">{tx(t, "admin.dash2.pstats.platform_vs_agent", "Հարթակ ընդդեմ գործակալ")}</div></div></div>
+          <div className="card-header"><div><div className="card-title">{d.psCommissionSplit}</div><div className="card-subtitle">{d.psPlatformVsAgent}</div></div></div>
           <div className="card-body">
             <div className="split-bar"><div className="split-seg platform" style={{ width: `${platformPct}%` }} /><div className="split-seg agent" style={{ width: `${agentPct}%` }} /></div>
             <div className="chart-legend">
-              <span className="legend-item"><span className="legend-dot" style={{ background: "var(--primary)" }} />{tx(t, "admin.dash2.pstats.platform", "Հարթակ")} · {platformPct.toFixed(0)}% · {curLabel("AMD", split.platform, lang)}</span>
-              <span className="legend-item"><span className="legend-dot" style={{ background: "var(--info)" }} />{tx(t, "admin.dash2.pstats.agent", "Գործակալ")} · {agentPct.toFixed(0)}% · {curLabel("AMD", split.agent, lang)}</span>
+              <span className="legend-item"><span className="legend-dot" style={{ background: "var(--primary)" }} />{d.psPlatform} · {platformPct.toFixed(0)}% · {curLabel("AMD", split.platform, lang)}</span>
+              <span className="legend-item"><span className="legend-dot" style={{ background: "var(--info)" }} />{d.psAgent} · {agentPct.toFixed(0)}% · {curLabel("AMD", split.agent, lang)}</span>
             </div>
           </div>
         </div>
         <div className="card">
-          <div className="card-header"><div><div className="card-title">{tx(t, "admin.dash2.pstats.revenue_by_currency", "Եկամուտ ըստ արժույթի")}</div><div className="card-subtitle">{tx(t, "admin.dash2.pstats.current_range", "Ընթացիկ ժամանակահատված")}</div></div></div>
+          <div className="card-header"><div><div className="card-title">{d.psRevenueByCurrency}</div><div className="card-subtitle">{d.psCurrentRange}</div></div></div>
           <div className="card-body">
             {currencyEntries.length === 0 ? (
               <div className="cell-muted">—</div>
@@ -589,7 +638,7 @@ function PlatformStatsPane({ token, days }: { token: string; days: number }) {
 
       <div className="dash-grid-2">
         <div className="card">
-          <div className="card-header"><div><div className="card-title">{tx(t, "admin.dash2.pstats.revenue_by_service", "Եկամուտ ըստ ծառայության")}</div><div className="card-subtitle">{tx(t, "admin.dash2.pstats.share_of_payments", "Վճարումների բաժին")}</div></div></div>
+          <div className="card-header"><div><div className="card-title">{d.psRevenueByService}</div><div className="card-subtitle">{d.psShareOfPayments}</div></div></div>
           <div className="card-body">
             {byService.length === 0 ? (
               <div className="cell-muted">—</div>
@@ -598,7 +647,7 @@ function PlatformStatsPane({ token, days }: { token: string; days: number }) {
                 {byService.map((s) => {
                   const m = serviceMeta(s.service);
                   return (
-                    <BreakdownRow key={s.service} label={tx(t, m.key, m.fallback)} icon={m.icon} tone={m.tone} pct={(s.amount / maxSvc) * 100} value={`${s.pct}%`} />
+                    <BreakdownRow key={s.service} label={d.service[(s.service ?? "").toLowerCase()] ?? s.service} icon={m.icon} tone={m.tone} pct={(s.amount / maxSvc) * 100} value={`${s.pct}%`} />
                   );
                 })}
               </div>
@@ -606,13 +655,13 @@ function PlatformStatsPane({ token, days }: { token: string; days: number }) {
           </div>
         </div>
         <div className="card">
-          <div className="card-header"><div><div className="card-title">{tx(t, "admin.dash2.pstats.top_sellers", "Լավագույն վաճառողներ")}</div><div className="card-subtitle">{tx(t, "admin.dash2.pstats.by_revenue", "Ըստ եկամտի այս ժամանակահատվածում")}</div></div></div>
+          <div className="card-header"><div><div className="card-title">{d.psTopSellers}</div><div className="card-subtitle">{d.psByRevenue}</div></div></div>
           <div className="table-wrap">
             <table className="table">
-              <thead><tr><th>{tx(t, "admin.dash2.pstats.seller", "Վաճառող")}</th><th>{tx(t, "admin.dash2.pstats.revenue", "Եկամուտ")}</th><th>{tx(t, "admin.dash2.pstats.orders", "Պատվերներ")}</th></tr></thead>
+              <thead><tr><th>{d.psSeller}</th><th>{d.psRevenue}</th><th>{d.psOrders}</th></tr></thead>
               <tbody>
                 {sellers.length === 0 ? (
-                  <tr><td colSpan={3} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{tx(t, "admin.dash2.no_data", "Տվյալներ չկան")}</td></tr>
+                  <tr><td colSpan={3} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{d.noData}</td></tr>
                 ) : (
                   sellers.map((s) => {
                     const rev = s.revenue ?? s.total_revenue ?? 0;
@@ -660,8 +709,9 @@ function splitCurrency(map: Record<string, number>, primary: string | null, lang
   return { big: curLabel(primaryCode, primaryAmount, lang), chips };
 }
 
-function OperatorStatsPane({ token }: { token: string }) {
-  const { t, lang } = useLanguage();
+function OperatorStatsPane({ token, onExportReady }: { token: string; onExportReady?: (fn: (() => void) | null) => void }) {
+  const { lang } = useLanguage();
+  const d = dashStrings(lang);
   const [data, setData] = useState<OperatorStatistics | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -687,9 +737,24 @@ function OperatorStatsPane({ token }: { token: string }) {
     };
   }, [token]);
 
-  if (forbidden) return <div className="card" style={{ padding: 16 }}>{tx(t, "admin.forbidden.dashboard_stats", "Հասանելի չէ")}</div>;
-  if (loading && !data) return <div className="card cell-muted" style={{ padding: 16 }}>{tx(t, "admin.dash2.loading", "Բեռնվում է…")}</div>;
-  if (!data) return <div className="card cell-muted" style={{ padding: 16 }}>{tx(t, "admin.dash2.no_data", "Տվյալներ չկան")}</div>;
+  // expose a CSV export of the by-service breakdown to the page shell
+  useEffect(() => {
+    if (!onExportReady) return;
+    const fn = () => {
+      const rows = (data?.service_breakdown ?? []).map((s) => [
+        d.service[(s.type ?? "").toLowerCase()] ?? s.type,
+        s.bookings,
+        s.revenue,
+      ]);
+      downloadCsv("dashboard-operator-by-service", [[d.opByService, d.opMyBookings, d.opRevenue], ...rows]);
+    };
+    onExportReady(fn);
+    return () => onExportReady(null);
+  }, [onExportReady, data, d]);
+
+  if (forbidden) return <div className="card" style={{ padding: 16 }}>{d.forbidden}</div>;
+  if (loading && !data) return <div className="card cell-muted" style={{ padding: 16 }}>{d.loading}</div>;
+  if (!data) return <div className="card cell-muted" style={{ padding: 16 }}>{d.noData}</div>;
 
   const revenue = splitCurrency(data.stats.revenue_by_currency, data.stats.primary_currency, lang);
   const commission = splitCurrency(data.stats.commission_by_currency, data.stats.primary_currency, lang);
@@ -701,35 +766,35 @@ function OperatorStatsPane({ token }: { token: string }) {
     <>
       <div className="kpi-grid">
         <div className="kpi-card c-primary">
-          <div className="kpi-head"><span className="kpi-label"><i className="ti ti-calendar-event" />{tx(t, "admin.dash2.op.my_bookings", "Իմ ամրագրումները")}</span></div>
+          <div className="kpi-head"><span className="kpi-label"><i className="ti ti-calendar-event" />{d.opMyBookings}</span></div>
           <div className="kpi-value">{formatValue(data.stats.total_bookings, lang)}</div>
-          <div className="kpi-sub">{tx(t, "admin.dash2.op.this_period", "Այս ժամանակահատվածում")}</div>
+          <div className="kpi-sub">{d.opThisPeriod}</div>
         </div>
         <div className="kpi-card c-info">
-          <div className="kpi-head"><span className="kpi-label"><i className="ti ti-tag" />{tx(t, "admin.dash2.op.active_offers", "Ակտիվ առաջարկներ")}</span></div>
+          <div className="kpi-head"><span className="kpi-label"><i className="ti ti-tag" />{d.opActiveOffers}</span></div>
           <div className="kpi-value">{formatValue(data.stats.active_offers, lang)}</div>
-          <div className="kpi-sub">{tx(t, "admin.dash2.op.live_marketplace", "Շուկայում հասանելի")}</div>
+          <div className="kpi-sub">{d.opLiveMarketplace}</div>
         </div>
         <div className="kpi-card c-success">
-          <div className="kpi-head"><span className="kpi-label"><i className="ti ti-coin" />{tx(t, "admin.dash2.op.revenue", "Եկամուտ")}</span></div>
+          <div className="kpi-head"><span className="kpi-label"><i className="ti ti-coin" />{d.opRevenue}</span></div>
           <div className="kpi-value">{revenue.big}</div>
           {revenue.chips.length > 0 ? <div className="cur-chips">{revenue.chips.map((c) => <span className="cur-chip" key={c}>{c}</span>)}</div> : null}
         </div>
         <div className="kpi-card c-warning">
-          <div className="kpi-head"><span className="kpi-label"><i className="ti ti-receipt-2" />{tx(t, "admin.dash2.op.commission", "Միջնորդավճար")}</span></div>
+          <div className="kpi-head"><span className="kpi-label"><i className="ti ti-receipt-2" />{d.opCommission}</span></div>
           <div className="kpi-value">{commission.big}</div>
           {commission.chips.length > 0 ? <div className="cur-chips">{commission.chips.map((c) => <span className="cur-chip" key={c}>{c}</span>)}</div> : null}
         </div>
       </div>
 
       <div className="card">
-        <div className="card-header"><div><div className="card-title">{tx(t, "admin.dash2.op.trend_title", "12-ամսյա եկամտի միտում")}</div><div className="card-subtitle">{tx(t, "admin.dash2.op.primary_currency", "Հիմնական արժույթ")}{data.trend.currency ? ` (${data.trend.currency})` : ""}</div></div></div>
+        <div className="card-header"><div><div className="card-title">{d.opTrendTitle}</div><div className="card-subtitle">{d.opPrimaryCurrency}{data.trend.currency ? ` (${data.trend.currency})` : ""}</div></div></div>
         <div className="card-body"><CssBarChart points={trendPoints} /></div>
       </div>
 
       <div className="dash-grid-2">
         <div className="card">
-          <div className="card-header"><div><div className="card-title">{tx(t, "admin.dash2.op.by_service", "Ըստ ծառայության")}</div><div className="card-subtitle">{tx(t, "admin.dash2.op.bookings_revenue", "Ամրագրումներ և եկամուտ")}</div></div></div>
+          <div className="card-header"><div><div className="card-title">{d.opByService}</div><div className="card-subtitle">{d.opBookingsRevenue}</div></div></div>
           <div className="card-body">
             {data.service_breakdown.length === 0 ? (
               <div className="cell-muted">—</div>
@@ -738,7 +803,7 @@ function OperatorStatsPane({ token }: { token: string }) {
                 {data.service_breakdown.map((s) => {
                   const m = serviceMeta(s.type);
                   return (
-                    <BreakdownRow key={s.type} label={tx(t, m.key, m.fallback)} icon={m.icon} tone={m.tone} pct={(s.revenue / maxSvcRev) * 100} value={`${formatNumber(s.bookings, lang)} · ${formatValue(s.revenue, lang)}`} />
+                    <BreakdownRow key={s.type} label={d.service[(s.type ?? "").toLowerCase()] ?? s.type} icon={m.icon} tone={m.tone} pct={(s.revenue / maxSvcRev) * 100} value={`${formatNumber(s.bookings, lang)} · ${formatValue(s.revenue, lang)}`} />
                   );
                 })}
               </div>
@@ -746,7 +811,7 @@ function OperatorStatsPane({ token }: { token: string }) {
           </div>
         </div>
         <div className="card">
-          <div className="card-header"><div><div className="card-title">{tx(t, "admin.dash2.op.top_destinations", "Լավագույն ուղղություններ")}</div><div className="card-subtitle">{tx(t, "admin.dash2.op.by_bookings", "Ըստ ամրագրումների այս ժամանակահատվածում")}</div></div></div>
+          <div className="card-header"><div><div className="card-title">{d.opTopDestinations}</div><div className="card-subtitle">{d.opByBookings}</div></div></div>
           <div className="card-body">
             {data.top_destinations.length === 0 ? (
               <div className="cell-muted">—</div>
@@ -766,16 +831,19 @@ function OperatorStatsPane({ token }: { token: string }) {
 
 /* ─── agent pane (CRM workspace) ─────────────────────────────────────── */
 
-const QUICK_TILES: { route: string; key: string; fallback: string; subKey: string; subFallback: string; icon: string }[] = [
-  { route: "/crm/pipeline", key: "admin.dash2.agent.tile_deal", fallback: "Նոր գործարք", subKey: "admin.dash2.agent.tile_deal_sub", subFallback: "Բացել խողովակը", icon: "ti-target-arrow" },
-  { route: "/crm/customers", key: "admin.dash2.agent.tile_customers", fallback: "Հաճախորդներ", subKey: "admin.dash2.agent.tile_customers_sub", subFallback: "Կառավարել ցանկը", icon: "ti-users" },
-  { route: "/crm/leads", key: "admin.dash2.agent.tile_leads", fallback: "Հնարավոր հաճախորդներ", subKey: "admin.dash2.agent.tile_leads_sub", subFallback: "Հետևել", icon: "ti-user-plus" },
-  { route: "/inventory", key: "admin.dash2.agent.tile_inventory", fallback: "Որոնել գույքագրում", subKey: "admin.dash2.agent.tile_inventory_sub", subFallback: "Գտնել առաջարկներ", icon: "ti-search" },
-  { route: "/agent/contracts", key: "admin.dash2.agent.tile_contracts", fallback: "Իմ պայմանագրերը", subKey: "admin.dash2.agent.tile_contracts_sub", subFallback: "Դիտել համաձայնագրերը", icon: "ti-file-text" },
+/* tile labels come from d.tile[code] / d.tile[`${code}Sub`]; this map keeps the
+ * route + icon + the dict-key codes only. */
+const QUICK_TILES: { route: string; code: string; icon: string }[] = [
+  { route: "/crm/pipeline", code: "deal", icon: "ti-target-arrow" },
+  { route: "/crm/customers", code: "customers", icon: "ti-users" },
+  { route: "/crm/leads", code: "leads", icon: "ti-user-plus" },
+  { route: "/inventory", code: "inventory", icon: "ti-search" },
+  { route: "/agent/contracts", code: "contracts", icon: "ti-file-text" },
 ];
 
-function AgentPane({ token }: { token: string }) {
-  const { t, lang } = useLanguage();
+function AgentPane({ token, onExportReady }: { token: string; onExportReady?: (fn: (() => void) | null) => void }) {
+  const { lang } = useLanguage();
+  const d = dashStrings(lang);
   const router = useRouter();
   const [crm, setCrm] = useState<CrmStats | null>(null);
   const [custStats, setCustStats] = useState<CrmCustomersStats | null>(null);
@@ -820,8 +888,19 @@ function AgentPane({ token }: { token: string }) {
     };
   }, [token]);
 
-  if (forbidden) return <div className="card" style={{ padding: 16 }}>{tx(t, "admin.forbidden.dashboard_stats", "Հասանելի չէ")}</div>;
-  if (loading && !crm) return <div className="card cell-muted" style={{ padding: 16 }}>{tx(t, "admin.dash2.loading", "Բեռնվում է…")}</div>;
+  // expose a CSV export of the my-customers table to the page shell
+  useEffect(() => {
+    if (!onExportReady) return;
+    const fn = () => {
+      const rows = customers.map((c) => [c.name, c.email, c.status, c.bookings_count]);
+      downloadCsv("dashboard-my-customers", [[d.agColCustomer, d.agColEmail, d.agColStatus, d.agColBookings], ...rows]);
+    };
+    onExportReady(fn);
+    return () => onExportReady(null);
+  }, [onExportReady, customers, d]);
+
+  if (forbidden) return <div className="card" style={{ padding: 16 }}>{d.forbidden}</div>;
+  if (loading && !crm) return <div className="card cell-muted" style={{ padding: 16 }}>{d.loading}</div>;
 
   const byStage = crm?.by_stage ? Object.values(crm.by_stage) : [];
   const maxStageValue = Math.max(...byStage.map((s) => s.value), 1);
@@ -830,39 +909,39 @@ function AgentPane({ token }: { token: string }) {
     <>
       <div className="kpi-grid">
         <div className="kpi-card c-primary">
-          <div className="kpi-head"><span className="kpi-label"><i className="ti ti-target-arrow" />{tx(t, "admin.dash2.agent.open_deals", "Բաց գործարքներ")}</span></div>
+          <div className="kpi-head"><span className="kpi-label"><i className="ti ti-target-arrow" />{d.agOpenDeals}</span></div>
           <div className="kpi-value">{formatValue(crm?.open_deals, lang)}</div>
-          <div className="kpi-sub">{tx(t, "admin.dash2.agent.in_pipeline", "Ձեր խողովակում")}</div>
+          <div className="kpi-sub">{d.agInPipeline}</div>
         </div>
         <div className="kpi-card c-info">
-          <div className="kpi-head"><span className="kpi-label"><i className="ti ti-chart-arrows-vertical" />{tx(t, "admin.dash2.agent.pipeline_value", "Խողովակի արժեք")}</span></div>
+          <div className="kpi-head"><span className="kpi-label"><i className="ti ti-chart-arrows-vertical" />{d.agPipelineValue}</span></div>
           <div className="kpi-value">{formatValue(crm?.pipeline_value, lang)}</div>
-          <div className="kpi-sub">{tx(t, "admin.dash2.agent.across_deals", "Բաց գործարքների գումարը")}</div>
+          <div className="kpi-sub">{d.agAcrossDeals}</div>
         </div>
         <div className="kpi-card c-success">
-          <div className="kpi-head"><span className="kpi-label"><i className="ti ti-users" />{tx(t, "admin.dash2.agent.active_customers", "Ակտիվ հաճախորդներ")}</span></div>
+          <div className="kpi-head"><span className="kpi-label"><i className="ti ti-users" />{d.agActiveCustomers}</span></div>
           <div className="kpi-value">{formatValue(custStats?.active, lang)}</div>
-          <div className="kpi-sub">{custStats ? `${formatNumber(custStats.new_this_month, lang)} ${tx(t, "admin.dash2.agent.new_month", "նոր այս ամիս")} · ${formatNumber(custStats.with_bookings, lang)} ${tx(t, "admin.dash2.agent.with_bookings", "ամրագրումներով")}` : "—"}</div>
+          <div className="kpi-sub">{custStats ? `${formatNumber(custStats.new_this_month, lang)} ${d.agNewMonth} · ${formatNumber(custStats.with_bookings, lang)} ${d.agWithBookings}` : "—"}</div>
         </div>
         <div className="kpi-card c-warning">
-          <div className="kpi-head"><span className="kpi-label"><i className="ti ti-user-plus" />{tx(t, "admin.dash2.agent.new_leads", "Նոր հնարավոր հաճախորդներ (7օր)")}</span></div>
+          <div className="kpi-head"><span className="kpi-label"><i className="ti ti-user-plus" />{d.agNewLeads}</span></div>
           <div className="kpi-value">{formatValue(leadStats?.new_7d, lang)}</div>
-          <div className="kpi-sub">{leadStats ? `${formatNumber(leadStats.qualified, lang)} ${tx(t, "admin.dash2.agent.qualified", "որակյալ")} · ${leadStats.conversion_rate}% ${tx(t, "admin.dash2.agent.conversion", "փոխարկում")}` : "—"}</div>
+          <div className="kpi-sub">{leadStats ? `${formatNumber(leadStats.qualified, lang)} ${d.agQualified} · ${leadStats.conversion_rate}% ${d.agConversion}` : "—"}</div>
         </div>
       </div>
 
       <div className="dash-grid-2">
         <div className="card">
-          <div className="card-header"><div><div className="card-title">{tx(t, "admin.dash2.agent.pipeline_by_stage", "Խողովակն ըստ փուլերի")}</div><div className="card-subtitle">{tx(t, "admin.dash2.agent.open_by_stage", "Բաց գործարքներն ըստ փուլի")}</div></div></div>
+          <div className="card-header"><div><div className="card-title">{d.agPipelineByStage}</div><div className="card-subtitle">{d.agOpenByStage}</div></div></div>
           <div className="card-body">
             {byStage.length === 0 ? (
               <div className="cell-muted">—</div>
             ) : (
               <div className="breakdown">
                 {byStage.map((s) => {
-                  const m = STAGE_META[s.stage] ?? { key: `admin.dash2.stage.${s.stage}`, fallback: s.stage, tone: "" };
+                  const m = STAGE_META[s.stage] ?? { tone: "" };
                   return (
-                    <BreakdownRow key={s.stage} label={tx(t, m.key, m.fallback)} tone={m.tone} pct={(s.value / maxStageValue) * 100} value={`${formatNumber(s.count, lang)} · ${formatValue(s.value, lang)}`} />
+                    <BreakdownRow key={s.stage} label={d.stage[s.stage] ?? s.stage} tone={m.tone} pct={(s.value / maxStageValue) * 100} value={`${formatNumber(s.count, lang)} · ${formatValue(s.value, lang)}`} />
                   );
                 })}
               </div>
@@ -870,7 +949,7 @@ function AgentPane({ token }: { token: string }) {
           </div>
         </div>
         <div className="card">
-          <div className="card-header"><div><div className="card-title">{tx(t, "admin.dash2.agent.quick_actions", "Արագ գործողություններ")}</div><div className="card-subtitle">{tx(t, "admin.dash2.agent.daily_work", "Անցնել ձեր ամենօրյա աշխատանքին")}</div></div></div>
+          <div className="card-header"><div><div className="card-title">{d.agQuickActions}</div><div className="card-subtitle">{d.agDailyWork}</div></div></div>
           <div className="card-body">
             <div className="tiles">
               {QUICK_TILES.map((tile) => (
@@ -884,8 +963,8 @@ function AgentPane({ token }: { token: string }) {
                   }}
                 >
                   <i className={`ti ${tile.icon}`} />
-                  <span className="tile-label">{tx(t, tile.key, tile.fallback)}</span>
-                  <span className="tile-sub">{tx(t, tile.subKey, tile.subFallback)}</span>
+                  <span className="tile-label">{d.tile[tile.code] ?? tile.code}</span>
+                  <span className="tile-sub">{d.tile[`${tile.code}Sub`] ?? ""}</span>
                 </a>
               ))}
             </div>
@@ -894,13 +973,13 @@ function AgentPane({ token }: { token: string }) {
       </div>
 
       <div className="card">
-        <div className="card-header"><div><div className="card-title">{tx(t, "admin.dash2.agent.my_customers", "Իմ հաճախորդները")}</div><div className="card-subtitle">{tx(t, "admin.dash2.agent.most_recent", "Ամենավերջինները")}</div></div><button className="btn btn-sm" onClick={() => router.push("/crm/customers")}><i className="ti ti-arrow-right" />{tx(t, "admin.dash2.agent.all_customers", "Բոլոր հաճախորդները")}</button></div>
+        <div className="card-header"><div><div className="card-title">{d.agMyCustomers}</div><div className="card-subtitle">{d.agMostRecent}</div></div><button className="btn btn-sm" onClick={() => router.push("/crm/customers")}><i className="ti ti-arrow-right" />{d.agAllCustomers}</button></div>
         <div className="table-wrap">
           <table className="table">
-            <thead><tr><th>{tx(t, "admin.dash2.agent.col_customer", "Հաճախորդ")}</th><th>{tx(t, "admin.dash2.agent.col_email", "Էլ. փոստ")}</th><th>{tx(t, "admin.dash2.agent.col_status", "Կարգավիճակ")}</th><th>{tx(t, "admin.dash2.agent.col_bookings", "Ամրագրումներ")}</th></tr></thead>
+            <thead><tr><th>{d.agColCustomer}</th><th>{d.agColEmail}</th><th>{d.agColStatus}</th><th>{d.agColBookings}</th></tr></thead>
             <tbody>
               {customers.length === 0 ? (
-                <tr><td colSpan={4} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{tx(t, "admin.dash2.agent.no_customers", "Հաճախորդներ դեռ չկան")}</td></tr>
+                <tr><td colSpan={4} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{d.agNoCustomers}</td></tr>
               ) : (
                 customers.map((c) => (
                   <tr key={c.id}>
@@ -917,13 +996,13 @@ function AgentPane({ token }: { token: string }) {
       </div>
 
       <div className="card">
-        <div className="card-header"><div><div className="card-title">{tx(t, "admin.dash2.agent.my_contracts", "Իմ պայմանագրերը")}</div><div className="card-subtitle">{tx(t, "admin.dash2.agent.agreements", "Ձեր կառավարած համաձայնագրերը")}</div></div></div>
+        <div className="card-header"><div><div className="card-title">{d.agMyContracts}</div><div className="card-subtitle">{d.agAgreements}</div></div></div>
         <div className="table-wrap">
           <table className="table">
-            <thead><tr><th>{tx(t, "admin.dash2.agent.col_number", "Համար")}</th><th>{tx(t, "admin.dash2.agent.col_counterparty", "Կողմեր")}</th><th>{tx(t, "admin.dash2.agent.col_status", "Կարգավիճակ")}</th><th>{tx(t, "admin.dash2.agent.col_expires", "Ավարտ")}</th></tr></thead>
+            <thead><tr><th>{d.agColNumber}</th><th>{d.agColCounterparty}</th><th>{d.agColStatus}</th><th>{d.agColExpires}</th></tr></thead>
             <tbody>
               {contracts.length === 0 ? (
-                <tr><td colSpan={4} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{tx(t, "admin.dash2.agent.no_contracts", "Պայմանագրեր դեռ չկան")}</td></tr>
+                <tr><td colSpan={4} className="cell-muted" style={{ textAlign: "center", padding: 30 }}>{d.agNoContracts}</td></tr>
               ) : (
                 contracts.slice(0, 8).map((c) => (
                   <tr key={c.id}>
@@ -956,11 +1035,20 @@ type TabDef = {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { t, lang, setLang, languageOptions } = useLanguage();
+  const { lang, setLang, languageOptions } = useLanguage();
+  const d = dashStrings(lang);
   const { token, user, logout } = useAdminAuth();
   const [rangeDays, setRangeDays] = useState(30);
   const { sidebarCollapsed, onHamburger, closeNav, layoutClass } = useMgmtMobileNav();
   const [unreadCount, setUnreadCount] = useState(0);
+  // The active pane registers its CSV-export handler here; the header Export
+  // button invokes whatever the current pane published (null = nothing to export).
+  const exportFnRef = useRef<(() => void) | null>(null);
+  const [canExport, setCanExport] = useState(false);
+  const handleExportReady = useCallback((fn: (() => void) | null) => {
+    exportFnRef.current = fn;
+    setCanExport(!!fn);
+  }, []);
 
   const allowed = canAccessDashboardSection(user);
   const allowedPlatformStats = allowed && canAccessPlatformAdminNav(user);
@@ -987,13 +1075,13 @@ export default function DashboardPage() {
   // ── Entitled tabs. Default = first entitled. ──
   const tabs = useMemo<TabDef[]>(() => {
     const all: (TabDef & { show: boolean })[] = [
-      { key: "overview", label: tx(t, "admin.dash2.tab.overview", "Ընդհանուր ակնարկ"), icon: "ti-layout-dashboard", superPill: true, subtitle: tx(t, "admin.dash2.sub.overview", "Շուկայի ընդհանուր ցուցանիշները բոլոր օպերատորների համար"), show: allowedPlatformStats },
-      { key: "platform-stats", label: tx(t, "admin.dash2.tab.platform_stats", "Հարթակի վիճակագրություն"), icon: "ti-chart-bar", superPill: true, subtitle: tx(t, "admin.dash2.sub.platform_stats", "Եկամուտ, միջնորդավճար և վճարումներ ամբողջ շուկայում"), show: allowedPlatformStats },
-      { key: "operator-stats", label: tx(t, "admin.dash2.tab.operator_stats", "Օպերատորի վիճակագրություն"), icon: "ti-building-store", superPill: false, subtitle: tx(t, "admin.dash2.sub.operator_stats", "Ձեր ընկերության ցուցանիշները։ Թվերը՝ ըստ արժույթի, երբեք չեն գումարվում"), show: allowedOperatorStats },
-      { key: "agent", label: tx(t, "admin.dash2.tab.agent", "Գործակալի աշխատանք"), icon: "ti-users", superPill: false, subtitle: tx(t, "admin.dash2.sub.agent", "Ձեր վաճառքի խողովակն ու հաճախորդները"), show: allowedAgent },
+      { key: "overview", label: d.tabOverview, icon: "ti-layout-dashboard", superPill: true, subtitle: d.subOverview, show: allowedPlatformStats },
+      { key: "platform-stats", label: d.tabPlatformStats, icon: "ti-chart-bar", superPill: true, subtitle: d.subPlatformStats, show: allowedPlatformStats },
+      { key: "operator-stats", label: d.tabOperatorStats, icon: "ti-building-store", superPill: false, subtitle: d.subOperatorStats, show: allowedOperatorStats },
+      { key: "agent", label: d.tabAgent, icon: "ti-users", superPill: false, subtitle: d.subAgent, show: allowedAgent },
     ];
     return all.filter((tab) => tab.show).map(({ show: _show, ...rest }) => rest);
-  }, [t, allowedPlatformStats, allowedOperatorStats, allowedAgent]);
+  }, [d, allowedPlatformStats, allowedOperatorStats, allowedAgent]);
 
   const [activeTab, setActiveTab] = useState<TabKey | null>(null);
   useEffect(() => {
@@ -1005,14 +1093,11 @@ export default function DashboardPage() {
   }, [tabs, activeTab]);
 
   const activeDef = tabs.find((tab) => tab.key === activeTab) ?? null;
-  const greeting = user?.name
-    ? `${tx(t, "admin.dashboard.title", "Վահանակ")} — ${user.name}`
-    : tx(t, "admin.dashboard.title", "Վահանակ");
+  const greeting = user?.name ? `${d.title} — ${user.name}` : d.title;
   const showRangeSelect = activeTab === "overview" || activeTab === "platform-stats";
 
   const handleExport = useCallback(() => {
-    // Export is intentionally a no-op stub here (the data lives per-pane); the
-    // button is kept to match the mockup's actions slot.
+    exportFnRef.current?.();
   }, []);
 
   // ── mgmt chrome wrapper (copied from CrmPage) ──
@@ -1038,20 +1123,20 @@ export default function DashboardPage() {
             <div className="page-header">
               <div>
                 <div className="breadcrumb">
-                  <a onClick={() => router.push("/dashboard")}>{tx(t, "admin.dash2.breadcrumb_home", "Գլխավոր")}</a>
+                  <a onClick={() => router.push("/dashboard")}>{d.breadcrumbHome}</a>
                   <i className="ti ti-chevron-right" />
-                  <span className="breadcrumb-current">{tx(t, "admin.dashboard.title", "Վահանակ")}</span>
+                  <span className="breadcrumb-current">{d.title}</span>
                 </div>
                 <h1 className="page-title">
                   <span>{greeting}</span>
                   {activeDef?.superPill ? (
                     <span className="super-tag">
                       <i className="ti ti-shield-lock" style={{ fontSize: 13 }} />
-                      {tx(t, "admin.dash2.super_admin", "Սուպեր ադմին")}
+                      {d.superAdmin}
                     </span>
                   ) : null}
                 </h1>
-                <div className="page-subtitle">{activeDef?.subtitle ?? tx(t, "admin.dashboard.platform_overview", "Հարթակի ընդհանուր պատկերը")}</div>
+                <div className="page-subtitle">{activeDef?.subtitle ?? d.platformOverview}</div>
               </div>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 {showRangeSelect ? (
@@ -1059,30 +1144,30 @@ export default function DashboardPage() {
                     className="range-select"
                     value={String(rangeDays)}
                     onChange={(e) => setRangeDays(Number(e.target.value))}
-                    aria-label={tx(t, "admin.dashboard.date_range", "Ժամանակահատված")}
+                    aria-label={d.dateRange}
                   >
-                    <option value="7">{tx(t, "admin.dashboard.last_7d", "Վերջին 7 օր")}</option>
-                    <option value="30">{tx(t, "admin.dashboard.last_30d", "Վերջին 30 օր")}</option>
-                    <option value="90">{tx(t, "admin.dashboard.last_90d", "Վերջին 90 օր")}</option>
-                    <option value="365">{tx(t, "admin.dash2.last_12m", "Վերջին 12 ամիս")}</option>
+                    <option value="7">{d.last7d}</option>
+                    <option value="30">{d.last30d}</option>
+                    <option value="90">{d.last90d}</option>
+                    <option value="365">{d.last12m}</option>
                   </select>
                 ) : null}
-                {activeTab === "overview" ? (
+                {canExport ? (
                   <button className="btn btn-primary" onClick={handleExport}>
                     <i className="ti ti-download" />
-                    {tx(t, "admin.dashboard.export", "Արտահանել")}
+                    {d.export}
                   </button>
                 ) : null}
               </div>
             </div>
 
             {!allowed ? (
-              <div className="card" style={{ padding: 16 }}>{tx(t, "admin.forbidden.dashboard_stats", "Հասանելի չէ")}</div>
+              <div className="card" style={{ padding: 16 }}>{d.forbidden}</div>
             ) : tabs.length === 0 ? (
               <div className="empty-state">
                 <div className="es-icon"><i className="ti ti-layout-dashboard" /></div>
-                <div className="es-title">{tx(t, "admin.dashboard.title", "Վահանակ")}</div>
-                <div className="es-sub">{tx(t, "admin.dash2.no_panes", "Այս հաշվի համար վահանակի բաժիններ հասանելի չեն։")}</div>
+                <div className="es-title">{d.title}</div>
+                <div className="es-sub">{d.noPanes}</div>
               </div>
             ) : (
               <>
@@ -1105,16 +1190,16 @@ export default function DashboardPage() {
 
                 {/* active pane */}
                 {activeTab === "overview" && token ? (
-                  <div className="page-pane active"><OverviewPane token={token} days={rangeDays} /></div>
+                  <div className="page-pane active"><OverviewPane token={token} days={rangeDays} onExportReady={handleExportReady} /></div>
                 ) : null}
                 {activeTab === "platform-stats" && token ? (
-                  <div className="page-pane active"><PlatformStatsPane token={token} days={rangeDays} /></div>
+                  <div className="page-pane active"><PlatformStatsPane token={token} days={rangeDays} onExportReady={handleExportReady} /></div>
                 ) : null}
                 {activeTab === "operator-stats" && token ? (
-                  <div className="page-pane active"><OperatorStatsPane token={token} /></div>
+                  <div className="page-pane active"><OperatorStatsPane token={token} onExportReady={handleExportReady} /></div>
                 ) : null}
                 {activeTab === "agent" && token ? (
-                  <div className="page-pane active"><AgentPane token={token} /></div>
+                  <div className="page-pane active"><AgentPane token={token} onExportReady={handleExportReady} /></div>
                 ) : null}
               </>
             )}
