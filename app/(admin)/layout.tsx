@@ -113,6 +113,22 @@ const MGMT_EXACT = [
   // are EXACT, not startsWith prefixes. (/platform/contracts is in MGMT_PREFIXES.)
   "/operator/contracts",
   "/agent/contracts",
+  // 2026-06-15 — Inventory rebuilt 1:1 from docs/admin_designe/2_Inventory/
+  // inventory.html: ONE unified InventoryPage (9 in-page tabs) renders its OWN
+  // mgmt chrome (Sidebar/Header/management.css), so bypass AdminShell. EXACT
+  // match only so deep sub-routes (e.g. /operator/flights/[id]/cabins) keep
+  // AdminShell. Routes are added here AS each vertical pane is ported, so any
+  // not-yet-ported /operator/* page keeps its working AdminShell view.
+  // Operator scope = own company; super gets the in-page oversight toggle.
+  "/operator/hotels",
+  "/operator/flights",
+  "/operator/transfers",
+  "/operator/cars",
+  "/operator/excursions",
+  "/operator/visas",
+  "/operator/packages",
+  "/operator/offers",
+  "/operator/external-api",
 ];
 
 /**
