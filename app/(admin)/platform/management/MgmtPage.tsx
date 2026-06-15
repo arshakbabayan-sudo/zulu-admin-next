@@ -25,6 +25,8 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import "./management.css";
 import { mgmtStrings, type MgmtKey } from "./management-i18n";
+import { SubscriptionsPane } from "./panes/SubscriptionsPane";
+import { PendingReviewPane } from "./panes/PendingReviewPane";
 import { useMgmtMobileNav } from "@/lib/use-mgmt-mobile-nav";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -116,8 +118,10 @@ import {
 
 export type MgmtTab =
   | "companies"
+  | "subscriptions"
   | "companyApplications"
   | "applications"
+  | "pendingReview"
   | "contracts"
   | "templates"
   | "logs"
@@ -132,10 +136,16 @@ const TAB_META: Record<
   { labelKey: MgmtKey; subtitleKey: MgmtKey; icon: string }
 > = {
   companies: { labelKey: "tabCompanies", subtitleKey: "subCompanies", icon: "ti-building-community" },
+  // 2026-06-15 — Subscriptions + Pending review promoted from navigate-out
+  // link-tabs to first-class in-page panes so the new two-level cluster nav
+  // (1:1 of docs/admin_designe/7_Management/management.html) keeps all 9 pages
+  // inside the same mgmt chrome.
+  subscriptions: { labelKey: "tabSubscriptions", subtitleKey: "subSubscriptions", icon: "ti-credit-card" },
   // 2026-06-05 — Company registration applications (B2B join requests) promoted
   // to a first-class Management tab (was a navigate-out to the old V2 page).
   companyApplications: { labelKey: "tabCompanyApplications", subtitleKey: "subCompanyApplications", icon: "ti-id-badge-2" },
   applications: { labelKey: "tabApplications", subtitleKey: "subApplications", icon: "ti-user-check" },
+  pendingReview: { labelKey: "tabPendingReview", subtitleKey: "subPendingReview", icon: "ti-eye-check" },
   contracts: { labelKey: "tabContracts", subtitleKey: "subContracts", icon: "ti-file-text" },
   templates: { labelKey: "tabTemplates", subtitleKey: "subTemplates", icon: "ti-template" },
   logs: { labelKey: "tabLogs", subtitleKey: "subLogs", icon: "ti-history" },
@@ -145,14 +155,19 @@ const TAB_META: Record<
   unverified: { labelKey: "tabUnverified", subtitleKey: "subUnverified", icon: "ti-user-question" },
 };
 
-// 2026-06-10 (roadmap §1 hidden pages) — Management tabs that NAVIGATE to a
-// standalone page instead of switching an in-page pane. Pending review (offer
-// moderation) and Subscriptions (plan governance) keep their own page chrome;
-// the strip just has to make them findable.
-const MGMT_LINK_TABS: Array<{ href: string; labelKey: MgmtKey; icon: string }> = [
-  { href: "/platform/pending-review", labelKey: "tabPendingReview", icon: "ti-eye-check" },
-  { href: "/bucket3/subscriptions", labelKey: "tabSubscriptions", icon: "ti-credit-card" },
+// 2026-06-15 — Two-level cluster nav (1:1 of 7_Management/management.html §1):
+// 4 L1 clusters → L2 page pills. "contracts" stays a valid tab/route for
+// deep-links but is intentionally NOT surfaced as a pill (dropped from the new
+// 9-page design). firstPageOf = the default landing page when an L1 is clicked.
+const MGMT_CLUSTERS: Array<{ key: string; labelKey: MgmtKey; icon: string; pages: MgmtTab[] }> = [
+  { key: "companies", labelKey: "clCompanies", icon: "ti-building", pages: ["companies", "subscriptions"] },
+  { key: "approvals", labelKey: "clApprovals", icon: "ti-checklist", pages: ["companyApplications", "applications", "pendingReview"] },
+  { key: "customers", labelKey: "clCustomers", icon: "ti-users", pages: ["customers", "unverified"] },
+  { key: "system", labelKey: "clSystem", icon: "ti-server-cog", pages: ["templates", "logs"] },
 ];
+function clusterOfTab(t: MgmtTab): (typeof MGMT_CLUSTERS)[number] {
+  return MGMT_CLUSTERS.find((c) => c.pages.includes(t)) ?? MGMT_CLUSTERS[0]!;
+}
 
 // Enum → dictionary key maps (resolved via mgmtStrings() at render).
 const TYPE_KEY: Record<string, MgmtKey> = {
@@ -1233,8 +1248,10 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
     // Update URL so deep-links / refresh land on the right route
     const map: Record<MgmtTab, string> = {
       companies: "/platform/companies",
+      subscriptions: "/bucket3/subscriptions",
       companyApplications: "/platform/company-applications",
       applications: "/platform/seller-applications",
+      pendingReview: "/platform/pending-review",
       contracts: "/platform/contracts",
       templates: "/platform/contract-templates",
       logs: "/platform/audit-logs",
@@ -1257,6 +1274,7 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
   // ───────────────── Render shell ─────────────────
   const activeMeta = TAB_META[tab];
   const activeLabel = s[activeMeta.labelKey];
+  const activeCluster = clusterOfTab(tab);
   const inCompanyDetail = tab === "companies" && detailCompanyId !== null && detailCompany !== null;
   const inCustomerDetail = tab === "customers" && detailCustomerId !== null;
   const inUnverifiedDetail = tab === "unverified" && detailUnverifiedId !== null;
@@ -1291,6 +1309,10 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
               <div>
                 <div className="breadcrumb">
                   <a onClick={() => router.push("/dashboard")}>{s.breadcrumbHome}</a>
+                  <i className="ti ti-chevron-right" />
+                  <a onClick={() => switchTab(MGMT_CLUSTERS[0]!.pages[0]!)}>{s.management}</a>
+                  <i className="ti ti-chevron-right" />
+                  <a onClick={() => switchTab(activeCluster.pages[0]!)}>{s[activeCluster.labelKey]}</a>
                   <i className="ti ti-chevron-right" />
                   <span className="breadcrumb-current">
                     {detailHeaderName ?? activeLabel}
@@ -1453,41 +1475,53 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
               </div>
             </div>
 
-            <div className="section-tabs">
-              {(Object.keys(TAB_META) as MgmtTab[]).map((k) => {
-                // Counts shown on Companies / Seller applications / Contracts
-                // from first paint (mock's `<span class="count">`). Prefer the
-                // live total from the open tab; fall back to the mount-time
-                // fetch so all three show immediately. Templates + Logs: none.
+            {/* L1 — cluster strip (1:1 of 7_Management two-level nav) */}
+            <div className="section-tabs" id="cluster-strip">
+              {MGMT_CLUSTERS.map((c) => (
+                <button
+                  key={c.key}
+                  className={`section-tab ${activeCluster.key === c.key ? "active" : ""}`}
+                  onClick={() => switchTab(c.pages[0]!)}
+                >
+                  <i className={`ti ${c.icon}`} />
+                  {s[c.labelKey]}
+                </button>
+              ))}
+            </div>
+
+            {/* L2 — page pills for the active cluster */}
+            <div className="pills-row active">
+              {activeCluster.pages.map((k) => {
+                // Live totals on the pills that have them (mock's count chips):
+                // Companies / Company applications / Seller applications /
+                // Customers / Unverified. Others have no count.
                 let count: number | null = null;
                 if (k === "companies") count = companiesMeta?.total ?? tabCounts.companies ?? null;
                 else if (k === "companyApplications") count = companyAppsMeta?.total ?? tabCounts.companyApplications ?? null;
                 else if (k === "applications") count = tabCounts.applications ?? (apps.length || null);
-                else if (k === "contracts") count = tabCounts.contracts ?? (contracts.length || null);
                 else if (k === "customers") count = customersMeta?.total ?? null;
                 else if (k === "unverified") count = unverifiedMeta?.total ?? usersStats?.pending_verification ?? null;
                 return (
                   <button
                     key={k}
-                    className={`section-tab ${tab === k ? "active" : ""}`}
+                    className={`sub-tab pg-pill ${tab === k ? "active" : ""}`}
                     onClick={() => switchTab(k)}
                   >
-                    <i className={`ti ${TAB_META[k].icon}`} />
                     {s[TAB_META[k].labelKey]}
-                    {count !== null ? <span className="count">{count}</span> : null}
+                    {count !== null ? <span className="pill-count">{count}</span> : null}
                   </button>
                 );
               })}
-              {MGMT_LINK_TABS.map((l) => (
-                <button
-                  key={l.href}
-                  className="section-tab"
-                  onClick={() => router.push(l.href)}
-                >
-                  <i className={`ti ${l.icon}`} />
-                  {s[l.labelKey]}
-                </button>
-              ))}
+            </div>
+
+            {/* ───────── SUBSCRIPTIONS pane (self-contained) ───────── */}
+            <div className={`page-pane ${tab === "subscriptions" ? "active" : ""}`}>
+              {tab === "subscriptions" && <SubscriptionsPane />}
+            </div>
+
+            {/* ───────── PENDING REVIEW pane (self-contained) ───────── */}
+            <div className={`page-pane ${tab === "pendingReview" ? "active" : ""}`}>
+              {tab === "pendingReview" && <PendingReviewPane />}
             </div>
 
             {/* ───────── COMPANIES pane ───────── */}

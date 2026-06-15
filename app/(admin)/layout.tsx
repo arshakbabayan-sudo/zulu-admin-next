@@ -155,6 +155,13 @@ const MGMT_EXACT = [
   "/platform/finance",
   "/platform/vouchers",
   "/bucket3/per-x-invoicing",
+  // 2026-06-15 — Management two-level cluster nav (7_Management/management.html):
+  // Subscriptions + Pending review promoted to in-page MgmtPage panes; their
+  // routes now render MgmtPage (own mgmt chrome), so bypass AdminShell. EXACT
+  // (no sub-routes). The other Management routes (/platform/companies etc.) are
+  // already covered by MGMT_PREFIXES above.
+  "/bucket3/subscriptions",
+  "/platform/pending-review",
 ];
 
 /**
