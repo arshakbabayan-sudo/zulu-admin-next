@@ -138,6 +138,10 @@ const MGMT_EXACT = [
   // 2026-06-15 — Package orders tab of the unified BookingsPage. EXACT match
   // (no sub-routes); /platform/bookings is handled as a prefix above.
   "/platform/package-orders",
+  // 2026-06-15 — Chat rebuilt 1:1 from docs/admin_designe/5_chat/chat.html: the
+  // two-pane messaging page renders its OWN mgmt chrome (Sidebar/Header/
+  // management.css), so bypass AdminShell. EXACT match (no /chat/* sub-routes).
+  "/chat",
 ];
 
 /**

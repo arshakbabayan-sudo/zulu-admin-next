@@ -27,6 +27,9 @@ const EN = {
   errStartChat: "Failed to start chat",
   errSend: "Failed to send",
   customerBadge: "Customer",
+  pickerSubtitle: "Start a conversation with a colleague",
+  back: "Back",
+  forbidden: "You don't have access to Chat.",
 } as const;
 
 export type ChatKey = keyof typeof EN;
@@ -49,6 +52,9 @@ const HY: Partial<Record<ChatKey, string>> = {
   errStartChat: "Չհաջողվեց սկսել չաթը",
   errSend: "Չհաջողվեց ուղարկել",
   customerBadge: "Հաճախորդ",
+  pickerSubtitle: "Սկսիր զրույց գործընկերոջ հետ",
+  back: "Հետ",
+  forbidden: "Դու Չաթի հասանելիություն չունես։",
 };
 
 const RU: Partial<Record<ChatKey, string>> = {
@@ -69,6 +75,9 @@ const RU: Partial<Record<ChatKey, string>> = {
   errStartChat: "Не удалось начать чат",
   errSend: "Не удалось отправить",
   customerBadge: "Клиент",
+  pickerSubtitle: "Начните переписку с коллегой",
+  back: "Назад",
+  forbidden: "У вас нет доступа к Чату.",
 };
 
 export function chatStrings(lang: string): Record<ChatKey, string> {

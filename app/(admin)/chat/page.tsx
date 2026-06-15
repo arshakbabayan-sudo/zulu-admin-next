@@ -1,20 +1,32 @@
 "use client";
 
 /**
- * Internal chat (Phase 1 — polling). Two-pane: conversation list (left) +
- * message thread (right). Company-scoped; you chat with colleagues (option Բ).
+ * admin v3 — internal Chat (messaging). 1:1 port of
+ * docs/admin_designe/5_chat/chat.html.
  *
- * Polling: while a conversation is open, fetch messages after the last seen id
- * every 4s; the conversation list refreshes every 8s for unread counts. No
- * websockets yet (Phase 2 can swap the poll for a live channel, same API).
+ * Renders its OWN mgmt chrome (Sidebar/Header/management.css, off-canvas mobile
+ * nav) like Inventory / Bookings / CRM / Settings — a two-pane messaging surface
+ * (conversation list + thread) inside a `.card`, NOT a list/table.
+ *
+ * Phase 1 polling (NO websockets): while a thread is open poll
+ * GET …/messages?after_id every 2500ms; refresh the conversation list (unread +
+ * previews) every 5000ms. The only write surfaces are the composer (send) and the
+ * New-chat colleague picker drawer (create/reuse a 1:1 conversation).
+ *
+ * Role scoping is server-side: super/platform staff also see B2C `customer`
+ * threads (Customer badge + email); operator/agent are gated by `chat.view` and
+ * only chat with company colleagues. Customer-thread titles are NEVER translated.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ForbiddenNotice } from "@/components/ForbiddenNotice";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import "../platform/management/management.css";
+import { Sidebar, Header } from "../platform/management/MgmtPage";
+import { useMgmtMobileNav } from "@/lib/use-mgmt-mobile-nav";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useDocumentTitle } from "@/lib/use-document-title";
-import { canAccessChatSection } from "@/lib/access";
+import { canAccessChatSection, canAccessNotificationsNav } from "@/lib/access";
+import { apiNotificationsUnreadCount } from "@/lib/notifications-api";
 import {
   apiChatColleagues,
   apiChatConversations,
@@ -25,17 +37,33 @@ import {
   type ChatConversationRow,
   type ChatMessageRow,
 } from "@/lib/chat-api";
-import { PageHeader, V2Card, EmptyState, V2Button } from "@/components/ui/v2";
+import { formatRelativeTime } from "@/lib/admin-v2-helpers";
 import { chatStrings } from "./chat-i18n";
-import { avatarInitials, avatarStyle, formatRelativeTime, pickAvatarTone } from "@/lib/admin-v2-helpers";
-import { MessageSquare, Plus, Send, X, Search } from "lucide-react";
+
+const TONES = ["", "avatar-teal", "avatar-amber", "avatar-blue"];
+function initials(name?: string | null): string {
+  if (!name) return "—";
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const a = parts[0]?.[0] ?? "";
+  const b = parts[1]?.[0] ?? "";
+  return (a + b).toUpperCase() || "—";
+}
+function tone(key: string | number): string {
+  let h = 0;
+  const s = String(key);
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return TONES[h % TONES.length]!;
+}
 
 export default function ChatPage() {
-  const { lang } = useLanguage();
+  const router = useRouter();
+  const { token, user, logout } = useAdminAuth();
+  const { lang, setLang, languageOptions } = useLanguage();
   const s = useMemo(() => chatStrings(lang), [lang]);
-  useDocumentTitle(s.title);
-  const { token, user } = useAdminAuth();
   const allowed = canAccessChatSection(user);
+
+  const { sidebarCollapsed, onHamburger, closeNav, layoutClass } = useMgmtMobileNav();
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const [convs, setConvs] = useState<ChatConversationRow[]>([]);
   const [activeId, setActiveId] = useState<number | null>(null);
@@ -43,6 +71,7 @@ export default function ChatPage() {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [threadActive, setThreadActive] = useState(false); // mobile: slide thread in
 
   // New-chat picker
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -53,6 +82,21 @@ export default function ChatPage() {
   const threadRef = useRef<HTMLDivElement>(null);
 
   const companyId = user?.companies?.[0]?.id ?? null;
+
+  // notifications badge for the shared chrome
+  useEffect(() => {
+    if (!token || !canAccessNotificationsNav(user)) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await apiNotificationsUnreadCount(token);
+        if (!cancelled) setUnreadCount(res.data.unread_count ?? 0);
+      } catch {
+        /* badge is non-critical chrome */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [token, user]);
 
   const loadConvs = useCallback(async () => {
     if (!token) return;
@@ -84,7 +128,7 @@ export default function ChatPage() {
     [token],
   );
 
-  // Initial conversation list + 8s refresh for unread counts.
+  // Initial conversation list + 5s refresh for unread counts.
   useEffect(() => {
     if (!allowed) return;
     void loadConvs();
@@ -100,7 +144,7 @@ export default function ChatPage() {
     void loadMessages(activeId, false);
   }, [activeId, loadMessages]);
 
-  // Poll the open thread every 4s for new messages.
+  // Poll the open thread every 2.5s for new messages.
   useEffect(() => {
     if (activeId == null) return;
     const id = window.setInterval(() => void loadMessages(activeId, true), 2500);
@@ -111,6 +155,15 @@ export default function ChatPage() {
   useEffect(() => {
     if (threadRef.current) threadRef.current.scrollTop = threadRef.current.scrollHeight;
   }, [messages]);
+
+  const selectConv = (id: number) => {
+    setActiveId(id);
+    setThreadActive(true);
+  };
+  const backToList = () => {
+    setThreadActive(false);
+    setActiveId(null);
+  };
 
   const openPicker = useCallback(async () => {
     setPickerOpen(true);
@@ -130,7 +183,7 @@ export default function ChatPage() {
       const res = await apiCreateChatConversation(token, { company_id: companyId, user_ids: [colleague.id] });
       setPickerOpen(false);
       await loadConvs();
-      setActiveId(res.data.id);
+      selectConv(res.data.id);
     } catch (e) {
       setErr(e instanceof Error ? e.message : s.errStartChat);
     }
@@ -154,226 +207,196 @@ export default function ChatPage() {
     }
   };
 
-  if (!allowed) return <ForbiddenNotice />;
+  // Escape closes the picker drawer.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setPickerOpen(false); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
 
   const active = convs.find((c) => c.id === activeId) ?? null;
+  const convTitle = (c: ChatConversationRow): string =>
+    c.title || (c.is_customer && c.customer?.name ? c.customer.name : c.is_customer ? s.customerBadge : "");
   const filteredColleagues = colleagues.filter((c) =>
     `${c.name} ${c.email}`.toLowerCase().includes(colleagueFilter.toLowerCase()),
   );
 
-  return (
-    <div>
-      <PageHeader
-        breadcrumb={[{ label: s.breadcrumbHome, href: "/dashboard" }, { label: s.title }]}
-        title={s.title}
-        subtitle={s.subtitle}
-        actions={
-          <V2Button variant="primary" onClick={() => void openPicker()} icon={<Plus className="h-4 w-4" />}>
-            {s.newChat}
-          </V2Button>
-        }
-      />
-
-      {err ? (
-        <div className="mb-4 rounded-md border p-3 text-[13px]" style={{ borderColor: "var(--admin-border)", color: "var(--admin-danger)" }}>
-          {err}
-        </div>
-      ) : null}
-
-      <V2Card>
-        <div className="grid" style={{ gridTemplateColumns: "300px 1fr", minHeight: "60vh" }}>
-          {/* ── Conversation list ── */}
-          <div className="border-r" style={{ borderColor: "var(--admin-border)" }}>
-            {convs.length === 0 ? (
-              <div className="p-4 text-[13px]" style={{ color: "var(--admin-text-secondary)" }}>
-                {s.convEmpty}
+  const chrome = (body: ReactNode, action?: ReactNode) => (
+    <div className="mgmt-page mgmt-page-host">
+      <div className={layoutClass}>
+        <Sidebar collapsed={sidebarCollapsed} unreadCount={unreadCount} />
+        <div className="nav-overlay" onClick={closeNav} />
+        <div className="main">
+          <Header
+            collapsed={sidebarCollapsed}
+            onHamburger={onHamburger}
+            user={user ?? null}
+            token={token}
+            lang={lang}
+            languageOptions={languageOptions}
+            onSetLang={setLang}
+            unreadCount={unreadCount}
+            onLogout={() => void logout().then(() => router.push("/login"))}
+            onNavigate={(href) => router.push(href)}
+          />
+          <div className="page">
+            <div className="page-header">
+              <div>
+                <div className="breadcrumb">
+                  <a onClick={() => router.push("/dashboard")}>{s.breadcrumbHome}</a>
+                  <i className="ti ti-chevron-right" />
+                  <span className="breadcrumb-current">{s.title}</span>
+                </div>
+                <h1 className="page-title"><span>{s.title}</span></h1>
+                <div className="page-subtitle">{s.subtitle}</div>
               </div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>{action}</div>
+            </div>
+
+            {/* single-tab section strip (one route: /chat) — shell consistency */}
+            <div className="section-tabs">
+              <button className="section-tab active"><i className="ti ti-messages" /> {s.title}</button>
+            </div>
+
+            {body}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (!allowed) {
+    return chrome(
+      <div className="empty-state">
+        <div className="es-icon"><i className="ti ti-lock" /></div>
+        <div className="es-title">{s.forbidden}</div>
+      </div>,
+    );
+  }
+
+  return chrome(
+    <div className="page-pane active">
+      <div className={`chat-error ${err ? "show" : ""}`}>
+        <i className="ti ti-alert-triangle" />
+        <span>{err}</span>
+      </div>
+
+      <div className="card" style={{ marginBottom: 0 }}>
+        <div className={`chat-shell ${threadActive ? "thread-active" : ""}`}>
+          {/* LEFT: conversation list */}
+          <div className="conv-list">
+            {convs.length === 0 ? (
+              <div className="conv-empty">{s.convEmpty}</div>
             ) : (
-              <ul>
-                {convs.map((c) => {
-                  const tone = pickAvatarTone(c.id);
-                  const isActive = c.id === activeId;
-                  return (
-                    <li key={c.id}>
-                      <button
-                        type="button"
-                        onClick={() => setActiveId(c.id)}
-                        className="flex w-full items-center gap-2.5 border-b px-3 py-2.5 text-left transition"
-                        style={{
-                          borderColor: "var(--admin-border)",
-                          backgroundColor: isActive ? "var(--admin-primary-soft)" : "transparent",
-                        }}
-                      >
-                        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold" style={avatarStyle(tone)}>
-                          {avatarInitials(c.title)}
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="flex items-center gap-1.5">
-                            <span className="truncate text-[13px] font-medium" style={{ color: "var(--admin-text-primary)" }}>
-                              {c.title || (c.is_customer ? s.customerBadge : "")}
-                            </span>
-                            {c.is_customer ? (
-                              <span
-                                className="shrink-0 rounded-full px-[6px] py-px text-[10px] font-semibold"
-                                style={{ backgroundColor: "var(--admin-primary-soft)", color: "var(--admin-primary)" }}
-                              >
-                                {s.customerBadge}
-                              </span>
-                            ) : null}
-                            {c.unread > 0 ? (
-                              <span className="ml-auto rounded-full px-[6px] py-px text-[10px] font-bold text-white" style={{ backgroundColor: "var(--admin-primary)" }}>
-                                {c.unread}
-                              </span>
-                            ) : null}
-                          </span>
-                          {c.last_message ? (
-                            <span className="block truncate text-[12px]" style={{ color: "var(--admin-text-secondary)" }}>
-                              {c.last_message.body}
-                            </span>
-                          ) : null}
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
+              convs.map((c) => {
+                const title = convTitle(c);
+                const last = c.last_message?.body ?? null;
+                return (
+                  <div key={c.id} className={`conv-row ${c.id === activeId ? "active" : ""}`} onClick={() => selectConv(c.id)}>
+                    <span className={`avatar ${tone(c.id)}`}>{initials(title)}</span>
+                    <div className="conv-body">
+                      <div className="conv-top">
+                        <span className="conv-title">{title}</span>
+                        {c.is_customer && <span className="badge badge-primary">{s.customerBadge}</span>}
+                        {c.unread > 0 && <span className="unread-badge">{c.unread}</span>}
+                      </div>
+                      {last && <div className="conv-preview">{last.length > 120 ? last.slice(0, 120) : last}</div>}
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
 
-          {/* ── Thread ── */}
-          <div className="flex flex-col" style={{ maxHeight: "70vh" }}>
+          {/* RIGHT: thread column */}
+          <div className="thread-col">
             {active == null ? (
-              <EmptyState
-                icon={<MessageSquare className="h-10 w-10" />}
-                title={s.threadEmptyTitle}
-                subtitle={s.threadEmptySubtitle}
-              />
+              <div className="thread-empty">
+                <div className="empty-state">
+                  <div className="es-icon"><i className="ti ti-message-circle" /></div>
+                  <div className="es-title">{s.threadEmptyTitle}</div>
+                  <div className="es-sub">{s.threadEmptySubtitle}</div>
+                </div>
+              </div>
             ) : (
               <>
-                <div className="flex items-center gap-2 border-b px-4 py-3" style={{ borderColor: "var(--admin-border)" }}>
-                  <span className="text-[14px] font-semibold" style={{ color: "var(--admin-text-primary)" }}>{active.title || (active.is_customer ? s.customerBadge : "")}</span>
-                  {active.is_customer ? (
-                    <span
-                      className="rounded-full px-[6px] py-px text-[10px] font-semibold"
-                      style={{ backgroundColor: "var(--admin-primary-soft)", color: "var(--admin-primary)" }}
-                    >
-                      {s.customerBadge}
-                    </span>
-                  ) : null}
-                  {active.is_customer && active.customer?.email ? (
-                    <span className="text-[12px]" style={{ color: "var(--admin-text-secondary)" }}>
-                      {active.customer.email}
-                    </span>
-                  ) : null}
-                </div>
-                <div ref={threadRef} className="flex-1 overflow-y-auto px-4 py-3" style={{ backgroundColor: "var(--admin-bg-secondary)" }}>
-                  {messages.length === 0 ? (
-                    <p className="py-8 text-center text-[13px]" style={{ color: "var(--admin-text-tertiary)" }}>
-                      {s.noMessages}
-                    </p>
-                  ) : (
-                    <div className="flex flex-col gap-2">
-                      {messages.map((m) => (
-                        <div key={m.id} className={`flex ${m.mine ? "justify-end" : "justify-start"}`}>
-                          <div
-                            className="max-w-[70%] rounded-[10px] px-3 py-2"
-                            style={{
-                              backgroundColor: m.mine ? "var(--admin-primary)" : "var(--bg-primary,#fff)",
-                              color: m.mine ? "#fff" : "var(--admin-text-primary)",
-                              border: m.mine ? "none" : "1px solid var(--admin-border)",
-                            }}
-                          >
-                            {!m.mine ? (
-                              <div className="mb-0.5 text-[11px] font-semibold" style={{ color: "var(--admin-text-secondary)" }}>
-                                {m.sender?.name ?? "—"}
-                              </div>
-                            ) : null}
-                            <div className="text-[13px] whitespace-pre-wrap break-words">{m.body}</div>
-                            <div className="mt-0.5 text-[10px]" style={{ opacity: 0.7 }}>
-                              {formatRelativeTime(m.created_at)}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                <div className="thread-head">
+                  <button className="icon-btn thread-back" onClick={backToList} title={s.back}><i className="ti ti-arrow-left" /></button>
+                  <span className={`avatar ${tone(active.id)}`}>{initials(convTitle(active))}</span>
+                  <div className="thread-head-main">
+                    <div className="thread-title-line">
+                      <span className="thread-title">{convTitle(active)}</span>
+                      {active.is_customer && <span className="badge badge-primary">{s.customerBadge}</span>}
                     </div>
+                    {active.is_customer && active.customer?.email && (
+                      <div className="thread-cust-email">{active.customer.email}</div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="thread-body" ref={threadRef}>
+                  {messages.length === 0 ? (
+                    <div className="thread-nomsg">{s.noMessages}</div>
+                  ) : (
+                    messages.map((m) => (
+                      <div key={m.id} className={`msg-row ${m.mine ? "mine" : "theirs"}`}>
+                        {!m.mine && <div className="msg-sender">{m.sender?.name ?? "—"}</div>}
+                        <div className="msg-bubble">{m.body}</div>
+                        <div className="msg-time">{formatRelativeTime(m.created_at)}</div>
+                      </div>
+                    ))
                   )}
                 </div>
-                <div className="flex items-center gap-2 border-t px-3 py-2.5" style={{ borderColor: "var(--admin-border)" }}>
+
+                <div className="composer">
                   <input
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
                     placeholder={s.msgPlaceholder}
-                    className="h-[38px] flex-1 rounded-md border px-3 text-[13px] outline-none"
-                    style={{ borderColor: "var(--admin-border)" }}
+                    maxLength={5000}
                   />
-                  <V2Button variant="primary" onClick={() => void send()} disabled={sending || draft.trim() === ""} icon={<Send className="h-4 w-4" />}>
-                    {s.send}
-                  </V2Button>
+                  <button className="btn btn-primary" onClick={() => void send()} disabled={sending || draft.trim() === ""} title={s.send}>
+                    <i className="ti ti-send" />
+                  </button>
                 </div>
               </>
             )}
           </div>
         </div>
-      </V2Card>
+      </div>
 
-      {/* ── New-chat picker ── */}
-      {pickerOpen ? (
-        <>
-          <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setPickerOpen(false)} aria-hidden />
-          <div className="fixed inset-y-0 right-0 z-50 flex w-[380px] max-w-full flex-col bg-white shadow-xl" style={{ borderLeft: "1px solid var(--admin-border)" }}>
-            <div className="flex items-center justify-between border-b px-5 py-4" style={{ borderColor: "var(--admin-border)" }}>
-              <span className="text-[15px] font-semibold">{s.newChat}</span>
-              <button type="button" onClick={() => setPickerOpen(false)} aria-label={s.close} className="rounded-md p-1 hover:bg-slate-100">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="border-b px-4 py-3" style={{ borderColor: "var(--admin-border)" }}>
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: "var(--admin-text-tertiary)" }} />
-                <input
-                  value={colleagueFilter}
-                  onChange={(e) => setColleagueFilter(e.target.value)}
-                  placeholder={s.searchColleaguesPh}
-                  className="h-[36px] w-full rounded-md border pl-9 pr-3 text-[13px] outline-none"
-                  style={{ borderColor: "var(--admin-border)" }}
-                />
-              </div>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              {filteredColleagues.length === 0 ? (
-                <p className="px-4 py-6 text-center text-[13px]" style={{ color: "var(--admin-text-secondary)" }}>
-                  {s.noColleagues}
-                </p>
-              ) : (
-                <ul>
-                  {filteredColleagues.map((col) => {
-                    const tone = pickAvatarTone(col.id);
-                    return (
-                      <li key={col.id}>
-                        <button
-                          type="button"
-                          onClick={() => void startChat(col)}
-                          className="flex w-full items-center gap-2.5 border-b px-4 py-2.5 text-left hover:bg-slate-50"
-                          style={{ borderColor: "var(--admin-border)" }}
-                        >
-                          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[12px] font-semibold" style={avatarStyle(tone)}>
-                            {avatarInitials(col.name)}
-                          </span>
-                          <span>
-                            <span className="block text-[13px] font-medium" style={{ color: "var(--admin-text-primary)" }}>{col.name}</span>
-                            <span className="block text-[12px]" style={{ color: "var(--admin-text-secondary)" }}>{col.email}</span>
-                          </span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
+      {/* New-chat picker drawer (the only create surface) */}
+      <div className={`drawer-overlay ${pickerOpen ? "open" : ""}`} onClick={() => setPickerOpen(false)} />
+      <div className={`drawer chat-picker ${pickerOpen ? "open" : ""}`}>
+        <div className="drawer-header">
+          <div>
+            <div className="card-title">{s.newChat}</div>
+            <div className="card-subtitle">{s.pickerSubtitle}</div>
           </div>
-        </>
-      ) : null}
-    </div>
+          <button className="icon-btn" onClick={() => setPickerOpen(false)} title={s.close}><i className="ti ti-x" /></button>
+        </div>
+        <div className="drawer-body">
+          <div className="picker-search">
+            <i className="ti ti-search" />
+            <input value={colleagueFilter} onChange={(e) => setColleagueFilter(e.target.value)} placeholder={s.searchColleaguesPh} />
+          </div>
+          {filteredColleagues.length === 0 ? (
+            <div className="coll-empty">{s.noColleagues}</div>
+          ) : (
+            filteredColleagues.map((col) => (
+              <div key={col.id} className="coll-row" onClick={() => void startChat(col)}>
+                <span className={`avatar ${tone(col.id)}`}>{initials(col.name)}</span>
+                <div className="coll-main">
+                  <div className="coll-name">{col.name}</div>
+                  <div className="coll-email">{col.email}</div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>,
+    <button className="btn btn-primary" onClick={() => void openPicker()}><i className="ti ti-plus" /> {s.newChat}</button>,
   );
 }
