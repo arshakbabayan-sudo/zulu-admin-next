@@ -14,6 +14,12 @@ import { useEffect } from "react";
  * page needs to control its own outer chrome.
  */
 const MGMT_PREFIXES = [
+  // 2026-06-15 — Bookings rebuilt 1:1 from docs/admin_designe/3_Bookings/
+  // bookings.html: ONE unified BookingsPage (All bookings + Package orders) that
+  // renders its OWN mgmt chrome (Sidebar/Header/management.css), so bypass
+  // AdminShell. A startsWith prefix so the /platform/bookings/[id] deep-link
+  // route (now folded into the in-pane detail) also gets the bypass.
+  "/platform/bookings",
   "/platform/companies",
   // 2026-06-10 — Company applications renders its OWN MgmtPage chrome (1:1 port
   // of company-applications.html); without this bypass it double-rendered inside
@@ -129,6 +135,9 @@ const MGMT_EXACT = [
   "/operator/packages",
   "/operator/offers",
   "/operator/external-api",
+  // 2026-06-15 — Package orders tab of the unified BookingsPage. EXACT match
+  // (no sub-routes); /platform/bookings is handled as a prefix above.
+  "/platform/package-orders",
 ];
 
 /**
