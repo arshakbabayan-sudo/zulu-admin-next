@@ -142,6 +142,19 @@ const MGMT_EXACT = [
   // two-pane messaging page renders its OWN mgmt chrome (Sidebar/Header/
   // management.css), so bypass AdminShell. EXACT match (no /chat/* sub-routes).
   "/chat",
+  // 2026-06-15 — Finance rebuilt 1:1 from docs/admin_designe/6_Finance/
+  // finance.html: ONE unified FinancePage (7 in-page tabs) rendering its OWN
+  // mgmt chrome. The 7 finance routes are now thin wrappers over FinancePage;
+  // EXACT match each (none have sub-routes). Per-X is super-admin only (gated
+  // inside the page). NOTE: "/platform/finance" must stay EXACT so it does not
+  // swallow "/platform/finance-summary" — both are listed explicitly.
+  "/platform/finance-summary",
+  "/platform/invoices",
+  "/platform/payments",
+  "/platform/commissions",
+  "/platform/finance",
+  "/platform/vouchers",
+  "/bucket3/per-x-invoicing",
 ];
 
 /**
