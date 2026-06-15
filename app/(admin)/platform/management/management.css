@@ -991,3 +991,80 @@ html.dark .mgmt-page .seg-ico { color:#e0b8d8; }
 
 /* inner sub-tab pill count */
 .mgmt-page .sub-tab .pill-count { margin-left:6px; font-size:11px; opacity:.75; }
+
+/* ============================================================
+   INBOX page — 1:1 port of docs/admin_designe/8_Inbox/inbox.html.
+   Scoped under .inbox-page (InboxPage wraps its panes in it) so the
+   inbox composer (textarea) never collides with the chat composer
+   (pill input). Tokens only; additive.
+   ============================================================ */
+/* My notifications — read-only grouped list */
+.mgmt-page .inbox-page .notif-group-label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.5px; color:var(--text-tertiary); margin:18px 0 8px; }
+.mgmt-page .inbox-page .notif-group-label:first-child { margin-top:0; }
+.mgmt-page .inbox-page .notif-list { display:flex; flex-direction:column; gap:8px; }
+.mgmt-page .inbox-page .notif-item { display:flex; align-items:flex-start; gap:12px; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:14px 16px; position:relative; }
+.mgmt-page .inbox-page .notif-item.unread { border-left:3px solid var(--primary); }
+.mgmt-page .inbox-page .notif-ico { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+.mgmt-page .inbox-page .notif-ico.tone-primary { background:var(--primary-light); color:var(--primary-dark); }
+.mgmt-page .inbox-page .notif-ico.tone-amber { background:var(--warning-light); color:var(--warning-dark); }
+.mgmt-page .inbox-page .notif-ico.tone-teal { background:var(--success-light); color:var(--success-dark); }
+.mgmt-page .inbox-page .notif-ico.tone-blue { background:var(--info-light); color:var(--info-dark); }
+.mgmt-page .inbox-page .notif-main { flex:1; min-width:0; }
+.mgmt-page .inbox-page .notif-title { font-size:13px; font-weight:600; display:flex; align-items:center; gap:8px; }
+.mgmt-page .inbox-page .notif-title .unread-dot { width:8px; height:8px; border-radius:50%; background:var(--info); flex-shrink:0; }
+.mgmt-page .inbox-page .notif-msg { font-size:13px; color:var(--text-secondary); margin-top:2px; line-height:1.5; }
+.mgmt-page .inbox-page .notif-foot { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:8px; }
+.mgmt-page .inbox-page .notif-time { font-size:11px; color:var(--text-tertiary); }
+.mgmt-page .inbox-page .notif-channels { display:flex; gap:5px; flex-wrap:wrap; }
+.mgmt-page .inbox-page .ch-pill { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.3px; padding:2px 7px; border-radius:999px; background:var(--bg-tertiary); color:var(--text-secondary); display:inline-flex; align-items:center; gap:3px; }
+.mgmt-page .inbox-page .notif-item .notif-act { margin-left:auto; align-self:center; flex-shrink:0; }
+
+/* shared bubble thread (Requests / Cases / Support) */
+.mgmt-page .inbox-page .thread { display:flex; flex-direction:column; gap:12px; }
+.mgmt-page .inbox-page .opener-msg { background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px 14px; }
+.mgmt-page .inbox-page .opener-msg .om-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--text-tertiary); margin-bottom:6px; }
+.mgmt-page .inbox-page .opener-msg .om-body { font-size:13px; line-height:1.6; color:var(--text-primary); white-space:pre-wrap; }
+.mgmt-page .inbox-page .bubble { display:flex; gap:10px; max-width:88%; }
+.mgmt-page .inbox-page .bubble.staff { flex-direction:row-reverse; margin-left:auto; }
+.mgmt-page .inbox-page .bubble .b-avatar { width:30px; height:30px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; background:var(--primary-light); color:var(--primary-dark); }
+.mgmt-page .inbox-page .bubble .b-avatar.tone-teal { background:var(--success-light); color:var(--success-dark); }
+.mgmt-page .inbox-page .bubble .b-avatar.tone-amber { background:var(--warning-light); color:var(--warning-dark); }
+.mgmt-page .inbox-page .bubble .b-avatar.tone-blue { background:var(--info-light); color:var(--info-dark); }
+.mgmt-page .inbox-page .bubble .b-wrap { min-width:0; }
+.mgmt-page .inbox-page .bubble .b-head { font-size:11px; color:var(--text-tertiary); margin-bottom:3px; display:flex; align-items:center; gap:6px; }
+.mgmt-page .inbox-page .bubble.staff .b-head { justify-content:flex-end; }
+.mgmt-page .inbox-page .bubble .b-head .b-name { font-weight:600; color:var(--text-secondary); }
+.mgmt-page .inbox-page .bubble .b-body { font-size:13px; line-height:1.55; padding:9px 12px; border-radius:var(--radius-md); background:var(--bg-secondary); border:1px solid var(--border-color); color:var(--text-primary); white-space:pre-wrap; }
+.mgmt-page .inbox-page .bubble.staff .b-body { background:var(--primary-soft); border-color:var(--primary-100); }
+.mgmt-page .inbox-page .bubble.internal .b-body { background:var(--warning-light); border-color:var(--warning); }
+.mgmt-page .inbox-page .bubble .b-int-tag { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; color:var(--warning-dark); }
+.mgmt-page .inbox-page .thread-empty { padding:24px; text-align:center; font-size:12px; color:var(--text-tertiary); }
+.mgmt-page .inbox-page .composer { margin-top:14px; }
+.mgmt-page .inbox-page .composer textarea { width:100%; border:1px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-primary); font-family:inherit; font-size:13px; padding:10px 12px; min-height:70px; resize:vertical; outline:none; color:var(--text-primary); line-height:1.5; }
+.mgmt-page .inbox-page .composer textarea:focus { border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-light); }
+.mgmt-page .inbox-page .composer-bar { display:flex; align-items:center; gap:8px; margin-top:8px; }
+.mgmt-page .inbox-page .composer-bar .spacer { flex:1; }
+
+/* review stars */
+.mgmt-page .inbox-page .stars { display:inline-flex; gap:1px; color:var(--warning); font-size:15px; }
+.mgmt-page .inbox-page .stars i.empty { color:var(--border-hover); }
+.mgmt-page .inbox-page .stars-lg { font-size:22px; }
+
+/* options checkbox group (notice create) */
+.mgmt-page .inbox-page .check-group { display:flex; flex-wrap:wrap; gap:8px 16px; }
+.mgmt-page .inbox-page .check-group label { display:inline-flex; align-items:center; gap:7px; font-size:13px; cursor:pointer; }
+.mgmt-page .inbox-page .check-group input { width:16px; height:16px; accent-color:var(--primary); cursor:pointer; }
+
+/* SLA chip */
+.mgmt-page .inbox-page .sla-chip { font-size:11px; font-weight:600; padding:2px 8px; border-radius:var(--radius-sm); font-variant-numeric:tabular-nums; display:inline-flex; align-items:center; gap:4px; }
+.mgmt-page .inbox-page .sla-chip.ok { background:var(--success-light); color:var(--success-dark); }
+.mgmt-page .inbox-page .sla-chip.warn { background:var(--warning-light); color:var(--warning-dark); }
+.mgmt-page .inbox-page .sla-chip.over { background:var(--danger-light); color:var(--danger-dark); }
+
+/* two-section divider (System notifications) + scope note */
+.mgmt-page .inbox-page .inbox-section-head { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin:4px 0 12px; }
+.mgmt-page .inbox-page .inbox-section-head .ish-title { font-size:15px; font-weight:600; display:flex; align-items:center; gap:8px; }
+.mgmt-page .inbox-page .inbox-section-head .ish-sub { font-size:12px; color:var(--text-secondary); margin-top:2px; }
+.mgmt-page .inbox-page .section-divider { height:1px; background:var(--border-color); margin:26px 0 20px; }
+.mgmt-page .inbox-page .scope-note { font-size:12px; color:var(--text-secondary); display:inline-flex; align-items:center; gap:6px; }
+.mgmt-page .inbox-page .scope-note i { font-size:14px; color:var(--info); }

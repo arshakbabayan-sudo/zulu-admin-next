@@ -1507,7 +1507,7 @@ function MoneyFlowModal({
 // Reviews pane (Support cluster) — list + filters + moderate
 // ════════════════════════════════════════════════════════════════
 
-function ReviewsPane({ token, lang }: { token: string | null; lang: string }) {
+export function ReviewsPane({ token, lang }: { token: string | null; lang: string }) {
   const s = settingsStrings(lang);
   const [rows, setRows] = useState<PlatformReviewRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -1686,7 +1686,7 @@ function ModerateModal({
 // Support tickets pane (Support cluster) — list + read drawer + reply
 // ════════════════════════════════════════════════════════════════
 
-function SupportTicketsPane({ token, lang }: { token: string | null; lang: string }) {
+export function SupportTicketsPane({ token, lang }: { token: string | null; lang: string }) {
   const s = settingsStrings(lang);
   const [rows, setRows] = useState<SupportTicketListRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -2630,7 +2630,7 @@ function ContentTrPane({ token, lang }: { token: string | null; lang: string }) 
 
 const EMAIL_CHANNELS = ["email", "in_app", "sms"];
 
-function EmailTplPane({ token, lang }: { token: string | null; lang: string }) {
+export function EmailTplPane({ token, lang }: { token: string | null; lang: string }) {
   const s = settingsStrings(lang);
   const [langs, setLangs] = useState<LocalizationLanguageRow[]>([]);
   const [event, setEvent] = useState<string>(NOTIFICATION_TEMPLATE_EVENTS[0]);
@@ -3560,7 +3560,7 @@ function NoticesSection({ token, lang }: { token: string; lang: string }) {
   );
 }
 
-function SysNotifPane({ token, lang }: { token: string | null; lang: string }) {
+export function SysNotifPane({ token, lang }: { token: string | null; lang: string }) {
   const s = settingsStrings(lang);
   const router = useRouter();
   // 2026-06-10 (roadmap §1) — bulk broadcast lives on its own super-only page

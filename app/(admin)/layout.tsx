@@ -162,6 +162,15 @@ const MGMT_EXACT = [
   // already covered by MGMT_PREFIXES above.
   "/bucket3/subscriptions",
   "/platform/pending-review",
+  // 2026-06-15 — Inbox rebuilt 1:1 from docs/admin_designe/8_Inbox/inbox.html:
+  // ONE unified InboxPage (7 in-page tabs) renders its OWN mgmt chrome. The 3
+  // native tabs (My notifications / Requests / Cases) were old AdminShell pages,
+  // so add them here to bypass AdminShell. (The 4 relocated tabs —
+  // /platform/notifications, /localization/templates, /platform/reviews,
+  // /support/tickets — are already in MGMT_PREFIXES above.) EXACT (no sub-routes).
+  "/admin-redesign/notifications",
+  "/bucket3/requests",
+  "/bucket3/cases",
 ];
 
 /**

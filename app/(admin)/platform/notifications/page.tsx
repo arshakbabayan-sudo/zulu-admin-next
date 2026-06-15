@@ -1,16 +1,13 @@
 "use client";
 
 /**
- * /platform/notifications — admin v3 (2026-06-05 pt3).
- *
- * Migrated into the unified Settings surface (1:1 port of
- * docs/admin_designe/11_settings.html, Content cluster). Renders the
- * consolidated SettingsPage with the System notifications pane active
- * (stats + filters + read-only registry + detail drawer). The pre-v3
- * standalone page is retired.
+ * /platform/notifications — unified Inbox page (System notifications tab).
+ * 1:1 port of docs/admin_designe/8_Inbox/inbox.html (2026-06-15). Renders the
+ * Inbox shell with the SysNotif pane (reused from SettingsPage) active.
  */
-import { SettingsPage } from "../../settings/SettingsPage";
 
-export default function SystemNotificationsSettingsPage() {
-  return <SettingsPage initialPage="sys-notif" />;
+import { InboxPage } from "../../inbox/InboxPage";
+
+export default function SystemNotificationsPage() {
+  return <InboxPage initialTab="sys-notif" />;
 }

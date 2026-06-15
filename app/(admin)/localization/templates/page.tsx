@@ -1,15 +1,13 @@
 "use client";
 
 /**
- * /localization/templates — admin v3 (2026-06-05).
- *
- * Migrated into the unified Settings surface (Localization cluster → Email
- * templates). Renders the consolidated SettingsPage with the email-tpl pane
- * active (event + channel + language → Load → title/body/is_active → Save). The
- * pre-v3 standalone page is retired.
+ * /localization/templates — unified Inbox page (Email templates tab). 1:1 port
+ * of docs/admin_designe/8_Inbox/inbox.html (2026-06-15). Renders the Inbox shell
+ * with the EmailTpl pane (reused from SettingsPage) active.
  */
-import { SettingsPage } from "../../settings/SettingsPage";
 
-export default function EmailTemplatesSettingsPage() {
-  return <SettingsPage initialPage="email-tpl" />;
+import { InboxPage } from "../../inbox/InboxPage";
+
+export default function EmailTemplatesPage() {
+  return <InboxPage initialTab="email-tpl" />;
 }

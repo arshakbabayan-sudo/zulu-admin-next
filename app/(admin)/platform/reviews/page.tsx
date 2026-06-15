@@ -1,15 +1,13 @@
 "use client";
 
 /**
- * /platform/reviews — admin v3 (2026-06-05).
- *
- * Migrated into the unified Settings surface (1:1 port of
- * docs/admin_designe/11_settings.html, Support cluster). Renders the
- * consolidated SettingsPage with the Reviews pane active (list + status/search
- * filters + moderate modal). The pre-v3 standalone page is retired.
+ * /platform/reviews — unified Inbox page (Reviews tab). 1:1 port of
+ * docs/admin_designe/8_Inbox/inbox.html (2026-06-15). Renders the Inbox shell
+ * with the Reviews pane (reused from SettingsPage) active.
  */
-import { SettingsPage } from "../../settings/SettingsPage";
 
-export default function ReviewsSettingsPage() {
-  return <SettingsPage initialPage="reviews" />;
+import { InboxPage } from "../../inbox/InboxPage";
+
+export default function ReviewsPage() {
+  return <InboxPage initialTab="reviews" />;
 }

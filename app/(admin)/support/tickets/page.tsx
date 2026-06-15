@@ -1,16 +1,13 @@
 "use client";
 
 /**
- * /support/tickets — admin v3 (2026-06-05).
- *
- * Migrated into the unified Settings surface (1:1 port of
- * docs/admin_designe/11_settings.html, Support cluster). Renders the
- * consolidated SettingsPage with the Support tickets pane active (list +
- * filters + read drawer with the message thread + reply). The pre-v3
- * standalone page is retired.
+ * /support/tickets — unified Inbox page (Support tickets tab). 1:1 port of
+ * docs/admin_designe/8_Inbox/inbox.html (2026-06-15). Renders the Inbox shell
+ * with the SupportTickets pane (reused from SettingsPage) active.
  */
-import { SettingsPage } from "../../settings/SettingsPage";
 
-export default function SupportTicketsSettingsPage() {
-  return <SettingsPage initialPage="support-tickets" />;
+import { InboxPage } from "../../inbox/InboxPage";
+
+export default function SupportTicketsPage() {
+  return <InboxPage initialTab="support-tickets" />;
 }
