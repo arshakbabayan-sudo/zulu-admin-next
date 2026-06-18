@@ -171,6 +171,12 @@ const MGMT_EXACT = [
   "/admin-redesign/notifications",
   "/bucket3/requests",
   "/bucket3/cases",
+  // 2026-06-18 — FAQ editor + Integrations: each renders its OWN mgmt chrome
+  // (Sidebar/Header/management.css) like Chat, so bypass AdminShell. EXACT
+  // match (neither has sub-routes). The sidebar highlights Settings on these
+  // routes via their tab entries in admin-nav-config.ts.
+  "/platform/faqs",
+  "/platform/integrations",
 ];
 
 /**

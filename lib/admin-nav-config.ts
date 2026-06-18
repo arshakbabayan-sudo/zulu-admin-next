@@ -440,6 +440,10 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       // (folds in the former "Layout" cluster: Header menu / Footer / Brand)
       { href: "/pages", labelKey: "admin.nav.tab.cms_pages" },
       { href: "/platform/banners", labelKey: "admin.nav.tab.banners", superAdminOnly: true },
+      // 2026-06-18 — FAQ editor (customer help questions). Content surface, so
+      // it sits in the Content & CMS cluster. New label key — labelFallback
+      // keeps it readable until the ui_translations row ships.
+      { href: "/platform/faqs", labelKey: "admin.nav.tab.faqs", labelFallback: "FAQ", superAdminOnly: true },
       { href: "/platform/settings/header-menu", labelKey: "admin.nav.tab.header_menu", superAdminOnly: true },
       { href: "/platform/settings/footer", labelKey: "admin.nav.tab.footer", superAdminOnly: true },
       { href: "/platform/settings/brand", labelKey: "admin.nav.tab.brand_settings", superAdminOnly: true },
@@ -455,6 +459,8 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       // ── System (integrations, security, geography, platform settings) ──
       { href: "/platform/security", labelKey: "admin.nav.tab.security", superAdminOnly: true },
       { href: "/platform/locations", labelKey: "admin.nav.tab.locations", superAdminOnly: true },
+      // 2026-06-18 — Integrations (Google Drive connection). System cluster.
+      { href: "/platform/integrations", labelKey: "admin.nav.tab.integrations", labelFallback: "Integrations", superAdminOnly: true },
       { href: "/platform/webhooks", labelKey: "admin.nav.tab.webhooks", superAdminOnly: true },
       { href: "/platform/api-docs", labelKey: "admin.nav.tab.api_docs", superAdminOnly: true },
       {
@@ -562,6 +568,7 @@ export const SETTINGS_SUBGROUPS: SettingsSubgroup[] = [
     hrefs: [
       "/pages",
       "/platform/banners",
+      "/platform/faqs",
       "/platform/settings/header-menu",
       "/platform/settings/footer",
       "/platform/settings/brand",
@@ -576,6 +583,7 @@ export const SETTINGS_SUBGROUPS: SettingsSubgroup[] = [
     hrefs: [
       "/platform/security",
       "/platform/locations",
+      "/platform/integrations",
       "/platform/webhooks",
       "/platform/api-docs",
       "/platform/settings",
