@@ -1,5 +1,4 @@
 import { apiFetchJson } from "./api-client";
-import { getApiBaseUrl } from "./api-base";
 import type { ApiSuccessEnvelope } from "./api-envelope";
 
 /**
@@ -44,18 +43,27 @@ export async function apiGoogleDriveDisconnect(
 }
 
 /**
- * Build the OAuth-start URL the browser navigates to (full-page redirect).
+ * Ask the backend for the Google OAuth start URL, then the caller navigates the
+ * browser to it (`window.location.href = authUrl`).
  *
- * Auth: `/auth/google-drive/redirect` is a 302 endpoint reached by a full-page
- * `window.location.href` navigation, which carries the shared `.zulu.am`
- * session cookie (same-site, SameSite=Lax) — the same cookie that authenticates
- * the rest of the admin. We do NOT put the Sanctum token in the URL (secrets
- * must never travel in query strings / referrers / logs). Only `company_id`.
+ * Why fetch instead of navigating straight to `/auth/google-drive/redirect`?
+ * That route sits behind `auth:sanctum`, and a full-page browser navigation
+ * cannot carry the Bearer header — it would 401. The admin authenticates with a
+ * Bearer token (NOT a Laravel session), so the cookie can't stand in for it
+ * either. So we fetch the auth URL WITH the Authorization header (`?json=1` →
+ * `{ auth_url }`), then redirect. The Sanctum token never travels in the URL /
+ * query string / referrer / logs.
  */
-export function googleDriveRedirectUrl(companyId: number): string {
-  const base = getApiBaseUrl().replace(/\/$/, "");
-  const q = new URLSearchParams({ company_id: String(companyId) });
-  return `${base}/auth/google-drive/redirect?${q.toString()}`;
+export async function apiGoogleDriveAuthUrl(
+  token: string,
+  companyId: number
+): Promise<string> {
+  const q = new URLSearchParams({ company_id: String(companyId), json: "1" });
+  const res = await apiFetchJson<ApiSuccessEnvelope<{ auth_url: string }>>(
+    `/auth/google-drive/redirect?${q.toString()}`,
+    { method: "GET", token }
+  );
+  return res.data.auth_url;
 }
 
 /** Defensive readers — the status payload key may vary by backend version. */

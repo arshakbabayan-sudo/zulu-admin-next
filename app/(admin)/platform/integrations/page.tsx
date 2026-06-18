@@ -28,7 +28,7 @@ import { apiCompaniesList, type CompanyListRow } from "@/lib/inventory-crud-api"
 import {
   apiGoogleDriveStatus,
   apiGoogleDriveDisconnect,
-  googleDriveRedirectUrl,
+  apiGoogleDriveAuthUrl,
   isDriveConnected,
   driveConnectedEmail,
   type GoogleDriveStatus,
@@ -112,11 +112,18 @@ export default function IntegrationsPage() {
     void loadStatus();
   }, [allowed, loadStatus]);
 
-  const connect = () => {
-    if (companyId == null) return;
-    // Full-page navigation kicks off the Google OAuth flow; it carries the
-    // shared .zulu.am session cookie (no token in the URL — see googleDriveRedirectUrl).
-    window.location.href = googleDriveRedirectUrl(companyId);
+  const connect = async () => {
+    if (!token || companyId == null) return;
+    setBusy(true);
+    try {
+      // Fetch the Google OAuth URL WITH the Bearer header (token never touches
+      // the URL), then navigate the whole page to Google's consent screen.
+      const authUrl = await apiGoogleDriveAuthUrl(token, companyId);
+      window.location.href = authUrl;
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : s.errConnect);
+      setBusy(false);
+    }
   };
 
   const disconnect = async () => {
@@ -272,7 +279,7 @@ export default function IntegrationsPage() {
                 <i className="ti ti-plug-connected-x" /> {s.disconnect}
               </button>
             ) : (
-              <button className="btn btn-primary" onClick={connect} disabled={busy || companyId == null}>
+              <button className="btn btn-primary" onClick={() => void connect()} disabled={busy || companyId == null}>
                 <i className="ti ti-brand-google-drive" /> {s.connect}
               </button>
             )}

@@ -26,6 +26,7 @@ const EN = {
   loading: "Loading…",
   confirmDisconnect: "Disconnect Google Drive from this company?",
   errStatus: "Failed to load connection status",
+  errConnect: "Failed to start the Google Drive connection",
   errDisconnect: "Failed to disconnect",
   forbidden: "You don't have access to Integrations.",
 } as const;
@@ -51,6 +52,7 @@ const HY: Partial<Record<IntegrationsKey, string>> = {
   loading: "Բեռնվում է…",
   confirmDisconnect: "Անջատե՞լ Google Drive-ը այս ընկերությունից։",
   errStatus: "Չհաջողվեց բեռնել միացման վիճակը",
+  errConnect: "Չհաջողվեց սկսել Google Drive-ի միացումը",
   errDisconnect: "Չհաջողվեց անջատել",
   forbidden: "Դու Ինտեգրումների հասանելիություն չունես։",
 };
@@ -74,6 +76,7 @@ const RU: Partial<Record<IntegrationsKey, string>> = {
   loading: "Загрузка…",
   confirmDisconnect: "Отключить Google Drive от этой компании?",
   errStatus: "Не удалось загрузить статус подключения",
+  errConnect: "Не удалось начать подключение Google Drive",
   errDisconnect: "Не удалось отключить",
   forbidden: "У вас нет доступа к интеграциям.",
 };
