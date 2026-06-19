@@ -216,7 +216,7 @@ export type SettingsPageKey =
   | "cms-pages" | "banners" | "sys-notif" | "newsletter"
   | "header-menu" | "footer" | "brand"
   | "loyalty"
-  | "security" | "webhooks" | "locations" | "api-docs" | "connections" | "platform-settings"
+  | "security" | "webhooks" | "locations" | "api-docs" | "integrations" | "connections" | "platform-settings"
   | "support-tickets" | "reviews";
 
 type ClusterKey =
@@ -261,6 +261,8 @@ const PAGES: Record<SettingsPageKey, PageMeta> = {
   "webhooks":          { cluster: "system", labelKey: "pgWebhooks", subKey: "subWebhooks", super: true, inPage: true, href: "/platform/webhooks" },
   "locations":         { cluster: "system", labelKey: "pgLocations", subKey: "subLocations", super: true, inPage: true, href: "/platform/locations" },
   "api-docs":          { cluster: "system", labelKey: "pgApiDocs", subKey: "subApiDocs", super: true, inPage: true, href: "/platform/api-docs" },
+  // Standalone page (own mgmt chrome) — the pill navigates out via router.push (no inPage pane).
+  "integrations":      { cluster: "system", labelKey: "pgIntegrations", subKey: "subIntegrations", super: true, href: "/platform/integrations" },
   // moved → CRM
   "connections":       { cluster: "system", labelKey: "pgConnections", subKey: "subConnections", super: false, inPage: true, href: "/connections", moved: true },
   "platform-settings": { cluster: "system", labelKey: "pgPlatformSettings", subKey: "subPlatformSettings", super: true, inPage: true, href: "/platform/settings" },
