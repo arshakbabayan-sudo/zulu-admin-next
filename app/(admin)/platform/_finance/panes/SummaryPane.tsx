@@ -32,7 +32,15 @@ import {
 } from "@/lib/finance-stats-api";
 import { apiPlatformFinanceSummary, type PlatformFinanceSummary } from "@/lib/platform-admin-api";
 import { financeStrings, pick } from "../finance-i18n";
-import { money, fmtDateTime, initials, avatarTone, statusBadgeCls, titleCase } from "../finance-helpers";
+import {
+  money,
+  fmtDateTime,
+  initials,
+  avatarTone,
+  statusBadgeCls,
+  titleCase,
+  currencyEntries,
+} from "../finance-helpers";
 import type { FinancePaneProps } from "../types";
 
 const RANGE_KEYS: FinanceRange[] = ["7d", "30d", "90d", "year"];
@@ -265,14 +273,42 @@ export function SummaryPane({ token, lang, registerAction, showToast }: FinanceP
   const denom = paid + pendingAmt;
   const collectionPct = denom > 0 ? Math.round((paid / denom) * 100) : 100;
 
-  // commission split → segment widths
+  // commission split → segment widths (all-currency fallback)
   const splitPlatform = v2?.commission_split.platform ?? 0;
   const splitAgent = v2?.commission_split.agent ?? 0;
   const splitTotal = splitPlatform + splitAgent;
   const platformPct = splitTotal > 0 ? Math.round((splitPlatform / splitTotal) * 100) : 50;
   const agentPct = 100 - platformPct;
 
-  const currencyChips = v2 ? Object.entries(v2.currency_breakdown) : [];
+  // ── per-currency breakdowns (NEW backend keys, with graceful fallback) ──
+  // Total-revenue chips: prefer the platform-summary per-currency map, then the
+  // v2 currency_breakdown, else none. Never summed across currencies.
+  const revenueChips = (() => {
+    const fromSummary = currencyEntries(summary?.total_payments_paid_by_currency);
+    if (fromSummary.length > 0) return fromSummary;
+    return currencyEntries(v2?.currency_breakdown);
+  })();
+
+  // Commission-accrued chips: prefer the per-currency map; else none.
+  const commissionChips = currencyEntries(summary?.total_commission_accrued_by_currency);
+
+  // Per-currency commission split (platform vs agent). Prefer the new
+  // by_currency map on either the platform summary or v2; render a bar+legend
+  // per currency. Empty ⇒ caller falls back to the single all-currency bar.
+  const splitByCurrencyRaw =
+    summary?.commission_split?.by_currency ?? v2?.commission_split.by_currency ?? null;
+  const splitByCurrency = splitByCurrencyRaw
+    ? Object.entries(splitByCurrencyRaw)
+        .map(([cur, sp]) => {
+          const p = Number(sp?.platform ?? 0);
+          const a = Number(sp?.agent ?? 0);
+          const total = p + a;
+          const pPct = total > 0 ? Math.round((p / total) * 100) : 50;
+          return { cur: cur.toUpperCase(), platform: p, agent: a, platformPct: pPct, agentPct: 100 - pPct };
+        })
+        .filter((r) => Number.isFinite(r.platform) && Number.isFinite(r.agent))
+        .sort((x, y) => (x.cur === "AMD" ? -1 : y.cur === "AMD" ? 1 : x.cur.localeCompare(y.cur)))
+    : [];
 
   return (
     <div>
@@ -289,11 +325,11 @@ export function SummaryPane({ token, lang, registerAction, showToast }: FinanceP
           <div className="fh-label"><i className="ti ti-cash" />{L.totalRevenue}</div>
           <div className="fh-value">{money(summary?.total_payments_paid, "AMD")}</div>
           <div className="fh-sub">
-            {currencyChips.length > 0 ? (
+            {revenueChips.length > 0 ? (
               <div className="cur-chips">
-                {currencyChips.map(([cur, amt]) => (
+                {revenueChips.map(([cur, amt]) => (
                   <span className="cur-chip" key={cur}>
-                    {money(amt, cur)} <span className="cc-code">{cur.toUpperCase()}</span>
+                    {money(amt, cur)} <span className="cc-code">{cur}</span>
                   </span>
                 ))}
               </div>
@@ -307,7 +343,37 @@ export function SummaryPane({ token, lang, registerAction, showToast }: FinanceP
           <div className="fh-label"><i className="ti ti-coins" />{L.commissionsAccrued}</div>
           <div className="fh-value">{money(summary?.total_commission_accrued, "AMD")}</div>
           <div className="fh-sub">
-            {v2 ? (
+            {commissionChips.length > 0 && (
+              <div className="cur-chips" style={{ marginBottom: 8 }}>
+                {commissionChips.map(([cur, amt]) => (
+                  <span className="cur-chip" key={cur}>
+                    {money(amt, cur)} <span className="cc-code">{cur}</span>
+                  </span>
+                ))}
+              </div>
+            )}
+            {splitByCurrency.length > 0 ? (
+              // NEW: one platform/agent split bar per currency (never summed).
+              splitByCurrency.map((r) => (
+                <div key={r.cur} style={{ marginBottom: 8 }}>
+                  <div className="split-bar">
+                    <div className="split-seg platform" style={{ width: `${r.platformPct}%` }} />
+                    <div className="split-seg agent" style={{ width: `${r.agentPct}%` }} />
+                  </div>
+                  <div className="split-legend">
+                    <span className="dl-row" style={{ fontSize: 12 }}>
+                      <span className="dl-dot" style={{ background: "var(--primary)" }} />
+                      {L.platform} {money(r.platform, r.cur)}
+                    </span>
+                    <span className="dl-row" style={{ fontSize: 12 }}>
+                      <span className="dl-dot" style={{ background: "var(--primary-300)" }} />
+                      {L.agent} {money(r.agent, r.cur)}
+                    </span>
+                  </div>
+                </div>
+              ))
+            ) : v2 ? (
+              // Fallback: single all-currency split bar (pre-deploy behaviour).
               <>
                 <div className="split-bar">
                   <div className="split-seg platform" style={{ width: `${platformPct}%` }} />
@@ -324,9 +390,9 @@ export function SummaryPane({ token, lang, registerAction, showToast }: FinanceP
                   </span>
                 </div>
               </>
-            ) : (
+            ) : commissionChips.length === 0 ? (
               "—"
-            )}
+            ) : null}
           </div>
         </div>
 

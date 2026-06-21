@@ -49,6 +49,13 @@ export type VouchersStats = {
   voided_count: number;
 };
 
+/**
+ * Per-currency split (platform vs agent) for one currency. Used by the new
+ * `commission_split.by_currency` breakdown that the backend adds alongside
+ * the existing scalar `platform`/`agent` totals.
+ */
+export type CommissionSplitByCurrency = Record<string, { platform: number; agent: number }>;
+
 export type FinanceSummaryV2 = {
   total_payments_paid: number;
   total_commission_accrued: number;
@@ -56,8 +63,20 @@ export type FinanceSummaryV2 = {
   payments_count_paid: number;
   commission_records_count: number;
   currency_breakdown: Record<string, number>;
-  commission_split: { platform: number; agent: number };
+  /**
+   * Scalar split stays as-is. `by_currency` is the NEW optional per-currency
+   * breakdown — absent before the backend deploys, so consumers fall back to
+   * the scalar `platform`/`agent`. NEVER summed across currencies.
+   */
+  commission_split: { platform: number; agent: number; by_currency?: CommissionSplitByCurrency };
   pending_meta: { count: number; avg_age_days: number; oldest_days: number };
+  /**
+   * NEW per-currency breakdowns added alongside the existing scalar totals
+   * (scalars unchanged). Each maps a 3-letter currency code → amount. Both
+   * OPTIONAL so the pane keeps working before the backend ships them.
+   */
+  total_payments_paid_by_currency?: Record<string, number>;
+  total_commission_accrued_by_currency?: Record<string, number>;
 };
 
 function withRange(base: string, range?: FinanceRange): string {

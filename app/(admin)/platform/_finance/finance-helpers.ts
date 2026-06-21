@@ -76,3 +76,25 @@ export function statusBadgeCls(status: string | null | undefined): string {
 export function titleCase(s: string | null | undefined): string {
   return (s ?? "").replace(/_/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
 }
+
+/**
+ * Normalise a per-currency breakdown object (`{ USD: 90, AMD: 18000 }`) into a
+ * stable, render-ready `[code, amount]` list. Filters out empty / non-finite
+ * values, upper-cases the code, and sorts AMD-first then alphabetically so the
+ * chip order is deterministic. Returns `[]` when the map is absent or empty —
+ * the caller then falls back to the legacy single-number rendering. We NEVER
+ * sum across currencies; each entry is rendered on its own with `money()`.
+ */
+export function currencyEntries(
+  map: Record<string, number> | null | undefined,
+): Array<[string, number]> {
+  if (!map) return [];
+  const out: Array<[string, number]> = [];
+  for (const [code, raw] of Object.entries(map)) {
+    const n = Number(raw);
+    if (!code || !Number.isFinite(n)) continue;
+    out.push([code.toUpperCase(), n]);
+  }
+  out.sort(([a], [b]) => (a === "AMD" ? -1 : b === "AMD" ? 1 : a.localeCompare(b)));
+  return out;
+}

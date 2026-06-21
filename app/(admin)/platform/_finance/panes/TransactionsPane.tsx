@@ -62,6 +62,10 @@ export function TransactionsPane({ token, user, lang, registerAction, showToast 
       awaiting: pick(lang, { hy: "Սպասվող կարգավորում", ru: "Ожидает расчёта", en: "Awaiting settlement" }),
       noSource: pick(lang, { hy: "Տվյալների աղբյուր դեռ չկա", ru: "Источник данных пока отсутствует", en: "No data source yet" }),
       summaryCard: pick(lang, { hy: "Ընկերության ֆինանսական ամփոփում", ru: "Финансовая сводка компании", en: "Company finance summary" }),
+      byCurrency: pick(lang, { hy: "Ըստ արժույթի", ru: "По валютам", en: "By currency" }),
+      earned: pick(lang, { hy: "Վաստակած", ru: "Начислено", en: "Earned" }),
+      pendingLbl: pick(lang, { hy: "Սպասվող", ru: "Ожидает", en: "Pending" }),
+      settledLbl: pick(lang, { hy: "Կարգավորված", ru: "Рассчитано", en: "Settled" }),
       payableAt: pick(lang, { hy: "Վճարման ենթակա", ru: "К выплате", en: "Payable at" }),
       settledAt: pick(lang, { hy: "Կարգավորված", ru: "Рассчитано", en: "Settled at" }),
       markPayable: pick(lang, { hy: "Նշել վճարման ենթակա", ru: "Отметить к выплате", en: "Mark payable" }),
@@ -284,6 +288,21 @@ export function TransactionsPane({ token, user, lang, registerAction, showToast 
     { cls: "c-warning", icon: "ti-clock", label: L.awaiting, value: money(summary?.total_pending ?? null), sub: undefined },
   ];
 
+  // NEW per-currency breakdown (with graceful fallback). When the backend
+  // sends `totals_by_currency`, render one row per currency; otherwise the
+  // generic summary loop below shows the flat scalar totals as before. AMD
+  // sorted first, then alphabetical. Never summed across currencies.
+  const currencyTotals = summary?.totals_by_currency
+    ? Object.entries(summary.totals_by_currency)
+        .map(([cur, t]) => ({
+          cur: cur.toUpperCase(),
+          earned: t?.total_earned ?? null,
+          pending: t?.total_pending ?? null,
+          settled: t?.total_settled ?? null,
+        }))
+        .sort((a, b) => (a.cur === "AMD" ? -1 : b.cur === "AMD" ? 1 : a.cur.localeCompare(b.cur)))
+    : [];
+
   return (
     <div>
       {/* company selector */}
@@ -374,16 +393,47 @@ export function TransactionsPane({ token, user, lang, registerAction, showToast 
               </div>
               <div className="card-body">
                 {summary && Object.keys(summary).length > 0 ? (
-                  <div className="sum-grid">
-                    {Object.entries(summary).map(([key, val]) => (
-                      <div className="sum-row" key={key}>
-                        <span className="sr-key">{titleCase(key)}</span>
-                        <span className="sr-val">
-                          {typeof val === "number" ? money(val, summary.currency) : String(val ?? "—")}
-                        </span>
+                  <>
+                    {/* NEW: per-currency totals (when the backend sends them). */}
+                    {currencyTotals.length > 0 && (
+                      <div className="table-wrap" style={{ marginBottom: 16 }}>
+                        <table className="table">
+                          <thead>
+                            <tr>
+                              <th>{L.byCurrency}</th>
+                              <th className="num">{L.earned}</th>
+                              <th className="num">{L.pendingLbl}</th>
+                              <th className="num">{L.settledLbl}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {currencyTotals.map((r) => (
+                              <tr key={r.cur}>
+                                <td className="font-mono" data-label={L.byCurrency}>{r.cur}</td>
+                                <td className="num font-mono" data-label={L.earned}>{money(r.earned, r.cur)}</td>
+                                <td className="num font-mono" data-label={L.pendingLbl}>{money(r.pending, r.cur)}</td>
+                                <td className="num font-mono" data-label={L.settledLbl}>{money(r.settled, r.cur)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
-                    ))}
-                  </div>
+                    )}
+                    <div className="sum-grid">
+                      {Object.entries(summary)
+                        // `totals_by_currency` is rendered above as a table;
+                        // skip it here so it never prints as "[object Object]".
+                        .filter(([key]) => key !== "totals_by_currency")
+                        .map(([key, val]) => (
+                          <div className="sum-row" key={key}>
+                            <span className="sr-key">{titleCase(key)}</span>
+                            <span className="sr-val">
+                              {typeof val === "number" ? money(val, summary.currency) : String(val ?? "—")}
+                            </span>
+                          </div>
+                        ))}
+                    </div>
+                  </>
                 ) : (
                   <div style={{ color: "var(--text-secondary)", fontSize: 13 }}>
                     {loading ? s.loading : s.empty}

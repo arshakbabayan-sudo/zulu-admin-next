@@ -1092,6 +1092,25 @@ export type PlatformFinanceSummary = {
   total_commission_pending: number;
   payments_count_paid: number;
   commission_records_count: number;
+  /**
+   * Per-currency breakdowns added alongside the existing scalar totals
+   * (the scalars are unchanged). Each is an object keyed by 3-letter
+   * currency code → amount. OPTIONAL: absent before the backend deploys,
+   * so the UI must fall back to the scalar fields when these are missing
+   * or empty. Amounts are NEVER summed across currencies.
+   */
+  total_payments_paid_by_currency?: Record<string, number>;
+  total_commission_accrued_by_currency?: Record<string, number>;
+  /**
+   * Commission split, broken out per currency. `by_currency[cur]` carries
+   * the platform/agent split for that currency. The scalar `commission_split`
+   * (FinanceSummaryV2) stays the all-currency fallback.
+   */
+  commission_split?: {
+    platform?: number;
+    agent?: number;
+    by_currency?: Record<string, { platform: number; agent: number }>;
+  };
 };
 
 export async function apiPlatformFinanceSummary(

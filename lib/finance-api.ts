@@ -40,6 +40,18 @@ export type CompanyFinanceSummary = {
   total_pending?: number;
   total_settled?: number;
   currency?: string;
+  /**
+   * Per-currency breakdown added alongside the existing scalar totals
+   * (the scalars stay unchanged). Keyed by 3-letter currency code → an
+   * object of the same scalar totals for that currency. OPTIONAL: absent
+   * before the backend deploys, so the UI must fall back to the flat
+   * scalar fields when this is missing or empty. NEVER sum across
+   * currencies — render each currency on its own row.
+   */
+  totals_by_currency?: Record<
+    string,
+    { total_earned?: number; total_pending?: number; total_settled?: number }
+  >;
   [key: string]: unknown;
 };
 
