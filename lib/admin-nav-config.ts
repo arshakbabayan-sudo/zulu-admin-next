@@ -426,6 +426,11 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { href: "/settings/pricing-rules", labelKey: "admin.nav.tab.pricing_rules" },
       { href: "/settings/money-flow", labelKey: "admin.nav.tab.money_flow", superAdminOnly: true },
       { href: "/settings/exchange-rates", labelKey: "admin.nav.tab.exchange_rates" },
+      // B2b — seller FX rate (operator bank rate + absolute margin). NOT
+      // superAdminOnly: every role (operator/agent self, super for platform/any)
+      // configures their own FX setting here; SellerFxPane picks the endpoint by
+      // role. labelFallback keeps it readable until the ui_translations row ships.
+      { href: "/settings/currency", labelKey: "admin.nav.tab.seller_fx", labelFallback: "Currency / FX rate" },
 
       // ── Permissions ───────────────────────────────────────────────────
       // UI-level filter for company-scoped roles (see /platform/rbac/page.tsx).
@@ -549,7 +554,7 @@ export type SettingsSubgroup = {
 export const SETTINGS_SUBGROUPS: SettingsSubgroup[] = [
   {
     label: "Money",
-    hrefs: ["/settings/pricing-rules", "/settings/money-flow", "/settings/exchange-rates"],
+    hrefs: ["/settings/pricing-rules", "/settings/money-flow", "/settings/exchange-rates", "/settings/currency"],
   },
   {
     label: "Permissions",

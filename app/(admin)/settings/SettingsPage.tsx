@@ -134,6 +134,8 @@ import {
   type RbacStatsData,
   type RbacRoleRow,
   type RbacRoleScope,
+  apiPlatformCompanies,
+  type PlatformCompanyRow,
 } from "@/lib/platform-admin-api";
 import {
   apiAdminPages,
@@ -206,11 +208,24 @@ import { PinPromptDialog } from "@/components/PinPromptDialog";
 import { InboxSectionTabs } from "@/components/inbox/InboxSectionTabs";
 import { SectionTabs } from "@/components/ui/v2";
 import { canAccessPlatformAdminNav } from "@/lib/access";
+import {
+  apiSellerFxGet,
+  apiSellerFxUpdate,
+  apiPlatformSellerFxList,
+  apiPlatformSellerFxCreate,
+  apiPlatformSellerFxUpdate,
+  type SellerFxRateRow,
+  type SellerFxSource,
+  type SellerFxScope,
+  type SellerFxManualRates,
+  type SellerFxSelfPayload,
+  type SellerFxPlatformPayload,
+} from "@/lib/seller-fx-rate-api";
 import { crmStrings } from "../crm/crm-i18n";
 
 // ── Page catalogue ──────────────────────────────────────────────
 export type SettingsPageKey =
-  | "pricing-rules" | "money-flow" | "exchange-rates"
+  | "pricing-rules" | "money-flow" | "exchange-rates" | "seller-fx"
   | "rbac"
   | "languages" | "ui-strings" | "content-tr" | "email-tpl"
   | "cms-pages" | "banners" | "sys-notif" | "newsletter"
@@ -240,6 +255,11 @@ const PAGES: Record<SettingsPageKey, PageMeta> = {
   "pricing-rules":     { cluster: "money", labelKey: "pgPricingRules", subKey: "subPricingRules", super: true, inPage: true, href: "/settings/pricing-rules" },
   "money-flow":        { cluster: "money", labelKey: "pgMoneyFlow", subKey: "subMoneyFlow", super: true, inPage: true, href: "/settings/money-flow" },
   "exchange-rates":    { cluster: "money", labelKey: "pgExchangeRates", subKey: "subExchangeRates", super: true, inPage: true, href: "/settings/exchange-rates" },
+  // B2b — seller FX rate (operator bank rate + absolute margin). Same form for
+  // all roles, wired to different endpoints inside SellerFxPane (super →
+  // platform-admin; operator/agent → operator-self). super:false so the cosmetic
+  // "Super admin" tag (render-only, does NOT gate) is hidden.
+  "seller-fx":         { cluster: "money", labelKey: "pgSellerFx", subKey: "subSellerFx", super: false, inPage: true, href: "/settings/currency" },
   "rbac":              { cluster: "permissions", labelKey: "pgRbac", subKey: "subRbac", super: true, inPage: true, href: "/platform/rbac" },
   "languages":         { cluster: "localization", labelKey: "pgLanguages", subKey: "subLanguages", super: true, inPage: true, href: "/localization/languages" },
   "ui-strings":        { cluster: "localization", labelKey: "pgUiStrings", subKey: "subUiStrings", super: true, inPage: true, href: "/localization/ui-translations" },
@@ -534,6 +554,7 @@ export function SettingsPage({ initialPage = "exchange-rates" }: { initialPage?:
             {page === "pricing-rules" && <PricingRulesPane token={token} lang={lang} />}
             {page === "money-flow" && <MoneyFlowPane token={token} lang={lang} />}
             {page === "exchange-rates" && <ExchangeRatesPane token={token} lang={lang} />}
+            {page === "seller-fx" && <SellerFxPane token={token} lang={lang} />}
             {page === "reviews" && <ReviewsPane token={token} lang={lang} />}
             {page === "support-tickets" && <SupportTicketsPane token={token} lang={lang} />}
             {page === "locations" && <LocationsPane token={token} lang={lang} />}
@@ -858,6 +879,330 @@ function ExchangeRateModal({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// Seller FX-rate pane (Money cluster) — B2b
+// The customer pays the operator's chosen bank rate + an ABSOLUTE margin.
+// Same form for every role, wired to different endpoints by role:
+//   super → /platform-admin/seller-fx-rates (+ optional company picker)
+//   operator/agent → /operator/seller-fx-rate (company + scope pinned server-side)
+// ════════════════════════════════════════════════════════════════
+
+type SellerFxDraft = {
+  source: SellerFxSource;
+  margin: string;
+  usd: string;
+  eur: string;
+  amd: string;
+  is_active: boolean;
+  target_currency: string;
+};
+
+function manualRatesFromDraft(d: SellerFxDraft): SellerFxManualRates | undefined {
+  if (d.source !== "manual") return undefined;
+  const out: SellerFxManualRates = {};
+  const usd = Number(d.usd);
+  const eur = Number(d.eur);
+  const amd = Number(d.amd);
+  if (d.usd.trim() !== "" && Number.isFinite(usd)) out.USD = usd;
+  if (d.eur.trim() !== "" && Number.isFinite(eur)) out.EUR = eur;
+  if (d.amd.trim() !== "" && Number.isFinite(amd)) out.AMD = amd;
+  return out;
+}
+
+function draftFromRow(row: SellerFxRateRow | null): SellerFxDraft {
+  return {
+    source: row?.source ?? "cba",
+    margin: row?.margin != null ? String(row.margin) : "",
+    usd: row?.manual_rates?.USD != null ? String(row.manual_rates.USD) : "",
+    eur: row?.manual_rates?.EUR != null ? String(row.manual_rates.EUR) : "",
+    amd: row?.manual_rates?.AMD != null ? String(row.manual_rates.AMD) : "",
+    is_active: row?.is_active ?? true,
+    target_currency: row?.target_currency ?? "AMD",
+  };
+}
+
+function SellerFxPane({ token, lang }: { token: string | null; lang: string }) {
+  const s = settingsStrings(lang);
+  const { user } = useAdminAuth();
+  const isSuper = !!(user?.is_super_admin || canAccessPlatformAdminNav(user));
+
+  const [draft, setDraft] = useState<SellerFxDraft>(draftFromRow(null));
+  const [currentRow, setCurrentRow] = useState<SellerFxRateRow | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [savedFlash, setSavedFlash] = useState(false);
+  const [errMsg, setErrMsg] = useState<string | null>(null);
+
+  // Super-only — optional company picker (empty = platform default).
+  const [companies, setCompanies] = useState<PlatformCompanyRow[]>([]);
+  const [companyId, setCompanyId] = useState<string>("");
+
+  const companyIdNum = companyId.trim() === "" ? undefined : Number(companyId);
+  const selectedCompany = companies.find((c) => String(c.id) === companyId) ?? null;
+
+  // Load the company list once (super only) for the optional picker.
+  useEffect(() => {
+    if (!token || !isSuper) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await apiPlatformCompanies(token, { per_page: 200, is_seller: true, sort_by: "name", sort_dir: "asc" });
+        if (!cancelled) setCompanies(res.data ?? []);
+      } catch {
+        /* picker is optional chrome — platform-default editing still works */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, isSuper]);
+
+  const load = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    setErrMsg(null);
+    try {
+      let row: SellerFxRateRow | null = null;
+      if (isSuper) {
+        // Super: list filtered by the picked company (or platform scope when empty).
+        const res = companyIdNum != null && Number.isFinite(companyIdNum) && companyIdNum > 0
+          ? await apiPlatformSellerFxList(token, { company_id: companyIdNum })
+          : await apiPlatformSellerFxList(token, { scope: "platform" });
+        const rows = res.data ?? [];
+        // Prefer the row that matches the current selection.
+        row =
+          (companyIdNum != null
+            ? rows.find((r) => r.company_id === companyIdNum)
+            : rows.find((r) => r.scope === "platform")) ??
+          rows[0] ??
+          null;
+      } else {
+        const res = await apiSellerFxGet(token);
+        row = res.data ?? null;
+      }
+      setCurrentRow(row);
+      setDraft(draftFromRow(row));
+    } catch (e) {
+      setErrMsg(e instanceof ApiRequestError ? e.message : s.errGeneric);
+      setCurrentRow(null);
+      setDraft(draftFromRow(null));
+    } finally {
+      setLoading(false);
+    }
+  }, [token, isSuper, companyIdNum]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const marginNum = Number(draft.margin);
+  const marginValid = draft.margin.trim() !== "" && Number.isFinite(marginNum) && marginNum >= 0;
+  const manualValid =
+    draft.source !== "manual" ||
+    [draft.usd, draft.eur, draft.amd].some((v) => v.trim() !== "" && Number.isFinite(Number(v)) && Number(v) > 0);
+  const canSave = marginValid && manualValid && !saving;
+
+  // Effective-rate example (USD → target), shown when easy.
+  const effectiveExample = (() => {
+    if (!marginValid) return null;
+    if (draft.source === "cba") {
+      return s.fxEffectiveExampleAuto.replace("{margin}", String(marginNum));
+    }
+    const usd = Number(draft.usd);
+    if (draft.usd.trim() === "" || !Number.isFinite(usd) || usd <= 0) return null;
+    const effective = usd + marginNum;
+    return s.fxEffectiveExampleManual
+      .replace("{rate}", String(usd))
+      .replace("{margin}", String(marginNum))
+      .replace("{effective}", String(effective))
+      .replace("{target}", draft.target_currency || "AMD");
+  })();
+
+  async function save() {
+    if (!token || !canSave) return;
+    setSaving(true);
+    setErrMsg(null);
+    setSavedFlash(false);
+    const base: SellerFxSelfPayload = {
+      source: draft.source,
+      margin: marginNum,
+      manual_rates: manualRatesFromDraft(draft),
+      is_active: draft.is_active,
+      target_currency: draft.target_currency || "AMD",
+    };
+    try {
+      if (isSuper) {
+        // scope: empty picker → platform default; a picked company → its scope
+        // derived from the company type (agency → agent, else operator) so the
+        // booking resolver (which looks up agent rows for agencies) finds it.
+        const pickedScope: SellerFxScope =
+          selectedCompany?.type === "agency" ? "agent" : "operator";
+        const scoped: SellerFxPlatformPayload =
+          companyIdNum != null && Number.isFinite(companyIdNum) && companyIdNum > 0
+            ? { ...base, scope: pickedScope, company_id: companyIdNum }
+            : { ...base, scope: "platform" };
+        if (currentRow?.id) {
+          await apiPlatformSellerFxUpdate(token, currentRow.id, scoped);
+        } else {
+          await apiPlatformSellerFxCreate(token, scoped);
+        }
+      } else {
+        await apiSellerFxUpdate(token, base);
+      }
+      setSavedFlash(true);
+      window.setTimeout(() => setSavedFlash(false), 3500);
+      await load();
+    } catch (e) {
+      setErrMsg(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const setD = (patch: Partial<SellerFxDraft>) => setDraft((p) => ({ ...p, ...patch }));
+
+  return (
+    <div>
+      <div className="alert" style={{ marginBottom: 14 }}>
+        <i className="ti ti-info-circle" />
+        <div>{s.fxIntro}</div>
+      </div>
+
+      {/* Super-only — optional company picker (empty = platform default). */}
+      {isSuper ? (
+        <div className="filter-card">
+          <div className="filter-field" style={{ flex: 2 }}>
+            <span className="filter-label">{s.fxPickCompany}</span>
+            <select value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
+              <option value="">{s.fxPickCompanyPlaceholder}</option>
+              {companies.map((c) => (
+                <option key={c.id} value={String(c.id)}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="filter-hint" style={{ alignSelf: "center", color: "var(--muted, #64748b)", fontSize: 12, flex: 3 }}>
+            {s.fxPickCompanyHint}
+          </div>
+        </div>
+      ) : null}
+
+      <div className="alert" style={{ marginBottom: 14 }}>
+        <i className="ti ti-shield-lock" />
+        <div>
+          {isSuper
+            ? selectedCompany
+              ? `${s.fxScope}: ${s.fxScopeOperator} — ${selectedCompany.name}`
+              : s.fxSuperNote
+            : s.fxOwnNote}
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="card"><div className="card-body">{s.loading}</div></div>
+      ) : (
+        <div className="card" style={{ marginBottom: 0 }}>
+          <div className="card-body">
+            {!currentRow ? (
+              <div className="alert" style={{ marginBottom: 14 }}>
+                <i className="ti ti-bulb" />
+                <div>{s.fxSettingEmpty}</div>
+              </div>
+            ) : null}
+
+            <div className="form-grid">
+              {/* Source toggle */}
+              <div className="fld" style={{ gridColumn: "1 / -1" }}>
+                <label className="fld-label">{s.fxSource}</label>
+                <select value={draft.source} onChange={(e) => setD({ source: e.target.value as SellerFxSource })}>
+                  <option value="cba">{s.fxSourceCba}</option>
+                  <option value="manual">{s.fxSourceManual}</option>
+                </select>
+                <div style={{ marginTop: 4, color: "var(--muted, #64748b)", fontSize: 12 }}>
+                  {draft.source === "cba" ? s.fxSourceCbaHint : s.fxSourceManualHint}
+                </div>
+              </div>
+
+              {/* Absolute margin */}
+              <div className="fld" style={{ gridColumn: "1 / -1" }}>
+                <label className="fld-label">{s.fxMargin}</label>
+                <input
+                  type="number"
+                  step="0.0001"
+                  min="0"
+                  value={draft.margin}
+                  placeholder="2"
+                  onChange={(e) => setD({ margin: e.target.value })}
+                />
+                <div style={{ marginTop: 4, color: "var(--muted, #64748b)", fontSize: 12 }}>{s.fxMarginHint}</div>
+              </div>
+
+              {/* Per-currency manual rates — only when source = manual */}
+              {draft.source === "manual" ? (
+                <>
+                  <div className="fld" style={{ gridColumn: "1 / -1" }}>
+                    <label className="fld-label">{s.fxRates}</label>
+                  </div>
+                  <div className="fld">
+                    <label className="fld-label">{s.fxRateUsd}</label>
+                    <input type="number" step="0.0001" min="0" value={draft.usd} placeholder="400" onChange={(e) => setD({ usd: e.target.value })} />
+                  </div>
+                  <div className="fld">
+                    <label className="fld-label">{s.fxRateEur}</label>
+                    <input type="number" step="0.0001" min="0" value={draft.eur} placeholder="430" onChange={(e) => setD({ eur: e.target.value })} />
+                  </div>
+                  <div className="fld">
+                    <label className="fld-label">{s.fxRateAmd}</label>
+                    <input type="number" step="0.0001" min="0" value={draft.amd} placeholder="1" onChange={(e) => setD({ amd: e.target.value })} />
+                  </div>
+                </>
+              ) : null}
+
+              {/* Target currency */}
+              <div className="fld">
+                <label className="fld-label">{s.fxTargetCurrency}</label>
+                <input
+                  value={draft.target_currency}
+                  maxLength={3}
+                  placeholder="AMD"
+                  style={{ textTransform: "uppercase" }}
+                  onChange={(e) => setD({ target_currency: e.target.value.toUpperCase() })}
+                />
+              </div>
+
+              {/* Active */}
+              <div className="fld" style={{ justifyContent: "flex-end" }}>
+                <label className="switch-row" style={{ cursor: "pointer" }}>
+                  <input type="checkbox" checked={draft.is_active} onChange={(e) => setD({ is_active: e.target.checked })} />
+                  {s.fxActive}
+                </label>
+                <div style={{ marginTop: 4, color: "var(--muted, #64748b)", fontSize: 12 }}>{s.fxActiveHint}</div>
+              </div>
+            </div>
+
+            {/* Effective-rate example */}
+            {effectiveExample ? (
+              <div className="alert" style={{ marginTop: 14 }}>
+                <i className="ti ti-calculator" />
+                <div><strong>{s.fxEffectiveExample}:</strong> {effectiveExample}</div>
+              </div>
+            ) : null}
+
+            {/* Save / status row */}
+            <div style={{ marginTop: 14, display: "flex", justifyContent: "flex-end", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+              {errMsg ? <span className="badge badge-warning" style={{ marginRight: "auto" }}>{errMsg}</span> : null}
+              {savedFlash ? <span className="badge badge-success" style={{ marginRight: "auto" }}><i className="ti ti-check" /> {s.fxSaved}</span> : null}
+              <button className="btn btn-sm btn-primary" disabled={!canSave} onClick={() => void save()}>
+                <i className="ti ti-device-floppy" />
+                {saving ? s.loading : s.save}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
