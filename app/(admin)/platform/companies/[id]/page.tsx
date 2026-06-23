@@ -19,6 +19,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ForbiddenNotice } from "@/components/ForbiddenNotice";
 import { PartnerSettingsModal } from "@/components/PartnerSettingsModal";
 import CompanyCommissionTab from "@/components/CompanyCommissionTab";
+import CompanyPriceMarkupCard from "@/components/CompanyPriceMarkupCard";
 import { StatusPill, autoStatusTone } from "@/components/ui/StatusPill";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useConfirm } from "@/contexts/ConfirmDialogContext";
@@ -345,7 +346,14 @@ export default function PlatformCompanyDetailPage() {
           )}
 
           {tab === "commission" && token && (
-            <CompanyCommissionTab token={token} companyId={company.id} />
+            <div>
+              <CompanyPriceMarkupCard
+                token={token}
+                company={company}
+                onSaved={(next) => setCompany((prev) => (prev ? { ...prev, ...next } : next))}
+              />
+              <CompanyCommissionTab token={token} companyId={company.id} />
+            </div>
           )}
 
           {tab === "payments" && <PaymentsTab company={company} t={t} />}

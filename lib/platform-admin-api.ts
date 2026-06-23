@@ -235,6 +235,14 @@ export type PlatformCompanyRow = {
   description?: string | null;
   logo?: string | null;
   is_partner_visible?: boolean;
+  /**
+   * Per-operator price markup (super-admin set). NULL = no per-operator value,
+   * fall back to the global B2C markup default (today's 15%). The customer-site
+   * DISPLAY uses `customer_markup_percent`; an agent (seller_b2b) buyer is
+   * charged with `agent_markup_percent`. Decimal, 0..100.
+   */
+  agent_markup_percent?: number | null;
+  customer_markup_percent?: number | null;
   governance_status: string;
   is_seller: boolean;
   seller_activated_at?: string | null;
@@ -474,6 +482,13 @@ export type CompanyProfileEditable = {
   phone?: string | null;
   website?: string | null;
   description?: string | null;
+  /**
+   * Per-operator price markup (super-admin only). `null` clears the
+   * per-operator value → the company falls back to the global default
+   * (today's 15%). Backend validation: nullable|numeric|min:0|max:100.
+   */
+  agent_markup_percent?: number | null;
+  customer_markup_percent?: number | null;
 };
 
 export async function apiPatchCompanyProfile(
