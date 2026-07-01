@@ -106,6 +106,7 @@ import {
   type EmployeePermissionRow,
 } from "@/lib/employees-api";
 import { AccountPane, MyCompanyPane, MyAgentsPane } from "./MyProfilePanes";
+import { ConnectionsPane } from "../settings/SettingsPage";
 import { MiniBars } from "./MiniBars";
 import { LeadsPane, SegmentsPane } from "./LeadsSegmentsPanes";
 
@@ -253,10 +254,11 @@ export function CrmPage({ initialPage = "pipeline" }: { initialPage?: CrmPageKey
     workhours:  { cluster: "work",    labelKey: "pgWorkhours",  subKey: "subWorkhours",  inPage: true,  href: "/bucket3/non-service-hours" },
     payroll:    { cluster: "work",    labelKey: "pgPayroll",    subKey: "subPayroll",    inPage: true,  href: "/bucket3/payroll" },
     files:      { cluster: "work",    labelKey: "pgFiles",      subKey: "subFiles",      inPage: true,  href: "/admin-redesign/files" },
-    // 2026-06-13 redesign — Connections relocated from Settings → CRM Work. Its
-    // pane still lives in SettingsPage at /connections, so this pill NAVIGATES
-    // out (inPage:false) rather than rendering in-page here.
-    connections:{ cluster: "work",    labelKey: "pgConnections",subKey: "subConnections",inPage: false, href: "/connections" },
+    // 2026-06-13 redesign — Connections relocated from Settings → CRM Work.
+    // 2026-07-01 — now rendered IN-PAGE (inPage:true) so clicking the pill no
+    // longer navigates out to the SettingsPage chrome (which made the page swap
+    // chrome and jump). The pane is imported from SettingsPage and reused as-is.
+    connections:{ cluster: "work",    labelKey: "pgConnections",subKey: "subConnections",inPage: true,  href: "/connections" },
     account:    { cluster: "myprofile", labelKey: "pgAccount",   subKey: "subAccount",    inPage: true,  href: "/crm/account" },
     mycompany:  { cluster: "myprofile", labelKey: "pgMyCompany", subKey: "subMyCompany",  inPage: true,  href: "/crm/my-company" },
     myteam:     { cluster: "myprofile", labelKey: "pgMyTeam",    subKey: "subMyTeam",     inPage: true,  href: "/crm/my-team" },
@@ -469,6 +471,7 @@ export function CrmPage({ initialPage = "pipeline" }: { initialPage?: CrmPageKey
             {page === "files" && (
               <FilesPane token={token} user={user} lang={lang} registerAction={setActionNode} showToast={showToast} />
             )}
+            {page === "connections" && <ConnectionsPane token={token} lang={lang} />}
 
             {/* My profile cluster — pane render is guarded by the role-scoped
                 pill list: a page the user can't see falls back to Account. */}

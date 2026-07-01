@@ -5599,7 +5599,10 @@ const CONN_STATUS_TONE: Record<string, string> = {
   canceled: "badge-danger",
 };
 
-function ConnectionsPane({ token, lang }: { token: string | null; lang: string }) {
+// Exported so the CRM Work cluster can render Connections in-page (2026-07-01):
+// the pill used to navigate out to /connections (SettingsPage chrome), which made
+// the whole page swap chrome and jump. CrmPage now renders this pane directly.
+export function ConnectionsPane({ token, lang }: { token: string | null; lang: string }) {
   const s = settingsStrings(lang);
   const { user } = useAdminAuth();
   const isSuper = user?.is_super_admin === true;

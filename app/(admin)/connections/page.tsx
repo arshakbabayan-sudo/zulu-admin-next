@@ -1,18 +1,17 @@
 "use client";
 
 /**
- * /connections — admin v3 (2026-06-05 pt3).
+ * /connections — admin v3.
  *
- * Migrated into the unified Settings surface (1:1 port of
- * docs/admin_designe/11_settings.html, System cluster). Renders the
- * consolidated SettingsPage with the Connections pane active (agent↔operator
- * service connections between flights / hotels / transfers + per-client
- * targeting; propose / accept / reject / cancel + CSV export). Visible to
- * operators and agents (super:false), so it renders the unified chrome for
- * non-super users too. The pre-v3 standalone page is retired.
+ * 2026-07-01 — Connections belongs to the CRM Work cluster, so this route now
+ * renders the CRM surface with the Connections pane active (was SettingsPage,
+ * which put the page in the wrong chrome and made it jump when opened from CRM).
+ * The pane itself (agent↔operator service connections; propose / accept / reject
+ * / cancel + CSV export) is reused from SettingsPage. Visible to operators and
+ * agents, so CrmPage renders its chrome for non-super users too.
  */
-import { SettingsPage } from "../settings/SettingsPage";
+import { CrmPage } from "../crm/CrmPage";
 
-export default function ConnectionsSettingsPage() {
-  return <SettingsPage initialPage="connections" />;
+export default function ConnectionsPage() {
+  return <CrmPage initialPage="connections" />;
 }
