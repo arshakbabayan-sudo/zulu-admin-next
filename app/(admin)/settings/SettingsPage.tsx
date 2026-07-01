@@ -21,6 +21,7 @@ import "../platform/management/management.css";
 import { Sidebar, Header } from "../platform/management/MgmtPage";
 import { useMgmtMobileNav } from "@/lib/use-mgmt-mobile-nav";
 import { settingsStrings, type SettingsKey } from "./settings-i18n";
+import { IntegrationsPane } from "../platform/integrations/IntegrationsPane";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { canAccessNotificationsNav } from "@/lib/access";
@@ -281,8 +282,10 @@ const PAGES: Record<SettingsPageKey, PageMeta> = {
   "webhooks":          { cluster: "system", labelKey: "pgWebhooks", subKey: "subWebhooks", super: true, inPage: true, href: "/platform/webhooks" },
   "locations":         { cluster: "system", labelKey: "pgLocations", subKey: "subLocations", super: true, inPage: true, href: "/platform/locations" },
   "api-docs":          { cluster: "system", labelKey: "pgApiDocs", subKey: "subApiDocs", super: true, inPage: true, href: "/platform/api-docs" },
-  // Standalone page (own mgmt chrome) — the pill navigates out via router.push (no inPage pane).
-  "integrations":      { cluster: "system", labelKey: "pgIntegrations", subKey: "subIntegrations", super: true, href: "/platform/integrations" },
+  // 2026-07-01 — rendered IN-PAGE (inPage:true) so opening it from Settings no
+  // longer navigates out to a standalone chrome (which made the page jump). The
+  // pane is imported from ../platform/integrations/IntegrationsPane.
+  "integrations":      { cluster: "system", labelKey: "pgIntegrations", subKey: "subIntegrations", super: true, inPage: true, href: "/platform/integrations" },
   // moved → CRM
   "connections":       { cluster: "system", labelKey: "pgConnections", subKey: "subConnections", super: false, inPage: true, href: "/connections", moved: true },
   "platform-settings": { cluster: "system", labelKey: "pgPlatformSettings", subKey: "subPlatformSettings", super: true, inPage: true, href: "/platform/settings" },
@@ -574,6 +577,7 @@ export function SettingsPage({ initialPage = "exchange-rates" }: { initialPage?:
             {page === "platform-settings" && <PlatformSettingsPane token={token} lang={lang} />}
             {page === "webhooks" && <WebhooksPane token={token} lang={lang} />}
             {page === "connections" && <ConnectionsPane token={token} lang={lang} />}
+            {page === "integrations" && <IntegrationsPane token={token} lang={lang} />}
             {page === "rbac" && <RbacPane token={token} lang={lang} />}
             {page === "api-docs" && <ApiDocsPane token={token} lang={lang} />}
           </div>
