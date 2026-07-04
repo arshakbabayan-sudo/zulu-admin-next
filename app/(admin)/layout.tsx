@@ -85,6 +85,7 @@ const MGMT_PREFIXES = [
   // /crm/customers/[id] deep-link route keeps AdminShell as a fallback.)
   "/crm/pipeline",
   "/crm/leads",
+  "/crm/messages",
   "/crm/segments",
   "/crm/deals",
   "/crm/activities",

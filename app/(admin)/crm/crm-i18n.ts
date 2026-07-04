@@ -53,6 +53,7 @@ const EN = {
   pgPayroll: "Payroll",
   pgFiles: "Files",
   pgConnections: "Connections",
+  pgMessages: "Messages",
   pgOptions: "Options",
 
   // ── page subtitles ────────────────────────────────────────────
@@ -68,7 +69,19 @@ const EN = {
   subPayroll: "Monthly payroll ledger.",
   subFiles: "Store contracts, payment receipts, and documents.",
   subConnections: "Service connections between agents and operators.",
+  subMessages: "Facebook & Instagram messages from your ads, in one place.",
   subOptions: "CRM settings for your company.",
+
+  // ── social inbox (Messenger / Instagram) ──────────────────────
+  msgInboxEmpty: "No messages yet.",
+  msgThreadEmptyTitle: "Select a conversation",
+  msgThreadEmptySubtitle: "Pick a message on the left to read it.",
+  msgNoMessages: "No messages in this conversation.",
+  msgCustomerFallback: "Messenger user",
+  msgReplyComingSoon: "Replying from here is coming next — for now reply from Facebook/Instagram.",
+  msgBack: "Back",
+  msgChannelFacebook: "Messenger",
+  msgChannelInstagram: "Instagram",
 
   // ── action buttons ────────────────────────────────────────────
   actNewDeal: "New deal",
@@ -891,6 +904,7 @@ const HY: Partial<Record<CrmKey, string>> = {
   pgPayroll: "Աշխատավարձ",
   pgFiles: "Ֆայլեր",
   pgConnections: "Կապեր",
+  pgMessages: "Հաղորդագրություններ",
   pgOptions: "Կարգավորումներ",
 
   subPipeline: "Քո գործարքներն ըստ փուլի։",
@@ -905,7 +919,19 @@ const HY: Partial<Record<CrmKey, string>> = {
   subPayroll: "Ամսական աշխատավարձի մատյան։",
   subFiles: "Պահիր պայմանագրեր, վճարման անդորրագրեր ու փաստաթղթեր։",
   subConnections: "Ագենտների և օպերատորների միջև ծառայության-կապերը։",
+  subMessages: "Facebook-ի ու Instagram-ի նամակները քո գովազդներից՝ մեկ տեղում։",
   subOptions: "Քո ընկերության CRM կարգավորումները։",
+
+  // ── social inbox (Messenger / Instagram) ──────────────────────
+  msgInboxEmpty: "Դեռ նամակներ չկան։",
+  msgThreadEmptyTitle: "Ընտրիր զրույց",
+  msgThreadEmptySubtitle: "Ձախից ընտրիր նամակը՝ կարդալու համար։",
+  msgNoMessages: "Այս զրույցում նամակներ չկան։",
+  msgCustomerFallback: "Messenger-ի օգտատեր",
+  msgReplyComingSoon: "Այստեղից պատասխանելը շուտով կավելանա — առայժմ պատասխանիր Facebook/Instagram-ից։",
+  msgBack: "Հետ",
+  msgChannelFacebook: "Messenger",
+  msgChannelInstagram: "Instagram",
 
   actNewDeal: "Նոր գործարք",
   actLogActivity: "Գրանցել գործողություն",
@@ -1698,6 +1724,7 @@ const RU: Partial<Record<CrmKey, string>> = {
   pgPayroll: "Зарплата",
   pgFiles: "Файлы",
   pgConnections: "Связи",
+  pgMessages: "Сообщения",
   pgOptions: "Настройки",
 
   subPipeline: "Ваши сделки по этапам.",
@@ -1712,7 +1739,19 @@ const RU: Partial<Record<CrmKey, string>> = {
   subPayroll: "Ежемесячный реестр зарплат.",
   subFiles: "Храните договоры, квитанции об оплате и документы.",
   subConnections: "Сервисные связи между агентами и операторами.",
+  subMessages: "Сообщения из Facebook и Instagram по вашей рекламе — в одном месте.",
   subOptions: "Настройки CRM вашей компании.",
+
+  // ── social inbox (Messenger / Instagram) ──────────────────────
+  msgInboxEmpty: "Сообщений пока нет.",
+  msgThreadEmptyTitle: "Выберите диалог",
+  msgThreadEmptySubtitle: "Выберите сообщение слева, чтобы прочитать.",
+  msgNoMessages: "В этом диалоге нет сообщений.",
+  msgCustomerFallback: "Пользователь Messenger",
+  msgReplyComingSoon: "Ответы отсюда появятся скоро — пока отвечайте из Facebook/Instagram.",
+  msgBack: "Назад",
+  msgChannelFacebook: "Messenger",
+  msgChannelInstagram: "Instagram",
 
   actNewDeal: "Новая сделка",
   actLogActivity: "Записать действие",

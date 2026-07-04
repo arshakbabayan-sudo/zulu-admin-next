@@ -107,6 +107,7 @@ import {
 } from "@/lib/employees-api";
 import { AccountPane, MyCompanyPane, MyAgentsPane } from "./MyProfilePanes";
 import { ConnectionsPane } from "../settings/SettingsPage";
+import { SocialInboxPane } from "./SocialInboxPane";
 import { MiniBars } from "./MiniBars";
 import { LeadsPane, SegmentsPane } from "./LeadsSegmentsPanes";
 
@@ -207,7 +208,7 @@ const BOOKING_BADGE: Record<string, string> = {
 
 type ClusterKey = "sales" | "people" | "work" | "myprofile" | "options";
 export type CrmPageKey =
-  | "pipeline" | "leads" | "deals" | "activities" | "segments"
+  | "pipeline" | "leads" | "messages" | "deals" | "activities" | "segments"
   | "customers" | "team"
   | "contracts" | "workhours" | "payroll" | "files" | "connections"
   | "account" | "mycompany" | "myteam" | "myagents"
@@ -245,6 +246,7 @@ export function CrmPage({ initialPage = "pipeline" }: { initialPage?: CrmPageKey
   const PAGES: Record<CrmPageKey, CrmMeta> = useMemo(() => ({
     pipeline:   { cluster: "sales",   labelKey: "pgPipeline",   subKey: "subPipeline",   inPage: true,  href: "/crm/pipeline" },
     leads:      { cluster: "sales",   labelKey: "pgLeads",      subKey: "subLeads",      inPage: true,  href: "/crm/leads" },
+    messages:   { cluster: "sales",   labelKey: "pgMessages",   subKey: "subMessages",   inPage: true,  href: "/crm/messages" },
     deals:      { cluster: "sales",   labelKey: "pgDeals",      subKey: "subDeals",      inPage: true,  href: "/crm/deals" },
     activities: { cluster: "sales",   labelKey: "pgActivities", subKey: "subActivities", inPage: true,  href: "/crm/activities" },
     segments:   { cluster: "sales",   labelKey: "pgSegments",   subKey: "subSegments",   inPage: true,  href: "/crm/segments" },
@@ -443,6 +445,7 @@ export function CrmPage({ initialPage = "pipeline" }: { initialPage?: CrmPageKey
             {page === "leads" && (
               <LeadsPane token={token} lang={lang} registerAction={setActionNode} showToast={showToast} />
             )}
+            {page === "messages" && <SocialInboxPane token={token} lang={lang} />}
             {page === "deals" && (
               <DealsPane token={token} lang={lang} registerAction={setActionNode} showToast={showToast} />
             )}
