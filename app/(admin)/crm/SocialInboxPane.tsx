@@ -17,6 +17,7 @@ import { ApiRequestError } from "@/lib/api-client";
 import {
   apiSocialConversations,
   apiSocialMessages,
+  apiSocialReply,
   type SocialConversationRow,
   type SocialThread,
 } from "@/lib/social-inbox-api";
@@ -57,6 +58,8 @@ export function SocialInboxPane({ token, lang }: { token: string | null; lang: s
   const [activeId, setActiveId] = useState<number | null>(null);
   const [thread, setThread] = useState<SocialThread | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+  const [sending, setSending] = useState(false);
   const threadRef = useRef<HTMLDivElement | null>(null);
 
   const convTitle = useCallback(
@@ -90,6 +93,22 @@ export function SocialInboxPane({ token, lang }: { token: string | null; lang: s
     },
     [token]
   );
+
+  const send = useCallback(async () => {
+    if (!token || activeId == null) return;
+    const text = draft.trim();
+    if (text === "" || sending) return;
+    setSending(true);
+    try {
+      const res = await apiSocialReply(token, activeId, text);
+      setThread((prev) => (prev ? { ...prev, messages: [...prev.messages, res.data] } : prev));
+      setDraft("");
+    } catch (e) {
+      setErr(e instanceof ApiRequestError ? e.message : String(e));
+    } finally {
+      setSending(false);
+    }
+  }, [token, activeId, draft, sending]);
 
   // Initial + polling for the conversation list.
   useEffect(() => {
@@ -217,10 +236,25 @@ export function SocialInboxPane({ token, lang }: { token: string | null; lang: s
                   )}
                 </div>
 
-                {/* Read-only composer for now (reply needs the page token). */}
                 <div className="composer">
-                  <input disabled placeholder={s.msgReplyComingSoon} />
-                  <button className="btn btn-primary" disabled title={s.msgReplyComingSoon}>
+                  <input
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        void send();
+                      }
+                    }}
+                    placeholder={s.msgReplyPlaceholder}
+                    maxLength={2000}
+                  />
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => void send()}
+                    disabled={sending || draft.trim() === ""}
+                    title={s.msgSend}
+                  >
                     <i className="ti ti-send" />
                   </button>
                 </div>

@@ -57,3 +57,11 @@ export async function apiSocialMarkRead(
 ): Promise<{ success: boolean }> {
   return apiFetchJson(`${BASE}/${conversationId}/read`, { method: "POST", token, body: {} });
 }
+
+export async function apiSocialReply(
+  token: string,
+  conversationId: number,
+  text: string
+): Promise<ApiSuccessEnvelope<SocialMessageRow>> {
+  return apiFetchJson(`${BASE}/${conversationId}/reply`, { method: "POST", token, body: { text } });
+}
