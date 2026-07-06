@@ -60,12 +60,14 @@ import {
   apiPlatformUsersStats,
   apiShowPlatformUser,
   apiUpdatePlatformUser,
+  apiChangePlatformUserRole,
   apiDeactivatePlatformUser,
   apiHardDeletePlatformUser,
   apiBulkRemindUsers,
   apiBulkDeleteUsers,
   apiAnonymizePlatformUser,
   apiAddPlatformUserNote,
+  apiRbacRoles,
   apiCompanyApplications,
   apiCompanyApplication,
   apiApproveCompanyApplication,
@@ -87,6 +89,8 @@ import {
   type PlatformAdminUserRow,
   type PlatformCompanyRow,
   type PlatformUsersStats,
+  type RbacRoleRow,
+  type ChangePlatformUserRoleInput,
   type SellerApplicationDetail,
   type SellerApplicationRow,
 } from "@/lib/platform-admin-api";
@@ -494,6 +498,17 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
   const [editCustomerSaving, setEditCustomerSaving] = useState(false);
   const [addNoteOpen, setAddNoteOpen] = useState(false);
   const [addNoteSaving, setAddNoteSaving] = useState(false);
+
+  // Change-role modal (2026-07-06 — super-admin sets a user's platform/company
+  // role via the pivot). `roleTarget` is the user whose role we are editing;
+  // `roleContext` says which pane to reload after save. Roles are fetched lazily
+  // on first open and cached for the session.
+  const [roleModalOpen, setRoleModalOpen] = useState(false);
+  const [roleModalSaving, setRoleModalSaving] = useState(false);
+  const [roleModalTarget, setRoleModalTarget] = useState<PlatformAdminUserDetail | null>(null);
+  const [roleModalContext, setRoleModalContext] = useState<"customer" | "unverified">("customer");
+  const [rbacRoles, setRbacRoles] = useState<RbacRoleRow[]>([]);
+  const [rbacRolesLoading, setRbacRolesLoading] = useState(false);
 
   // Drawers / modals
   const [appDrawer, setAppDrawer] = useState<SellerApplicationDetail | null>(null);
@@ -1240,6 +1255,61 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
     }
   }
 
+  // Change-role modal — open for the given user (customer or unverified pane).
+  // Lazily fetch the RBAC role list on first open so the <select> is populated.
+  function openRoleModal(target: PlatformAdminUserDetail | null, context: "customer" | "unverified") {
+    if (!target) return;
+    setRoleModalTarget(target);
+    setRoleModalContext(context);
+    setRoleModalOpen(true);
+    if (token && rbacRoles.length === 0 && !rbacRolesLoading) {
+      setRbacRolesLoading(true);
+      void (async () => {
+        try {
+          const res = await apiRbacRoles(token);
+          setRbacRoles(res.data);
+        } catch (e) {
+          console.error("load rbac roles failed", e);
+        } finally {
+          setRbacRolesLoading(false);
+        }
+      })();
+    }
+  }
+
+  // Persist the role change, then reload the affected detail + list pane and
+  // toast the outcome. Mirrors the SHARED CONTRACT response shape.
+  async function saveUserRole(input: ChangePlatformUserRoleInput) {
+    if (!token || !roleModalTarget) return;
+    setRoleModalSaving(true);
+    try {
+      const res = await apiChangePlatformUserRole(token, roleModalTarget.id, input);
+      setRoleModalOpen(false);
+      // Refresh whichever detail pane is showing this user, plus its list.
+      if (roleModalContext === "customer") {
+        if (detailCustomerId === roleModalTarget.id) {
+          const fresh = await apiShowPlatformUser(token, roleModalTarget.id);
+          setDetailCustomer(fresh.data);
+        }
+        await loadCustomers();
+      } else {
+        if (detailUnverifiedId === roleModalTarget.id) {
+          const fresh = await apiShowPlatformUser(token, roleModalTarget.id);
+          setDetailUnverified(fresh.data);
+        }
+        await loadUnverified();
+      }
+      setToast(res.data.role_name === null ? s.crToastRemoved : s.crToastSaved);
+    } catch (e) {
+      console.error("change role failed", e);
+      if (typeof window !== "undefined") {
+        window.alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+      }
+    } finally {
+      setRoleModalSaving(false);
+    }
+  }
+
   // Add an admin note onto the open customer detail.
   async function addDetailCustomerNote(body: string) {
     if (!token || !detailCustomer) return;
@@ -1823,6 +1893,7 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                   }}
                   onEdit={() => setEditCustomerOpen(true)}
                   onAddNote={() => setAddNoteOpen(true)}
+                  onChangeRole={() => openRoleModal(detailCustomer, "customer")}
                   onDeactivate={() => void deactivateDetailCustomer()}
                   onAnonymize={() => void anonymizeDetailCustomer()}
                   onHardDelete={() => void hardDeleteDetailCustomer()}
@@ -1856,11 +1927,13 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                 <UnverifiedDetail
                   loading={detailUnverifiedLoading}
                   unverified={detailUnverified}
+                  isSuper={user?.is_super_admin === true}
                   onBack={() => {
                     setDetailUnverifiedId(null);
                     setDetailUnverified(null);
                   }}
                   onRemind={() => void remindDetailUnverified()}
+                  onChangeRole={() => openRoleModal(detailUnverified, "unverified")}
                   onDelete={() => void deleteDetailUnverified()}
                 />
               )}
@@ -2056,6 +2129,20 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
         saving={addNoteSaving}
         onClose={() => setAddNoteOpen(false)}
         onSave={(body) => void addDetailCustomerNote(body)}
+      />
+
+      {/* Change-role modal (2026-07-06 — super-admin only). Sets a user's
+          platform/company role via the pivot; shared contract with the backend
+          PATCH /platform-admin/users/{id}/role endpoint. */}
+      <ChangeRoleModal
+        open={roleModalOpen}
+        saving={roleModalSaving}
+        target={roleModalTarget}
+        roles={rbacRoles}
+        rolesLoading={rbacRolesLoading}
+        token={token}
+        onClose={() => setRoleModalOpen(false)}
+        onSave={(input) => void saveUserRole(input)}
       />
 
       {/* Company-application approve / reject modals (2026-06-05) */}
@@ -4837,6 +4924,7 @@ function CustomerDetail(props: {
   onMessage: () => void;
   onEdit: () => void;
   onAddNote: () => void;
+  onChangeRole: () => void;
   onDeactivate: () => void;
   onAnonymize: () => void;
   onHardDelete: () => void;
@@ -5207,6 +5295,12 @@ function CustomerDetail(props: {
 
       {/* Sticky footer actions */}
       <div className="sticky-actions">
+        {props.isSuper && (
+          <button className="btn btn-sm" onClick={props.onChangeRole}>
+            <i className="ti ti-user-cog" />
+            {s.crAction}
+          </button>
+        )}
         <button className="btn btn-sm" onClick={props.onDeactivate}>
           <i className="ti ti-user-off" />
           {s.cuFooterDeactivate}
@@ -5238,8 +5332,10 @@ function CustomerDetail(props: {
 function UnverifiedDetail(props: {
   loading: boolean;
   unverified: PlatformAdminUserDetail | null;
+  isSuper: boolean;
   onBack: () => void;
   onRemind: () => void;
+  onChangeRole: () => void;
   onDelete: () => void;
 }) {
   const { lang } = useLanguage();
@@ -5328,6 +5424,12 @@ function UnverifiedDetail(props: {
           <i className="ti ti-mail-fast" />
           {s.uvFooterRemind}
         </button>
+        {props.isSuper && (
+          <button className="btn btn-sm" onClick={props.onChangeRole}>
+            <i className="ti ti-user-cog" />
+            {s.crAction}
+          </button>
+        )}
         <div className="spacer" />
         <button className="btn btn-sm btn-danger" onClick={props.onDelete}>
           <i className="ti ti-trash" />
@@ -5440,6 +5542,195 @@ function CustomerEditModal(props: {
           >
             <i className="ti ti-device-floppy" />
             {props.saving ? s.saving : s.actionSaveProfile}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Change-role modal (2026-07-06 — super-admin only). Sets a user's
+// platform/company role via the pivot. Clones the CustomerEditModal chrome.
+// Shared contract with backend PATCH /platform-admin/users/{id}/role:
+//   body { role_name: string|null, company_id?: number|null,
+//          intended_role?: 'operator'|'agent'|null }.
+// role_name null = detach (make customer). company_id is required only when
+// attaching a company-scoped role to a user with no existing membership.
+// ═══════════════════════════════════════════════════════════════
+const REMOVE_ROLE_SENTINEL = "__remove__";
+
+function ChangeRoleModal(props: {
+  open: boolean;
+  saving: boolean;
+  target: PlatformAdminUserDetail | null;
+  roles: RbacRoleRow[];
+  rolesLoading: boolean;
+  token: string | null;
+  onClose: () => void;
+  onSave: (input: ChangePlatformUserRoleInput) => void;
+}) {
+  const { lang } = useLanguage();
+  const s = mgmtStrings(lang);
+  // Selected role slug; "" = nothing chosen yet, REMOVE_ROLE_SENTINEL = detach.
+  const [roleValue, setRoleValue] = useState("");
+  const [companyId, setCompanyId] = useState("");
+  const [intendedRole, setIntendedRole] = useState<"" | "operator" | "agent">("");
+  const [companies, setCompanies] = useState<PlatformCompanyRow[]>([]);
+  const [companiesLoading, setCompaniesLoading] = useState(false);
+  const [companiesLoaded, setCompaniesLoaded] = useState(false);
+
+  // Seed the intended-role field from the target when the modal opens; reset
+  // the role/company pickers (no default role selected — the super-admin picks).
+  useEffect(() => {
+    if (props.open && props.target) {
+      setRoleValue("");
+      setCompanyId("");
+      const ir = props.target.intended_role;
+      setIntendedRole(ir === "operator" || ir === "agent" ? ir : "");
+    }
+  }, [props.open, props.target]);
+
+  // The target already belongs to a company iff it has ≥1 membership row. In
+  // that case the backend reuses that company, so we don't prompt for one.
+  const existingCompanies = props.target?.companies ?? [];
+  const hasMembership = existingCompanies.length > 0;
+
+  const selectedRole =
+    roleValue && roleValue !== REMOVE_ROLE_SENTINEL
+      ? props.roles.find((r) => r.name === roleValue) ?? null
+      : null;
+  const isCompanyScoped = selectedRole?.scope === "company";
+  const needsCompanyPicker = isCompanyScoped && !hasMembership;
+
+  // Lazily fetch the company list the first time a company-scoped role that
+  // needs a picker is chosen. per_page high so the super-admin can find any.
+  useEffect(() => {
+    const tkn = props.token;
+    if (!props.open || !needsCompanyPicker || companiesLoaded || companiesLoading || !tkn) return;
+    setCompaniesLoading(true);
+    void (async () => {
+      try {
+        const res = await apiPlatformCompanies(tkn, {
+          per_page: 200,
+          archive_filter: "active",
+          sort_by: "name",
+          sort_dir: "asc",
+        });
+        setCompanies(res.data);
+        setCompaniesLoaded(true);
+      } catch (e) {
+        console.error("load companies for role modal failed", e);
+      } finally {
+        setCompaniesLoading(false);
+      }
+    })();
+  }, [props.open, needsCompanyPicker, companiesLoaded, companiesLoading, props.token]);
+
+  const roleError = roleValue === "";
+  const companyError = needsCompanyPicker && companyId === "";
+  const canSave = !props.saving && !roleError && !companyError;
+
+  function handleSave() {
+    if (!canSave) return;
+    const intended: "operator" | "agent" | null = intendedRole === "" ? null : intendedRole;
+    if (roleValue === REMOVE_ROLE_SENTINEL) {
+      props.onSave({ role_name: null, intended_role: intended });
+      return;
+    }
+    const body: ChangePlatformUserRoleInput = { role_name: roleValue, intended_role: intended };
+    if (needsCompanyPicker && companyId !== "") {
+      body.company_id = Number(companyId);
+    }
+    props.onSave(body);
+  }
+
+  const roleLabel = (r: RbacRoleRow): string =>
+    r.display_name && r.display_name.trim() !== "" ? r.display_name : r.name;
+
+  return (
+    <div
+      className={`modal-overlay ${props.open ? "open" : ""}`}
+      onClick={(e) => e.target === e.currentTarget && props.onClose()}
+    >
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <div className="modal-title">{s.crTitle}</div>
+          <button className="icon-btn" onClick={props.onClose}>
+            <i className="ti ti-x" />
+          </button>
+        </div>
+        <div className="modal-body">
+          <p style={{ marginTop: 0, marginBottom: 16, fontSize: 13, color: "var(--text-muted)" }}>
+            {s.crIntro}
+          </p>
+          <div className="form-grid-2">
+            <div className="fld" style={{ gridColumn: "1 / -1" }}>
+              <span className="fld-label">{s.crFldRole}</span>
+              <select
+                value={roleValue}
+                onChange={(e) => setRoleValue(e.target.value)}
+                disabled={props.rolesLoading}
+              >
+                <option value="">
+                  {props.rolesLoading ? s.crLoadingRoles : s.crErrRoleRequired}
+                </option>
+                {props.roles.map((r) => (
+                  <option key={r.id} value={r.name}>
+                    {roleLabel(r)}
+                    {r.scope === "company" ? " · " + s.crFldCompany : ""}
+                  </option>
+                ))}
+                <option value={REMOVE_ROLE_SENTINEL}>{s.crOptRemove}</option>
+              </select>
+            </div>
+
+            {needsCompanyPicker && (
+              <div className="fld" style={{ gridColumn: "1 / -1" }}>
+                <span className="fld-label">{s.crFldCompany}</span>
+                <select
+                  value={companyId}
+                  onChange={(e) => setCompanyId(e.target.value)}
+                  disabled={companiesLoading}
+                >
+                  <option value="">
+                    {companiesLoading ? s.loading : s.crCompanyPlaceholder}
+                  </option>
+                  {companies.map((co) => (
+                    <option key={co.id} value={String(co.id)}>
+                      {co.name}
+                    </option>
+                  ))}
+                </select>
+                <span style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
+                  {s.crCompanyHint}
+                </span>
+              </div>
+            )}
+
+            <div className="fld" style={{ gridColumn: "1 / -1" }}>
+              <span className="fld-label">{s.crFldIntendedRole}</span>
+              <select
+                value={intendedRole}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setIntendedRole(v === "operator" || v === "agent" ? v : "");
+                }}
+              >
+                <option value="">{s.crIntendedNone}</option>
+                <option value="operator">{s.crIntendedOperator}</option>
+                <option value="agent">{s.crIntendedAgent}</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn" onClick={props.onClose} disabled={props.saving}>
+            {s.actionCancel}
+          </button>
+          <button className="btn btn-primary" disabled={!canSave} onClick={handleSave}>
+            <i className="ti ti-device-floppy" />
+            {props.saving ? s.saving : s.crSaveBtn}
           </button>
         </div>
       </div>

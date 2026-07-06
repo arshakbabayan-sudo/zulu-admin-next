@@ -674,12 +674,31 @@ export async function apiBulkRemindUsers(
   return apiFetchJson(`${PA}/users/bulk-remind`, { method: "POST", token, body: { ids } });
 }
 
-/** Phase Բ.3 — bulk anonymize (reversible-safe) users. */
+/** One user the bulk-delete pass refused to anonymize, with a machine-readable reason. */
+export type BulkDeleteSkippedUser = {
+  id: number;
+  email: string;
+  /** 'self' | 'super_admin' | 'has_company_membership' (backend-defined). */
+  reason: string;
+};
+
+/** Phase Բ.3 — bulk anonymize (reversible-safe) users.
+ *  Return shape aligned 2026-07-06 with the backend `bulkDeleteUsers`
+ *  (`PlatformAdminController.php:1536-1547`): `processed` is the legacy key,
+ *  `deleted_count`/`skipped_count`/`skipped[]` are the additive machine-readable
+ *  outcome so the pane can show WHO was skipped and WHY. */
 export async function apiBulkDeleteUsers(
   token: string,
   ids: number[],
   reason?: string
-): Promise<ApiSuccessEnvelope<{ processed: number; skipped: number }> & { message?: string }> {
+): Promise<
+  ApiSuccessEnvelope<{
+    processed: number;
+    deleted_count: number;
+    skipped_count: number;
+    skipped: BulkDeleteSkippedUser[];
+  }> & { message?: string }
+> {
   return apiFetchJson(`${PA}/users/bulk-delete`, { method: "POST", token, body: { ids, reason } });
 }
 
@@ -819,6 +838,41 @@ export async function apiUpdatePlatformUser(
   input: UpdatePlatformUserInput
 ): Promise<ApiSuccessEnvelope<PlatformAdminUserDetail>> {
   return apiFetchJson(`${PA}/users/${id}`, { method: "PATCH", token, body: input });
+}
+
+/**
+ * 2026-07-06 — super-admin only. Change a user's platform/company role via the
+ * pivot (`user_company.role_id`); there is no `users.role` column. Mirrors the
+ * SHARED CONTRACT with the backend `PATCH /platform-admin/users/{id}/role`:
+ *   - `role_name`: the target role's `name` slug (e.g. "agent",
+ *     "company_admin", "platform_admin", "super_admin"), or `null` to DETACH
+ *     the user's role membership (make them a plain customer).
+ *   - `company_id`: required only when attaching a NEW company-scoped
+ *     membership to a user who currently has none; ignored when the user
+ *     already has a membership (that membership's company is reused) or for
+ *     detach.
+ *   - `intended_role`: optional; set/clear the `users.intended_role` marker so
+ *     the Unverified pane badge matches reality. Independent of `role_name`.
+ */
+export type ChangePlatformUserRoleInput = {
+  role_name: string | null;
+  company_id?: number | null;
+  intended_role?: "operator" | "agent" | null;
+};
+
+export type ChangePlatformUserRoleResult = {
+  user_id: number;
+  role_name: string | null;
+  company_id: number | null;
+  canonical_role: string;
+};
+
+export async function apiChangePlatformUserRole(
+  token: string,
+  id: number,
+  input: ChangePlatformUserRoleInput
+): Promise<ApiSuccessEnvelope<ChangePlatformUserRoleResult>> {
+  return apiFetchJson(`${PA}/users/${id}/role`, { method: "PATCH", token, body: input });
 }
 
 export type SellerApplicationRow = {

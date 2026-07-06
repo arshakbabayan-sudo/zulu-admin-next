@@ -617,6 +617,27 @@ const EN = {
 
   // ── sidebar empty-state (2026-07-06 — zero visible menu groups) ──
   sidebarNoSections: "No sections are available for this account.",
+
+  // ── change-role modal (2026-07-06 — super-admin sets a user's platform/company role) ──
+  crAction: "Change role",
+  crTitle: "Change role",
+  crIntro:
+    "Set this account's platform or company role. Company-scoped roles need a company; choosing “remove role” makes the account a plain customer.",
+  crFldRole: "Role",
+  crOptRemove: "— remove role (make customer) —",
+  crFldCompany: "Company",
+  crCompanyPlaceholder: "Select a company…",
+  crCompanyHint: "Required for a company role when the user has no membership yet.",
+  crFldIntendedRole: "Intended role (unverified marker)",
+  crIntendedNone: "— none —",
+  crIntendedOperator: "Operator",
+  crIntendedAgent: "Agent",
+  crLoadingRoles: "Loading roles…",
+  crSaveBtn: "Save role",
+  crToastSaved: "Role updated.",
+  crToastRemoved: "Role removed — account is now a customer.",
+  crErrCompanyRequired: "Please select a company for this role.",
+  crErrRoleRequired: "Please select a role.",
 } as const;
 
 export type MgmtKey = keyof typeof EN;
@@ -1192,6 +1213,26 @@ const HY: Partial<Record<MgmtKey, string>> = {
     "{n} հաշիվ բաց է թողնվել և ՉԻ ջնջվել, որովհետև դրանք ընկերության անդամ են (օպերատորի/գործակալի աշխատակիցներ)՝",
 
   sidebarNoSections: "Այս հաշվի համար հասանելի բաժիններ չկան։",
+
+  crAction: "Փոխել դերը",
+  crTitle: "Փոխել դերը",
+  crIntro:
+    "Նշիր այս հաշվի հարթակի կամ ընկերության դերը։ Ընկերության դերերի համար պետք է ընկերություն ընտրել, իսկ «հեռացնել դերը»-ն դարձնում է հաշիվը սովորական հաճախորդ։",
+  crFldRole: "Դեր",
+  crOptRemove: "— հեռացնել դերը (դարձնել հաճախորդ) —",
+  crFldCompany: "Ընկերություն",
+  crCompanyPlaceholder: "Ընտրիր ընկերություն…",
+  crCompanyHint: "Պարտադիր է ընկերության դերի համար, երբ օգտատերը դեռ անդամ չէ։",
+  crFldIntendedRole: "Նախատեսված դեր (չհաստատվածի նշիչ)",
+  crIntendedNone: "— չկա —",
+  crIntendedOperator: "Օպերատոր",
+  crIntendedAgent: "Գործակալ",
+  crLoadingRoles: "Դերերը բեռնվում են…",
+  crSaveBtn: "Պահպանել դերը",
+  crToastSaved: "Դերը թարմացվեց։",
+  crToastRemoved: "Դերը հեռացվեց — հաշիվն այժմ հաճախորդ է։",
+  crErrCompanyRequired: "Ընտրիր ընկերություն այս դերի համար։",
+  crErrRoleRequired: "Ընտրիր դեր։",
 };
 
 const RU: Partial<Record<MgmtKey, string>> = {
@@ -1765,6 +1806,26 @@ const RU: Partial<Record<MgmtKey, string>> = {
     "Пропущено аккаунтов: {n} — они НЕ удалены, потому что являются участниками компании (сотрудники оператора/агента):",
 
   sidebarNoSections: "Для этого аккаунта нет доступных разделов.",
+
+  crAction: "Изменить роль",
+  crTitle: "Изменить роль",
+  crIntro:
+    "Задайте платформенную или компанийную роль этого аккаунта. Для роли компании нужна компания, а «убрать роль» делает аккаунт обычным клиентом.",
+  crFldRole: "Роль",
+  crOptRemove: "— убрать роль (сделать клиентом) —",
+  crFldCompany: "Компания",
+  crCompanyPlaceholder: "Выберите компанию…",
+  crCompanyHint: "Обязательно для роли компании, если пользователь ещё не состоит в ней.",
+  crFldIntendedRole: "Предполагаемая роль (метка непроверенного)",
+  crIntendedNone: "— нет —",
+  crIntendedOperator: "Оператор",
+  crIntendedAgent: "Агент",
+  crLoadingRoles: "Загрузка ролей…",
+  crSaveBtn: "Сохранить роль",
+  crToastSaved: "Роль обновлена.",
+  crToastRemoved: "Роль убрана — аккаунт теперь клиент.",
+  crErrCompanyRequired: "Выберите компанию для этой роли.",
+  crErrRoleRequired: "Выберите роль.",
 };
 
 export function mgmtStrings(lang: string): Record<MgmtKey, string> {
