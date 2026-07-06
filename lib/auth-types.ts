@@ -6,8 +6,9 @@
 export type SellerServiceType = "flight" | "hotel" | "transfer" | "package" | "excursion" | "car" | "visa";
 
 export type AdminUserContext = {
-  world: "super_admin" | "platform_admin" | "operator_admin" | "company_admin";
-  canonical_role?: "super_admin" | "platform_admin" | "operator_admin" | string;
+  /** Canonical role slug. `customer` = no role-bound membership (plain B2C user); `agent` = pure sales agent. */
+  world: "super_admin" | "platform_admin" | "operator_admin" | "company_admin" | "agent" | "customer";
+  canonical_role?: "super_admin" | "platform_admin" | "operator_admin" | "agent" | "customer" | string;
   active_company_id: number | null;
   /** Service types granted to the active company via super-admin "Seller service types" dialog. */
   active_seller_service_types?: SellerServiceType[];

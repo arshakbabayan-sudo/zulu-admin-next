@@ -1068,3 +1068,8 @@ html.dark .mgmt-page .seg-ico { color:#e0b8d8; }
 .mgmt-page .inbox-page .section-divider { height:1px; background:var(--border-color); margin:26px 0 20px; }
 .mgmt-page .inbox-page .scope-note { font-size:12px; color:var(--text-secondary); display:inline-flex; align-items:center; gap:6px; }
 .mgmt-page .inbox-page .scope-note i { font-size:14px; color:var(--info); }
+
+/* ── Sidebar empty-state (2026-07-06) ─────────────────────────────────────
+   Shown when RBAC leaves the account with zero visible menu groups —
+   mirrors AdminShell's "no navigation" message instead of a blank rail. */
+.mgmt-page .sidebar-empty { padding:9px 12px; font-size:12px; line-height:1.5; color:var(--text-secondary); }

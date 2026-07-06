@@ -1081,11 +1081,46 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
     const ids = Array.from(unverifiedSelectedIds);
     setUnverifiedBulkBusy(true);
     try {
-      await apiBulkDeleteUsers(token, ids);
+      const res = await apiBulkDeleteUsers(token, ids);
       setUnverifiedSelectedIds(new Set());
       await loadUnverified();
+      // 2026-07-06 — surface the enriched bulk-delete response. The backend is
+      // moving from { processed, skipped: number } to
+      // { deleted_count, skipped: [{ id, email, reason }] }; inspect the
+      // payload at runtime so BOTH shapes work (absent fields ⇒ same silent
+      // success as before).
+      const data: unknown = res.data;
+      const deletedCount =
+        data && typeof data === "object" && typeof (data as { deleted_count?: unknown }).deleted_count === "number"
+          ? (data as { deleted_count: number }).deleted_count
+          : null;
+      const skippedRows =
+        data && typeof data === "object" && Array.isArray((data as { skipped?: unknown }).skipped)
+          ? (data as { skipped: unknown[] }).skipped
+          : null;
+      if (deletedCount !== null) {
+        setToast(s.uvBulkDeletedToast.replace("{n}", String(deletedCount)));
+      }
+      if (skippedRows && skippedRows.length > 0) {
+        const emails = skippedRows
+          .map((row) =>
+            row && typeof row === "object" && typeof (row as { email?: unknown }).email === "string"
+              ? (row as { email: string }).email
+              : "",
+          )
+          .filter((email) => email.length > 0);
+        if (typeof window !== "undefined") {
+          window.alert(
+            s.uvBulkSkippedNotice.replace("{n}", String(skippedRows.length)) +
+              (emails.length > 0 ? `\n${emails.join("\n")}` : ""),
+          );
+        }
+      }
     } catch (e) {
       console.error("bulk delete failed", e);
+      if (typeof window !== "undefined") {
+        window.alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+      }
     } finally {
       setUnverifiedBulkBusy(false);
     }
@@ -1107,6 +1142,9 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
       await loadCustomers();
     } catch (e) {
       console.error("anonymize failed", e);
+      if (typeof window !== "undefined") {
+        window.alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+      }
     }
   }
 
@@ -1143,6 +1181,9 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
       await loadCustomers();
     } catch (e) {
       console.error("anonymize failed", e);
+      if (typeof window !== "undefined") {
+        window.alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+      }
     }
   }
 
@@ -1167,6 +1208,9 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
       await loadCustomers();
     } catch (e) {
       console.error("hard delete failed", e);
+      if (typeof window !== "undefined") {
+        window.alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+      }
     }
   }
 
@@ -1236,6 +1280,9 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
       await loadUnverified();
     } catch (e) {
       console.error("delete unverified failed", e);
+      if (typeof window !== "undefined") {
+        window.alert(e instanceof ApiRequestError ? e.message : s.errGeneric);
+      }
     }
   }
 
@@ -2072,7 +2119,8 @@ function isMgmtTabVisible(
 export function Sidebar({ collapsed: _c, unreadCount }: { collapsed: boolean; unreadCount: number }) {
   const pathname = usePathname();
   const { user } = useAdminAuth();
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
+  const s = mgmtStrings(lang);
 
   const visibleGroups = ADMIN_NAV_GROUPS.filter((g) => {
     if (!isMgmtGroupVisible(g, user)) return false;
@@ -2080,6 +2128,18 @@ export function Sidebar({ collapsed: _c, unreadCount }: { collapsed: boolean; un
     return g.tabs.some((tab) => isMgmtTabVisible(tab, user));
   });
   const activeGroup = findActiveGroup(pathname ?? "");
+
+  // 2026-07-06 — RBAC left this account with ZERO visible menu groups. Render
+  // an explicit empty-state (mirrors AdminShell.tsx "admin.shell.no_navigation")
+  // instead of a silent blank rail so the operator understands why the menu
+  // is empty rather than suspecting a rendering bug.
+  if (visibleGroups.length === 0) {
+    return (
+      <aside className="sidebar">
+        <div className="sidebar-empty">{s.sidebarNoSections}</div>
+      </aside>
+    );
+  }
 
   return (
     <aside className="sidebar">

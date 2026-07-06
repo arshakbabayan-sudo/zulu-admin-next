@@ -609,6 +609,14 @@ const EN = {
   caRejectReasonRequired: "Please enter a rejection reason.",
   caToastApproved: "Application approved — company & user created.",
   caToastRejected: "Application rejected.",
+
+  // ── delete / bulk-delete feedback (2026-07-06 — visible errors + skipped rows) ──
+  uvBulkDeletedToast: "Deleted accounts: {n}.",
+  uvBulkSkippedNotice:
+    "{n} account(s) were skipped and NOT deleted because they are company members (operator/agent staff):",
+
+  // ── sidebar empty-state (2026-07-06 — zero visible menu groups) ──
+  sidebarNoSections: "No sections are available for this account.",
 } as const;
 
 export type MgmtKey = keyof typeof EN;
@@ -1178,6 +1186,12 @@ const HY: Partial<Record<MgmtKey, string>> = {
   caRejectReasonRequired: "Նշիր մերժման պատճառը։",
   caToastApproved: "Դիմումը հաստատվեց — ընկերությունն ու օգտատերը ստեղծվեցին։",
   caToastRejected: "Դիմումը մերժվեց։",
+
+  uvBulkDeletedToast: "Ջնջված հաշիվներ՝ {n}։",
+  uvBulkSkippedNotice:
+    "{n} հաշիվ բաց է թողնվել և ՉԻ ջնջվել, որովհետև դրանք ընկերության անդամ են (օպերատորի/գործակալի աշխատակիցներ)՝",
+
+  sidebarNoSections: "Այս հաշվի համար հասանելի բաժիններ չկան։",
 };
 
 const RU: Partial<Record<MgmtKey, string>> = {
@@ -1745,6 +1759,12 @@ const RU: Partial<Record<MgmtKey, string>> = {
   caRejectReasonRequired: "Укажите причину отказа.",
   caToastApproved: "Заявка одобрена — компания и пользователь созданы.",
   caToastRejected: "Заявка отклонена.",
+
+  uvBulkDeletedToast: "Удалено аккаунтов: {n}.",
+  uvBulkSkippedNotice:
+    "Пропущено аккаунтов: {n} — они НЕ удалены, потому что являются участниками компании (сотрудники оператора/агента):",
+
+  sidebarNoSections: "Для этого аккаунта нет доступных разделов.",
 };
 
 export function mgmtStrings(lang: string): Record<MgmtKey, string> {

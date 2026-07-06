@@ -730,6 +730,7 @@ const EN = {
   rbActSellerPerms: "Seller perms",
   rbActDashboard: "Dashboard",
   rbActEditProfile: "Edit profile",
+  rbActViewAll: "View all",
   // tree SECTION labels — client-side mirror of AdminRbacController::PERMISSION_TREE
   // section keys; unknown keys fall back to the server-sent English label.
   rbTreeSecDashboard: "Dashboard",
@@ -759,6 +760,8 @@ const EN = {
   rbTreeItemPackageOrders: "Package orders",
   rbTreeItemTeam: "Team & employees",
   rbTreeItemFiles: "Files",
+  rbTreeItemViewAll: "View all (whole company)",
+  rbTreeItemContracts: "Contracts",
   rbTreeItemInvoices: "Invoices",
   rbTreeItemPayments: "Payments",
   rbTreeItemCommissions: "Commissions",
@@ -1505,6 +1508,7 @@ const HY: Partial<Record<SettingsKey, string>> = {
   rbActSellerPerms: "Վաճառողի թույլտվություններ",
   rbActDashboard: "Վահանակ",
   rbActEditProfile: "Պրոֆիլի խմբագրում",
+  rbActViewAll: "Դիտել բոլորը",
   // tree SECTION labels (canonical sidebar names — admin.nav.section.*)
   rbTreeSecDashboard: "Վահանակ",
   rbTreeSecInventory: "Գույքագրում",
@@ -1533,6 +1537,8 @@ const HY: Partial<Record<SettingsKey, string>> = {
   rbTreeItemPackageOrders: "Փաթեթի պատվերներ",
   rbTreeItemTeam: "Թիմ և աշխատակիցներ",
   rbTreeItemFiles: "Ֆայլեր",
+  rbTreeItemViewAll: "Դիտել բոլորը (ամբողջ ընկերությունը)",
+  rbTreeItemContracts: "Պայմանագրեր",
   rbTreeItemInvoices: "Հաշիվ-ապրանքագրեր",
   rbTreeItemPayments: "Վճարումներ",
   rbTreeItemCommissions: "Միջնորդավճարներ",
@@ -2277,6 +2283,7 @@ const RU: Partial<Record<SettingsKey, string>> = {
   rbActSellerPerms: "Права продавца",
   rbActDashboard: "Панель",
   rbActEditProfile: "Редактирование профиля",
+  rbActViewAll: "Просмотр всех",
   // tree SECTION labels (canonical sidebar names — admin.nav.section.*)
   rbTreeSecDashboard: "Панель",
   rbTreeSecInventory: "Инвентарь",
@@ -2305,6 +2312,8 @@ const RU: Partial<Record<SettingsKey, string>> = {
   rbTreeItemPackageOrders: "Заказы пакетов",
   rbTreeItemTeam: "Команда и сотрудники",
   rbTreeItemFiles: "Файлы",
+  rbTreeItemViewAll: "Просмотр всех (вся компания)",
+  rbTreeItemContracts: "Договоры",
   rbTreeItemInvoices: "Счета",
   rbTreeItemPayments: "Платежи",
   rbTreeItemCommissions: "Комиссии",

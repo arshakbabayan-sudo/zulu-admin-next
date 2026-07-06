@@ -1162,7 +1162,14 @@ export default function DashboardPage() {
             </div>
 
             {!allowed ? (
-              <div className="card" style={{ padding: 16 }}>{d.forbidden}</div>
+              // 2026-07-06 — explanatory empty-state instead of a bare
+              // "Not available" card: tells the operator WHY the dashboard is
+              // closed (no admin access / partner application still pending).
+              <div className="empty-state">
+                <div className="es-icon"><i className="ti ti-lock" /></div>
+                <div className="es-title">{d.forbiddenTitle}</div>
+                <div className="es-sub">{d.forbiddenBody}</div>
+              </div>
             ) : tabs.length === 0 ? (
               <div className="empty-state">
                 <div className="es-icon"><i className="ti ti-layout-dashboard" /></div>

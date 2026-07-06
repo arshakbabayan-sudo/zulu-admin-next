@@ -6167,9 +6167,14 @@ function RbacPane({ token, lang }: { token: string | null; lang: string }) {
     <div>
       {stats && (
         <div className="stat-grid">
+          {/* RBAC numbers unification (2026-07-06): the cards tell the same story
+              as the role table + drawer — Permissions = tree-managed permissions
+              (not the raw DB count with hidden escalators/orphans), Members =
+              distinct PEOPLE (not pivot rows). `??` fallbacks keep the pane
+              working against an older backend during deploy skew. */}
           <div className="stat-card c-primary"><div className="stat-header"><i className="ti ti-shield-lock" /></div><div className="stat-value">{stats.total_roles}</div><div className="stat-label">{s.rbStatRoles}</div></div>
-          <div className="stat-card c-info"><div className="stat-header"><i className="ti ti-key" /></div><div className="stat-value">{stats.total_permissions}</div><div className="stat-label">{s.rbStatPermissions}</div></div>
-          <div className="stat-card c-success"><div className="stat-header"><i className="ti ti-users" /></div><div className="stat-value">{stats.total_memberships}</div><div className="stat-label">{s.rbStatMemberships}</div></div>
+          <div className="stat-card c-info"><div className="stat-header"><i className="ti ti-key" /></div><div className="stat-value">{stats.tree_permissions_total ?? stats.total_permissions}</div><div className="stat-label">{s.rbStatPermissions}</div></div>
+          <div className="stat-card c-success"><div className="stat-header"><i className="ti ti-users" /></div><div className="stat-value">{stats.members_distinct ?? stats.total_memberships}</div><div className="stat-label">{s.rbStatMemberships}</div></div>
           <div className="stat-card c-warning"><div className="stat-header"><i className="ti ti-lock-access" /></div><div className="stat-value">{stats.super_admins}</div><div className="stat-label">{s.rbStatSuperAdmins}</div></div>
         </div>
       )}
@@ -6203,7 +6208,11 @@ function RbacPane({ token, lang }: { token: string | null; lang: string }) {
                     <td><span className={`badge ${rbBadgeTone(r.name)}`}>{rbRoleLabel(r, s)}</span></td>
                     <td className="cell-muted text-sm">{r.description || "—"}</td>
                     <td className="num-cell">{r.memberships_count}</td>
-                    <td className="num-cell cell-muted">{r.permissions.length} / {permTotal}</td>
+                    {/* Drawer-semantics counts from the backend (tree-managed
+                        perms only; platform-only ones excluded for company
+                        roles) so this column always matches the drawer below.
+                        Falls back to the old raw numbers on an older backend. */}
+                    <td className="num-cell cell-muted">{r.tree_granted_count ?? r.permissions.length} / {r.tree_total_count ?? permTotal}</td>
                     <td onClick={(e) => e.stopPropagation()} style={{ textAlign: "right" }}>
                       <div className="row-actions" style={{ justifyContent: "flex-end" }}>
                         {canEditRole(r) && <button className="icon-btn" title={s.edit} onClick={() => setModal({ mode: "edit", role: r })}><i className="ti ti-edit" /></button>}

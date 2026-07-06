@@ -74,6 +74,9 @@ const ACTION_KEY: Record<string, SettingsKey> = {
   view_dashboard: "rbActDashboard",
   edit_profile: "rbActEditProfile",
   update_profile: "rbActEditProfile",
+  // Layer-B "<module>.view_all" = see the WHOLE company's rows for the module
+  // (joined the tree 2026-07-06 — RBAC numbers unification).
+  view_all: "rbActViewAll",
 };
 
 /**
@@ -113,10 +116,13 @@ const ITEM_LABEL_KEY: Record<string, SettingsKey> = {
   "inventory.offers": "rbTreeItemOffers",
   "bookings.access": "rbTreeItemAccessView",
   "bookings.manage": "rbTreeItemManageBookings",
+  "bookings.view_all": "rbTreeItemViewAll",
   "bookings.package_orders": "rbTreeItemPackageOrders",
   "crm.access": "rbTreeItemAccess",
   "crm.team": "rbTreeItemTeam",
   "crm.files": "rbTreeItemFiles",
+  "crm.view_all": "rbTreeItemViewAll",
+  "crm.contracts": "rbTreeItemContracts",
   "chat.access": "rbTreeItemAccess",
   "finance.access": "rbTreeItemAccess",
   "finance.invoices": "rbTreeItemInvoices",

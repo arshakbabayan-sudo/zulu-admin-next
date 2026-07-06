@@ -1764,12 +1764,26 @@ export type RbacRoleRow = {
   scope: RbacRoleScope;
   memberships_count: number;
   permissions: RbacPermission[];
+  /** RBAC numbers unification (2026-07-06) — server-computed with EXACTLY the
+   *  RbacMenuTree drawer's semantics: tree-managed permissions only, and for
+   *  company-scoped roles the platform-only ones (name starts "platform." or
+   *  equals "super_admin") are excluded from both counts. Optional so the UI
+   *  tolerates an older backend during deploy skew (falls back to
+   *  permissions.length / the raw permissions total). */
+  tree_granted_count?: number;
+  tree_total_count?: number;
 };
 export type RbacStatsData = {
   total_roles: number;
   total_permissions: number;
   total_memberships: number;
   super_admins: number;
+  /** Distinct user ids across user_company — PEOPLE, where total_memberships
+   *  counts pivot rows. Optional: older backend during deploy skew. */
+  members_distinct?: number;
+  /** Seeded permissions the RbacMenuTree drawer actually manages — the number
+   *  the "Permissions" stat card should show. Optional: older backend. */
+  tree_permissions_total?: number;
 };
 
 export async function apiRbacStats(token: string): Promise<ApiSuccessEnvelope<RbacStatsData>> {

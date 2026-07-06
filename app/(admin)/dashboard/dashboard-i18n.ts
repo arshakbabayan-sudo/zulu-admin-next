@@ -25,6 +25,11 @@ const EN = {
   noData: "No data",
   noPanes: "No dashboard sections are available for this account.",
   forbidden: "Not available",
+  // 2026-07-06 — page-level "no admin access" empty-state (replaces the bare
+  // "Not available" card; `forbidden` stays for the per-pane 403 fallbacks).
+  forbiddenTitle: "No admin access",
+  forbiddenBody:
+    "This account does not have access to the admin panel. If you submitted a partner application (tour operator or agency), it is awaiting approval — access opens as soon as it is approved.",
   export: "Export",
   dateRange: "Date range",
   last7d: "Last 7 days",
@@ -203,6 +208,9 @@ const HY: Partial<Record<DashKey, unknown>> = {
   noData: "Տվյալներ չկան",
   noPanes: "Այս հաշվի համար վահանակի բաժիններ հասանելի չեն։",
   forbidden: "Հասանելի չէ",
+  forbiddenTitle: "Ադմին հասանելիություն չկա",
+  forbiddenBody:
+    "Այս հաշիվը ադմին վահանակի հասանելիություն չունի։ Եթե գործընկերության հայտ եք ներկայացրել (տուրօպերատոր կամ գործակալություն), այն սպասում է հաստատման։ Հաստատվելուն պես մուտքը կբացվի։",
   export: "Արտահանել",
   dateRange: "Ժամանակահատված",
   last7d: "Վերջին 7 օր",
@@ -369,6 +377,9 @@ const RU: Partial<Record<DashKey, unknown>> = {
   noData: "Нет данных",
   noPanes: "Для этого аккаунта нет доступных разделов панели.",
   forbidden: "Недоступно",
+  forbiddenTitle: "Нет доступа к админ-панели",
+  forbiddenBody:
+    "У этого аккаунта нет доступа к админ-панели. Если вы подали партнёрскую заявку (туроператор или агентство), она ожидает одобрения. Как только её одобрят, доступ откроется.",
   export: "Экспорт",
   dateRange: "Период",
   last7d: "Последние 7 дней",
