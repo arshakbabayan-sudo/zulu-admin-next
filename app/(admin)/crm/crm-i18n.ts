@@ -191,6 +191,13 @@ const EN = {
   cuBkColStatus: "Status",
   cuBkEmpty: "No bookings on record.",
   cuDetailPhone: "Phone",
+  // Customer detail — labeled personal-info card (2026-07-07). Mirrors the
+  // Management B2C detail so the login email the customer authenticates with is
+  // shown as a proper labeled row, not just an icon in the hero.
+  cuPersonalTitle: "Personal info",
+  cuFldEmail: "Login email",
+  cuFldPhone: "Phone",
+  cuFldJoined: "Joined",
 
   // ── team pane ─────────────────────────────────────────────────
   teamAlert:
@@ -238,7 +245,7 @@ const EN = {
   tmTabPay: "Pay",
   tmTabPermissions: "Permissions",
   tmFldName: "Name",
-  tmFldEmail: "Email",
+  tmFldEmail: "Login email",
   tmFldPhone: "Phone",
   tmFldRole: "Role",
   tmFldStatus: "Status",
@@ -612,7 +619,9 @@ const EN = {
   clMyProfile: "My profile",
 
   pgAccount: "Account",
-  pgMyCompany: "My company",
+  // 2026-07-07 — surface the subMyCompany intent in the pill LABEL so it reads
+  // as the operator's ONE own company (seller status & payouts), never plural.
+  pgMyCompany: "My company (seller & payouts)",
   pgMyTeam: "My team",
   pgMyAgents: "My agents",
 
@@ -641,7 +650,7 @@ const EN = {
   acRecentEmpty: "No recent activity yet.",
   acPersonalTitle: "Personal info",
   acFldName: "Name",
-  acFldEmail: "Email",
+  acFldEmail: "Login email",
   acFldPhone: "Phone",
   acFldJoined: "Joined",
   acFldLocation: "Location",
@@ -706,6 +715,9 @@ const EN = {
   mcPaymentsTitle: "Payments",
   mcPaymentsSub: "Receive payouts via Stripe Connect (Express).",
   mcNoCompany: "You don't have a company assigned. These settings are managed per company.",
+  // Plain-language explainer shown at the top of each My-company card (2026-07-07).
+  mcSellerExplainer: "The services your company is allowed to sell on ZULU — request approval for new ones here.",
+  mcStripeExplainer: "Link your company's Stripe/bank account so ZULU can pay you your share of each booking.",
 
   // ── My agents pane ────────────────────────────────────────────
   agAlert: "Partner agencies connected to you. They sell your inventory; you set the commission you pay them.",
@@ -1037,6 +1049,10 @@ const HY: Partial<Record<CrmKey, string>> = {
   cuBkColStatus: "Կարգավիճակ",
   cuBkEmpty: "Ամրագրումներ չկան։",
   cuDetailPhone: "Հեռախոս",
+  cuPersonalTitle: "Անձնական տվյալներ",
+  cuFldEmail: "Մուտքի էլ. փոստ",
+  cuFldPhone: "Հեռախոս",
+  cuFldJoined: "Միացել է",
 
   teamAlert:
     "Սրանք քո ընկերության սեփական աշխատակիցներն են։ Ամեն տնօրեն ինքն ա ավելացնում ու կառավարում իր անձնակազմը. թույլտվությունները սահմանափակ են տնօրենի սեփականով (առավելագույն շեմ)։",
@@ -1082,7 +1098,7 @@ const HY: Partial<Record<CrmKey, string>> = {
   tmTabPay: "Վճար",
   tmTabPermissions: "Թույլտվություններ",
   tmFldName: "Անուն",
-  tmFldEmail: "Էլ. փոստ",
+  tmFldEmail: "Մուտքի էլ. փոստ",
   tmFldPhone: "Հեռախոս",
   tmFldRole: "Դեր",
   tmFldStatus: "Կարգավիճակ",
@@ -1442,7 +1458,7 @@ const HY: Partial<Record<CrmKey, string>> = {
   clMyProfile: "Իմ էջը",
 
   pgAccount: "Հաշիվ",
-  pgMyCompany: "Իմ ընկերությունը",
+  pgMyCompany: "Իմ ընկերությունը (վաճառք և վճարումներ)",
   pgMyTeam: "Իմ թիմը",
   pgMyAgents: "Իմ գործակալները",
 
@@ -1470,7 +1486,7 @@ const HY: Partial<Record<CrmKey, string>> = {
   acRecentEmpty: "Դեռ վերջին գործողություններ չկան։",
   acPersonalTitle: "Անձնական տվյալներ",
   acFldName: "Անուն",
-  acFldEmail: "Էլ. փոստ",
+  acFldEmail: "Մուտքի էլ. փոստ",
   acFldPhone: "Հեռախոս",
   acFldJoined: "Միացել է",
   acFldLocation: "Տեղ",
@@ -1534,6 +1550,8 @@ const HY: Partial<Record<CrmKey, string>> = {
   mcPaymentsTitle: "Վճարումներ",
   mcPaymentsSub: "Ստացիր վճարումներ Stripe Connect-ի միջոցով։",
   mcNoCompany: "Քեզ ընկերություն վերագրված չէ։ Այս կարգավորումները կառավարվում են ընկերության մակարդակում։",
+  mcSellerExplainer: "Այն ծառայությունները, որ քո ընկերությանը թույլատրված է վաճառել ZULU-ում. նորերի հաստատումը խնդրիր այստեղից։",
+  mcStripeExplainer: "Կապիր քո ընկերության Stripe/բանկային հաշիվը, որ ZULU-ն կարողանա վճարել քո բաժինը յուրաքանչյուր ամրագրումից։",
 
   agAlert: "Քեզ միացած գործընկեր գործակալությունները։ Նրանք վաճառում են քո առաջարկները, դու սահմանում ես միջնորդավճարը։",
   agStatAgents: "Գործակալներ",
@@ -1859,6 +1877,10 @@ const RU: Partial<Record<CrmKey, string>> = {
   cuBkColStatus: "Статус",
   cuBkEmpty: "Бронирований нет.",
   cuDetailPhone: "Телефон",
+  cuPersonalTitle: "Личные данные",
+  cuFldEmail: "Эл. почта для входа",
+  cuFldPhone: "Телефон",
+  cuFldJoined: "Регистрация",
 
   teamAlert:
     "Это собственные сотрудники вашей компании. Каждый владелец сам добавляет и управляет своим персоналом; права ограничены правами руководителя (потолок).",
@@ -1904,7 +1926,7 @@ const RU: Partial<Record<CrmKey, string>> = {
   tmTabPay: "Оплата",
   tmTabPermissions: "Права",
   tmFldName: "Имя",
-  tmFldEmail: "Эл. почта",
+  tmFldEmail: "Эл. почта для входа",
   tmFldPhone: "Телефон",
   tmFldRole: "Роль",
   tmFldStatus: "Статус",
@@ -2264,7 +2286,7 @@ const RU: Partial<Record<CrmKey, string>> = {
   clMyProfile: "Мой профиль",
 
   pgAccount: "Аккаунт",
-  pgMyCompany: "Моя компания",
+  pgMyCompany: "Моя компания (продажи и выплаты)",
   pgMyTeam: "Моя команда",
   pgMyAgents: "Мои агенты",
 
@@ -2292,7 +2314,7 @@ const RU: Partial<Record<CrmKey, string>> = {
   acRecentEmpty: "Пока нет недавней активности.",
   acPersonalTitle: "Личные данные",
   acFldName: "Имя",
-  acFldEmail: "Эл. почта",
+  acFldEmail: "Эл. почта для входа",
   acFldPhone: "Телефон",
   acFldJoined: "Регистрация",
   acFldLocation: "Местоположение",
@@ -2356,6 +2378,8 @@ const RU: Partial<Record<CrmKey, string>> = {
   mcPaymentsTitle: "Платежи",
   mcPaymentsSub: "Получайте выплаты через Stripe Connect (Express).",
   mcNoCompany: "Вам не назначена компания. Эти настройки управляются на уровне компании.",
+  mcSellerExplainer: "Услуги, которые вашей компании разрешено продавать на ZULU — запросите одобрение новых здесь.",
+  mcStripeExplainer: "Привяжите счёт Stripe/банковский счёт компании, чтобы ZULU мог выплачивать вашу долю с каждого бронирования.",
 
   agAlert: "Партнёрские агентства, подключённые к вам. Они продают ваши предложения, вы устанавливаете комиссию.",
   agStatAgents: "Агенты",

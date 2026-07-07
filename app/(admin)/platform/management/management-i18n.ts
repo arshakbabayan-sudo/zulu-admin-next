@@ -501,7 +501,8 @@ const EN = {
   cuCardPersonal: "Personal information",
   cuCardSummary: "Summary",
   cuFldFullName: "Full name",
-  cuFldEmail: "Email",
+  cuFldEmail: "Login email",
+  cuFldEmailHint: "The email this customer signs in with.",
   cuFldPhone: "Phone",
   cuFldNationality: "Nationality",
   cuFldNatReveal: "Reveal",
@@ -547,7 +548,8 @@ const EN = {
   uvAwaitingPill: "Awaiting verification",
   uvCardAccount: "Account details",
   uvFldFullName: "Full name",
-  uvFldEmail: "Email",
+  uvFldEmail: "Login email",
+  uvFldEmailHint: "The email this account signs in with.",
   uvFldIntendedRole: "Intended role",
   uvFldRegistered: "Registered",
   uvFldVerifiedAt: "Email verified at",
@@ -638,6 +640,30 @@ const EN = {
   crToastRemoved: "Role removed — account is now a customer.",
   crErrCompanyRequired: "Please select a company for this role.",
   crErrRoleRequired: "Please select a role.",
+
+  // ── login-method badge (2026-07-07 — how the account authenticates) ──
+  lmGoogle: "Signs in with Google",
+  lmFacebook: "Signs in with Facebook",
+  lmPassword: "Email & password",
+
+  // ── reset-password modal (2026-07-07 — super-admin overwrites a password) ──
+  rpAction: "Reset password",
+  rpTitle: "Reset password",
+  rpIntro:
+    "Set a new password for this account. Leave the field empty to generate a strong one automatically. The old password can never be displayed.",
+  rpFldNew: "New password",
+  rpFldNewPh: "Leave empty to auto-generate",
+  rpHintAuto: "If left empty, a strong random password will be generated.",
+  rpHintManual: "At least 8 characters.",
+  rpErrTooShort: "The password must be at least 8 characters.",
+  rpSaveBtn: "Reset password",
+  rpResultTitle: "New password",
+  rpResultNote:
+    "Give this password to the user. It is shown only once and cannot be displayed again. The old password can never be recovered.",
+  rpResultCopy: "Copy",
+  rpResultCopied: "Copied",
+  rpResultDone: "Done",
+  rpToastDone: "Password reset — the old sessions were signed out.",
 } as const;
 
 export type MgmtKey = keyof typeof EN;
@@ -1100,7 +1126,8 @@ const HY: Partial<Record<MgmtKey, string>> = {
   cuCardPersonal: "Անձնական տվյալներ",
   cuCardSummary: "Ամփոփում",
   cuFldFullName: "Անուն ազգանուն",
-  cuFldEmail: "Էլ. փոստ",
+  cuFldEmail: "Մուտքի էլ. փոստ",
+  cuFldEmailHint: "Այս էլ. փոստով է հաճախորդը մուտք գործում։",
   cuFldPhone: "Հեռախոս",
   cuFldNationality: "Քաղաքացիություն",
   cuFldNatReveal: "Բացել",
@@ -1145,7 +1172,8 @@ const HY: Partial<Record<MgmtKey, string>> = {
   uvAwaitingPill: "Սպասում է հաստատման",
   uvCardAccount: "Հաշվի տվյալներ",
   uvFldFullName: "Անուն ազգանուն",
-  uvFldEmail: "Էլ. փոստ",
+  uvFldEmail: "Մուտքի էլ. փոստ",
+  uvFldEmailHint: "Այս էլ. փոստով է հաշիվը մուտք գործում։",
   uvFldIntendedRole: "Նպատակային դեր",
   uvFldRegistered: "Գրանցվել է",
   uvFldVerifiedAt: "Էլ. փոստի հաստատում",
@@ -1233,6 +1261,28 @@ const HY: Partial<Record<MgmtKey, string>> = {
   crToastRemoved: "Դերը հեռացվեց — հաշիվն այժմ հաճախորդ է։",
   crErrCompanyRequired: "Ընտրիր ընկերություն այս դերի համար։",
   crErrRoleRequired: "Ընտրիր դեր։",
+
+  lmGoogle: "Մուտք է գործում Google-ով",
+  lmFacebook: "Մուտք է գործում Facebook-ով",
+  lmPassword: "Էլ. փոստ և գաղտնաբառ",
+
+  rpAction: "Վերականգնել գաղտնաբառ",
+  rpTitle: "Վերականգնել գաղտնաբառ",
+  rpIntro:
+    "Նշանակիր այս հաշվի նոր գաղտնաբառը։ Դատարկ թողնելու դեպքում ուժեղ գաղտնաբառը կստեղծվի ինքնաշխատ։ Հին գաղտնաբառը երբեք հնարավոր չէ ցույց տալ։",
+  rpFldNew: "Նոր գաղտնաբառ",
+  rpFldNewPh: "Դատարկ թող՝ ինքնաշխատ ստեղծելու համար",
+  rpHintAuto: "Դատարկ թողնելու դեպքում կստեղծվի ուժեղ պատահական գաղտնաբառ։",
+  rpHintManual: "Առնվազն 8 նիշ։",
+  rpErrTooShort: "Գաղտնաբառը պետք է լինի առնվազն 8 նիշ։",
+  rpSaveBtn: "Վերականգնել գաղտնաբառ",
+  rpResultTitle: "Նոր գաղտնաբառ",
+  rpResultNote:
+    "Այս գաղտնաբառը տուր օգտատիրոջը։ Ցուցադրվում է միայն մեկ անգամ և կրկին ցույց տալ հնարավոր չէ։ Հին գաղտնաբառը երբեք հնարավոր չէ վերականգնել։",
+  rpResultCopy: "Պատճենել",
+  rpResultCopied: "Պատճենվեց",
+  rpResultDone: "Պատրաստ է",
+  rpToastDone: "Գաղտնաբառը վերականգնվեց — հին մուտքերը դուրս բերվեցին։",
 };
 
 const RU: Partial<Record<MgmtKey, string>> = {
@@ -1693,7 +1743,8 @@ const RU: Partial<Record<MgmtKey, string>> = {
   cuCardPersonal: "Личные данные",
   cuCardSummary: "Сводка",
   cuFldFullName: "Полное имя",
-  cuFldEmail: "Эл. почта",
+  cuFldEmail: "Эл. почта для входа",
+  cuFldEmailHint: "Эл. почта, с которой клиент входит в систему.",
   cuFldPhone: "Телефон",
   cuFldNationality: "Гражданство",
   cuFldNatReveal: "Показать",
@@ -1738,7 +1789,8 @@ const RU: Partial<Record<MgmtKey, string>> = {
   uvAwaitingPill: "Ожидает подтверждения",
   uvCardAccount: "Данные аккаунта",
   uvFldFullName: "Полное имя",
-  uvFldEmail: "Эл. почта",
+  uvFldEmail: "Эл. почта для входа",
+  uvFldEmailHint: "Эл. почта, с которой аккаунт входит в систему.",
   uvFldIntendedRole: "Планируемая роль",
   uvFldRegistered: "Зарегистрирован",
   uvFldVerifiedAt: "Эл. почта подтверждена",
@@ -1826,6 +1878,28 @@ const RU: Partial<Record<MgmtKey, string>> = {
   crToastRemoved: "Роль убрана — аккаунт теперь клиент.",
   crErrCompanyRequired: "Выберите компанию для этой роли.",
   crErrRoleRequired: "Выберите роль.",
+
+  lmGoogle: "Входит через Google",
+  lmFacebook: "Входит через Facebook",
+  lmPassword: "Эл. почта и пароль",
+
+  rpAction: "Сбросить пароль",
+  rpTitle: "Сбросить пароль",
+  rpIntro:
+    "Задайте новый пароль для этого аккаунта. Оставьте поле пустым, чтобы сгенерировать надёжный пароль автоматически. Старый пароль никогда нельзя показать.",
+  rpFldNew: "Новый пароль",
+  rpFldNewPh: "Оставьте пустым для автогенерации",
+  rpHintAuto: "Если оставить пустым, будет сгенерирован надёжный случайный пароль.",
+  rpHintManual: "Не менее 8 символов.",
+  rpErrTooShort: "Пароль должен быть не менее 8 символов.",
+  rpSaveBtn: "Сбросить пароль",
+  rpResultTitle: "Новый пароль",
+  rpResultNote:
+    "Передайте этот пароль пользователю. Он показывается только один раз и не может быть показан снова. Старый пароль восстановить невозможно.",
+  rpResultCopy: "Копировать",
+  rpResultCopied: "Скопировано",
+  rpResultDone: "Готово",
+  rpToastDone: "Пароль сброшен — старые сессии завершены.",
 };
 
 export function mgmtStrings(lang: string): Record<MgmtKey, string> {

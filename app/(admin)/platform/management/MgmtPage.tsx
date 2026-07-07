@@ -61,6 +61,7 @@ import {
   apiShowPlatformUser,
   apiUpdatePlatformUser,
   apiChangePlatformUserRole,
+  apiResetPlatformUserPassword,
   apiDeactivatePlatformUser,
   apiHardDeletePlatformUser,
   apiBulkRemindUsers,
@@ -509,6 +510,17 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
   const [roleModalContext, setRoleModalContext] = useState<"customer" | "unverified">("customer");
   const [rbacRoles, setRbacRoles] = useState<RbacRoleRow[]>([]);
   const [rbacRolesLoading, setRbacRolesLoading] = useState(false);
+
+  // Reset-password modal (2026-07-07 — super-admin overwrites a user's password
+  // and relays the fresh plaintext to them once). `rpTarget` is the account
+  // being reset; `rpResult` holds the freshly-SET password once the backend
+  // returns it (shown once, then cleared on close). Works for both the customer
+  // and unverified detail panes.
+  const [rpModalOpen, setRpModalOpen] = useState(false);
+  const [rpSaving, setRpSaving] = useState(false);
+  const [rpTarget, setRpTarget] = useState<PlatformAdminUserDetail | null>(null);
+  const [rpResult, setRpResult] = useState<string | null>(null);
+  const [rpError, setRpError] = useState<string | null>(null);
 
   // Drawers / modals
   const [appDrawer, setAppDrawer] = useState<SellerApplicationDetail | null>(null);
@@ -1310,6 +1322,32 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
     }
   }
 
+  // Reset-password modal — open for the given user (customer or unverified pane).
+  function openResetPasswordModal(target: PlatformAdminUserDetail | null) {
+    if (!target) return;
+    setRpTarget(target);
+    setRpResult(null);
+    setRpError(null);
+    setRpModalOpen(true);
+  }
+
+  // Persist the password reset. `newPassword` empty → backend auto-generates.
+  // On success we surface the freshly-SET plaintext (shown once) and toast.
+  async function submitResetPassword(newPassword: string) {
+    if (!token || !rpTarget) return;
+    setRpSaving(true);
+    setRpError(null);
+    try {
+      const res = await apiResetPlatformUserPassword(token, rpTarget.id, newPassword);
+      setRpResult(res.data.new_password);
+      setToast(s.rpToastDone);
+    } catch (e) {
+      setRpError(e instanceof ApiRequestError ? e.message : s.errGeneric);
+    } finally {
+      setRpSaving(false);
+    }
+  }
+
   // Add an admin note onto the open customer detail.
   async function addDetailCustomerNote(body: string) {
     if (!token || !detailCustomer) return;
@@ -1894,6 +1932,7 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                   onEdit={() => setEditCustomerOpen(true)}
                   onAddNote={() => setAddNoteOpen(true)}
                   onChangeRole={() => openRoleModal(detailCustomer, "customer")}
+                  onResetPassword={() => openResetPasswordModal(detailCustomer)}
                   onDeactivate={() => void deactivateDetailCustomer()}
                   onAnonymize={() => void anonymizeDetailCustomer()}
                   onHardDelete={() => void hardDeleteDetailCustomer()}
@@ -1934,6 +1973,7 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
                   }}
                   onRemind={() => void remindDetailUnverified()}
                   onChangeRole={() => openRoleModal(detailUnverified, "unverified")}
+                  onResetPassword={() => openResetPasswordModal(detailUnverified)}
                   onDelete={() => void deleteDetailUnverified()}
                 />
               )}
@@ -2143,6 +2183,25 @@ export function MgmtPage({ initialTab = "companies" }: { initialTab?: MgmtTab })
         token={token}
         onClose={() => setRoleModalOpen(false)}
         onSave={(input) => void saveUserRole(input)}
+      />
+
+      {/* Reset-password modal (2026-07-07 — super-admin only). Overwrites the
+          user's password (or auto-generates one), revokes their sessions, and
+          shows the fresh plaintext ONCE. Shared contract with backend
+          POST /platform-admin/users/{id}/reset-password. */}
+      <ResetPasswordModal
+        open={rpModalOpen}
+        saving={rpSaving}
+        target={rpTarget}
+        result={rpResult}
+        error={rpError}
+        onClose={() => {
+          setRpModalOpen(false);
+          setRpTarget(null);
+          setRpResult(null);
+          setRpError(null);
+        }}
+        onSubmit={(pw) => void submitResetPassword(pw)}
       />
 
       {/* Company-application approve / reject modals (2026-06-05) */}
@@ -4925,6 +4984,7 @@ function CustomerDetail(props: {
   onEdit: () => void;
   onAddNote: () => void;
   onChangeRole: () => void;
+  onResetPassword: () => void;
   onDeactivate: () => void;
   onAnonymize: () => void;
   onHardDelete: () => void;
@@ -5038,7 +5098,10 @@ function CustomerDetail(props: {
                 </div>
                 <div className="info-row wide">
                   <span className="info-label">{s.cuFldEmail}</span>
-                  <span className="info-value">{c.email}</span>
+                  <span className="info-value" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+                    <span>{c.email}</span>
+                    <LoginMethodBadge method={c.login_method} s={s} />
+                  </span>
                 </div>
                 <div className="info-row wide">
                   <span className="info-label">{s.cuFldPhone}</span>
@@ -5301,6 +5364,12 @@ function CustomerDetail(props: {
             {s.crAction}
           </button>
         )}
+        {props.isSuper && (
+          <button className="btn btn-sm" onClick={props.onResetPassword}>
+            <i className="ti ti-key" />
+            {s.rpAction}
+          </button>
+        )}
         <button className="btn btn-sm" onClick={props.onDeactivate}>
           <i className="ti ti-user-off" />
           {s.cuFooterDeactivate}
@@ -5336,6 +5405,7 @@ function UnverifiedDetail(props: {
   onBack: () => void;
   onRemind: () => void;
   onChangeRole: () => void;
+  onResetPassword: () => void;
   onDelete: () => void;
 }) {
   const { lang } = useLanguage();
@@ -5391,7 +5461,10 @@ function UnverifiedDetail(props: {
             </div>
             <div className="info-row wide">
               <span className="info-label">{s.uvFldEmail}</span>
-              <span className="info-value">{u.email}</span>
+              <span className="info-value" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+                <span>{u.email}</span>
+                <LoginMethodBadge method={u.login_method} s={s} />
+              </span>
             </div>
             <div className="info-row wide">
               <span className="info-label">{s.uvFldIntendedRole}</span>
@@ -5428,6 +5501,12 @@ function UnverifiedDetail(props: {
           <button className="btn btn-sm" onClick={props.onChangeRole}>
             <i className="ti ti-user-cog" />
             {s.crAction}
+          </button>
+        )}
+        {props.isSuper && (
+          <button className="btn btn-sm" onClick={props.onResetPassword}>
+            <i className="ti ti-key" />
+            {s.rpAction}
           </button>
         )}
         <div className="spacer" />
@@ -5732,6 +5811,206 @@ function ChangeRoleModal(props: {
             <i className="ti ti-device-floppy" />
             {props.saving ? s.saving : s.crSaveBtn}
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Login-method badge (2026-07-07) — tells the owner HOW the account
+// authenticates, so they know whether it even has a usable password.
+// Derived from `login_method` on the user-detail payload; renders nothing
+// when the field is absent (backend not yet deployed).
+// ═══════════════════════════════════════════════════════════════
+function LoginMethodBadge(props: {
+  method: PlatformAdminUserDetail["login_method"];
+  s: Record<MgmtKey, string>;
+}) {
+  const { method, s } = props;
+  if (method === "google") {
+    return (
+      <span className="badge badge-gray" title={s.lmGoogle}>
+        <i className="ti ti-brand-google" style={{ fontSize: 12 }} />
+        {s.lmGoogle}
+      </span>
+    );
+  }
+  if (method === "facebook") {
+    return (
+      <span className="badge badge-gray" title={s.lmFacebook}>
+        <i className="ti ti-brand-facebook" style={{ fontSize: 12 }} />
+        {s.lmFacebook}
+      </span>
+    );
+  }
+  if (method === "password") {
+    return (
+      <span className="badge badge-gray" title={s.lmPassword}>
+        <i className="ti ti-lock" style={{ fontSize: 12 }} />
+        {s.lmPassword}
+      </span>
+    );
+  }
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Reset-password modal (2026-07-07 — super-admin only). Clones the
+// CustomerEditModal chrome. Two phases: (1) a form where the admin types a
+// new password or leaves it blank to auto-generate; (2) a result view showing
+// the freshly-SET plaintext ONCE in a copyable field. Shared contract with
+// backend POST /platform-admin/users/{id}/reset-password.
+// ═══════════════════════════════════════════════════════════════
+function ResetPasswordModal(props: {
+  open: boolean;
+  saving: boolean;
+  target: PlatformAdminUserDetail | null;
+  /** The freshly-SET plaintext once the backend returns it; null = form phase. */
+  result: string | null;
+  error: string | null;
+  onClose: () => void;
+  onSubmit: (newPassword: string) => void;
+}) {
+  const { lang } = useLanguage();
+  const s = mgmtStrings(lang);
+  const [pw, setPw] = useState("");
+  const [localErr, setLocalErr] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  // Reset the form each time the modal opens for a fresh target.
+  useEffect(() => {
+    if (props.open) {
+      setPw("");
+      setLocalErr(null);
+      setCopied(false);
+    }
+  }, [props.open, props.target]);
+
+  const showResult = props.result !== null;
+
+  function handleSubmit() {
+    if (props.saving) return;
+    const trimmed = pw.trim();
+    // Non-empty passwords must be at least 8 chars (matches backend 422 rule);
+    // an empty field is valid — the backend auto-generates.
+    if (trimmed.length > 0 && trimmed.length < 8) {
+      setLocalErr(s.rpErrTooShort);
+      return;
+    }
+    setLocalErr(null);
+    props.onSubmit(trimmed);
+  }
+
+  async function handleCopy() {
+    if (!props.result) return;
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(props.result);
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 2000);
+      }
+    } catch {
+      // Clipboard blocked — the value is still visible for manual copy.
+    }
+  }
+
+  return (
+    <div
+      className={`modal-overlay ${props.open ? "open" : ""}`}
+      onClick={(e) => e.target === e.currentTarget && props.onClose()}
+    >
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <div className="modal-title">{s.rpTitle}</div>
+          <button className="icon-btn" onClick={props.onClose}>
+            <i className="ti ti-x" />
+          </button>
+        </div>
+        <div className="modal-body">
+          {!showResult ? (
+            <>
+              <p style={{ marginTop: 0, marginBottom: 16, fontSize: 13, color: "var(--text-muted)" }}>
+                {s.rpIntro}
+              </p>
+              {props.target && (
+                <p style={{ marginTop: 0, marginBottom: 16, fontSize: 13 }}>
+                  <strong>{props.target.name}</strong>
+                  {props.target.email ? ` · ${props.target.email}` : ""}
+                </p>
+              )}
+              <div className="fld">
+                <span className="fld-label">{s.rpFldNew}</span>
+                <input
+                  type="text"
+                  value={pw}
+                  placeholder={s.rpFldNewPh}
+                  onChange={(e) => {
+                    setPw(e.target.value);
+                    if (localErr) setLocalErr(null);
+                  }}
+                  disabled={props.saving}
+                />
+                <span style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
+                  {pw.trim().length > 0 ? s.rpHintManual : s.rpHintAuto}
+                </span>
+              </div>
+              {(localErr || props.error) && (
+                <p style={{ marginTop: 12, marginBottom: 0, fontSize: 13, color: "var(--danger-dark)" }}>
+                  {localErr ?? props.error}
+                </p>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="fld">
+                <span className="fld-label">{s.rpResultTitle}</span>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <input
+                    type="text"
+                    value={props.result ?? ""}
+                    readOnly
+                    onFocus={(e) => e.currentTarget.select()}
+                    className="font-mono"
+                    style={{ flex: 1 }}
+                  />
+                  <button className="btn btn-sm" onClick={() => void handleCopy()}>
+                    <i className="ti ti-copy" />
+                    {copied ? s.rpResultCopied : s.rpResultCopy}
+                  </button>
+                </div>
+              </div>
+              <p
+                style={{
+                  marginTop: 12,
+                  marginBottom: 0,
+                  fontSize: 13,
+                  color: "var(--warning-dark)",
+                }}
+              >
+                <i className="ti ti-alert-triangle" style={{ fontSize: 13, marginRight: 4 }} />
+                {s.rpResultNote}
+              </p>
+            </>
+          )}
+        </div>
+        <div className="modal-footer">
+          {!showResult ? (
+            <>
+              <button className="btn" onClick={props.onClose} disabled={props.saving}>
+                {s.actionCancel}
+              </button>
+              <button className="btn btn-primary" disabled={props.saving} onClick={handleSubmit}>
+                <i className="ti ti-key" />
+                {props.saving ? s.saving : s.rpSaveBtn}
+              </button>
+            </>
+          ) : (
+            <button className="btn btn-primary" onClick={props.onClose}>
+              <i className="ti ti-check" />
+              {s.rpResultDone}
+            </button>
+          )}
         </div>
       </div>
     </div>

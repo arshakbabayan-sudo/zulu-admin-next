@@ -777,6 +777,14 @@ export type PlatformAdminUserDetail = PlatformAdminUserRow & {
   intended_role?: string | null;
   two_factor_method?: string | null;
   two_factor_required?: boolean;
+  /**
+   * 2026-07-07 — how this account authenticates. Derived server-side:
+   * `oauth_provider` when the user signed up with a social login, else
+   * `"password"`. Tells the owner whether the account even HAS a usable
+   * password (Google/Facebook accounts get a random unusable one). Additive;
+   * absent before the backend deploys → treat as unknown (render no badge).
+   */
+  login_method?: "google" | "facebook" | "password";
   recent_orders?: PlatformAdminUserRecentOrder[];
   /**
    * Admin v3 (2026-06-04) — wired to the new inline detail panes. `loyalty`
@@ -873,6 +881,41 @@ export async function apiChangePlatformUserRole(
   input: ChangePlatformUserRoleInput
 ): Promise<ApiSuccessEnvelope<ChangePlatformUserRoleResult>> {
   return apiFetchJson(`${PA}/users/${id}/role`, { method: "PATCH", token, body: input });
+}
+
+/**
+ * 2026-07-07 — super-admin ONLY. Reset (overwrite) a user's password.
+ * SHARED CONTRACT with backend POST /platform-admin/users/{id}/reset-password:
+ *   REQUEST { new_password?: string|null }
+ *     - non-empty string → use it verbatim (backend enforces min 8 → 422 if weak)
+ *     - omitted / null    → backend GENERATES a strong random password (≥12 chars)
+ *   SUCCESS 200 data { user_id, new_password }
+ *     - `new_password` is the plaintext value that was JUST SET (then bcrypt-hashed
+ *       at rest). It is NOT a decrypted stored secret — the stored password can
+ *       never be read back. Returned ONCE so the admin can relay it to the user.
+ *   SIDE EFFECT: the target's existing sessions (Sanctum tokens) are revoked.
+ *   ERRORS: 403 (caller not super-admin), 404 (no user), 422 (weak new_password).
+ */
+export type ResetPlatformUserPasswordResult = {
+  user_id: number;
+  /** The freshly-SET plaintext password — show once, never retrievable again. */
+  new_password: string;
+};
+
+export async function apiResetPlatformUserPassword(
+  token: string,
+  id: number,
+  /** Optional: leave undefined/null to have the backend auto-generate one. */
+  newPassword?: string | null
+): Promise<ApiSuccessEnvelope<ResetPlatformUserPasswordResult>> {
+  const trimmed = typeof newPassword === "string" ? newPassword : "";
+  return apiFetchJson(`${PA}/users/${id}/reset-password`, {
+    method: "POST",
+    token,
+    // Send an explicit value only when the admin typed one; otherwise send
+    // null so the backend takes the auto-generate branch.
+    body: { new_password: trimmed.length > 0 ? trimmed : null },
+  });
 }
 
 export type SellerApplicationRow = {

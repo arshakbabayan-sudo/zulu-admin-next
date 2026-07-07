@@ -1631,6 +1631,20 @@ function CustomerDetail({
           </button>
         </div>
       </div>
+      {/* 2026-07-07 — labeled personal-info card. Email previously showed only
+          as an icon in the hero; surfacing it as a proper "Login email" row
+          (matching the Management B2C detail) makes clear this is the address
+          the customer authenticates with. */}
+      <div className="card">
+        <div className="card-header"><div className="card-title">{s.cuPersonalTitle}</div></div>
+        <div className="card-body">
+          <div className="info-grid">
+            <div className="info-row"><span className="info-label">{s.cuFldEmail}</span><span className="info-value">{data?.email ?? s.none}</span></div>
+            <div className="info-row"><span className="info-label">{s.cuFldPhone}</span><span className="info-value">{data?.phone ?? s.none}</span></div>
+            <div className="info-row"><span className="info-label">{s.cuFldJoined}</span><span className="info-value">{fmtDate(data?.created_at)}</span></div>
+          </div>
+        </div>
+      </div>
       <div className="card" style={{ marginBottom: 0 }}>
         <div className="card-header">
           <div>

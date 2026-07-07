@@ -21,6 +21,7 @@ import { canAccessPlatformAdminNav } from "@/lib/access";
 import { ApiRequestError } from "@/lib/api-client";
 import {
   apiDeactivatePlatformUser,
+  apiResetPlatformUserPassword,
   apiShowPlatformUser,
   apiUpdatePlatformUser,
   type PlatformAdminUserDetail,
@@ -42,6 +43,78 @@ const STATUS_OPTIONS = [
   { value: "pending", label: "Pending" },
   { value: "suspended", label: "Suspended" },
 ];
+
+/**
+ * 2026-07-07 — self-contained trilingual strings for the login-method badge and
+ * the reset-password action on this page. This page uses the global `t()`
+ * dictionary, but these bespoke strings are not in the DB catalog; keeping them
+ * local avoids a raw-key flash and a cache dependency. Armenian = proper script.
+ */
+type UdLang = "hy" | "ru" | "en";
+const UD_STR: Record<
+  | "lmGoogle"
+  | "lmFacebook"
+  | "lmPassword"
+  | "rpAction"
+  | "rpTitle"
+  | "rpIntro"
+  | "rpFldNew"
+  | "rpFldNewPh"
+  | "rpHintAuto"
+  | "rpHintManual"
+  | "rpErrTooShort"
+  | "rpSaveBtn"
+  | "rpResultTitle"
+  | "rpResultNote"
+  | "rpResultCopy"
+  | "rpResultCopied"
+  | "rpResultDone"
+  | "rpSaving"
+  | "rpCancel"
+  | "rpGenericErr",
+  Record<UdLang, string>
+> = {
+  lmGoogle: { hy: "Մուտք է գործում Google-ով", ru: "Входит через Google", en: "Signs in with Google" },
+  lmFacebook: { hy: "Մուտք է գործում Facebook-ով", ru: "Входит через Facebook", en: "Signs in with Facebook" },
+  lmPassword: { hy: "Էլ. փոստ և գաղտնաբառ", ru: "Эл. почта и пароль", en: "Email & password" },
+  rpAction: { hy: "Վերականգնել գաղտնաբառ", ru: "Сбросить пароль", en: "Reset password" },
+  rpTitle: { hy: "Վերականգնել գաղտնաբառ", ru: "Сбросить пароль", en: "Reset password" },
+  rpIntro: {
+    hy: "Նշանակիր այս հաշվի նոր գաղտնաբառը։ Դատարկ թողնելու դեպքում ուժեղ գաղտնաբառը կստեղծվի ինքնաշխատ։ Հին գաղտնաբառը երբեք հնարավոր չէ ցույց տալ։",
+    ru: "Задайте новый пароль для этого аккаунта. Оставьте поле пустым, чтобы сгенерировать надёжный пароль автоматически. Старый пароль никогда нельзя показать.",
+    en: "Set a new password for this account. Leave the field empty to generate a strong one automatically. The old password can never be displayed.",
+  },
+  rpFldNew: { hy: "Նոր գաղտնաբառ", ru: "Новый пароль", en: "New password" },
+  rpFldNewPh: { hy: "Դատարկ թող՝ ինքնաշխատ ստեղծելու համար", ru: "Оставьте пустым для автогенерации", en: "Leave empty to auto-generate" },
+  rpHintAuto: {
+    hy: "Դատարկ թողնելու դեպքում կստեղծվի ուժեղ պատահական գաղտնաբառ։",
+    ru: "Если оставить пустым, будет сгенерирован надёжный случайный пароль.",
+    en: "If left empty, a strong random password will be generated.",
+  },
+  rpHintManual: { hy: "Առնվազն 8 նիշ։", ru: "Не менее 8 символов.", en: "At least 8 characters." },
+  rpErrTooShort: {
+    hy: "Գաղտնաբառը պետք է լինի առնվազն 8 նիշ։",
+    ru: "Пароль должен быть не менее 8 символов.",
+    en: "The password must be at least 8 characters.",
+  },
+  rpSaveBtn: { hy: "Վերականգնել գաղտնաբառ", ru: "Сбросить пароль", en: "Reset password" },
+  rpResultTitle: { hy: "Նոր գաղտնաբառ", ru: "Новый пароль", en: "New password" },
+  rpResultNote: {
+    hy: "Այս գաղտնաբառը տուր օգտատիրոջը։ Ցուցադրվում է միայն մեկ անգամ և կրկին ցույց տալ հնարավոր չէ։ Հին գաղտնաբառը երբեք հնարավոր չէ վերականգնել։",
+    ru: "Передайте этот пароль пользователю. Он показывается только один раз и не может быть показан снова. Старый пароль восстановить невозможно.",
+    en: "Give this password to the user. It is shown only once and cannot be displayed again. The old password can never be recovered.",
+  },
+  rpResultCopy: { hy: "Պատճենել", ru: "Копировать", en: "Copy" },
+  rpResultCopied: { hy: "Պատճենվեց", ru: "Скопировано", en: "Copied" },
+  rpResultDone: { hy: "Պատրաստ է", ru: "Готово", en: "Done" },
+  rpSaving: { hy: "Պահպանվում է…", ru: "Сохранение…", en: "Saving…" },
+  rpCancel: { hy: "Չեղարկել", ru: "Отмена", en: "Cancel" },
+  rpGenericErr: { hy: "Սխալ տեղի ունեցավ։", ru: "Произошла ошибка.", en: "Something went wrong." },
+};
+
+function udLang(lang: string): UdLang {
+  return lang === "hy" ? "hy" : lang === "ru" ? "ru" : "en";
+}
 
 type FormState = {
   name: string;
@@ -67,7 +140,8 @@ export default function PlatformUserDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { token, user: me } = useAdminAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const L = udLang(lang);
   const confirm = useConfirm();
   const allowed = canAccessPlatformAdminNav(me);
   const userId = Number(params?.id);
@@ -86,6 +160,15 @@ export default function PlatformUserDetailPage() {
    */
   const [recentBookings, setRecentBookings] = useState<BookingRow[] | null>(null);
   const [bookingsError, setBookingsError] = useState<string | null>(null);
+
+  // Reset-password modal (2026-07-07 — super-admin only). `rpResult` holds the
+  // freshly-SET plaintext once the backend returns it (shown once).
+  const [rpOpen, setRpOpen] = useState(false);
+  const [rpPw, setRpPw] = useState("");
+  const [rpSaving, setRpSaving] = useState(false);
+  const [rpResult, setRpResult] = useState<string | null>(null);
+  const [rpError, setRpError] = useState<string | null>(null);
+  const [rpCopied, setRpCopied] = useState(false);
 
   const load = useCallback(async () => {
     if (!token || !allowed || !userId) return;
@@ -181,6 +264,48 @@ export default function PlatformUserDetailPage() {
     }
   }
 
+  function openResetPassword() {
+    setRpPw("");
+    setRpResult(null);
+    setRpError(null);
+    setRpCopied(false);
+    setRpOpen(true);
+  }
+
+  async function submitResetPassword() {
+    if (!token || !user || rpSaving) return;
+    const trimmed = rpPw.trim();
+    // Non-empty passwords must be ≥8 chars (matches backend 422); empty is fine
+    // (backend auto-generates).
+    if (trimmed.length > 0 && trimmed.length < 8) {
+      setRpError(UD_STR.rpErrTooShort[L]);
+      return;
+    }
+    setRpSaving(true);
+    setRpError(null);
+    try {
+      const res = await apiResetPlatformUserPassword(token, user.id, trimmed);
+      setRpResult(res.data.new_password);
+    } catch (e) {
+      setRpError(e instanceof ApiRequestError ? e.message : UD_STR.rpGenericErr[L]);
+    } finally {
+      setRpSaving(false);
+    }
+  }
+
+  async function copyResetPassword() {
+    if (!rpResult) return;
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(rpResult);
+        setRpCopied(true);
+        window.setTimeout(() => setRpCopied(false), 2000);
+      }
+    } catch {
+      // Clipboard blocked — value is still visible for manual copy.
+    }
+  }
+
   if (!allowed || forbidden) {
     return (
       <div className="space-y-4">
@@ -212,8 +337,9 @@ export default function PlatformUserDetailPage() {
         ]}
         title={user.name || user.email}
         subtitle={
-          <span className="flex items-center gap-2">
+          <span className="flex flex-wrap items-center gap-2">
             <span>{user.email}</span>
+            <LoginMethodBadge method={user.login_method} lang={L} />
             <span>·</span>
             <span>#{user.id}</span>
             <StatusPill status={user.status} />
@@ -311,14 +437,26 @@ export default function PlatformUserDetailPage() {
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-default pt-4">
-          <button
-            type="button"
-            onClick={handleDeactivate}
-            disabled={saving || user.status === "inactive"}
-            className="inline-flex h-10 items-center rounded-zulu border border-error-200 bg-white px-3 text-sm font-medium text-error-700 transition hover:bg-error-50 disabled:opacity-40"
-          >
-            {t("admin.users.btn_deactivate")}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={handleDeactivate}
+              disabled={saving || user.status === "inactive"}
+              className="inline-flex h-10 items-center rounded-zulu border border-error-200 bg-white px-3 text-sm font-medium text-error-700 transition hover:bg-error-50 disabled:opacity-40"
+            >
+              {t("admin.users.btn_deactivate")}
+            </button>
+            {me?.is_super_admin ? (
+              <button
+                type="button"
+                onClick={openResetPassword}
+                disabled={saving}
+                className="inline-flex h-10 items-center gap-1.5 rounded-zulu border border-default bg-white px-3 text-sm font-medium text-fg-t8 transition hover:bg-figma-bg-1 disabled:opacity-40"
+              >
+                {UD_STR.rpAction[L]}
+              </button>
+            ) : null}
+          </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -423,8 +561,151 @@ export default function PlatformUserDetailPage() {
         </V2Card>
       ) : null}
       </div>
+
+      {/* Reset-password modal (2026-07-07 — super-admin only). Overwrites the
+          user's password (or auto-generates one), revokes their sessions, and
+          shows the fresh plaintext ONCE. */}
+      {rpOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setRpOpen(false);
+          }}
+        >
+          <div className="w-full max-w-md rounded-zulu bg-white p-5 shadow-lg">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-fg-t8">{UD_STR.rpTitle[L]}</h3>
+              <button
+                type="button"
+                onClick={() => setRpOpen(false)}
+                className="text-fg-t6 hover:text-fg-t8"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            {rpResult === null ? (
+              <>
+                <p className="mb-3 text-sm text-fg-t7">{UD_STR.rpIntro[L]}</p>
+                <p className="mb-3 text-sm text-fg-t8">
+                  <strong>{user.name || user.email}</strong>
+                  {user.email ? ` · ${user.email}` : ""}
+                </p>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs font-medium text-fg-t7">{UD_STR.rpFldNew[L]}</span>
+                  <input
+                    type="text"
+                    value={rpPw}
+                    placeholder={UD_STR.rpFldNewPh[L]}
+                    disabled={rpSaving}
+                    onChange={(e) => {
+                      setRpPw(e.target.value);
+                      if (rpError) setRpError(null);
+                    }}
+                    className="h-10 w-full rounded-zulu border border-default bg-white px-3 text-sm text-fg-t8 placeholder:text-fg-t6 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100 disabled:opacity-60"
+                  />
+                  <span className="text-xs text-fg-t6">
+                    {rpPw.trim().length > 0 ? UD_STR.rpHintManual[L] : UD_STR.rpHintAuto[L]}
+                  </span>
+                </label>
+                {rpError ? (
+                  <p className="mt-3 text-sm text-error-700">{rpError}</p>
+                ) : null}
+                <div className="mt-5 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRpOpen(false)}
+                    disabled={rpSaving}
+                    className="inline-flex h-10 items-center rounded-zulu border border-default bg-white px-4 text-sm font-medium text-fg-t8 transition hover:bg-figma-bg-1 disabled:opacity-40"
+                  >
+                    {UD_STR.rpCancel[L]}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void submitResetPassword()}
+                    disabled={rpSaving}
+                    className="inline-flex h-10 items-center rounded-zulu bg-primary px-4 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
+                  >
+                    {rpSaving ? UD_STR.rpSaving[L] : UD_STR.rpSaveBtn[L]}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs font-medium text-fg-t7">{UD_STR.rpResultTitle[L]}</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={rpResult}
+                      readOnly
+                      onFocus={(e) => e.currentTarget.select()}
+                      className="h-10 w-full rounded-zulu border border-default bg-figma-bg-1 px-3 font-mono text-sm text-fg-t8"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void copyResetPassword()}
+                      className="inline-flex h-10 shrink-0 items-center rounded-zulu border border-default bg-white px-3 text-sm font-medium text-fg-t8 transition hover:bg-figma-bg-1"
+                    >
+                      {rpCopied ? UD_STR.rpResultCopied[L] : UD_STR.rpResultCopy[L]}
+                    </button>
+                  </div>
+                </label>
+                <p className="mt-3 rounded-zulu border border-warning-100 bg-warning-50 px-3 py-2 text-sm text-warning-700">
+                  {UD_STR.rpResultNote[L]}
+                </p>
+                <div className="mt-5 flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setRpOpen(false)}
+                    className="inline-flex h-10 items-center rounded-zulu bg-primary px-4 text-sm font-semibold text-white transition hover:opacity-90"
+                  >
+                    {UD_STR.rpResultDone[L]}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
+}
+
+/**
+ * Login-method badge — tells the owner HOW the account authenticates. Renders
+ * nothing when `login_method` is absent (backend not yet deployed).
+ */
+function LoginMethodBadge({
+  method,
+  lang,
+}: {
+  method: PlatformAdminUserDetail["login_method"];
+  lang: UdLang;
+}) {
+  if (method === "google") {
+    return (
+      <span className="inline-flex rounded-full bg-figma-bg-1 px-2 py-0.5 text-xs font-medium text-fg-t7">
+        {UD_STR.lmGoogle[lang]}
+      </span>
+    );
+  }
+  if (method === "facebook") {
+    return (
+      <span className="inline-flex rounded-full bg-figma-bg-1 px-2 py-0.5 text-xs font-medium text-fg-t7">
+        {UD_STR.lmFacebook[lang]}
+      </span>
+    );
+  }
+  if (method === "password") {
+    return (
+      <span className="inline-flex rounded-full bg-figma-bg-1 px-2 py-0.5 text-xs font-medium text-fg-t7">
+        {UD_STR.lmPassword[lang]}
+      </span>
+    );
+  }
+  return null;
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {

@@ -941,8 +941,17 @@ export function MyCompanyPane({ lang, token, user, registerAction }: MyProfilePa
         <div>{s.mcAlert}</div>
       </div>
       <div className="detail-card-grid">
-        <SellerStatusCard token={token} companyId={companyId} tx={tx} />
-        <StripeConnectCard token={token} companyId={companyId} tx={tx} />
+        {/* 2026-07-07 — plain-language explainer above each card so an operator
+            immediately understands what "Seller status" / "Stripe Connect" mean
+            without engineering jargon. */}
+        <div>
+          <p className="card-subtitle" style={{ marginBottom: 10 }}>{s.mcSellerExplainer}</p>
+          <SellerStatusCard token={token} companyId={companyId} tx={tx} />
+        </div>
+        <div>
+          <p className="card-subtitle" style={{ marginBottom: 10 }}>{s.mcStripeExplainer}</p>
+          <StripeConnectCard token={token} companyId={companyId} tx={tx} />
+        </div>
       </div>
     </div>
   );
