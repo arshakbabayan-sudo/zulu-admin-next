@@ -211,7 +211,7 @@ export type CrmPageKey =
   | "pipeline" | "leads" | "messages" | "deals" | "activities" | "segments"
   | "customers" | "team"
   | "contracts" | "workhours" | "payroll" | "files" | "connections"
-  | "account" | "mycompany" | "myteam" | "myagents"
+  | "account" | "mycompany" | "myagents"
   | "options";
 
 type CrmMeta = {
@@ -263,7 +263,7 @@ export function CrmPage({ initialPage = "pipeline" }: { initialPage?: CrmPageKey
     connections:{ cluster: "work",    labelKey: "pgConnections",subKey: "subConnections",inPage: true,  href: "/connections" },
     account:    { cluster: "myprofile", labelKey: "pgAccount",   subKey: "subAccount",    inPage: true,  href: "/crm/account" },
     mycompany:  { cluster: "myprofile", labelKey: "pgMyCompany", subKey: "subMyCompany",  inPage: true,  href: "/crm/my-company" },
-    myteam:     { cluster: "myprofile", labelKey: "pgMyTeam",    subKey: "subMyTeam",     inPage: true,  href: "/crm/my-team" },
+    // "myteam" removed 2026-07-07 — it duplicated People → Team (same TeamPane).
     myagents:   { cluster: "myprofile", labelKey: "pgMyAgents",  subKey: "subMyAgents",   inPage: true,  href: "/crm/my-agents" },
     options:    { cluster: "options", labelKey: "pgOptions",    subKey: "subOptions",    inPage: true,  href: "/crm/options" },
   }), [contractsHref]);
@@ -320,11 +320,11 @@ export function CrmPage({ initialPage = "pipeline" }: { initialPage?: CrmPageKey
     // Super (platform owner) sees ALL 4 pills — consistent with super seeing
     // everything else in the panel, and so the whole section is reviewable.
     if (isSuper) {
-      pages.push("mycompany", "myteam", "myagents");
+      pages.push("mycompany", "myagents");
       return pages;
     }
     if (isCompanyOwner) {
-      pages.push("mycompany", "myteam");
+      pages.push("mycompany");
     }
     // Operator owner manages its agents; an agent owner has no sub-agents.
     if (isOperatorOwner) {
@@ -484,12 +484,6 @@ export function CrmPage({ initialPage = "pipeline" }: { initialPage?: CrmPageKey
             {page === "mycompany" &&
               (visibleMyProfilePages.includes("mycompany") ? (
                 <MyCompanyPane token={token} user={user} lang={lang} registerAction={setActionNode} showToast={showToast} />
-              ) : (
-                <AccountPane token={token} user={user} lang={lang} registerAction={setActionNode} showToast={showToast} />
-              ))}
-            {page === "myteam" &&
-              (visibleMyProfilePages.includes("myteam") ? (
-                <TeamPane token={token} user={user} lang={lang} registerAction={setActionNode} showToast={showToast} />
               ) : (
                 <AccountPane token={token} user={user} lang={lang} registerAction={setActionNode} showToast={showToast} />
               ))}
